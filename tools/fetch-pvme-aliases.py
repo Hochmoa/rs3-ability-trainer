@@ -1,7 +1,8 @@
 """Build public/data/pvme-aliases.json: PvME emoji alias -> entity key of this app.
 
 Source: https://github.com/pvme/pvme-settings (emojis/emojis_v2.json). Aliases are matched by name or by
-slug against our abilities, prayers, specials, specs and weapons (gear:<weapon id>); a few are mapped by hand. Unmatched aliases
+slug against our abilities, prayers, specials, specs, weapons (gear:<weapon id>) and armour / jewellery (item:<gear id>);
+a few are mapped by hand. Unmatched aliases
 (removed abilities, gear we do not model, bosses, ...) are left out and show up as notes when importing.
 Run:  python tools/fetch-pvme-aliases.py   (after the other fetch scripts)
 """
@@ -64,7 +65,7 @@ def main():
 
     by_name: dict[str, str] = {}
     by_norm: dict[str, str] = {}
-    for f, kind in (("abilities", "ability"), ("prayers", "prayer"), ("specials", "special"), ("specs", "spec"), ("weapons", "gear")):
+    for f, kind in (("abilities", "ability"), ("prayers", "prayer"), ("specials", "special"), ("specs", "spec"), ("weapons", "gear"), ("gear", "item")):
         for x in json.load(open(DATA / f"{f}.json", encoding="utf-8")):
             key = kind + ":" + x["id"]
             by_name.setdefault(x["name"].lower(), key)

@@ -13,6 +13,7 @@ import { BUFF_BY_ID, ruleFor } from '../../engine/rules';
 import { STACK_NAMES, StackId } from '../../engine/rules-model';
 import { ActiveBuff, EngineEntity, EngineEvent, GCD_TICKS, TICK_MS, TrainerEngine, UsableReason, Wield } from '../../engine/trainer-engine';
 import { SOUL_SPLIT } from '../../engine/prayer-rules';
+import { morphSourceOf, slotAbilities } from '../../engine/morphs';
 import { AbilityIcon, IconState } from '../../shared/ability-icon';
 import { ActionBar, SlotView } from '../../shared/action-bar';
 import { GearAction, GearPanel } from '../../shared/gear-panel';
@@ -163,9 +164,11 @@ export class Train implements OnDestroy {
           const kb = s.slotKeybinds[pos]?.[i];
           // a slot without a keybind can still be clicked, like in the game
           if (step && step.kind !== 'note') {
-            const key = entityKey(step.kind, step.id);
-            if (kb) m.set(key, keybindLabel(kb));
-            else if (!m.has(key)) m.set(key, 'click');
+            const keys = step.kind === 'ability' ? slotAbilities(step.id).map((id) => entityKey('ability', id)) : [entityKey(step.kind, step.id)];
+            for (const key of keys) {
+              if (kb) m.set(key, keybindLabel(kb));
+              else if (!m.has(key)) m.set(key, 'click');
+            }
           }
         });
       }
@@ -236,6 +239,8 @@ export class Train implements OnDestroy {
   readonly flashKey = signal<{ key: string; kind: 'fired' | 'wrong' } | null>(null);
   /** per visible entity: usability + own cooldown, refreshed every frame */
   readonly slotState = signal<Map<string, { usable: UsableReason; cooldownS: number; cooldownPhase: number }>>(new Map());
+  /** slot key → what it shows right now (Command X, Slaughter, Spectral Scythe 2) */
+  readonly morphs = signal<Map<string, { entity: Entity; stage: number }>>(new Map());
   /** active prayers as entities (icon + tooltip) */
   readonly activePrayers = signal<Entity[]>([]);
   readonly prayerStats = signal<PrayerStats>({ ...EMPTY_PRAYER_STATS });
@@ -268,24 +273,29 @@ export class Train implements OnDestroy {
     const queued = this.queuedKey();
     const flash = this.flashKey();
     const layout = this.layout();
+    const morphs = this.morphs();
     return layout.order.map((pos) => {
       const id = shown[pos] ?? null;
       const preset = id === null ? null : s.presets.find((p) => p.id === id) ?? null;
       const slots: SlotView[] = (preset?.slots ?? Array(14).fill(null)).map((step, i) => {
         const entity = step ? this.data.step(step) ?? null : null;
-        const st = entity ? state.get(entity.key) : undefined;
-        const isGcdAbility = !!entity?.ability?.triggersGcd;
+        const m = running && entity ? morphs.get(entity.key) : undefined;
+        const morph = m ? { entity: m.entity, stage: m.stage } : null;
+        const shown = morph?.entity ?? entity;
+        const st = shown ? state.get(shown.key) : undefined;
+        const isGcdAbility = !!shown?.ability?.triggersGcd;
         return {
           entity,
+          morph,
           keyLabel: keybindLabel(s.slotKeybinds[pos]?.[i]),
           usable: running && entity ? st?.usable ?? 'ok' : null,
           cooldownS: running ? st?.cooldownS ?? 0 : 0,
           cooldownPhase: running ? st?.cooldownPhase ?? 1 : 1,
           gcdPhase: running && isGcdAbility ? gcd : 1,
           gcdRemainingMs: running && isGcdAbility ? gcdMs : 0,
-          expected: running && !!entity && entity.key === expected,
-          queued: running && !!entity && entity.key === queued,
-          flash: running && entity && flash?.key === entity.key ? flash.kind : null,
+          expected: running && !!shown && shown.key === expected,
+          queued: running && !!shown && shown.key === queued,
+          flash: running && shown && flash?.key === shown.key ? flash.kind : null,
         };
       });
       return { position: pos, presetName: preset?.name ?? '– empty –', slots, shape: layout.shape[pos] };
@@ -453,7 +463,13 @@ export class Train implements OnDestroy {
       const e = this.data.get(key);
       if (e) catalog.set(key, this.data.toEngineEntity(e));
     };
-    for (const p of setup.presets) for (const step of p.slots) if (step && step.kind !== 'note') add(entityKey(step.kind, step.id));
+    for (const p of setup.presets) {
+      for (const step of p.slots) {
+        if (!step || step.kind === 'note') continue;
+        if (step.kind === 'ability') for (const id of slotAbilities(step.id)) add(entityKey('ability', id));
+        else add(entityKey(step.kind, step.id));
+      }
+    }
     for (const id of Object.keys(setup.actionKeybinds ?? {})) add('action:' + id);
     for (const id of loadoutWeapons(this.storage.loadout())) add('weapon:' + id);
     for (const r of this.storage.loadout().inventory) if (r?.kind === 'special') add('special:' + r.id);
@@ -488,6 +504,7 @@ export class Train implements OnDestroy {
     this.stacks.set([]);
     this.cooldowns.set({});
     this.channelling.set(null);
+    this.morphs.set(new Map());
     this.startedAt = Date.now();
     this.results.set([]);
     this.counts.set({ perfect: 0, late: 0, early: 0, wrong: 0, missed: 0 });
@@ -621,6 +638,15 @@ export class Train implements OnDestroy {
       });
     }
     this.slotState.set(state);
+    const morphs = new Map<string, { entity: Entity; stage: number }>();
+    for (const key of e.catalog.keys()) {
+      const m = e.morphOf(key, tick);
+      if (!m) continue;
+      const ent = this.data.get(m.key);
+      if (ent) morphs.set(key, { entity: ent, stage: m.stage });
+    }
+    const cur = this.morphs();
+    if (morphs.size !== cur.size || [...morphs].some(([k, v]) => cur.get(k)?.entity.key !== v.entity.key || cur.get(k)?.stage !== v.stage)) this.morphs.set(morphs);
     if (e.state !== 'running') {
       this.stopLoops();
       this.running.set(false);

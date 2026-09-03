@@ -177,6 +177,11 @@ export interface AbilityRule {
   channel?: ChannelSpec;
   /** the cast counts as this sequence step (group + step) and opens the next one */
   sequence?: { group: string; step: number; windowTicks: number; last?: boolean };
+  /**
+   * One ability with several casts in a row (Spectral Scythe): cast n uses stages[n-1]; the cooldown starts
+   * with cast 1, later casts within the sequence window ignore it; the last cast resets the slot.
+   */
+  stages?: { cost: number }[];
   sharedCooldown?: string;
   /** buffs applied on cast (overrides the wiki buff link) */
   buffs?: string[];

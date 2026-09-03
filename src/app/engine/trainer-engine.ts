@@ -1,6 +1,7 @@
 import { AbilityType, EnemyConfig, EntityKind, PrayerStats, SPEC_KEY, StepResult, Style, Style4, isStyle4 } from '../core/models';
 import { ResolvedLoadout, defaultResolvedLoadout } from './loadout-resolved';
 import { PROTECTION, PrayerBook, SOUL_SPLIT, bookOf, togglePrayer } from './prayer-rules';
+import { MORPH_TARGETS } from './morphs';
 import { BUFF_BY_ID, GLOBALS, ruleFor } from './rules';
 import { AbilityRule, ChannelSpec, Condition, Effect, GlobalRule, Requirement, StackId } from './rules-model';
 
@@ -350,6 +351,34 @@ export class TrainerEngine {
     return s && tick <= s.untilTick ? s.openStep : 1;
   }
 
+  /** Current cast number of a staged ability (Spectral Scythe 1..3); expired windows are cleaned every tick. */
+  private stageOf(rule: AbilityRule | undefined): number {
+    if (!rule?.stages || !rule.sequence) return 1;
+    return this.sequences.get(rule.sequence.group)?.openStep ?? 1;
+  }
+
+  /**
+   * What a bar slot with `key` shows right now: another ability (Command X while the spirit lives,
+   * Slaughter after Dismember) or a later cast of the same one (Spectral Scythe 2/3). Null = unchanged.
+   */
+  morphOf(key: string, tick: number): { key: string; stage: number } | null {
+    const e = this.catalog.get(key);
+    if (!e || e.kind !== 'ability') return null;
+    const rule = ruleFor(e.id);
+    if (rule?.stages && rule.sequence) {
+      const stage = this.sequenceStep(rule.sequence.group, tick);
+      return stage > 1 ? { key, stage } : null;
+    }
+    for (const target of MORPH_TARGETS.get(e.id) ?? []) {
+      const tr = ruleFor(target);
+      if (!tr) continue;
+      if (tr.sequence && this.sequenceStep(tr.sequence.group, tick) === tr.sequence.step) return { key: 'ability:' + target, stage: tr.sequence.step };
+      const spirit = tr.requires?.find((r) => r.spirit)?.spirit;
+      if (spirit && this.spirits.has(spirit)) return { key: 'ability:' + target, stage: 1 };
+    }
+    return null;
+  }
+
   tickTime(tick: number): number {
     return this.t0 + tick * TICK_MS;
   }
@@ -390,6 +419,7 @@ export class TrainerEngine {
       if (available > 0) return 0;
       return Math.max(0, Math.min(...ready) - tick);
     }
+    if (rule?.stages && this.stageOf(rule) > 1) return 0;
     let ready = this.readyTick.get(acting.key) ?? 0;
     const shared = rule?.sharedCooldown ?? acting.sharedCooldown;
     if (shared) ready = Math.max(ready, this.readyTick.get('shared:' + shared) ?? 0);
@@ -417,6 +447,7 @@ export class TrainerEngine {
     }
     let cost = rule?.adrenaline !== undefined ? Math.max(0, -rule.adrenaline) : e.adrenaline < 0 ? -e.adrenaline : 0;
     if (rule?.cost?.cost !== undefined) cost = rule.cost.cost;
+    if (rule?.stages) cost = rule.stages[Math.min(this.stageOf(rule), rule.stages.length) - 1].cost;
     if (rule?.cost?.perStack) {
       const p = rule.cost.perStack;
       cost = Math.max(0, p.base - p.per * Math.min(this.stack(p.stack), p.maxStacks));
@@ -511,9 +542,18 @@ export class TrainerEngine {
       const spec = wielded ? this.steps.find((s, i) => i >= this.index && !this.done.has(i) && s.kind === 'spec' && s.id === wielded) : undefined;
       if (spec) input = { ...input, key: spec.key };
     }
-    const entity = this.catalog.get(input.key);
+    let entity = this.catalog.get(input.key);
     if (!entity) return;
     const tickP = this.tickOf(input.arrival);
+    // the slot fires what it shows: Command X while the spirit lives, Slaughter after Dismember
+    const morph = this.morphOf(input.key, tickP);
+    if (morph && morph.key !== input.key) {
+      const target = this.catalog.get(morph.key);
+      if (target) {
+        input = { ...input, key: morph.key };
+        entity = target;
+      }
+    }
     const wf = this.weaponFailure(entity);
     if (wf) {
       this.wrong++;
@@ -795,7 +835,8 @@ export class TrainerEngine {
     if (!opt.offGcd && this.channel && !this.channel.cancelled && tick < this.channel.endTick) this.cancelChannel();
 
     // cooldown (charges, own, shared)
-    const cdTicks = this.cooldownFor(acting, rule, tick);
+    const stage = this.stageOf(rule);
+    const cdTicks = rule?.stages && stage > 1 ? 0 : this.cooldownFor(acting, rule, tick);
     if (rule?.charges) {
       const list = (this.chargeReady.get(entity.key) ?? []).filter((t) => t > tick);
       if (list.length < rule.charges) list.push(tick + cdTicks);
@@ -876,10 +917,12 @@ export class TrainerEngine {
       if (g.consumes && !g.discount && this.hasBuff(g.consumes)) this.removeBuff(g.consumes);
     }
 
-    // sequences
+    // sequences (staged abilities advance by their current cast and reset after the last one)
     if (rule?.sequence) {
-      if (rule.sequence.last) this.sequences.delete(rule.sequence.group);
-      else this.sequences.set(rule.sequence.group, { openStep: rule.sequence.step + 1, untilTick: tick + rule.sequence.windowTicks });
+      const last = rule.stages ? stage >= rule.stages.length : rule.sequence.last;
+      const step = rule.stages ? stage : rule.sequence.step;
+      if (last) this.sequences.delete(rule.sequence.group);
+      else this.sequences.set(rule.sequence.group, { openStep: step + 1, untilTick: tick + rule.sequence.windowTicks });
     }
 
     // hits / channel

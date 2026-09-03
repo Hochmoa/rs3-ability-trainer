@@ -98,6 +98,7 @@ export const NECROMANCY_RULES: AbilityRule[] = [
   {
     ability: 'spectral-scythe',
     sequence: { group: 'spectral-scythe', step: 1, windowTicks: 25 },
+    stages: [{ cost: 10 }, { cost: 20 }, { cost: 30 }],
     notes: [
       'Three casts in one slot: cast 1 (10%) starts the 25-tick cooldown and opens cast 2 (−20%) for 25 ticks, cast 2 opens cast 3 (−30%); cast 3 or an expired window resets to cast 1 (' + W + 'Spectral_Scythe )',
       'Casts 1 and 2 have a 25% chance per target to grant a Residual Soul; cast 3 deals up to 2x on low-health targets (' + W + 'Spectral_Scythe )',

@@ -7,6 +7,8 @@ import { EntityTip } from './tooltip';
 /** What the train page knows about one slot right now. */
 export interface SlotView {
   entity: Entity | null;
+  /** what the slot shows right now when it differs from the entity (Command Ghost, Slaughter, Spectral Scythe 2) */
+  morph?: { entity: Entity; stage: number } | null;
   keyLabel: string;
   /** null when idle */
   usable: UsableReason | null;
@@ -41,7 +43,7 @@ export interface SlotView {
           <div
             class="slot"
             [class]="'slot' + (s.entity ? ' ' + s.entity.kind : ' empty') + (s.expected ? ' expected' : '') + (s.queued ? ' queued' : '') + (s.usable && s.usable !== 'ok' ? ' unusable ' + s.usable : '') + (s.flash ? ' flash-' + s.flash : '')"
-            [entityTip]="s.entity"
+            [entityTip]="s.morph?.entity ?? s.entity"
             cdkDropList
             cdkDropListSortingDisabled
             [cdkDropListDisabled]="!droppable()"
@@ -50,7 +52,10 @@ export interface SlotView {
             (click)="slotClick.emit($index)"
           >
             @if (s.entity) {
-              <img [src]="s.entity.icon" [alt]="s.entity.name" draggable="false" />
+              <img [src]="(s.morph?.entity ?? s.entity).icon" [alt]="(s.morph?.entity ?? s.entity).name" draggable="false" />
+              @if (s.morph && s.morph.stage > 1 && s.morph.entity.key === s.entity.key) {
+                <span class="stage">{{ s.morph.stage }}</span>
+              }
               @if (s.queued) {
                 <!-- queued: black loading ring, like the game's queue indicator -->
                 <div class="queue-spin"></div>
@@ -190,6 +195,18 @@ export interface SlotView {
       to {
         transform: rotate(360deg);
       }
+    }
+    .stage {
+      position: absolute;
+      top: 1px;
+      right: 2px;
+      font-size: 10px;
+      font-weight: 700;
+      color: #8fd3ff;
+      background: rgba(0, 0, 0, 0.75);
+      border-radius: 3px;
+      padding: 0 3px;
+      pointer-events: none;
     }
     .slot.queued {
       border-color: #ffe27a;
