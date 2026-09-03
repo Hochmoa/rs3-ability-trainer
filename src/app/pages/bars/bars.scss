@@ -65,6 +65,29 @@
   }
 }
 
+/* stacked layout (narrow screens): no sticky list (the editor would scroll underneath), presets as wrapping chips */
+@media (max-width: 800px) {
+  .presets {
+    position: static;
+    padding: 10px 12px;
+  }
+
+  .presets ul {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .presets li {
+    border: 1px solid var(--border);
+    padding: 3px 8px;
+  }
+
+  .presets li .name {
+    flex: none;
+  }
+}
+
 .head {
   display: flex;
   flex-wrap: wrap;
