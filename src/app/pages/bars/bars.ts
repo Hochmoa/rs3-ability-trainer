@@ -91,21 +91,21 @@ export class Bars {
     });
   }
 
-  /** drop from the catalog or from another slot onto slot `target` */
+  /** drop from the catalog onto slot `target` */
   drop(event: CdkDragDrop<unknown>, target: number): void {
-    const from = event.previousContainer.id;
-    const item = event.item.data as Entity | { slot: number };
+    if (event.previousContainer.id !== 'catalog') return;
+    const e = event.item.data as Entity;
     this.mutatePreset((slots) => {
-      if (from === 'catalog') {
-        const e = item as Entity;
-        slots[target] = { kind: e.kind, id: e.id };
-      } else if (from.startsWith('slot-')) {
-        const source = (item as { slot: number }).slot;
-        if (source === target) return;
-        const tmp = slots[target];
-        slots[target] = slots[source];
-        slots[source] = tmp;
-      }
+      slots[target] = { kind: e.kind, id: e.id };
+    });
+  }
+
+  /** ‹ › on a slot: swap with the neighbour */
+  move(slot: number, dir: -1 | 1): void {
+    const j = slot + dir;
+    this.mutatePreset((slots) => {
+      if (j < 0 || j >= slots.length) return;
+      [slots[slot], slots[j]] = [slots[j], slots[slot]];
     });
   }
 

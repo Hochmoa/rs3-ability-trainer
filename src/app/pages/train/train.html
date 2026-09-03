@@ -18,7 +18,7 @@
     </label>
     @if (!running()) {
       <button class="btn btn-primary" (click)="start()" [disabled]="!canStart()">Start</button>
-      <button class="btn" [class.active]="editLayout()" (click)="editLayout.set(!editLayout())" title="Arrange the action bars: drag to reorder, toggle half width">{{ editLayout() ? 'Done' : 'Layout' }}</button>
+      <button class="btn" [class.active]="editLayout()" (click)="editLayout.set(!editLayout())" title="Arrange the action bars: move with the arrows, toggle half width, rearrange slots">{{ editLayout() ? 'Done' : 'Layout' }}</button>
     } @else {
       <button class="btn" (click)="stop()">Stop (Esc)</button>
     }
@@ -93,13 +93,20 @@
     }
   </div>
 
+  <div cdkDropListGroup>
   @if (unreachable().length) {
-    <div class="panel warning">
-      Not on any keybound bar slot:
-      @for (e of unreachable(); track e.key) {
-        <b>{{ e.name }}</b>{{ $last ? '' : ', ' }}
-      }
-      – put them on a preset on the <a routerLink="/bars">Action bars</a> page and bind the slot on <a routerLink="/keybinds">Keybinds</a>.
+    <div class="panel warning missing">
+      <div class="missing-text">
+        Not on any keybound bar slot – drag them onto a slot of the bars below (or use the <a routerLink="/bars">Action bars</a> page). Slots without a key are bound on <a routerLink="/keybinds">Keybinds</a>.
+      </div>
+      <div class="missing-list" cdkDropList id="unreachable" cdkDropListSortingDisabled [cdkDropListEnterPredicate]="never">
+        @for (e of unreachable(); track e.key) {
+          <div class="missing-item" cdkDrag [cdkDragData]="e" [entityTip]="e">
+            <ability-icon [ability]="e" [px]="40" />
+            <span class="missing-name">{{ e.name }}</span>
+          </div>
+        }
+      </div>
     </div>
   }
   @if (unknownSteps()) {
@@ -246,21 +253,35 @@
       </div>
     </div>
 
-    <div class="action-bars" [class.editing]="editLayout() && !running()" cdkDropList [cdkDropListData]="bars()" (cdkDropListDropped)="reorderBars($event)" [cdkDropListDisabled]="!editLayout() || running()">
+    <div class="action-bars" [class.editing]="editLayout() && !running()">
       @for (b of bars(); track b.position) {
-        <div class="bar-cell" [class]="'bar-cell ' + b.shape" cdkDrag [cdkDragDisabled]="!editLayout() || running()">
+        <div class="bar-cell" [class]="'bar-cell ' + b.shape">
           @if (editLayout() && !running()) {
             <div class="bar-tools">
-              <span class="handle" cdkDragHandle title="Drag to move">⋮⋮</span>
+              <span class="arrows">
+                <button class="btn btn-sm" (click)="moveBar(b.position, -1)" [disabled]="$first" title="Move this bar back">←</button>
+                <button class="btn btn-sm" (click)="moveBar(b.position, 1)" [disabled]="$last" title="Move this bar forward">→</button>
+              </span>
               <button class="btn btn-sm" (click)="toggleShape(b.position)" [title]="b.shape === 'wide' ? 'Make half width (2 × 7)' : 'Make full width (1 × 14)'">{{ b.shape === 'wide' ? '½' : '1/1' }}</button>
             </div>
           }
-          <action-bar [position]="b.position" [presetName]="b.presetName" [slots]="b.slots" [compact]="b.shape === 'compact'" (slotClick)="slotClick(b.position, $event)" />
+          <action-bar
+            [position]="b.position"
+            [presetName]="b.presetName"
+            [slots]="b.slots"
+            [compact]="b.shape === 'compact'"
+            [droppable]="!running()"
+            [editable]="editLayout() && !running()"
+            (slotClick)="slotClick(b.position, $event)"
+            (slotDrop)="dropOnSlot(b.position, $event.slot, $event.entity)"
+            (slotMove)="moveSlot(b.position, $event.slot, $event.dir)"
+            (slotClear)="clearSlot(b.position, $event)"
+          />
         </div>
       }
     </div>
     @if (editLayout() && !running()) {
-      <p class="muted small layout-hint">Drag a bar to move it, ½ makes it half as wide with two rows of seven slots – two half bars share one line. Keybinds stay with slot numbers 1–14.</p>
+      <p class="muted small layout-hint">← → move a bar, ½ makes it half as wide with two rows of seven slots – two half bars share one line. Hover a slot for ‹ › to shift it and × to clear it. Keybinds stay with slot numbers 1–14.</p>
     }
 
     <div class="counts">
@@ -284,6 +305,8 @@
         }
       </div>
     }
+  </div>
+
   </div>
 
   @if (finished() && (results().length || (enemy().enabled && prayerStats().attacks))) {

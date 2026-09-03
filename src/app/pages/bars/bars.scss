@@ -145,7 +145,39 @@
   .drag {
     position: absolute;
     inset: 0;
-    cursor: grab;
+
+    .mv {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 14px;
+      padding: 0;
+      border: none;
+      background: rgba(0, 0, 0, 0.75);
+      color: #ffe27a;
+      font: inherit;
+      font-size: 14px;
+      cursor: pointer;
+      display: none;
+
+      &:disabled {
+        color: #666;
+        cursor: default;
+      }
+
+      &.left {
+        left: 0;
+      }
+
+      &.right {
+        right: 0;
+        bottom: 16px;
+      }
+    }
+
+    &:hover .mv {
+      display: block;
+    }
 
     img {
       width: 100%;

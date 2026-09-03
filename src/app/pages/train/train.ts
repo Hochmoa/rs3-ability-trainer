@@ -1,4 +1,4 @@
-import { CdkDrag, CdkDragDrop, CdkDragHandle, CdkDropList, moveItemInArray } from '@angular/cdk/drag-drop';
+import { CdkDrag, CdkDropList, CdkDropListGroup } from '@angular/cdk/drag-drop';
 import { DecimalPipe } from '@angular/common';
 import { Component, HostListener, OnDestroy, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -64,7 +64,7 @@ const EMPTY_PRAYER_STATS: PrayerStats = { ticks: 0, soulSplitTicks: 0, attacks: 
 
 @Component({
   selector: 'app-train',
-  imports: [AbilityIcon, ActionBar, RouterLink, FormsModule, EntityTip, DecimalPipe, CdkDropList, CdkDrag, CdkDragHandle],
+  imports: [AbilityIcon, ActionBar, RouterLink, FormsModule, EntityTip, DecimalPipe, CdkDropListGroup, CdkDropList, CdkDrag],
   templateUrl: './train.html',
   styleUrl: './train.scss',
 })
@@ -210,11 +210,57 @@ export class Train implements OnDestroy {
     });
   });
 
-  /** drag & drop in layout edit mode */
-  reorderBars(event: CdkDragDrop<BarView[]>): void {
+  /** ← → in layout edit mode: move the bar one place back / forward in the display order */
+  moveBar(position: number, dir: -1 | 1): void {
     const order = [...this.layout().order];
-    moveItemInArray(order, event.previousIndex, event.currentIndex);
+    const i = order.indexOf(position);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= order.length) return;
+    [order[i], order[j]] = [order[j], order[i]];
     void this.storage.saveActionBars({ ...this.storage.actionBars(), layout: { order, shape: [...this.layout().shape] } });
+  }
+
+  /** the "missing abilities" list never takes items back */
+  readonly never = (): boolean => false;
+
+  /** edit the preset shown at `pos` for the start weapon; an empty position gets the first unused empty preset */
+  private editPreset(pos: number, mutate: (slots: (RotationStep | null)[]) => void): void {
+    if (this.running()) return;
+    const s = structuredClone(this.storage.actionBars());
+    let id = visiblePresets(s, s.startWeapon)[pos];
+    if (id === null) {
+      const free = s.presets.find((p) => !p.slots.some(Boolean) && !s.positions.includes(p.id));
+      if (!free) return;
+      id = free.id;
+      s.positions[pos] = id;
+    }
+    const preset = s.presets.find((p) => p.id === id);
+    if (!preset) return;
+    mutate(preset.slots);
+    void this.storage.saveActionBars(s);
+  }
+
+  /** a missing ability was dropped onto a slot of the bar at `pos` */
+  dropOnSlot(pos: number, slot: number, entity: Entity): void {
+    if (entity.kind === 'action' || entity.key.startsWith('note:')) return;
+    this.editPreset(pos, (slots) => {
+      slots[slot] = { kind: entity.kind, id: entity.id } as RotationStep;
+    });
+  }
+
+  /** ‹ › on a slot: swap with the neighbour */
+  moveSlot(pos: number, slot: number, dir: -1 | 1): void {
+    const j = slot + dir;
+    if (j < 0 || j >= 14) return;
+    this.editPreset(pos, (slots) => {
+      [slots[slot], slots[j]] = [slots[j], slots[slot]];
+    });
+  }
+
+  clearSlot(pos: number, slot: number): void {
+    this.editPreset(pos, (slots) => {
+      slots[slot] = null;
+    });
   }
 
   toggleShape(position: number): void {

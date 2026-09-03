@@ -49,8 +49,10 @@
               (cdkDropListDropped)="drop($event, $index)"
             >
               @if (e) {
-                <div class="drag" cdkDrag [cdkDragData]="{ slot: $index }" [entityTip]="e">
+                <div class="drag" [entityTip]="e">
                   <img [src]="e.icon" [alt]="e.name" draggable="false" />
+                  <button class="mv left" [disabled]="$first" (click)="move($index, -1); $event.stopPropagation()" title="Move left">‹</button>
+                  <button class="mv right" [disabled]="$last" (click)="move($index, 1); $event.stopPropagation()" title="Move right">›</button>
                   <button class="x" (click)="clear($index); $event.stopPropagation()" title="Remove">×</button>
                 </div>
               }
@@ -58,7 +60,7 @@
             </div>
           }
         </div>
-        <p class="muted small">Drag from the catalog into a slot, drag slots to swap, click an icon in the catalog to fill the first free slot. Keybinds are set per bar position on the <a routerLink="/keybinds">Keybinds</a> page.</p>
+        <p class="muted small">Drag from the catalog into a slot or click an icon in the catalog to fill the first free slot; use ‹ › on a slot to shift it. Keybinds are set per bar position on the <a routerLink="/keybinds">Keybinds</a> page.</p>
       </div>
 
       <div class="panel">
