@@ -8,12 +8,20 @@
     <a routerLink="/loadout" routerLinkActive="active">Loadout</a>
     <a routerLink="/settings" routerLinkActive="active">Settings</a>
     <a routerLink="/explore" routerLinkActive="active">Explore</a>
+    @if (supabase.isStaff()) {
+      <a routerLink="/admin" routerLinkActive="active" class="admin-link">Admin</a>
+    }
     <button class="feedback" type="button" (click)="feedback.show()" title="Report a bug or suggest something">Feedback</button>
     <a routerLink="/account" routerLinkActive="active" class="account">{{ supabase.profile()?.display_name ?? (supabase.user() ? 'Account' : 'Sign in') }}</a>
   </nav>
 </header>
 
 <main>
+  @if (supabase.isBlocked()) {
+    <div class="panel warning blocked">
+      Your account is blocked{{ supabase.profile()?.blocked_reason ? ': ' + supabase.profile()?.blocked_reason : '' }}. You can keep training locally, but nothing is saved online any more.
+    </div>
+  }
   <router-outlet />
 </main>
 

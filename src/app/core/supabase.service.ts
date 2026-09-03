@@ -2,9 +2,14 @@ import { Injectable, computed, signal } from '@angular/core';
 import { AuthError, Session as AuthSession, SupabaseClient, createClient } from '@supabase/supabase-js';
 import { environment } from '../../environments/environment';
 
+export type Role = 'user' | 'moderator' | 'admin';
+
 export interface Profile {
   id: string;
   display_name: string;
+  role: Role;
+  blocked_at: string | null;
+  blocked_reason: string | null;
 }
 
 export const DISPLAY_NAME_RE = /^[A-Za-z0-9 _-]{3,20}$/;
@@ -19,6 +24,9 @@ export class SupabaseService {
   readonly session = signal<AuthSession | null>(null);
   readonly user = computed(() => this.session()?.user ?? null);
   readonly profile = signal<Profile | null>(null);
+  readonly isAdmin = computed(() => this.profile()?.role === 'admin');
+  readonly isStaff = computed(() => this.profile()?.role === 'admin' || this.profile()?.role === 'moderator');
+  readonly isBlocked = computed(() => !!this.profile()?.blocked_at);
   /** true once the initial session lookup finished */
   readonly ready = signal(false);
   /** last auth event, e.g. 'PASSWORD_RECOVERY' lets the callback page show the new-password form */
@@ -44,7 +52,7 @@ export class SupabaseService {
   }
 
   private async loadProfile(id: string): Promise<void> {
-    const { data } = await this.client.from('profiles').select('id, display_name').eq('id', id).maybeSingle();
+    const { data } = await this.client.from('profiles').select('id, display_name, role, blocked_at, blocked_reason').eq('id', id).maybeSingle();
     this.profile.set((data as Profile | null) ?? null);
   }
 
@@ -81,6 +89,12 @@ export class SupabaseService {
   async updatePassword(password: string): Promise<void> {
     const { error } = await this.client.auth.updateUser({ password });
     if (error) throw error;
+  }
+
+  /** re-read the own profile (role / block state may have changed) */
+  async refreshProfile(): Promise<void> {
+    const id = this.user()?.id;
+    if (id) await this.loadProfile(id);
   }
 
   async updateDisplayName(name: string): Promise<void> {

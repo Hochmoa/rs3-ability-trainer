@@ -1,0 +1,114 @@
+import { Injectable, inject } from '@angular/core';
+import { Role, SupabaseService } from './supabase.service';
+
+export interface AdminUser {
+  id: string;
+  display_name: string;
+  role: Role;
+  blocked_at: string | null;
+  blocked_reason: string | null;
+  blocked_by_name: string | null;
+  created_at: string;
+  /** null for moderators (admins only) */
+  email: string | null;
+  email_confirmed_at: string | null;
+  last_sign_in_at: string | null;
+  rotations: number;
+  public_rotations: number;
+  sessions: number;
+  keybinds: number;
+  has_action_bars: boolean;
+}
+
+export interface AdminRotation {
+  id: string;
+  name: string;
+  is_public: boolean;
+  steps: unknown[];
+  copies: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FeedbackRow {
+  id: string;
+  created_at: string;
+  user_id: string | null;
+  display_name: string | null;
+  kind: 'bug' | 'suggestion';
+  message: string;
+  contact: string | null;
+  page: string | null;
+  user_agent: string | null;
+}
+
+/** Admin panel data access. Every call is checked again by the database (RPCs + row level security). */
+@Injectable({ providedIn: 'root' })
+export class AdminService {
+  private supabase = inject(SupabaseService);
+  private get client() {
+    return this.supabase.client;
+  }
+
+  async listUsers(): Promise<AdminUser[]> {
+    const { data, error } = await this.client.rpc('admin_list_users');
+    if (error) throw error;
+    return (data ?? []) as AdminUser[];
+  }
+
+  async blockUser(id: string, reason: string): Promise<void> {
+    const { error } = await this.client.rpc('admin_block_user', { target: id, reason: reason || null });
+    if (error) throw error;
+  }
+
+  async unblockUser(id: string): Promise<void> {
+    const { error } = await this.client.rpc('admin_unblock_user', { target: id });
+    if (error) throw error;
+  }
+
+  async setRole(id: string, role: Role): Promise<void> {
+    const { error } = await this.client.rpc('admin_set_role', { target: id, new_role: role });
+    if (error) throw error;
+  }
+
+  async renameUser(id: string, name: string): Promise<void> {
+    const { error } = await this.client.rpc('admin_rename_user', { target: id, new_name: name });
+    if (error) throw error;
+  }
+
+  async deleteUser(id: string): Promise<void> {
+    const { error } = await this.client.rpc('admin_delete_user', { target: id });
+    if (error) throw error;
+  }
+
+  async listRotations(ownerId: string): Promise<AdminRotation[]> {
+    const { data, error } = await this.client
+      .from('rotations')
+      .select('id, name, is_public, steps, copies, created_at, updated_at')
+      .eq('owner_id', ownerId)
+      .order('updated_at', { ascending: false });
+    if (error) throw error;
+    return (data ?? []) as AdminRotation[];
+  }
+
+  async updateRotation(id: string, patch: { name?: string; is_public?: boolean }): Promise<void> {
+    const { error } = await this.client.from('rotations').update(patch).eq('id', id);
+    if (error) throw error;
+  }
+
+  async deleteRotation(id: string): Promise<void> {
+    const { error } = await this.client.from('rotations').delete().eq('id', id);
+    if (error) throw error;
+  }
+
+  async listFeedback(): Promise<FeedbackRow[]> {
+    const { data, error } = await this.client.from('feedback').select('*').order('created_at', { ascending: false }).limit(200);
+    if (error) throw error;
+    return (data ?? []) as FeedbackRow[];
+  }
+
+  async deleteFeedback(id: string): Promise<void> {
+    const { error } = await this.client.from('feedback').delete().eq('id', id);
+    if (error) throw error;
+  }
+}

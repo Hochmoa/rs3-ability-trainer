@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { Account } from './pages/account/account';
+import { Admin, staffGuard } from './pages/admin/admin';
 import { Bars } from './pages/bars/bars';
 import { AuthCallback } from './pages/auth-callback/auth-callback';
 import { Explore } from './pages/explore/explore';
@@ -19,6 +20,7 @@ export const routes: Routes = [
   { path: 'settings', component: Settings, title: 'Settings – RS3 Ability Trainer' },
   { path: 'explore', component: Explore, title: 'Explore – RS3 Ability Trainer' },
   { path: 'account', component: Account, title: 'Account – RS3 Ability Trainer' },
+  { path: 'admin', component: Admin, canActivate: [staffGuard], title: 'Admin – RS3 Ability Trainer' },
   { path: 'auth/callback', component: AuthCallback, title: 'RS3 Ability Trainer' },
   { path: 'privacy', component: Privacy, title: 'Privacy – RS3 Ability Trainer' },
   { path: '**', redirectTo: '' },
