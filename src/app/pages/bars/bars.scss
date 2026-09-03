@@ -121,10 +121,25 @@
     border-style: solid;
   }
 
-  &.cdk-drop-list-dragging,
+  /* every slot that could take the drop */
   &.cdk-drop-list-receiving {
-    border-color: var(--gold);
-    background: rgba(201, 162, 39, 0.12);
+    border-color: rgba(201, 162, 39, 0.6);
+    background: rgba(201, 162, 39, 0.08);
+  }
+
+  /* the slot under the cursor: this is where the drop lands */
+  &.cdk-drop-list-dragging {
+    border-color: #ffe27a;
+    border-style: solid;
+    background: rgba(255, 226, 122, 0.35);
+    box-shadow: 0 0 0 2px #ffe27a, 0 0 12px #ffe27a;
+    transform: scale(1.08);
+    z-index: 1;
+  }
+
+  /* a slot is a drop target, never a list: the dragged catalog cell must not be laid out inside it */
+  .cdk-drag-placeholder {
+    display: none;
   }
 
   .drag {
@@ -208,8 +223,6 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
   gap: 6px;
-  max-height: 340px;
-  overflow-y: auto;
 }
 
 .cell {

@@ -43,6 +43,7 @@
               class="slot"
               [class.filled]="!!e"
               cdkDropList
+              cdkDropListSortingDisabled
               [id]="'slot-' + $index"
               [cdkDropListConnectedTo]="slotIds()"
               (cdkDropListDropped)="drop($event, $index)"
