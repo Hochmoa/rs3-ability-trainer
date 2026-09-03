@@ -32,9 +32,9 @@ export function keyName(code: string): string {
 export function keybindLabel(k: Keybind | null | undefined): string {
   if (!k) return '';
   const parts: string[] = [];
-  if (k.ctrl) parts.push('Ctrl');
-  if (k.shift) parts.push('Shift');
-  if (k.alt) parts.push('Alt');
+  if (k.ctrl) parts.push('c');
+  if (k.shift) parts.push('s');
+  if (k.alt) parts.push('a');
   parts.push(keyName(k.code));
   return parts.join('+');
 }
