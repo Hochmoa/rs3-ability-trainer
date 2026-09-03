@@ -159,7 +159,7 @@ export class Train implements OnDestroy {
   readonly queuedKey = signal<string | null>(null);
   readonly flashKey = signal<{ key: string; kind: 'fired' | 'wrong' } | null>(null);
   /** per visible entity: usability + own cooldown, refreshed every frame */
-  readonly slotState = signal<Map<string, { usable: UsableReason; cooldownS: number }>>(new Map());
+  readonly slotState = signal<Map<string, { usable: UsableReason; cooldownS: number; cooldownPhase: number }>>(new Map());
   /** active prayers as entities (icon + tooltip) */
   readonly activePrayers = signal<Entity[]>([]);
   readonly prayerStats = signal<PrayerStats>({ ...EMPTY_PRAYER_STATS });
@@ -204,6 +204,7 @@ export class Train implements OnDestroy {
           keyLabel: keybindLabel(s.slotKeybinds[pos]?.[i]),
           usable: running && entity ? st?.usable ?? 'ok' : null,
           cooldownS: running ? st?.cooldownS ?? 0 : 0,
+          cooldownPhase: running ? st?.cooldownPhase ?? 1 : 1,
           gcdPhase: running && isGcdAbility ? gcd : 1,
           gcdRemainingMs: running && isGcdAbility ? gcdMs : 0,
           expected: running && !!entity && entity.key === expected,
@@ -445,13 +446,19 @@ export class Train implements OnDestroy {
     }
     // usability of everything on the visible bars
     const tick = e.currentTick(now);
-    const state = new Map<string, { usable: UsableReason; cooldownS: number }>();
+    const state = new Map<string, { usable: UsableReason; cooldownS: number; cooldownPhase: number }>();
     for (const key of e.catalog.keys()) {
       const cd = e.cooldownLeft(key, tick);
       // an ability on cooldown keeps its colour (the sweep + seconds show the cooldown); only missing
       // adrenaline / resources / gear grey it out, like in the game
       const usable = e.usable(key, tick);
-      state.set(key, { usable: usable === 'cooldown' ? 'ok' : usable, cooldownS: cd > 0 ? (e.tickTime(tick + cd) - now) / 1000 : 0 });
+      const total = e.catalog.get(key)?.cooldownTicks ?? 0;
+      const remainingMs = cd > 0 ? e.tickTime(tick + cd) - now : 0;
+      state.set(key, {
+        usable: usable === 'cooldown' ? 'ok' : usable,
+        cooldownS: remainingMs / 1000,
+        cooldownPhase: cd > 0 && total > 0 ? Math.max(0, Math.min(1, 1 - remainingMs / (total * TICK_MS))) : 1,
+      });
     }
     this.slotState.set(state);
     if (e.state !== 'running') {
