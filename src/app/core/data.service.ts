@@ -1,8 +1,9 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { forkJoin } from 'rxjs';
+import { ruleFor } from '../engine/rules';
 import { EngineBuff, EngineEntity } from '../engine/trainer-engine';
-import { ACTIONS, Ability, Action, Buff, EntityKind, Prayer, RotationStep, SPEC_KEY, Spec, Special, Weapon, entityKey, isStyle4 } from './models';
+import { ACTIONS, Ability, Action, Buff, EntityKind, Perk, Prayer, RotationStep, SPEC_KEY, SetEffect, Special, Weapon, WeaponSpec, entityKey } from './models';
 
 /** Anything that can sit in a rotation / get a keybind, in one shape for lists and tooltips. */
 export interface Entity {
@@ -16,17 +17,10 @@ export interface Entity {
   ability?: Ability;
   prayer?: Prayer;
   special?: Special;
+  /** weapon item (weapons.json) – a rotation step "weapon:<id>" wields it */
   weapon?: Weapon;
-  spec?: Spec;
+  spec?: WeaponSpec;
   action?: Action;
-}
-
-/** A weapon from the wiki special-attack table (Omni guard, ...): used to resolve PvME gear aliases. */
-interface Gear {
-  id: string;
-  name: string;
-  icon: string;
-  specId: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -38,20 +32,24 @@ export class DataService {
   readonly prayers = signal<Prayer[]>([]);
   readonly specials = signal<Special[]>([]);
   readonly weapons = signal<Weapon[]>([]);
-  readonly specs = signal<Spec[]>([]);
-  readonly gear = signal<Gear[]>([]);
+  readonly specs = signal<WeaponSpec[]>([]);
+  readonly perks = signal<Perk[]>([]);
+  readonly setEffects = signal<SetEffect[]>([]);
   /** PvME emoji alias → entity key ("deathskulls" → "ability:death-skulls", "omniguard" → "gear:omni-guard") */
   readonly pvmeAliases = signal<Record<string, string>>({});
   readonly loaded = signal(false);
 
   readonly buffById = computed(() => new Map(this.buffs().map((b) => [b.id, b])));
+  readonly weaponById = computed(() => new Map(this.weapons().map((w) => [w.id, w])));
   readonly specById = computed(() => new Map(this.specs().map((s) => [s.id, s])));
+  readonly perkById = computed(() => new Map(this.perks().map((p) => [p.id, p])));
+  readonly setEffectById = computed(() => new Map(this.setEffects().map((s) => [s.id, s])));
   readonly entities = computed<Entity[]>(() => [
     ...this.abilities().map<Entity>((a) => ({ key: entityKey('ability', a.id), kind: 'ability', id: a.id, name: a.name, icon: a.icon, group: a.style, ability: a })),
     ...this.prayers().map<Entity>((p) => ({ key: entityKey('prayer', p.id), kind: 'prayer', id: p.id, name: p.name, icon: p.icon, group: p.book, prayer: p })),
     ...this.specials().map<Entity>((s) => ({ key: entityKey('special', s.id), kind: 'special', id: s.id, name: s.name, icon: s.icon, group: 'Special', special: s })),
-    ...this.weapons().map<Entity>((w) => ({ key: entityKey('weapon', w.id), kind: 'weapon', id: w.id, name: w.name, icon: w.icon, group: 'Weapons', weapon: w })),
-    ...this.specs().map<Entity>((s) => ({ key: entityKey('spec', s.id), kind: 'spec', id: s.id, name: s.name, icon: s.icon, group: 'Specs', spec: s })),
+    ...this.weapons().map<Entity>((w) => ({ key: entityKey('weapon', w.id), kind: 'weapon', id: w.id, name: w.name, icon: w.icon ?? '', group: 'Weapons', weapon: w })),
+    ...this.specs().map<Entity>((s) => ({ key: entityKey('spec', s.id), kind: 'spec', id: s.id, name: s.name, icon: s.weaponIcons[0] ?? 'assets/abilities/weapon-special-attack.png', group: 'Specs', spec: s })),
     ...ACTIONS.map<Entity>((a) => ({ key: entityKey('action', a.id), kind: 'action', id: a.id, name: a.name, icon: a.icon, group: 'Actions', action: a })),
   ]);
   readonly byKey = computed(() => new Map(this.entities().map((e) => [e.key, e])));
@@ -63,8 +61,9 @@ export class DataService {
       prayers: this.http.get<Prayer[]>('data/prayers.json'),
       specials: this.http.get<Special[]>('data/specials.json'),
       weapons: this.http.get<Weapon[]>('data/weapons.json'),
-      specs: this.http.get<Spec[]>('data/specs.json'),
-      gear: this.http.get<Gear[]>('data/gear.json'),
+      specs: this.http.get<WeaponSpec[]>('data/specs.json'),
+      perks: this.http.get<Perk[]>('data/perks.json'),
+      setEffects: this.http.get<SetEffect[]>('data/set-effects.json'),
       aliases: this.http.get<Record<string, string>>('data/pvme-aliases.json'),
     }).subscribe({
       next: (d) => {
@@ -74,7 +73,8 @@ export class DataService {
         this.specials.set(d.specials);
         this.weapons.set(d.weapons);
         this.specs.set(d.specs);
-        this.gear.set(d.gear);
+        this.perks.set(d.perks);
+        this.setEffects.set(d.setEffects);
         this.pvmeAliases.set(d.aliases);
         this.loaded.set(true);
       },
@@ -96,20 +96,25 @@ export class DataService {
     return this.byKey().get(key)?.name ?? key;
   }
 
+  /** Buff icon for a rule buff id (via the wiki buff id in rules-buffs) or a wiki buff id. */
+  buffIcon(wikiId: number | undefined): string | null {
+    if (wikiId === undefined) return null;
+    const b = this.buffById().get(wikiId);
+    return b?.iconSelf ?? b?.iconTarget ?? null;
+  }
+
   /**
-   * Resolves a PvME alias to rotation steps. Gear aliases ("omniguard") become "switch to that
-   * weapon's style" + the weapon's special attack; "spec" alone is the generic special-attack slot.
+   * Resolves a PvME alias to rotation steps. Gear aliases ("omniguard") become "wield that weapon" +
+   * its special attack; "spec" alone is the generic special-attack slot.
    */
   resolvePvmeAlias(alias: string): RotationStep[] | null {
     const key = this.pvmeAliases()[alias];
     if (!key) return null;
     if (key.startsWith('gear:')) {
-      const g = this.gear().find((x) => x.id === key.slice(5));
-      const spec = g && this.specById().get(g.specId);
-      if (!spec) return null;
-      const steps: RotationStep[] = [];
-      if (isStyle4(spec.style)) steps.push({ kind: 'weapon', id: spec.style.toLowerCase() });
-      steps.push({ kind: 'spec', id: spec.id });
+      const w = this.weaponById().get(key.slice(5));
+      if (!w) return null;
+      const steps: RotationStep[] = [{ kind: 'weapon', id: w.id }];
+      if (w.spec) steps.push({ kind: 'spec', id: w.spec });
       return steps;
     }
     if (key === 'action:weapon-special-attack') return [{ kind: 'ability', id: 'weapon-special-attack' }];
@@ -117,72 +122,67 @@ export class DataService {
     return e ? [{ kind: e.kind, id: e.id }] : null;
   }
 
+  private dataBuffs(ids: number[], durationTicks: number | null): EngineBuff[] {
+    return ids
+      .map((id) => this.buffById().get(id))
+      .filter((b): b is Buff => !!b)
+      .map<EngineBuff>((b) => ({
+        id: 'buff:' + b.id,
+        name: b.name,
+        kind: b.kind,
+        on: b.kind === 'Debuff' && b.iconTarget ? 'target' : b.iconTarget && !b.iconSelf ? 'target' : 'self',
+        icon: b.iconSelf ?? b.iconTarget,
+        durationTicks: durationTicks ?? b.durationTicks ?? GCD_DEFAULT_BUFF_TICKS,
+      }));
+  }
+
   /** Engine view of an entity: numbers the simulation needs. */
   toEngineEntity(e: Entity): EngineEntity {
     if (e.ability) {
       const a = e.ability;
+      const rule = ruleFor(a.id);
       return {
         key: e.key,
         kind: 'ability',
+        id: a.id,
         name: a.name,
         icon: a.icon,
-        gcd: a.triggersGcd,
-        abilityType: a.type,
+        gcd: a.triggersGcd && !rule?.offGcd,
         style: a.style,
-        equipment: a.equipment,
+        abilityType: a.type,
         adrenaline: a.adrenaline ?? 0,
         cooldownTicks: a.cooldownTicks ?? 0,
-        buffs: a.buffs
-          .map((id) => this.buffById().get(id))
-          .filter((b): b is Buff => !!b)
-          .map<EngineBuff>((b) => ({
-            id: 'buff:' + b.id,
-            name: b.name,
-            kind: b.kind,
-            on: b.kind === 'Debuff' && b.iconTarget ? 'target' : b.iconTarget && !b.iconSelf ? 'target' : 'self',
-            icon: b.iconSelf ?? b.iconTarget,
-            durationTicks: a.durationTicks ?? b.durationTicks ?? GCD_DEFAULT_BUFF_TICKS,
-          })),
+        buffs: this.dataBuffs(a.buffs, a.durationTicks),
       };
     }
     if (e.prayer) {
       const p = e.prayer;
+      return { key: e.key, kind: 'prayer', id: p.id, name: p.name, icon: p.icon, gcd: false, adrenaline: 0, cooldownTicks: 0, buffs: [] };
+    }
+    if (e.weapon) {
+      const w = e.weapon;
       return {
         key: e.key,
-        kind: 'prayer',
-        name: p.name,
-        icon: p.icon,
+        kind: 'weapon',
+        id: w.id,
+        name: w.name,
+        icon: e.icon,
         gcd: false,
         adrenaline: 0,
         cooldownTicks: 0,
         buffs: [],
+        weapon: { id: w.id, slot: w.slot === '2h' ? '2h' : w.slot === 'main' ? 'main' : 'off', style: w.style },
       };
     }
-    if (e.weapon) {
-      return { key: e.key, kind: 'weapon', name: e.name, icon: e.icon, gcd: false, adrenaline: 0, cooldownTicks: 0, buffs: [], weapon: { style: e.weapon.style } };
-    }
-    if (e.spec) {
-      const s = e.spec;
-      return {
-        key: e.key,
-        kind: 'spec',
-        name: s.name,
-        icon: s.icon,
-        gcd: true,
-        abilityType: 'Special',
-        style: s.style,
-        adrenaline: s.adrenaline ?? 0,
-        cooldownTicks: s.cooldownTicks ?? 0,
-        buffs: [],
-      };
-    }
+    if (e.spec) return this.specEntity(e.spec);
     if (e.action) {
-      return { key: e.key, kind: 'action', name: e.name, icon: e.icon, gcd: false, adrenaline: 0, cooldownTicks: 0, buffs: [] };
+      return { key: e.key, kind: 'action', id: e.id, name: e.name, icon: e.icon, gcd: false, adrenaline: 0, cooldownTicks: 0, buffs: [] };
     }
     const s = e.special!;
     return {
       key: e.key,
       kind: 'special',
+      id: s.id,
       name: s.name,
       icon: s.icon,
       gcd: false,
@@ -191,6 +191,26 @@ export class DataService {
       sharedCooldown: s.sharedCooldown || undefined,
       adrenalineOverTime: s.adrenalineOverTime > 0 ? { amount: s.adrenalineOverTime, ticks: s.overTimeTicks } : undefined,
       buffs: s.debuff ? [{ id: e.key, name: s.debuff.name, kind: 'Debuff', on: 'target', icon: s.debuff.icon, durationTicks: s.debuff.durationTicks }] : [],
+    };
+  }
+
+  /** Engine view of a weapon special attack (Weapon Special Attack / Essence of Finality steps and "spec:<id>" steps). */
+  specEntity(spec: WeaponSpec): EngineEntity {
+    const hits = spec.damageMin !== null ? [0] : undefined;
+    return {
+      key: 'spec:' + spec.id,
+      kind: 'spec',
+      id: spec.id,
+      name: spec.name,
+      icon: spec.weaponIcons[0] ?? 'assets/abilities/weapon-special-attack.png',
+      gcd: !spec.ignoresGcd,
+      style: spec.style,
+      abilityType: 'Special',
+      adrenaline: -(spec.adrenaline ?? 0),
+      cooldownTicks: spec.cooldownTicks,
+      buffs: this.dataBuffs(spec.buffs.map((b) => b.id).filter((id) => id >= 0), spec.durationTicks),
+      hits,
+      channel: spec.channelled ? { ticks: 3, hits: [1, 2, 3] } : undefined,
     };
   }
 }

@@ -2,12 +2,12 @@ import { Component, HostListener, computed, inject, signal } from '@angular/core
 import { RouterLink } from '@angular/router';
 import { DataService, Entity } from '../../core/data.service';
 import { keybindFromEvent, keybindKey, keybindLabel } from '../../core/keybind.util';
-import { ACTIONS, BAR_POSITION_NAMES, Keybind, STYLES4, Style4 } from '../../core/models';
+import { ACTIONS, BAR_POSITION_NAMES, Keybind, loadoutWeapons } from '../../core/models';
 import { StorageService } from '../../core/storage.service';
 import { ToastService } from '../../shared/toast';
 import { EntityTip } from '../../shared/tooltip';
 
-type Target = { pos: number; slot: number } | { weapon: Style4 } | { action: string };
+type Target = { pos: number; slot: number } | { weapon: string } | { action: string };
 
 /** Keybinds belong to bar position + slot (like in the game) plus one key per weapon switch. */
 @Component({
@@ -21,7 +21,6 @@ export class Keybinds {
   readonly data = inject(DataService);
 
   readonly POSITIONS = BAR_POSITION_NAMES;
-  readonly STYLES4 = STYLES4;
   readonly ACTIONS = ACTIONS;
   readonly setup = this.storage.actionBars;
   readonly capturing = signal<Target | null>(null);
@@ -39,9 +38,9 @@ export class Keybinds {
         if (kb) m.set(keybindKey(kb), [...(m.get(keybindKey(kb)) ?? []), this.POSITIONS[pos] + ' slot ' + (slot + 1)]);
       }),
     );
-    for (const st of STYLES4) {
-      const kb = s.weaponKeybinds[st];
-      if (kb) m.set(keybindKey(kb), [...(m.get(keybindKey(kb)) ?? []), st + ' weapon']);
+    for (const w of this.carried()) {
+      const kb = s.weaponKeybinds[w.id];
+      if (kb) m.set(keybindKey(kb), [...(m.get(keybindKey(kb)) ?? []), w.name]);
     }
     for (const a of ACTIONS) {
       const kb = s.actionKeybinds?.[a.id];
@@ -66,12 +65,15 @@ export class Keybinds {
     return keybindLabel(this.setup().slotKeybinds[pos]?.[slot]);
   }
 
-  weaponLabel(style: Style4): string {
-    return keybindLabel(this.setup().weaponKeybinds[style]);
-  }
+  /** weapons of the active loadout (in hand + switches) */
+  readonly carried = computed<Entity[]>(() =>
+    loadoutWeapons(this.storage.loadout())
+      .map((id) => this.data.get('weapon:' + id))
+      .filter((e): e is Entity => !!e),
+  );
 
-  weaponIcon(style: Style4): string {
-    return this.data.get('weapon:' + style.toLowerCase())?.icon ?? '';
+  weaponLabel(id: string): string {
+    return keybindLabel(this.setup().weaponKeybinds[id]);
   }
 
   conflictOf(kb: Keybind | null, self: string): string[] {
@@ -83,8 +85,8 @@ export class Keybinds {
     return this.conflictOf(this.setup().slotKeybinds[pos]?.[slot] ?? null, this.POSITIONS[pos] + ' slot ' + (slot + 1));
   }
 
-  weaponConflicts(style: Style4): string[] {
-    return this.conflictOf(this.setup().weaponKeybinds[style], style + ' weapon');
+  weaponConflicts(w: Entity): string[] {
+    return this.conflictOf(this.setup().weaponKeybinds[w.id] ?? null, w.name);
   }
 
   actionLabel(id: string): string {
@@ -124,7 +126,7 @@ export class Keybinds {
   }
 
   private put(s: ReturnType<typeof this.setup>, t: Target, kb: Keybind | null): void {
-    if ('weapon' in t) s.weaponKeybinds[t.weapon] = kb;
+    if ('weapon' in t) s.weaponKeybinds = { ...s.weaponKeybinds, [t.weapon]: kb };
     else if ('action' in t) s.actionKeybinds = { ...(s.actionKeybinds ?? {}), [t.action]: kb };
     else s.slotKeybinds[t.pos][t.slot] = kb;
   }
@@ -144,9 +146,9 @@ export class Keybinds {
         if (kb && keybindKey(kb) === key && !this.sameTarget(t, self)) return t;
       }
     }
-    for (const st of STYLES4) {
-      const kb = s.weaponKeybinds[st];
-      const t: Target = { weapon: st };
+    for (const w of this.carried()) {
+      const kb = s.weaponKeybinds[w.id];
+      const t: Target = { weapon: w.id };
       if (kb && keybindKey(kb) === key && !this.sameTarget(t, self)) return t;
     }
     for (const a of ACTIONS) {

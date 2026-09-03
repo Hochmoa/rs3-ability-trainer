@@ -1,14 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_ENEMY, DEFAULT_LOADOUT, EnemyConfig } from '../core/models';
+import { DEFAULT_ENEMY, EnemyConfig } from '../core/models';
+import { defaultResolvedLoadout } from './loadout-resolved';
 import { EngineConfig, EngineEntity, TrainerEngine } from './trainer-engine';
 
-const base: EngineConfig = { pingMs: 0, jitterMs: 0, abilityQueueing: false, loop: false, loadout: { ...DEFAULT_LOADOUT }, prayerBook: 'Curses' };
+const base: EngineConfig = { pingMs: 0, jitterMs: 0, abilityQueueing: false, loop: false, loadout: defaultResolvedLoadout(), prayerBook: 'Curses' };
 
 function ability(key: string): EngineEntity {
-  return { key, kind: 'ability', name: key, icon: '', gcd: true, abilityType: 'Basic', adrenaline: 9, cooldownTicks: 0, buffs: [], style: 'Defence', equipment: 'Any' };
+  return { key, kind: 'ability', id: key, name: key, icon: '', gcd: true, abilityType: 'Basic', adrenaline: 9, cooldownTicks: 0, buffs: [], style: 'Defence' };
 }
 function prayer(id: string): EngineEntity {
-  return { key: 'prayer:' + id, kind: 'prayer', name: id, icon: '', gcd: false, adrenaline: 0, cooldownTicks: 0, buffs: [] };
+  return { key: 'prayer:' + id, kind: 'prayer', id, name: id, icon: '', gcd: false, adrenaline: 0, cooldownTicks: 0, buffs: [] };
 }
 
 const A = ability('a');

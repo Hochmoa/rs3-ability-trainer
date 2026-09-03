@@ -42,22 +42,25 @@
 
 <div class="panel">
   <h3>Weapon switches</h3>
-  <p class="muted small">One key per weapon style. Switching is instant and does not use the global cooldown.</p>
+  <p class="muted small">One key per weapon of the active <a routerLink="/loadout">loadout</a> (in hand and carried switches). Switching is instant and does not use the global cooldown.</p>
+  @if (!carried().length) {
+    <p class="muted small">No weapons in the loadout yet.</p>
+  }
   <div class="weapons">
-    @for (st of STYLES4; track st) {
+    @for (w of carried(); track w.id) {
       <button
         class="weapon"
-        [class.capturing]="isCapturing({ weapon: st })"
-        [class.conflict]="weaponConflicts(st).length > 0"
-        [class.flash]="isFlashing({ weapon: st })"
-        (click)="capture({ weapon: st })"
-        [title]="weaponConflicts(st).length ? 'Also used by ' + weaponConflicts(st).join(', ') : ''"
+        [class.capturing]="isCapturing({ weapon: w.id })"
+        [class.conflict]="weaponConflicts(w).length > 0"
+        (click)="capture({ weapon: w.id })"
+        [title]="weaponConflicts(w).length ? 'Also used by ' + weaponConflicts(w).join(', ') : w.name"
+        [entityTip]="w"
       >
-        <img [src]="weaponIcon(st)" [alt]="st" />
-        <span class="name">{{ st }}</span>
-        <span class="key" [class.waiting]="isCapturing({ weapon: st })">{{ isCapturing({ weapon: st }) ? 'Press a key…' : weaponLabel(st) || '–' }}</span>
-        @if (weaponLabel(st)) {
-          <span class="clear" (click)="clear({ weapon: st }); $event.stopPropagation()" title="Clear">×</span>
+        <img [src]="w.icon" [alt]="w.name" />
+        <span class="name">{{ w.name }}</span>
+        <span class="key" [class.waiting]="isCapturing({ weapon: w.id })">{{ isCapturing({ weapon: w.id }) ? 'Press a key…' : weaponLabel(w.id) || '–' }}</span>
+        @if (weaponLabel(w.id)) {
+          <span class="clear" (click)="clear({ weapon: w.id }); $event.stopPropagation()" title="Clear">×</span>
         }
       </button>
     }

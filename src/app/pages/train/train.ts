@@ -5,9 +5,12 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DataService, Entity, SPEC_KEY } from '../../core/data.service';
 import { keybindFromEvent, keybindKey, keybindLabel } from '../../core/keybind.util';
-import { AttackPattern, BAR_POSITIONS, BarShape, barLayout, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, PrayerStats, STYLES4, StepResult, Style4, entityKey, visiblePresets, RotationStep } from '../../core/models';
+import { AttackPattern, BAR_POSITIONS, BarShape, barLayout, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, PrayerStats, STYLES4, StepResult, Style4, WeaponSpec, entityKey, isStyle4, loadoutWeapons, visiblePresets, RotationStep } from '../../core/models';
 import { StorageService } from '../../core/storage.service';
-import { ActiveBuff, EngineEntity, EngineEvent, GCD_TICKS, TICK_MS, TrainerEngine, UsableReason } from '../../engine/trainer-engine';
+import { resolveLoadout } from '../../engine/loadout-resolver';
+import { BUFF_BY_ID, ruleFor } from '../../engine/rules';
+import { STACK_NAMES, StackId } from '../../engine/rules-model';
+import { ActiveBuff, EngineEntity, EngineEvent, GCD_TICKS, TICK_MS, TrainerEngine, UsableReason, Wield } from '../../engine/trainer-engine';
 import { SOUL_SPLIT } from '../../engine/prayer-rules';
 import { AbilityIcon, IconState } from '../../shared/ability-icon';
 import { ActionBar, SlotView } from '../../shared/action-bar';
@@ -38,6 +41,13 @@ interface BuffView {
   icon: string | null;
   kind: 'Buff' | 'Debuff';
   remainingS: number | null;
+  stacks: number;
+}
+
+interface StackView {
+  id: StackId;
+  name: string;
+  value: number;
 }
 
 interface BarView {
@@ -97,6 +107,34 @@ export class Train implements OnDestroy {
   );
   readonly unknownSteps = computed(() => (this.data.loaded() ? this.stepEntities().filter((e) => !e).length : 0));
 
+  /** the active loadout resolved for the weapons in hand at the start */
+  readonly resolved = computed(() => resolveLoadout(this.storage.loadout(), this.loadoutData()));
+  readonly loadoutData = computed(() => ({
+    weaponById: this.data.weaponById(),
+    specById: this.data.specById(),
+    perkById: this.data.perkById(),
+    setEffectById: this.data.setEffectById(),
+    specEntity: (s: WeaponSpec) => this.data.specEntity(s),
+  }));
+  /** steps the active loadout cannot perform (no 2h, no shield, no spec weapon ...) */
+  readonly equipmentWarnings = computed<string[]>(() => {
+    if (!this.data.loaded()) return [];
+    const probe = new TrainerEngine([], new Map(), { ...this.storage.settings(), loadout: this.resolved() });
+    probe.start(0);
+    const out = new Set<string>();
+    for (const e of this.stepEntities()) {
+      if (!e?.ability) continue;
+      const rule = ruleFor(e.ability.id);
+      for (const r of rule?.requires ?? []) {
+        if (r.equipment) {
+          const fail = probe.requirementFailure(this.data.toEngineEntity(e), 0);
+          if (fail && fail === r.text) out.add(e.name + ': ' + r.text);
+        }
+      }
+    }
+    return [...out];
+  });
+
   /** entity key → where it can be pressed ("Main bar 3" / "Magic weapon key"), for all presets a position can show */
   readonly reachable = computed(() => {
     const s = this.storage.actionBars();
@@ -138,6 +176,15 @@ export class Train implements OnDestroy {
     return this.stepEntities().filter((e): e is Entity => !!e && !e.key.startsWith('note:') && !r.has(e.key) && !seen.has(e.key) && !!seen.add(e.key));
   });
   readonly canStart = computed(() => !!this.rotation() && this.stepEntities().length > 0 && this.unreachable().length === 0 && this.unknownSteps() === 0);
+  readonly styleStacks = computed<StackId[]>(() => {
+    const styles = new Set(this.stepEntities().map((e) => e?.ability?.style).filter((s): s is NonNullable<typeof s> => !!s));
+    const out: StackId[] = [];
+    if (styles.has('Melee')) out.push('bloodlust');
+    if (styles.has('Necromancy')) out.push('necrosis', 'residual-souls');
+    const ids = new Set(this.stepEntities().map((e) => e?.ability?.id));
+    if (ids.has('storm-shards') || ids.has('shatter')) out.push('storm-shards');
+    return out;
+  });
 
   // live state
   readonly running = signal(false);
@@ -149,8 +196,21 @@ export class Train implements OnDestroy {
   readonly doneSteps = signal<Set<number>>(new Set());
   readonly adrenaline = signal(0);
   readonly maxAdrenaline = signal(100);
+  /** ids of the weapons in hand while training */
+  readonly wielded = signal<string[]>([]);
+  /** combat style of the wielded weapon (bars are bound per style) */
   readonly weapon = signal<Style4>('Melee');
+  /** style of the loadout's starting weapon */
+  readonly startStyle = computed<Style4>(() => {
+    const l = this.storage.loadout();
+    const w = this.data.weaponById().get(l.twoHand ?? l.mainHand ?? '');
+    return w && isStyle4(w.style) ? w.style : 'Melee';
+  });
   readonly buffs = signal<BuffView[]>([]);
+  readonly stacks = signal<StackView[]>([]);
+  /** entity key → remaining internal cooldown ms */
+  readonly cooldowns = signal<Record<string, { remainingMs: number; totalMs: number }>>({});
+  readonly channelling = signal<string | null>(null);
   readonly iconState = signal<IconState>('idle');
   readonly feedback = signal<Feedback | null>(null);
   readonly counts = signal({ perfect: 0, late: 0, early: 0, wrong: 0, missed: 0 });
@@ -182,7 +242,7 @@ export class Train implements OnDestroy {
   /** the five bars for the wielded weapon */
   readonly bars = computed<BarView[]>(() => {
     const s = this.storage.actionBars();
-    const style = this.running() ? this.weapon() : s.startWeapon;
+    const style = this.running() ? this.weapon() : this.startStyle();
     const shown = visiblePresets(s, style);
     const state = this.slotState();
     const running = this.running();
@@ -233,7 +293,7 @@ export class Train implements OnDestroy {
   private editPreset(pos: number, mutate: (slots: (RotationStep | null)[]) => void): void {
     if (this.running()) return;
     const s = structuredClone(this.storage.actionBars());
-    let id = visiblePresets(s, s.startWeapon)[pos];
+    let id = visiblePresets(s, this.startStyle())[pos];
     if (id === null) {
       const free = s.presets.find((p) => !p.slots.some(Boolean) && !s.positions.includes(p.id));
       if (!free) return;
@@ -335,15 +395,27 @@ export class Train implements OnDestroy {
   }
 
   name(key: string): string {
+    if (key.startsWith('spec:')) return this.data.specById().get(key.slice(5))?.name ?? key;
     return this.data.name(key);
   }
 
-  weaponKey(style: Style4): string {
-    return keybindLabel(this.storage.actionBars().weaponKeybinds[style]);
+  /** carried weapons of the active loadout with their switch keys */
+  readonly carriedWeapons = computed(() =>
+    loadoutWeapons(this.storage.loadout())
+      .map((id) => this.data.get('weapon:' + id))
+      .filter((e): e is Entity => !!e)
+      .map((e) => ({ entity: e, key: keybindLabel(this.storage.actionBars().weaponKeybinds[e.id]) })),
+  );
+
+  /** cooldown overlay for a queue slot: phase 1 = ready */
+  cdPhase(slot: QueueSlot): number {
+    const cd = this.cooldowns()[slot.entity.key];
+    if (!cd || cd.remainingMs <= 0 || cd.totalMs <= 0) return 1;
+    return 1 - cd.remainingMs / cd.totalMs;
   }
 
-  weaponIcon(style: Style4): string {
-    return this.data.get('weapon:' + style.toLowerCase())?.icon ?? '';
+  cdRemaining(slot: QueueSlot): number {
+    return this.cooldowns()[slot.entity.key]?.remainingMs ?? 0;
   }
 
   start(): void {
@@ -353,7 +425,7 @@ export class Train implements OnDestroy {
     const rotSteps = rot.steps;
     const steps = (this.stepEntities() as Entity[]).map((e, i) => {
       const s = rotSteps[i];
-      if (s.kind === 'note') return { key: e.key, kind: 'action' as const, name: e.name, icon: e.icon, gcd: false, adrenaline: 0, cooldownTicks: 0, buffs: [], isNote: true };
+      if (s.kind === 'note') return { key: e.key, kind: 'action' as const, id: e.id, name: e.name, icon: e.icon, gcd: false, adrenaline: 0, cooldownTicks: 0, buffs: [], isNote: true };
       const ee = { ...this.data.toEngineEntity(e) };
       if (s.offsetTicks !== undefined) ee.offsetTicks = s.offsetTicks;
       else if (s.sameTick) ee.offsetTicks = 0;
@@ -370,10 +442,12 @@ export class Train implements OnDestroy {
     for (const st of STYLES4) add('weapon:' + st.toLowerCase());
     for (const s of steps) catalog.set(s.key, s);
     const enemy = this.enemy();
+    const l = this.storage.loadout();
     this.engine = new TrainerEngine(steps, catalog, {
       ...this.storage.settings(),
-      loadout: { ...this.storage.loadout() },
-      weaponSetup: { start: setup.startWeapon, types: { ...setup.weapons } },
+      loadout: this.resolved(),
+      startWield: { mainHand: l.mainHand, offHand: l.offHand, twoHand: l.twoHand },
+      resolveWield: (w: Wield) => resolveLoadout({ ...l, ...w }, this.loadoutData()),
       prayerBook: this.prayerBook(),
       enemy: enemy.enabled ? { ...enemy, styles: [...enemy.styles] } : undefined,
     });
@@ -383,11 +457,17 @@ export class Train implements OnDestroy {
     this.prayerStats.set({ ...EMPTY_PRAYER_STATS });
     this.incoming.set(null);
     this.attackLog.set([]);
+    this.stacks.set([]);
+    this.cooldowns.set({});
+    this.channelling.set(null);
     this.startedAt = Date.now();
     this.results.set([]);
     this.counts.set({ perfect: 0, late: 0, early: 0, wrong: 0, missed: 0 });
     this.doneSteps.set(new Set());
     this.buffs.set([]);
+    this.stacks.set([]);
+    this.cooldowns.set({});
+    this.channelling.set(null);
     this.maxAdrenaline.set(this.engine.maxAdrenaline);
     const first = this.slots().find((s) => s.kind === 'current');
     this.feedback.set({ text: 'Press ' + first?.key + ' (' + first?.entity.name + ') to start.', cls: 'info' });
@@ -397,7 +477,7 @@ export class Train implements OnDestroy {
     this.iconState.set('idle');
     this.flashKey.set(null);
     this.engine.start(performance.now());
-    this.weapon.set(this.engine.weapon);
+    this.syncWield(this.engine);
     this.adrenaline.set(this.engine.adrenaline);
     this.expectedKey.set(this.engine.currentStep?.key ?? null);
     this.raf = requestAnimationFrame(this.frame);
@@ -435,10 +515,22 @@ export class Train implements OnDestroy {
     this.gcdRemaining.set(e.gcdRemainingMs(now));
     this.index.set(e.index);
     this.adrenaline.set(e.adrenaline);
-    this.weapon.set(e.weapon);
+    this.syncWield(e);
     this.expectedKey.set(e.currentStep?.key ?? null);
     this.queuedKey.set(e.queuedKey);
     this.buffs.set(e.buffs.map((b) => this.buffView(b, now)));
+    this.stacks.set(this.styleStacks().map((id) => ({ id, name: STACK_NAMES[id], value: e.stack(id) })));
+    const cds: Record<string, { remainingMs: number; totalMs: number }> = {};
+    for (const s of this.slots()) {
+      const remainingMs = e.cooldownRemainingMs(s.entity.key, now);
+      if (remainingMs > 0) {
+        const ent = e.catalog.get(s.entity.key);
+        const total = ((ent ? (e.specFor(ent) ?? ent).cooldownTicks : 0) || 1) * TICK_MS;
+        cds[s.entity.key] = { remainingMs, totalMs: Math.max(total, remainingMs) };
+      }
+    }
+    this.cooldowns.set(cds);
+    this.channelling.set(e.channel && !e.channel.cancelled ? e.channel.key : null);
     this.syncPrayers(e, now);
     if (now >= this.flashUntil) {
       this.iconState.set(e.isQueued ? 'queued' : 'idle');
@@ -499,13 +591,34 @@ export class Train implements OnDestroy {
     });
   }
 
+  /** style icon for incoming attacks */
+  weaponIcon(style: Style4): string {
+    return 'assets/weapons/' + style.toLowerCase() + '.png';
+  }
+
+  /** mirrors the engine's weapons in hand into the signals the bars and the weapon row use */
+  private syncWield(e: TrainerEngine): void {
+    const ids = [e.wield.twoHand, e.wield.mainHand, e.wield.offHand].filter((x): x is string => !!x);
+    const cur = this.wielded();
+    if (ids.length !== cur.length || ids.some((x, i) => x !== cur[i])) this.wielded.set(ids);
+    const st = e.style;
+    const next: Style4 = st && isStyle4(st) ? st : this.startStyle();
+    if (next !== this.weapon()) this.weapon.set(next);
+  }
+
   private buffView(b: ActiveBuff, now: number): BuffView {
     const remaining = b.endTick === null ? null : Math.max(0, (this.engine!.tickTime(b.endTick) - now) / 1000);
-    return { id: b.id, name: b.name, icon: b.icon, kind: b.kind, remainingS: remaining };
+    let icon = b.icon;
+    if (!icon) {
+      const def = BUFF_BY_ID.get(b.id);
+      icon = this.data.buffIcon(def?.wikiId) ?? this.engine!.catalog.get(b.sourceKey)?.icon ?? null;
+    }
+    return { id: b.id, name: b.name, icon, kind: b.kind, remainingS: remaining, stacks: b.stacks };
   }
 
   private applyEvent(ev: EngineEvent, now: number): void {
     const e = this.engine!;
+    const queueing = this.storage.settings().abilityQueueing;
     switch (ev.kind) {
       case 'queued': {
         const inMs = Math.max(0, Math.round(e.tickTime(ev.fireTick) - now));
@@ -554,7 +667,7 @@ export class Train implements OnDestroy {
       case 'wrong-weapon':
         this.counts.update((c) => ({ ...c, wrong: c.wrong + 1 }));
         this.feedback.set({
-          text: this.name(ev.key) + (ev.reason === 'weapon' ? ' needs a ' + (this.data.get(ev.key)?.ability?.style ?? '') + ' weapon – you wield ' + e.weapon : ' needs different equipment (' + (this.data.get(ev.key)?.ability?.equipment ?? '') + ')'),
+          text: this.name(ev.key) + (ev.reason === 'weapon' ? ' needs a ' + (this.data.get(ev.key)?.ability?.style ?? this.data.get(ev.key)?.spec?.style ?? '') + ' weapon – you wield ' + (e.style ?? 'nothing') : ' is not the special attack of the wielded weapon'),
           cls: 'bad',
         });
         this.flash('wrong', ev.key, now, 300);
@@ -592,6 +705,13 @@ export class Train implements OnDestroy {
       case 'on-cooldown':
         this.feedback.set({ text: this.name(ev.key) + ' is on cooldown for ' + (ev.readyInTicks * TICK_MS) / 1000 + ' s' + (this.storage.settings().abilityQueueing ? ' – queued' : ''), cls: 'bad' });
         this.flash('wrong', ev.key, now, 300);
+        break;
+      case 'requirement':
+        this.feedback.set({ text: this.name(ev.key) + ': ' + ev.text + (queueing ? ' – queued' : ''), cls: 'bad' });
+        this.flash('wrong', ev.key, now, 300);
+        break;
+      case 'channel-cancelled':
+        this.feedback.set({ text: this.name(ev.key) + ' channel cancelled – ' + ev.hitsLost + (ev.hitsLost === 1 ? ' hit' : ' hits') + ' lost', cls: 'warn' });
         break;
       case 'missed':
         this.counts.update((c) => ({ ...c, missed: c.missed + ev.keys.length }));

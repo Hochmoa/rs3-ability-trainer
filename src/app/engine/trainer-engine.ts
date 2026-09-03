@@ -1,10 +1,20 @@
-import { AbilityType, DEFAULT_LOADOUT, EnemyConfig, EntityKind, Loadout, PrayerStats, SPEC_KEY, StepResult, Style4, WeaponType, isStyle4 } from '../core/models';
+import { AbilityType, EnemyConfig, EntityKind, PrayerStats, SPEC_KEY, StepResult, Style, Style4, isStyle4 } from '../core/models';
+import { ResolvedLoadout, defaultResolvedLoadout } from './loadout-resolved';
 import { PROTECTION, PrayerBook, SOUL_SPLIT, bookOf, togglePrayer } from './prayer-rules';
+import { BUFF_BY_ID, GLOBALS, ruleFor } from './rules';
+import { AbilityRule, ChannelSpec, Condition, Effect, GlobalRule, Requirement, StackId } from './rules-model';
 
 /** One RS3 game tick / server cycle. */
 export const TICK_MS = 600;
 /** Global cooldown in ticks (1.8 s). */
 export const GCD_TICKS = 3;
+
+/** The weapons in hand: item ids from weapons.json. A two-handed weapon excludes main/off hand. */
+export interface Wield {
+  mainHand: string | null;
+  offHand: string | null;
+  twoHand: string | null;
+}
 
 export interface EngineConfig {
   pingMs: number;
@@ -12,16 +22,19 @@ export interface EngineConfig {
   /** In-game "Ability queueing" setting. On: a press during the GCD is queued and casts when the GCD ends. Off: it is ignored. */
   abilityQueueing: boolean;
   loop: boolean;
-  loadout: Loadout;
-  /** wielded weapon at session start and the weapon type per style (2h / dual wield / one-hand + shield) */
-  weaponSetup?: { start: Style4; types: Record<Style4, WeaponType> };
+  /** resolved loadout for the weapons wielded at the start */
+  loadout: ResolvedLoadout;
+  /** weapons wielded at the start; weapon-switch steps change it */
+  startWield?: Wield;
+  /** re-resolves the loadout after a weapon switch (style, spec, shield, conduit ...) */
+  resolveWield?: (wield: Wield) => ResolvedLoadout;
   /** prayer book of the session (default Curses); prayers of the other book are ignored */
   prayerBook?: PrayerBook;
   /** simulated enemy; only used when enabled */
   enemy?: EnemyConfig;
 }
 
-export type UsableReason = 'ok' | 'weapon' | 'equipment' | 'adrenaline' | 'cooldown' | 'book';
+export type UsableReason = 'ok' | 'weapon' | 'book' | 'adrenaline' | 'cooldown' | 'requirement';
 
 export interface IncomingAttack {
   tick: number;
@@ -30,7 +43,7 @@ export interface IncomingAttack {
   revealTick: number;
 }
 
-/** A status effect an entity applies when it casts / activates. */
+/** A status effect an entity applies when it casts / activates (data-driven fallback when no rule buff exists). */
 export interface EngineBuff {
   id: string;
   name: string;
@@ -41,14 +54,17 @@ export interface EngineBuff {
   durationTicks: number | null;
 }
 
-/** Everything the engine needs to know about a pressable thing (ability, prayer, potion). */
+/** Everything the engine needs to know about a pressable thing (ability, prayer, potion, weapon, weapon special, client action). */
 export interface EngineEntity {
   key: string;
   kind: EntityKind;
+  /** ability / spec id used to look up rules */
+  id: string;
   name: string;
   icon: string;
   /** true for abilities that start / obey the global cooldown */
   gcd: boolean;
+  style?: Style;
   abilityType?: AbilityType;
   /** +gain / -cost in percent */
   adrenaline: number;
@@ -57,52 +73,71 @@ export interface EngineEntity {
   /** group name for shared cooldowns (adrenaline potions) */
   sharedCooldown?: string;
   adrenalineOverTime?: { amount: number; ticks: number };
+  /** data buffs (wiki link) used when the rules define none */
   buffs: EngineBuff[];
-  /** abilities: combat style ("Melee", ..., "Defence", "Constitution") */
-  style?: string;
-  /** abilities: wiki equipment requirement ("Any", "Two-handed", "Dual wield", "Shield", ...) */
-  equipment?: string;
-  /** weapon-switch entities: the style wielded after the switch */
-  weapon?: { style: Style4 };
+  /** weapon specials: channel from the spec data */
+  channel?: ChannelSpec;
+  /** weapon specials: hit schedule */
+  hits?: number[];
+  /** weapon-switch entities: the item that goes into the hand */
+  weapon?: { id: string; slot: 'main' | 'off' | '2h'; style: Style };
   /** rotation steps only: PvME "+" (0) / "2t" (2) – expected this many ticks after the previous input's tick */
   offsetTicks?: number;
   /** rotation steps only: free text from an imported rotation, skipped automatically */
   isNote?: boolean;
 }
 
-export interface ActiveBuff extends EngineBuff {
+export interface ActiveBuff {
+  id: string;
+  name: string;
+  kind: 'Buff' | 'Debuff';
+  on: 'self' | 'target';
+  icon: string | null;
   startTick: number;
   endTick: number | null;
+  stacks: number;
+  /** ticks added by extend-buff (for maxTotal) */
+  extended: number;
   sourceKey: string;
 }
 
+export interface Spirit {
+  spirit: string;
+  sinceTick: number;
+  endTick: number;
+}
+
+export interface ActiveChannel {
+  key: string;
+  castTick: number;
+  endTick: number;
+  hits: number;
+  hitsDone: number;
+  cancelled: boolean;
+}
+
 export type EngineEvent =
-  /** entity accepted; casts at fireTick (queued during the GCD, or on the tick it was processed) */
   | { kind: 'queued'; key: string; expected: string; fireTick: number; marginMs: number }
-  /** the expected step finished – GCD ability cast or off-GCD thing activated */
   | { kind: 'fired'; result: StepResult }
-  /** something other than the expected step was cast / activated */
   | { kind: 'wrong-fired'; key: string; expected: string; tick: number }
-  /** queueing off: press of the expected ability during the GCD, ignored */
   | { kind: 'too-early'; key: string; ticksEarly: number }
-  /** queueing off: press of another ability during the GCD, ignored */
   | { kind: 'wrong'; key: string; expected: string }
-  /** not enough adrenaline for the ability */
   | { kind: 'no-adrenaline'; key: string; need: number; have: number }
-  /** entity still on its own (or shared) cooldown */
   | { kind: 'on-cooldown'; key: string; readyInTicks: number }
-  /** off-GCD steps skipped because the next GCD ability cast first */
-  | { kind: 'missed'; keys: string[] }
-  /** ability needs another weapon style / weapon type – ignored like in the game */
-  | { kind: 'wrong-weapon'; key: string; reason: 'weapon' | 'equipment' }
+  /** a rule requirement is not met (stacks, spirit, sequence, equipment ...) */
+  | { kind: 'requirement'; key: string; text: string }
+  | { kind: 'channel-cancelled'; key: string; hitsLost: number }
+  /** ability needs another weapon style / the wielded weapon has no such special – ignored like in the game */
+  | { kind: 'wrong-weapon'; key: string; reason: 'weapon' | 'spec' }
   /** weapon switched */
-  | { kind: 'weapon'; style: Style4 }
+  | { kind: 'weapon'; id: string; style: Style }
   /** prayer toggled; `replaced` = conflicting prayers that were switched off */
   | { kind: 'prayer'; id: string; on: boolean; replaced: string[] }
   /** prayer of the other book – ignored */
   | { kind: 'wrong-book'; id: string; book: PrayerBook }
   /** enemy attack landed */
   | { kind: 'attack'; style: Style4; tick: number; prayed: boolean; needed: string }
+  | { kind: 'missed'; keys: string[] }
   | { kind: 'finished' };
 
 interface PendingInput {
@@ -111,50 +146,57 @@ interface PendingInput {
   arrival: number;
 }
 
-/** The single queue slot of the game: one ability waiting to be cast at `tick`. */
 interface Pending {
   key: string;
   tick: number;
   arrival: number;
-  /** in-game bypass: the ability that stays queued for the next GCD end after this one casts */
   bypassed?: Pending;
-  /** a "waiting for adrenaline / cooldown" event was already emitted */
   notified?: boolean;
 }
 
+interface ScheduledHit {
+  key: string;
+  entity: EngineEntity;
+  rule: AbilityRule | undefined;
+  tick: number;
+  index: number;
+  total: number;
+  channel: ActiveChannel | null;
+  guaranteedCrit: boolean;
+}
+
+interface SequenceState {
+  /** step that is open now (2 = Slaughter after Dismember) */
+  openStep: number;
+  untilTick: number;
+}
+
 /**
- * Pure timing + resource model of the trainer. All times are milliseconds on one monotonic
- * clock (performance.now()); the caller feeds `now` into press()/update().
+ * Pure timing + resource model of the trainer. All times are milliseconds on one monotonic clock;
+ * the caller feeds `now` into press()/update(). See docs/interactions-design.md.
  *
- * Ticks: server tick k happens at t0 + k * TICK_MS. A key press at client time t reaches the
- * server at t + ping (+ jitter) and is processed at the first tick at or after that (`tickP`).
- *
- * GCD abilities: the last cast started the GCD at `castTick`; the next cast is possible from
- * `gcdEnd = castTick + GCD_TICKS`. Press processed after the GCD → casts on that tick (late).
- * Press processed on the last GCD tick → casts at gcdEnd (perfect). Earlier: queueing off →
- * ignored; queueing on → queued for gcdEnd (perfect). A wrong ability that casts starts a GCD
- * like any other. Adrenaline and the ability's own cooldown are checked when it would cast:
- * queueing on keeps it queued until it is possible, queueing off drops the press.
- *
- * Off-GCD steps (prayers, potions, Surge, ...) activate on the tick they are processed. They
- * belong to the group of off-GCD steps directly before the next GCD ability and may be pressed
- * in any order inside that group; whatever is still open when that ability casts is "missed".
+ * Rotation semantics: GCD abilities are judged against the global cooldown (perfect / late / too early),
+ * off-GCD steps (prayers, potions, weapon switches, Surge, target cycle ...) belong to the group before
+ * the next GCD ability; steps with `offsetTicks` (PvME "+" / "2t") are scored against the previous input's
+ * tick. Notes are skipped. Prayers are free actions judged by the prayer score, not as wrong presses.
  */
 export class TrainerEngine {
   state: 'idle' | 'running' | 'finished' = 'idle';
   t0 = 0;
-  /** first step that is not done yet */
   index = 0;
   castTick: number | null = null;
   adrenaline = 0;
-  weapon: Style4 = 'Melee';
+  results: StepResult[] = [];
+  buffs: ActiveBuff[] = [];
+  stacks = new Map<StackId, number>();
+  spirits = new Map<string, Spirit>();
+  channel: ActiveChannel | null = null;
+  /** weapons in hand */
+  wield: Wield = { mainHand: null, offHand: null, twoHand: null };
   /** ids of the active prayers (e.g. "soul-split") */
   activePrayers = new Set<string>();
   prayerStats: PrayerStats = { ticks: 0, soulSplitTicks: 0, attacks: 0, prayed: 0, hits: 0 };
   nextAttack: IncomingAttack | null = null;
-  results: StepResult[] = [];
-  buffs: ActiveBuff[] = [];
-  /** Events since the last drain; the UI empties this array. */
   readonly events: EngineEvent[] = [];
   random: () => number = Math.random;
 
@@ -164,8 +206,14 @@ export class TrainerEngine {
   private tooEarly = 0;
   private wrong = 0;
   private readyTick = new Map<string, number>();
+  private chargeReady = new Map<string, number[]>();
+  private sequences = new Map<string, SequenceState>();
+  private reconjureReady = new Map<string, number>();
+  private scheduled: ScheduledHit[] = [];
   private overTime: { key: string; perTick: number; untilTick: number }[] = [];
   private lastTick = 0;
+  private lastAttackTick = -1000;
+  private relentlessLockUntil = -1;
   /** tick of the last input that counted (cast or off-GCD activation) – reference for "+" / "2t" companions */
   private lastInputTick: number | null = null;
   private attackHistory: Style4[] = [];
@@ -175,10 +223,25 @@ export class TrainerEngine {
     readonly steps: EngineEntity[],
     readonly catalog: Map<string, EngineEntity>,
     public config: EngineConfig,
-  ) {}
+  ) {
+    config.loadout ??= defaultResolvedLoadout();
+  }
+
+  get loadout(): ResolvedLoadout {
+    return this.config.loadout;
+  }
+
+  get maxAdrenaline(): number {
+    return this.loadout.maxAdrenaline;
+  }
 
   get prayerBook(): PrayerBook {
     return this.config.prayerBook ?? 'Curses';
+  }
+
+  /** combat style of the wielded weapon (null = nothing in hand) */
+  get style(): Style | null {
+    return this.loadout.style;
   }
 
   /** overhead that protects against `style` in the session's book */
@@ -186,80 +249,57 @@ export class TrainerEngine {
     return PROTECTION[this.prayerBook][style];
   }
 
-  get maxAdrenaline(): number {
-    const l = this.config.loadout ?? DEFAULT_LOADOUT;
-    return 100 + (l.heightenedSenses ? 10 : 0) + (l.vestmentsOfHavoc ? 20 : 0);
-  }
-
   start(now: number): void {
     this.t0 = now;
     this.index = 0;
     this.castTick = null;
-    this.weapon = this.config.weaponSetup?.start ?? 'Melee';
-    this.adrenaline = Math.max(0, Math.min(this.maxAdrenaline, this.config.loadout?.startAdrenaline ?? 0));
+    this.wield = { mainHand: null, offHand: null, twoHand: null, ...(this.config.startWield ?? {}) };
+    this.adrenaline = Math.max(0, Math.min(this.maxAdrenaline, this.loadout.startAdrenaline));
     this.results = [];
     this.buffs = [];
+    this.stacks.clear();
+    this.spirits.clear();
+    this.channel = null;
     this.inflight = [];
     this.pending = null;
     this.done.clear();
     this.tooEarly = 0;
     this.wrong = 0;
     this.readyTick.clear();
+    this.chargeReady.clear();
+    this.sequences.clear();
+    this.reconjureReady.clear();
+    this.scheduled = [];
     this.overTime = [];
     this.lastTick = 0;
+    this.lastAttackTick = -1000;
+    this.relentlessLockUntil = -1;
     this.lastInputTick = null;
     this.activePrayers = new Set();
     this.prayerStats = { ticks: 0, soulSplitTicks: 0, attacks: 0, prayed: 0, hits: 0 };
     this.attackHistory = [];
     this.cycleIndex = 0;
     this.nextAttack = null;
-    const enemy = this.config.enemy;
-    if (enemy?.enabled && enemy.styles.length) this.scheduleAttack(Math.max(1, enemy.firstAttackTicks));
     this.events.length = 0;
     this.state = 'running';
-  }
-
-  private scheduleAttack(tick: number): void {
-    const enemy = this.config.enemy!;
-    const styles = enemy.styles;
-    const last = this.attackHistory.at(-1);
-    let style: Style4;
-    switch (enemy.pattern) {
-      case 'cycle':
-        style = styles[this.cycleIndex % styles.length];
-        this.cycleIndex++;
-        break;
-      case 'streak': {
-        const n = Math.max(1, enemy.streak);
-        const run = this.attackHistory.length;
-        style = styles[Math.floor(run / n) % styles.length];
-        break;
-      }
-      case 'no-repeat': {
-        const pool = styles.length > 1 && last ? styles.filter((s) => s !== last) : styles;
-        style = pool[Math.floor(this.random() * pool.length)];
-        break;
-      }
-      default:
-        style = styles[Math.floor(this.random() * styles.length)];
-    }
-    this.attackHistory.push(style);
-    this.nextAttack = { tick, style, revealTick: tick - Math.max(0, enemy.warningTicks) };
+    const enemy = this.config.enemy;
+    if (enemy?.enabled && enemy.styles.length) this.scheduleAttack(Math.max(1, enemy.firstAttackTicks));
+    this.advanceIndex();
   }
 
   stop(): void {
     if (this.state === 'running') this.state = 'finished';
   }
 
-  /** The step the player should do next (first open step). */
+  // ---------------------------------------------------------------- read-only views
+
   get currentStep(): EngineEntity | undefined {
     return this.steps[this.index];
   }
 
-  /** The next GCD ability the rotation expects. */
   get expectedAbility(): EngineEntity | undefined {
     for (let i = this.index; i < this.steps.length; i++) {
-      if (this.steps[i].gcd) return this.steps[i];
+      if (this.isGcdStep(this.steps[i])) return this.steps[i];
     }
     return undefined;
   }
@@ -268,12 +308,10 @@ export class TrainerEngine {
     return this.done.has(stepIndex);
   }
 
-  /** Entity key waiting in the queue slot, if any. */
   get queuedKey(): string | null {
     return this.pending?.key ?? null;
   }
 
-  /** True when the expected ability is queued / about to cast. */
   get isQueued(): boolean {
     return this.pending !== null && this.pending.key === this.expectedAbility?.key;
   }
@@ -282,11 +320,28 @@ export class TrainerEngine {
     return this.castTick === null ? null : this.castTick + GCD_TICKS;
   }
 
+  stack(id: StackId): number {
+    return this.stacks.get(id) ?? 0;
+  }
+
+  hasBuff(id: string): boolean {
+    return this.buffs.some((b) => b.id === id);
+  }
+
+  buff(id: string): ActiveBuff | undefined {
+    return this.buffs.find((b) => b.id === id);
+  }
+
+  /** Which step of a sequence slot is currently shown (1 = base ability). */
+  sequenceStep(group: string, tick: number): number {
+    const s = this.sequences.get(group);
+    return s && tick <= s.untilTick ? s.openStep : 1;
+  }
+
   tickTime(tick: number): number {
     return this.t0 + tick * TICK_MS;
   }
 
-  /** Tick at which an input arriving at the server at `time` is processed. */
   tickOf(time: number): number {
     return Math.ceil((time - this.t0) / TICK_MS);
   }
@@ -295,13 +350,11 @@ export class TrainerEngine {
     return Math.floor((now - this.t0) / TICK_MS);
   }
 
-  /** 0..1 progress of the current tick. */
   tickPhase(now: number): number {
     const p = ((now - this.t0) % TICK_MS) / TICK_MS;
     return p < 0 ? 0 : p;
   }
 
-  /** 0..1 progress of the GCD; 1 when no GCD is running. */
   gcdPhase(now: number): number {
     if (this.castTick === null) return 1;
     const p = (now - this.tickTime(this.castTick)) / (GCD_TICKS * TICK_MS);
@@ -313,40 +366,99 @@ export class TrainerEngine {
     return end === null ? 0 : Math.max(0, this.tickTime(end) - now);
   }
 
-  get weaponType(): WeaponType {
-    return this.config.weaponSetup?.types[this.weapon] ?? 'two-handed';
+  /** Ticks until `key` is off its own / shared cooldown at `tick` (0 = ready). */
+  cooldownLeft(key: string, tick: number): number {
+    const e = this.catalog.get(key);
+    if (!e) return 0;
+    const rule = this.ruleOf(e);
+    const acting = this.specFor(e) ?? e;
+    if (rule?.charges) {
+      const ready = this.chargeReady.get(e.key) ?? [];
+      const available = ready.filter((t) => t <= tick).length + (rule.charges - ready.length);
+      if (available > 0) return 0;
+      return Math.max(0, Math.min(...ready) - tick);
+    }
+    let ready = this.readyTick.get(acting.key) ?? 0;
+    const shared = rule?.sharedCooldown ?? acting.sharedCooldown;
+    if (shared) ready = Math.max(ready, this.readyTick.get('shared:' + shared) ?? 0);
+    return Math.max(0, ready - tick);
   }
 
-  /** Why an entity could not be used at `tick` (weapon and equipment first, like the greyed-out bar in the game). */
+  /** Remaining internal cooldown of an entity in ms at `now`. */
+  cooldownRemainingMs(key: string, now: number): number {
+    const tick = this.currentTick(now);
+    const left = this.cooldownLeft(key, tick);
+    if (left <= 0) return 0;
+    return Math.max(0, this.tickTime(tick + left) - now);
+  }
+
+  /** The adrenaline this entity needs right now (requirement) and what it costs. */
+  costOf(e: EngineEntity): { need: number; cost: number } {
+    const rule = this.ruleOf(e);
+    const spec = this.specFor(e);
+    if (spec) {
+      const c = Math.round((spec.adrenaline < 0 ? -spec.adrenaline : 0) * this.loadout.specCostMult);
+      return { need: c, cost: c };
+    }
+    if (this.isThreshold(e, rule)) {
+      return { need: this.hasBuff('limitless') ? 15 : 50, cost: 15 };
+    }
+    let cost = rule?.adrenaline !== undefined ? Math.max(0, -rule.adrenaline) : e.adrenaline < 0 ? -e.adrenaline : 0;
+    if (rule?.cost?.cost !== undefined) cost = rule.cost.cost;
+    if (rule?.cost?.perStack) {
+      const p = rule.cost.perStack;
+      cost = Math.max(0, p.base - p.per * Math.min(this.stack(p.stack), p.maxStacks));
+    }
+    for (const g of this.matchingGlobals(e)) {
+      if (g.discount && g.consumes && this.hasBuff(g.consumes) && cost > 0) cost = Math.max(0, cost - g.discount);
+    }
+    return { need: cost, cost };
+  }
+
+  /** First unmet requirement of an entity at `tick`, or null. */
+  requirementFailure(e: EngineEntity, tick: number): string | null {
+    const rule = this.ruleOf(e);
+    for (const r of rule?.requires ?? []) {
+      if (!this.requirementMet(r, tick)) return r.text;
+    }
+    for (const eff of rule?.onCast ?? []) {
+      if (eff.kind === 'conjure' && e.id !== 'conjure-undead-army') {
+        if (this.spirits.has(eff.spirit)) return 'a ' + eff.spirit.replace(/-/g, ' ') + ' is already active';
+        const ready = this.reconjureReady.get(eff.spirit) ?? 0;
+        if (ready > tick) return 'cannot be re-conjured for ' + (ready - tick) + ' more ticks';
+      }
+    }
+    if (e.id === 'conjure-undead-army' && ['skeleton-warrior', 'putrid-zombie', 'vengeful-ghost'].every((s) => this.spirits.has(s))) {
+      return 'all spirits are already active';
+    }
+    return null;
+  }
+
+  /** Why the wielded weapon cannot use this entity: wrong style, or a spec the weapon does not have. */
+  weaponFailure(e: EngineEntity): 'weapon' | 'spec' | null {
+    if (e.kind === 'spec') return this.loadout.weaponSpec?.id === e.id ? null : 'spec';
+    if (e.kind !== 'ability') return null;
+    // utility abilities off the GCD (Surge, Escape, Dive) work with any weapon; only real casts need the style
+    if (this.isGcdStep(e) && e.style && isStyle4(e.style) && this.style !== e.style) return 'weapon';
+    if (e.id === 'weapon-special-attack' && !this.loadout.weaponSpec) return 'spec';
+    return null;
+  }
+
+  /** Why an entity could not be used at `tick` (for the greyed-out bars), weapon first like in the game. */
   usable(key: string, tick: number): UsableReason {
     const e = this.catalog.get(key);
     if (!e) return 'ok';
     if (e.kind === 'prayer') {
       const book = bookOf(prayerId(key));
-      if (book && book !== this.prayerBook) return 'book';
-      return 'ok';
+      return book && book !== this.prayerBook ? 'book' : 'ok';
     }
-    if (e.kind === 'ability' || e.kind === 'spec') {
-      // utility abilities off the GCD (Surge, Escape, Dive) work with any weapon; only real casts need the style
-      if (e.gcd && e.style && isStyle4(e.style) && e.style !== this.weapon) return 'weapon';
-      const eq = (e.equipment ?? 'Any').toLowerCase();
-      const t = this.weaponType;
-      if (eq.startsWith('two-handed') && t !== 'two-handed') return 'equipment';
-      if (eq.startsWith('dual wield') && t !== 'dual-wield') return 'equipment';
-      if (eq.startsWith('shield') && t !== 'shield') return 'equipment';
-    }
-    if (this.cooldownLeft(key, tick) > 0) return 'cooldown';
-    if (e.adrenaline < 0 && this.adrenaline < -e.adrenaline) return 'adrenaline';
-    return 'ok';
+    if (this.weaponFailure(e)) return 'weapon';
+    const b = this.blocker(e, tick);
+    if (!b) return 'ok';
+    return b.kind === 'on-cooldown' ? 'cooldown' : b.kind === 'no-adrenaline' ? 'adrenaline' : 'requirement';
   }
 
-  /** Ticks until `key` is off its own / shared cooldown at `tick` (0 = ready). */
-  cooldownLeft(key: string, tick: number): number {
-    const e = this.catalog.get(key);
-    let ready = this.readyTick.get(key) ?? 0;
-    if (e?.sharedCooldown) ready = Math.max(ready, this.readyTick.get('shared:' + e.sharedCooldown) ?? 0);
-    return Math.max(0, ready - tick);
-  }
+  // ---------------------------------------------------------------- input
 
   press(key: string, now: number): void {
     if (this.state !== 'running') return;
@@ -362,11 +474,10 @@ export class TrainerEngine {
       const next = this.inflight[0];
       const castAt = this.pending ? this.tickTime(this.pending.tick) : Infinity;
       const tickAt = this.tickTime(this.lastTick + 1);
-      // advance server ticks (over-time adrenaline, buff expiry) before anything scheduled later
       if (tickAt <= now && tickAt <= castAt && (!next || tickAt <= next.arrival)) {
         this.advanceTick(this.lastTick + 1);
       } else if (castAt <= now && (!next || castAt <= next.arrival)) {
-        this.cast();
+        this.castPending();
         if (this.state !== 'running') return;
       } else if (next && next.arrival <= now) {
         this.inflight.shift();
@@ -377,30 +488,30 @@ export class TrainerEngine {
     }
   }
 
-  // ---------------------------------------------------------------- input handling
-
   private handle(input: PendingInput): void {
     if (input.key === SPEC_KEY) {
-      // the generic special-attack slot fires whatever spec the wielded weapon has; the rotation says which one
-      const spec = this.steps.find((s, i) => i >= this.index && !this.done.has(i) && s.kind === 'spec' && s.style === this.weapon);
+      // the generic special-attack slot fires the wielded weapon's spec; a rotation step written as that spec counts
+      const wielded = this.loadout.weaponSpec?.id;
+      const spec = wielded ? this.steps.find((s, i) => i >= this.index && !this.done.has(i) && s.kind === 'spec' && s.id === wielded) : undefined;
       if (spec) input = { ...input, key: spec.key };
     }
     const entity = this.catalog.get(input.key);
     if (!entity) return;
     const tickP = this.tickOf(input.arrival);
-    const gear = this.usable(entity.key, tickP);
-    if (gear === 'weapon' || gear === 'equipment') {
+    const wf = this.weaponFailure(entity);
+    if (wf) {
       this.wrong++;
-      this.events.push({ kind: 'wrong-weapon', key: entity.key, reason: gear });
+      this.events.push({ kind: 'wrong-weapon', key: entity.key, reason: wf });
       return;
     }
-    if (!entity.gcd) {
-      this.handleOffGcd(entity, tickP);
+    const gcdEnd = this.gcdEndTick;
+    const gcdRunning = gcdEnd !== null && tickP < gcdEnd && tickP > (this.castTick ?? -1);
+    const rule = this.ruleOf(entity);
+    if (!entity.gcd || rule?.offGcd || (rule?.offGcdNoGain && gcdRunning)) {
+      this.handleOffGcd(entity, tickP, gcdRunning);
       return;
     }
     const expected = this.expectedAbility?.key ?? '';
-    const gcdEnd = this.gcdEndTick;
-
     if (gcdEnd === null || tickP > gcdEnd) {
       this.accept(input, tickP, expected);
       return;
@@ -415,7 +526,6 @@ export class TrainerEngine {
       }
       return;
     }
-    // earlier during the GCD
     if (!this.config.abilityQueueing) {
       if (input.key === expected) {
         this.tooEarly++;
@@ -426,23 +536,19 @@ export class TrainerEngine {
       }
       return;
     }
-    if (this.pending?.key === input.key) return; // already queued – repeated presses change nothing
+    if (this.pending?.key === input.key) return;
     this.accept(input, gcdEnd, expected);
   }
 
-  /** Queueing off: check adrenaline / cooldown now; queueing on: the cast waits until possible. */
+  /** Queueing off: everything is checked now; queueing on: the cast waits until possible. */
   private accept(input: PendingInput, tick: number, expected: string): void {
     const entity = this.catalog.get(input.key)!;
     if (!this.config.abilityQueueing) {
-      const cd = this.cooldownLeft(entity.key, tick);
-      if (cd > 0) {
-        this.countWrongPress(entity.key, expected);
-        this.events.push({ kind: 'on-cooldown', key: entity.key, readyInTicks: cd });
-        return;
-      }
-      if (entity.adrenaline < 0 && this.adrenaline < -entity.adrenaline) {
-        this.countWrongPress(entity.key, expected);
-        this.events.push({ kind: 'no-adrenaline', key: entity.key, need: -entity.adrenaline, have: this.adrenaline });
+      const blocked = this.blocker(entity, tick);
+      if (blocked) {
+        if (input.key === expected) this.tooEarly++;
+        else this.wrong++;
+        this.events.push(blocked);
         return;
       }
     }
@@ -452,12 +558,18 @@ export class TrainerEngine {
     this.events.push({ kind: 'queued', key: entity.key, expected, fireTick: tick, marginMs });
   }
 
-  private countWrongPress(key: string, expected: string): void {
-    if (key === expected) this.tooEarly++;
-    else this.wrong++;
+  /** Why an entity cannot cast at `tick` (cooldown, adrenaline, rule requirement), or null. */
+  private blocker(entity: EngineEntity, tick: number): EngineEvent | null {
+    const cd = this.cooldownLeft(entity.key, tick);
+    if (cd > 0) return { kind: 'on-cooldown', key: entity.key, readyInTicks: cd };
+    const req = this.requirementFailure(entity, tick);
+    if (req) return { kind: 'requirement', key: entity.key, text: req };
+    const { need } = this.costOf(entity);
+    if (need > 0 && this.adrenaline < need) return { kind: 'no-adrenaline', key: entity.key, need, have: this.adrenaline };
+    return null;
   }
 
-  private handleOffGcd(entity: EngineEntity, tick: number): void {
+  private handleOffGcd(entity: EngineEntity, tick: number, insideGcd: boolean): void {
     if (entity.kind === 'prayer') {
       const id = prayerId(entity.key);
       const book = bookOf(id);
@@ -471,10 +583,10 @@ export class TrainerEngine {
         return;
       }
     }
-    const cd = this.cooldownLeft(entity.key, tick);
-    if (cd > 0) {
+    const blocked = this.blocker(entity, tick);
+    if (blocked) {
       this.wrong++;
-      this.events.push({ kind: 'on-cooldown', key: entity.key, readyInTicks: cd });
+      this.events.push(blocked);
       return;
     }
     // does it satisfy an open off-GCD step in the current group?
@@ -482,13 +594,13 @@ export class TrainerEngine {
     let ref = this.lastInputTick;
     // "bloat + vulnbomb": the companion may arrive on the same tick, before the ability itself casts
     if (stepIndex < 0 && this.pending && tick >= this.pending.tick) {
-      const j = this.steps.findIndex((s, i) => i >= this.index && s.gcd && s.key === this.pending!.key);
+      const j = this.steps.findIndex((s, i) => i >= this.index && this.isGcdStep(s) && s.key === this.pending!.key);
       if (j >= 0) {
         stepIndex = this.openOffGcdStep(j + 1, entity.key);
         ref = this.pending.tick;
       }
     }
-    this.activate(entity, tick);
+    this.activate(entity, tick, { offGcd: true, noGain: insideGcd && !!this.ruleOf(entity)?.offGcdNoGain });
     if (entity.kind === 'prayer' && !this.activePrayers.has(prayerId(entity.key))) {
       // switched the prayer off – never completes a step; counts as wrong if the rotation wanted it on
       if (stepIndex >= 0) this.wrong++;
@@ -532,35 +644,39 @@ export class TrainerEngine {
   private openOffGcdStep(from: number, key: string): number {
     for (let i = from; i < this.steps.length; i++) {
       const s = this.steps[i];
-      if (s.gcd) break;
+      if (this.isGcdStep(s)) break;
       if (!this.done.has(i) && !s.isNote && s.key === key) return i;
     }
     return -1;
   }
 
+  /** Off-GCD abilities (Surge, Provoke ...), prayers, potions, weapon switches and notes are not GCD steps. */
+  isGcdStep(e: EngineEntity): boolean {
+    if (!e.gcd || e.isNote) return false;
+    const rule = this.ruleOf(e);
+    return !rule?.offGcd;
+  }
+
   // ---------------------------------------------------------------- casting
 
-  private cast(): void {
+  private castPending(): void {
     const p = this.pending!;
     const entity = this.catalog.get(p.key)!;
     // the weapon may have changed since the press: the queued ability just fails, like in the game
-    const gear = this.usable(entity.key, p.tick);
-    if (gear === 'weapon' || gear === 'equipment') {
+    const wf = this.weaponFailure(entity);
+    if (wf) {
       this.pending = p.bypassed ? { ...p.bypassed, tick: p.tick } : null;
       this.wrong++;
-      this.events.push({ kind: 'wrong-weapon', key: entity.key, reason: gear });
+      this.events.push({ kind: 'wrong-weapon', key: entity.key, reason: wf });
       return;
     }
-    // queueing on: wait until adrenaline and cooldown allow it
-    const cd = this.cooldownLeft(entity.key, p.tick);
-    const need = entity.adrenaline < 0 ? -entity.adrenaline : 0;
-    if (cd > 0 || this.adrenaline < need) {
+    const blocked = this.blocker(entity, p.tick);
+    if (blocked) {
       if (!p.notified) {
-        if (cd > 0) this.events.push({ kind: 'on-cooldown', key: entity.key, readyInTicks: cd });
-        else this.events.push({ kind: 'no-adrenaline', key: entity.key, need, have: this.adrenaline });
+        this.events.push(blocked);
         p.notified = true;
       }
-      p.tick += Math.max(1, cd); // re-check on the next possible tick
+      p.tick += Math.max(1, blocked.kind === 'on-cooldown' ? blocked.readyInTicks : 1);
       return;
     }
     this.pending = p.bypassed ? { ...p.bypassed, tick: p.tick + GCD_TICKS } : null;
@@ -568,14 +684,13 @@ export class TrainerEngine {
     const gcdEnd = this.gcdEndTick;
     this.castTick = p.tick;
     this.lastInputTick = p.tick;
-    this.activate(entity, p.tick);
+    this.activate(entity, p.tick, { offGcd: false, noGain: false });
 
     if (!expected || entity.key !== expected.key) {
       this.wrong++;
       this.events.push({ kind: 'wrong-fired', key: entity.key, expected: expected?.key ?? '', tick: p.tick });
       return;
     }
-    // off-GCD steps of this group that were not done are missed
     const expectedIndex = this.steps.indexOf(expected, this.index);
     const missed: string[] = [];
     for (let i = this.index; i < expectedIndex; i++) {
@@ -631,9 +746,8 @@ export class TrainerEngine {
     return true;
   }
 
-  /** Apply the effects of an entity that just cast / activated at `tick`. */
-  private activate(entity: EngineEntity, tick: number): void {
-    const l = this.config.loadout ?? DEFAULT_LOADOUT;
+  /** Apply everything an entity does when it casts / activates at `tick`. */
+  private activate(entity: EngineEntity, tick: number, opt: { offGcd: boolean; noGain: boolean }): void {
     if (entity.kind === 'prayer') {
       const id = prayerId(entity.key);
       const t = togglePrayer(this.activePrayers, id);
@@ -642,37 +756,424 @@ export class TrainerEngine {
       return;
     }
     if (entity.weapon) {
-      this.weapon = entity.weapon.style;
-      this.events.push({ kind: 'weapon', style: entity.weapon.style });
+      this.switchWeapon(entity.weapon);
+      return;
     }
-    if (entity.cooldownTicks > 0) this.readyTick.set(entity.key, tick + entity.cooldownTicks);
-    if (entity.sharedCooldown) this.readyTick.set('shared:' + entity.sharedCooldown, tick + entity.cooldownTicks);
+    if (entity.kind === 'action') return; // target cycle etc.: nothing to simulate
 
-    let delta = entity.adrenaline;
-    if (entity.kind === 'ability' && entity.gcd && entity.abilityType === 'Basic' && entity.adrenaline > 0) {
-      if (l.furyOfTheSmall) delta += 1;
-      if (l.impatientRank > 0 && this.random() < 0.09 * l.impatientRank) delta += 3;
+    const rule = this.ruleOf(entity);
+    const spec = this.specFor(entity);
+    const acting = spec ?? entity; // weapon special attacks act with the spec's numbers
+    const globals = this.matchingGlobals(entity);
+
+    // a new GCD ability cuts a running channel
+    if (!opt.offGcd && this.channel && !this.channel.cancelled && tick < this.channel.endTick) this.cancelChannel();
+
+    // cooldown (charges, own, shared)
+    const cdTicks = this.cooldownFor(acting, rule, tick);
+    if (rule?.charges) {
+      const list = (this.chargeReady.get(entity.key) ?? []).filter((t) => t > tick);
+      if (list.length < rule.charges) list.push(tick + cdTicks);
+      this.chargeReady.set(entity.key, list);
+    } else if (cdTicks > 0) {
+      this.readyTick.set(acting.key, tick + cdTicks);
     }
-    if (entity.abilityType === 'Ultimate' && entity.adrenaline < 0) {
-      if (l.ringOfVigour) delta += 10;
-      if (l.conservationOfEnergy) delta += 10;
+    const shared = rule?.sharedCooldown ?? acting.sharedCooldown;
+    if (shared && cdTicks > 0) this.readyTick.set('shared:' + shared, tick + cdTicks);
+
+    // adrenaline
+    const { cost } = this.costOf(entity);
+    const baseCost = rule?.adrenaline !== undefined ? Math.max(0, -rule.adrenaline) : acting.adrenaline < 0 ? -acting.adrenaline : 0;
+    // a Flow-type discount is used up even when it brings the cost to 0
+    if (baseCost > 0 || this.isThreshold(entity, rule)) {
+      for (const g of globals) if (g.consumes && g.discount && this.hasBuff(g.consumes)) this.removeBuff(g.consumes);
     }
+    let delta = 0;
+    if (cost > 0) {
+      let paid = cost;
+      if (this.loadout.relentlessRank > 0 && tick >= this.relentlessLockUntil && this.random() < 0.01 * this.loadout.relentlessRank) {
+        paid = 0;
+        this.relentlessLockUntil = tick + 50;
+      }
+      if (this.isThreshold(entity, rule) && this.loadout.thresholdFreeChance > 0 && this.random() < this.loadout.thresholdFreeChance) paid = 0;
+      delta -= paid;
+      if (rule?.cost?.perStack) {
+        const p = rule.cost.perStack;
+        this.stacks.set(p.stack, this.stack(p.stack) - Math.min(this.stack(p.stack), p.maxStacks));
+      }
+      if (entity.abilityType === 'Ultimate' && rule?.cost?.ultimate !== false && !spec) {
+        delta += this.loadout.ultimateRefund;
+        const havoc = this.loadout.adrenalineAfterUltimate;
+        if (havoc && entity.style === havoc.style) {
+          if (this.hasBuff('havoc-regeneration')) {
+            this.removeBuff('havoc-regeneration');
+            this.overTime = this.overTime.filter((o) => o.key !== 'havoc');
+            delta += havoc.instantIfActive;
+          } else {
+            this.applyBuff('havoc-regeneration', tick, entity.key, havoc.overTicks);
+            this.overTime.push({ key: 'havoc', perTick: havoc.amount / havoc.overTicks, untilTick: tick + havoc.overTicks });
+          }
+        }
+      }
+    } else if (!opt.noGain) {
+      const base = rule?.adrenaline ?? acting.adrenaline;
+      if (base > 0) {
+        let gain = base;
+        if (entity.abilityType === 'Basic' && entity.gcd) {
+          gain += this.loadout.basicGainAdd;
+          if (this.loadout.impatientRank > 0 && this.random() < 0.09 * this.loadout.impatientRank) gain += 3;
+          if (this.isBasicAttack(entity) && this.loadout.invigoratingRank > 0) gain *= 1 + 0.05 * this.loadout.invigoratingRank;
+        }
+        for (const g of globals) {
+          if (g.gainAdd) gain += g.gainAdd;
+          if (g.gainMult !== undefined) gain *= g.gainMult;
+        }
+        delta += gain;
+      }
+    }
+    this.addAdrenaline(delta);
+    if (acting.adrenalineOverTime && acting.adrenalineOverTime.ticks > 0) {
+      this.overTime.push({ key: acting.key, perTick: acting.adrenalineOverTime.amount / acting.adrenalineOverTime.ticks, untilTick: tick + acting.adrenalineOverTime.ticks });
+    }
+
+    // buffs: rules first, wiki data as fallback
+    const ruleAppliesBuffs = !!rule?.buffs || !!rule?.onCast?.some((e) => e.kind === 'buff' || e.kind === 'choose' || e.kind === 'conjure') || !!rule?.onHit?.some((e) => e.kind === 'buff' || e.kind === 'choose') || !!rule?.hitBuffs;
+    if (rule?.buffs) {
+      for (const id of rule.buffs) this.applyBuff(id, tick, entity.key);
+    } else if (!ruleAppliesBuffs) {
+      for (const b of acting.buffs) this.applyDataBuff(b, tick, entity.key);
+    }
+
+    // effects
+    for (const eff of rule?.onCast ?? []) this.applyEffect(eff, tick, entity, 0);
+    for (const g of globals) {
+      for (const eff of g.onCast ?? []) this.applyEffect(eff, tick, entity, 0);
+      if (g.consumes && !g.discount && this.hasBuff(g.consumes)) this.removeBuff(g.consumes);
+    }
+
+    // sequences
+    if (rule?.sequence) {
+      if (rule.sequence.last) this.sequences.delete(rule.sequence.group);
+      else this.sequences.set(rule.sequence.group, { openStep: rule.sequence.step + 1, untilTick: tick + rule.sequence.windowTicks });
+    }
+
+    // hits / channel
+    const channel = this.loadout.channelOverrides[entity.id] ?? rule?.channel ?? acting.channel;
+    const hits = this.loadout.hitsOverrides[entity.id] ?? rule?.hits ?? acting.hits ?? (this.isDamaging(acting, rule) ? [0] : undefined);
+    if (channel) {
+      this.channel = { key: entity.key, castTick: tick, endTick: tick + channel.ticks, hits: channel.hits.length, hitsDone: 0, cancelled: false };
+      channel.hits.forEach((offset, i) =>
+        this.scheduled.push({ key: entity.key, entity, rule, tick: tick + offset, index: i, total: channel.hits.length, channel: this.channel, guaranteedCrit: !!channel.guaranteedCrit }),
+      );
+      this.lastAttackTick = tick;
+    } else if (hits) {
+      hits.forEach((offset, i) =>
+        this.scheduled.push({ key: entity.key, entity, rule, tick: tick + offset, index: i, total: hits.length, channel: null, guaranteedCrit: false }),
+      );
+      this.lastAttackTick = tick;
+    }
+    this.processHits(tick);
+  }
+
+  /** Puts a weapon item in hand and re-resolves the loadout (style, spec, shield, conduit ...). */
+  private switchWeapon(w: { id: string; slot: 'main' | 'off' | '2h'; style: Style }): void {
+    if (w.slot === '2h') this.wield = { mainHand: null, offHand: null, twoHand: w.id };
+    else if (w.slot === 'main') this.wield = { ...this.wield, mainHand: w.id, twoHand: null };
+    else this.wield = { ...this.wield, offHand: w.id, twoHand: null };
+    if (this.config.resolveWield) {
+      const start = this.loadout.startAdrenaline;
+      this.config.loadout = this.config.resolveWield(this.wield);
+      this.config.loadout.startAdrenaline = start;
+      this.adrenaline = Math.min(this.adrenaline, this.maxAdrenaline);
+    } else {
+      this.config.loadout = { ...this.config.loadout, style: w.style };
+    }
+    this.events.push({ kind: 'weapon', id: w.id, style: w.style });
+  }
+
+  /** Abilities that hit the target (for hit effects) unless the rule/data says otherwise. */
+  private isDamaging(acting: EngineEntity, rule: AbilityRule | undefined): boolean {
+    if (acting.kind === 'prayer' || acting.kind === 'special' || acting.kind === 'action' || acting.kind === 'weapon') return false;
+    if (rule?.offGcd) return false;
+    if (rule?.onHit || rule?.hitBuffs) return true;
+    // self-buff abilities (Berserk, Sunshine ...) have wiki buffs and no hit line; keep them hit-less
+    return acting.buffs.length === 0 && !rule?.buffs && !rule?.onCast?.some((e) => e.kind === 'buff' || e.kind === 'conjure');
+  }
+
+  private processHits(tick: number): void {
+    const due = this.scheduled.filter((h) => h.tick <= tick).sort((a, b) => a.tick - b.tick || a.index - b.index);
+    this.scheduled = this.scheduled.filter((h) => h.tick > tick);
+    for (const h of due) {
+      const ch = h.channel ? this.loadout.channelOverrides[h.entity.id] ?? h.rule?.channel ?? h.entity.channel : undefined;
+      if (h.channel) {
+        if (h.channel.cancelled) continue;
+        if (ch?.adrenalinePerHit) {
+          if (this.adrenaline < ch.adrenalinePerHit) {
+            this.cancelChannel();
+            continue;
+          }
+          this.addAdrenaline(-ch.adrenalinePerHit);
+        }
+        h.channel.hitsDone++;
+      }
+      this.onHit(h);
+      if (h.channel && h.channel.hitsDone === h.channel.hits) {
+        for (const eff of ch?.onComplete ?? []) this.applyEffect(eff, h.tick, h.entity, h.index);
+        if (this.channel === h.channel) this.channel = null;
+      }
+    }
+  }
+
+  private onHit(h: ScheduledHit): void {
+    const globals = this.matchingGlobals(h.entity);
+    for (const eff of h.rule?.onHit ?? []) this.applyEffect(eff, h.tick, h.entity, h.index);
+    for (const id of h.rule?.hitBuffs ?? []) this.applyBuff(id, h.tick, h.entity.key);
+    const crit = h.guaranteedCrit || (this.hasBuff('greater-fury') && h.index === 0 && h.entity.style === 'Melee') || this.random() < 0.1;
+    for (const g of globals) {
+      for (const eff of g.onHit ?? []) this.applyEffect(eff, h.tick, h.entity, h.index);
+      if (g.hitAdrenaline) this.addAdrenaline(g.hitAdrenaline * (this.hasBuff('natural-instinct') ? 2 : 1));
+      if (g.critAdrenaline && crit) this.addAdrenaline(g.critAdrenaline * (this.hasBuff('natural-instinct') ? 2 : 1));
+    }
+    const perTick = this.loadout.channelAdrenalinePerTick[h.entity.id];
+    if (perTick && h.channel) this.addAdrenaline(perTick);
+  }
+
+  private cancelChannel(): void {
+    const ch = this.channel;
+    if (!ch || ch.cancelled) return;
+    ch.cancelled = true;
+    const lost = this.scheduled.filter((h) => h.channel === ch).length;
+    this.scheduled = this.scheduled.filter((h) => h.channel !== ch);
+    this.events.push({ kind: 'channel-cancelled', key: ch.key, hitsLost: lost });
+    this.channel = null;
+  }
+
+  // ---------------------------------------------------------------- enemy attacks (prayer training)
+
+  private scheduleAttack(tick: number): void {
+    const enemy = this.config.enemy!;
+    const styles = enemy.styles;
+    const last = this.attackHistory.at(-1);
+    let style: Style4;
+    switch (enemy.pattern) {
+      case 'cycle':
+        style = styles[this.cycleIndex % styles.length];
+        this.cycleIndex++;
+        break;
+      case 'streak': {
+        const n = Math.max(1, enemy.streak);
+        const run = this.attackHistory.length;
+        style = styles[Math.floor(run / n) % styles.length];
+        break;
+      }
+      case 'no-repeat': {
+        const pool = styles.length > 1 && last ? styles.filter((s) => s !== last) : styles;
+        style = pool[Math.floor(this.random() * pool.length)];
+        break;
+      }
+      default:
+        style = styles[Math.floor(this.random() * styles.length)];
+    }
+    this.attackHistory.push(style);
+    this.nextAttack = { tick, style, revealTick: tick - Math.max(0, enemy.warningTicks) };
+  }
+
+  // ---------------------------------------------------------------- effects
+
+  private applyEffect(eff: Effect, tick: number, entity: EngineEntity, hitIndex: number): void {
+    if ('when' in eff && eff.when && eff.kind !== 'choose' && !this.conditionMet(eff.when, tick, hitIndex)) return;
+    switch (eff.kind) {
+      case 'stack': {
+        const cap = this.loadout.stackCaps[eff.stack] ?? eff.cap ?? Infinity;
+        this.stacks.set(eff.stack, Math.min(cap, this.stack(eff.stack) + eff.amount));
+        break;
+      }
+      case 'stack-set':
+        this.stacks.set(eff.stack, eff.amount);
+        break;
+      case 'consume-stack': {
+        const have = this.stack(eff.stack);
+        if (eff.min !== undefined && have < eff.min) break;
+        const take = eff.amount === 'all' ? have : Math.min(have, eff.amount);
+        if (take <= 0) break;
+        this.stacks.set(eff.stack, have - take);
+        for (const e of eff.then ?? []) this.applyEffect(e, tick, entity, hitIndex);
+        break;
+      }
+      case 'buff':
+        this.applyBuff(eff.id, tick, entity.key, eff.durationTicks, eff.stacks, eff.refresh ?? true);
+        break;
+      case 'extend-buff': {
+        const b = this.buff(eff.buff);
+        if (b && b.endTick !== null) {
+          const room = eff.maxTotal === undefined ? eff.ticks : Math.max(0, eff.maxTotal - b.extended);
+          const add = Math.min(eff.ticks, room);
+          b.endTick += add;
+          b.extended += add;
+        }
+        break;
+      }
+      case 'remove-buff':
+        this.removeBuff(eff.id);
+        break;
+      case 'cooldown-reset':
+        for (const id of eff.abilities) {
+          this.readyTick.delete('ability:' + id);
+          this.chargeReady.delete('ability:' + id);
+        }
+        break;
+      case 'cooldown-reduce': {
+        const key = 'ability:' + eff.ability;
+        const ready = this.readyTick.get(key);
+        if (ready !== undefined && ready > tick) this.readyTick.set(key, Math.max(tick, ready - eff.ticks));
+        break;
+      }
+      case 'adrenaline':
+        this.addAdrenaline(eff.amount);
+        break;
+      case 'adrenaline-per-tick':
+        this.overTime.push({ key: entity.key, perTick: eff.amount, untilTick: tick + eff.ticks });
+        break;
+      case 'sequence-open':
+        this.sequences.set(eff.group, { openStep: eff.step, untilTick: tick + eff.windowTicks });
+        break;
+      case 'sequence-reset':
+        this.sequences.delete(eff.group);
+        break;
+      case 'flag':
+        break;
+      case 'conjure': {
+        if (this.spirits.has(eff.spirit)) break;
+        const duration = Math.round((eff.durationTicks + this.loadout.conjureDurationAdd) * this.loadout.conjureDurationMult);
+        this.spirits.set(eff.spirit, { spirit: eff.spirit, sinceTick: tick, endTick: tick + duration });
+        this.applyBuff('spirit-' + eff.spirit, tick, entity.key, duration);
+        break;
+      }
+      case 'dismiss': {
+        const s = this.spirits.get(eff.spirit);
+        this.spirits.delete(eff.spirit);
+        this.removeBuff('spirit-' + eff.spirit);
+        if (s && eff.reconjureAfterTicks) this.reconjureReady.set(eff.spirit, s.sinceTick + eff.reconjureAfterTicks);
+        break;
+      }
+      case 'choose':
+        for (const e of this.conditionMet(eff.when, tick, hitIndex) ? eff.then : eff.otherwise ?? []) this.applyEffect(e, tick, entity, hitIndex);
+        break;
+    }
+  }
+
+  private conditionMet(c: Condition, tick: number, hitIndex: number): boolean {
+    if (c.buff && !this.hasBuff(c.buff)) return false;
+    if (c.notBuff && this.hasBuff(c.notBuff)) return false;
+    if (c.stackMin && this.stack(c.stackMin.stack) < c.stackMin.min) return false;
+    if (c.stackMax && this.stack(c.stackMax.stack) > c.stackMax.max) return false;
+    if (c.item && !this.loadout.items.has(c.item)) return false;
+    if (c.style && this.loadout.style !== c.style) return false;
+    if (c.chance !== undefined && this.random() >= c.chance) return false;
+    if (c.idleMin !== undefined && tick - this.lastAttackTick < c.idleMin) return false;
+    if (c.hit !== undefined && hitIndex !== c.hit) return false;
+    if (c.duringGcd !== undefined) {
+      const running = this.gcdEndTick !== null && tick < this.gcdEndTick;
+      if (running !== c.duringGcd) return false;
+    }
+    return true;
+  }
+
+  private requirementMet(r: Requirement, tick: number): boolean {
+    if (r.buff && !this.hasBuff(r.buff)) return false;
+    if (r.notBuff && this.hasBuff(r.notBuff)) return false;
+    if (r.stackMin && this.stack(r.stackMin.stack) < r.stackMin.min) return false;
+    if (r.spirit) {
+      const s = this.spirits.get(r.spirit);
+      if (!s) return false;
+      if (r.spiritAgeMin !== undefined && tick - s.sinceTick < r.spiritAgeMin) return false;
+    }
+    if (r.sequence && this.sequenceStep(r.sequence.group, tick) !== r.sequence.step) return false;
+    if (r.adrenalineBelow !== undefined && this.adrenaline >= r.adrenalineBelow) return false;
+    if (r.adrenalineMin !== undefined && this.adrenaline < r.adrenalineMin) return false;
+    if (r.notStunImmune && (this.hasBuff('anticipation') || this.hasBuff('freedom') || this.hasBuff('transfigure-immunity'))) return false;
+    if (r.style && this.loadout.style !== r.style) return false;
+    if (r.equipment) {
+      const l = this.loadout;
+      switch (r.equipment) {
+        case '2h': if (!l.has2h) return false; break;
+        case 'shield': if (!l.hasShield) return false; break;
+        case 'defender-or-shield': if (!l.hasShield && !l.hasDefender) return false; break;
+        case 'conduit': if (!l.hasConduit) return false; break;
+        case 'spec-weapon': if (!l.weaponSpec) return false; break;
+        case 'eof': if (!l.eofSpec || (l.style && l.eofSpec.style && l.eofSpec.style !== l.style)) return false; break;
+      }
+    }
+    return true;
+  }
+
+  private applyBuff(id: string, tick: number, sourceKey: string, durationOverride?: number, stacks?: number, refresh = true): void {
+    const def = BUFF_BY_ID.get(id);
+    let duration: number | null = durationOverride ?? def?.durationTicks ?? 3;
+    if (duration !== null) {
+      duration += this.loadout.buffDurationAdd[id] ?? 0;
+      duration = Math.round(duration * (this.loadout.buffDurationMult[id] ?? 1));
+    }
+    const existing = this.buff(id);
+    if (existing) {
+      if (stacks) existing.stacks += stacks;
+      if (refresh && duration !== null) {
+        existing.endTick = tick + duration;
+        existing.extended = 0;
+      }
+      return;
+    }
+    this.buffs.push({
+      id,
+      name: def?.name ?? id,
+      kind: def?.kind ?? 'Buff',
+      on: def?.on ?? 'self',
+      icon: def?.icon ?? null,
+      startTick: tick,
+      endTick: duration === null ? null : tick + duration,
+      stacks: stacks ?? 0,
+      extended: 0,
+      sourceKey,
+    });
+  }
+
+  private applyDataBuff(b: EngineBuff, tick: number, sourceKey: string): void {
+    this.buffs = this.buffs.filter((x) => x.id !== b.id);
+    this.buffs.push({ id: b.id, name: b.name, kind: b.kind, on: b.on, icon: b.icon, startTick: tick, endTick: b.durationTicks === null ? null : tick + b.durationTicks, stacks: 0, extended: 0, sourceKey });
+  }
+
+  private removeBuff(id: string): void {
+    this.buffs = this.buffs.filter((b) => b.id !== id);
+  }
+
+  private addAdrenaline(delta: number): void {
     this.adrenaline = Math.max(0, Math.min(this.maxAdrenaline, this.adrenaline + delta));
-    if (entity.adrenalineOverTime && entity.adrenalineOverTime.ticks > 0) {
-      this.overTime.push({
-        key: entity.key,
-        perTick: entity.adrenalineOverTime.amount / entity.adrenalineOverTime.ticks,
-        untilTick: tick + entity.adrenalineOverTime.ticks,
-      });
-    }
-    for (const b of entity.buffs) {
-      this.buffs = this.buffs.filter((x) => x.id !== b.id);
-      this.buffs.push({ ...b, startTick: tick, endTick: b.durationTicks === null ? null : tick + b.durationTicks, sourceKey: entity.key });
-    }
   }
 
   private advanceTick(tick: number): void {
     this.lastTick = tick;
+    for (const o of this.overTime) {
+      if (tick <= o.untilTick) this.addAdrenaline(o.perTick);
+    }
+    this.overTime = this.overTime.filter((o) => tick < o.untilTick);
+    for (const b of this.buffs) {
+      const def = BUFF_BY_ID.get(b.id);
+      if (def?.adrenalinePerTick) this.addAdrenaline(def.adrenalinePerTick);
+    }
+    this.buffs = this.buffs.filter((b) => b.endTick === null || b.endTick > tick);
+    for (const [name, s] of [...this.spirits]) {
+      if (s.endTick <= tick) {
+        this.spirits.delete(name);
+        this.removeBuff('spirit-' + name);
+      }
+    }
+    for (const [group, s] of [...this.sequences]) {
+      if (s.untilTick < tick) this.sequences.delete(group);
+    }
+    this.processHits(tick);
+    if (this.channel && !this.channel.cancelled && this.channel.endTick <= tick && this.channel.hitsDone >= this.channel.hits) this.channel = null;
+
+    // prayer score + enemy attacks
     this.prayerStats.ticks++;
     if (this.nextAttack && this.nextAttack.tick === tick) {
       const { style } = this.nextAttack;
@@ -686,11 +1187,6 @@ export class TrainerEngine {
     } else if (this.activePrayers.has(SOUL_SPLIT)) {
       this.prayerStats.soulSplitTicks++;
     }
-    for (const o of this.overTime) {
-      if (tick <= o.untilTick) this.adrenaline = Math.min(this.maxAdrenaline, this.adrenaline + o.perTick);
-    }
-    this.overTime = this.overTime.filter((o) => tick < o.untilTick);
-    this.buffs = this.buffs.filter((b) => b.endTick === null || b.endTick > tick);
   }
 
   private advanceIndex(): void {
@@ -712,6 +1208,58 @@ export class TrainerEngine {
         this.events.push({ kind: 'finished' });
       }
     }
+  }
+
+  // ---------------------------------------------------------------- helpers
+
+  ruleOf(e: EngineEntity): AbilityRule | undefined {
+    return e.kind === 'ability' ? ruleFor(e.id) : undefined;
+  }
+
+  /** Weapon Special Attack / Essence of Finality steps act as the wielded weapon's spec; spec steps act as themselves. */
+  specFor(e: EngineEntity): EngineEntity | null {
+    if (e.kind === 'spec') return this.loadout.weaponSpec?.id === e.id ? this.loadout.weaponSpec : e;
+    if (e.id === 'weapon-special-attack') return this.loadout.weaponSpec;
+    if (e.id === 'essence-of-finality') return this.loadout.eofSpec;
+    return null;
+  }
+
+  private isThreshold(e: EngineEntity, rule: AbilityRule | undefined): boolean {
+    if (rule?.cost?.threshold === false) return false;
+    return e.abilityType === 'Threshold' || !!rule?.cost?.threshold;
+  }
+
+  private isBasicAttack(e: EngineEntity): boolean {
+    return e.id === 'attack' || e.id === 'ranged' || e.id === 'magic' || e.id === 'necromancy';
+  }
+
+  private cooldownFor(acting: EngineEntity, rule: AbilityRule | undefined, tick: number): number {
+    let ticks = rule?.cooldownTicks ?? acting.cooldownTicks;
+    for (const r of rule?.cooldownRules ?? []) {
+      if (this.conditionMet(r.when, tick, 0)) ticks = r.ticks;
+    }
+    const mult = this.loadout.cooldownMult[acting.id];
+    if (mult !== undefined) ticks = Math.round(ticks * mult);
+    return ticks;
+  }
+
+  private matchingGlobals(e: EngineEntity): GlobalRule[] {
+    if (e.kind !== 'ability') return [];
+    const rule = ruleFor(e.id);
+    return GLOBALS.filter((g) => {
+      const w = g.when;
+      if (w.abilities && !w.abilities.includes(e.id)) return false;
+      if (w.excludeAbilities?.includes(e.id)) return false;
+      if (w.style && e.style !== w.style) return false;
+      if (w.styles && (!e.style || !w.styles.includes(e.style))) return false;
+      if (w.type && e.abilityType !== w.type) return false;
+      if (w.types && (!e.abilityType || !w.types.includes(e.abilityType))) return false;
+      if (w.gcd && (!e.gcd || rule?.offGcd)) return false;
+      if (w.costing && !(e.adrenaline < 0 || this.isThreshold(e, rule))) return false;
+      if (w.generating && !((rule?.adrenaline ?? e.adrenaline) > 0)) return false;
+      if (w.buff && !this.hasBuff(w.buff)) return false;
+      return true;
+    });
   }
 }
 

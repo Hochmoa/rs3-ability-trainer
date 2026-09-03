@@ -2419,7 +2419,7 @@
    14710
   ],
   "icon": "assets/abilities/anticipation.png",
-  "triggersGcd": false
+  "triggersGcd": true
  },
  {
   "id": "bash",
@@ -3088,31 +3088,6 @@
    14675
   ],
   "icon": "assets/abilities/storm-shards.png",
-  "triggersGcd": true
- },
- {
-  "id": "demoralise",
-  "structId": null,
-  "name": "Demoralise",
-  "style": "Constitution",
-  "type": "Threshold",
-  "level": 37,
-  "target": "Single",
-  "equipment": "None",
-  "members": false,
-  "basicAttack": false,
-  "adrenaline": -15.0,
-  "cooldownTicks": 25,
-  "damageAvg": 75.0,
-  "damageText": "75%",
-  "damageMin": null,
-  "damageMax": null,
-  "hits": null,
-  "channelled": false,
-  "durationTicks": null,
-  "description": "Disable your opponents&#91;sic&#93; protection prayers for 5 seconds and dealing up to 150% weapon damage.",
-  "buffs": [],
-  "icon": "assets/abilities/demoralise.png",
   "triggersGcd": true
  },
  {

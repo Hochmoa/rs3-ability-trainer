@@ -117,15 +117,6 @@ export const STYLES4: Style4[] = ['Melee', 'Ranged', 'Magic', 'Necromancy'];
 export type WeaponType = 'two-handed' | 'dual-wield' | 'shield';
 export const WEAPON_TYPES: WeaponType[] = ['two-handed', 'dual-wield', 'shield'];
 
-/** weapon-switch entity, id = style in lower case ("melee", "ranged", ...) */
-export interface Weapon {
-  id: string;
-  name: string;
-  style: Style4;
-  description: string;
-  icon: string;
-}
-
 export function isStyle4(s: string): s is Style4 {
   return (STYLES4 as string[]).includes(s);
 }
@@ -191,21 +182,173 @@ export interface Settings {
 
 export const DEFAULT_SETTINGS: Settings = { pingMs: 60, jitterMs: 20, abilityQueueing: false, loop: false };
 
-/** Everything outside the rotation that changes adrenaline (numbers from runescape.wiki, Sept 2026). */
+// ---------------------------------------------------------------- equipment data (public/data/*.json)
+
+export interface Weapon {
+  id: string;
+  name: string;
+  style: Style;
+  slot: 'main' | 'off' | '2h' | 'shield';
+  type: string | null;
+  tier: number;
+  tierDamage: number;
+  tierAccuracy: number;
+  speed: number | null;
+  attackStyle: string | null;
+  range: number | null;
+  damage: number;
+  accuracy: number;
+  abilityDamage: number | null;
+  armour: number;
+  lifePoints: number;
+  charges: string | null;
+  /** weapon special attack id (specs.json) */
+  spec: string | null;
+  innateMastery: boolean;
+  icon: string | null;
+  role: 'siphon' | 'conduit' | 'shield' | 'defender' | null;
+}
+
+export interface WeaponSpec {
+  id: string;
+  name: string;
+  page: string;
+  style: Style;
+  target: string;
+  weapons: string[];
+  weaponIds: string[];
+  /** adrenaline requirement = cost */
+  adrenaline: number | null;
+  cooldownTicks: number;
+  ignoresGcd: boolean;
+  channelled: boolean;
+  damageText: string;
+  damageMin: number | null;
+  damageMax: number | null;
+  durationTicks: number | null;
+  description: string;
+  buffs: { id: number; pagename: string }[];
+  weaponIcons: string[];
+  eof: { storable: boolean | 'unknown'; notes: string | null };
+  members: boolean;
+}
+
+export interface Perk {
+  id: string;
+  name: string;
+  gizmos: string[];
+  maxRank: number;
+  maxRankAncient: number;
+  level: number | null;
+  description: string;
+  class: 'adrenaline' | 'cooldown' | 'damage' | 'defensive' | 'none';
+  params: Record<string, unknown>;
+  twoSlot: boolean;
+  icon: string | null;
+}
+
+export interface SetEffectThreshold {
+  pieces: number;
+  class: string;
+  text: string;
+  effect: Record<string, unknown> & { kind: string };
+}
+
+export interface SetEffect {
+  id: string;
+  kind: 'set' | 'item';
+  name: string;
+  style: Style | null;
+  source: string;
+  /** sets */
+  maxPieces?: number;
+  thresholds?: SetEffectThreshold[];
+  /** single items */
+  slot?: string;
+  class?: string;
+  text?: string;
+  effect?: Record<string, unknown> & { kind: string };
+}
+
+// ---------------------------------------------------------------- loadout
+
+export interface GizmoPerk {
+  perk: string;
+  rank: number;
+}
+
+export interface Gizmo {
+  ancient: boolean;
+  perks: GizmoPerk[];
+}
+
+/** Everything outside the rotation: weapons, special attacks, armour set, item passives, perks, relics. */
 export interface Loadout {
+  id: string;
+  name: string;
   /** start of a training session, 0..100 */
   startAdrenaline: number;
-  /** Ring of vigour (or its unlocked passive): +10% adrenaline back after an ultimate */
+  /** weapon ids (weapons.json) in hand at the start; twoHand excludes mainHand/offHand */
+  mainHand: string | null;
+  offHand: string | null;
+  twoHand: string | null;
+  /** further weapons carried for switching (weapon ids); rotation steps "weapon:<id>" wield them */
+  switches: string[];
+  /** active prayer book – standard prayers or Ancient Curses; never mixed inside a session */
+  prayerBook: 'Prayers' | 'Curses';
+  /** special attack stored in the Essence of Finality amulet (specs.json id) */
+  eofSpec: string | null;
+  /** armour set (set-effects.json, kind "set") and how many pieces are worn */
+  armourSet: string | null;
+  armourPieces: number;
+  /** single-item passives (set-effects.json, kind "item") */
+  items: string[];
+  /** two weapon gizmos (2h) or one per weapon (dual wield / 1h) */
+  weaponGizmos: Gizmo[];
+  /** body + legs (+ shield) */
+  armourGizmos: Gizmo[];
+  /** Archaeology relics: fury-of-the-small, conservation-of-energy, heightened-senses, persistent-rage */
+  relics: string[];
+  /** Necromancy talent Spirit Pact tier 0..3 */
+  spiritPact: 0 | 1 | 2 | 3;
+}
+
+export const RELICS: { id: string; name: string; text: string }[] = [
+  { id: 'fury-of-the-small', name: 'Fury of the Small', text: 'Basic abilities generate +1% adrenaline.' },
+  { id: 'conservation-of-energy', name: 'Conservation of Energy', text: 'Regain 10% adrenaline after an ultimate (stacks with Ring of vigour).' },
+  { id: 'heightened-senses', name: 'Heightened Senses', text: 'Maximum adrenaline +10%.' },
+  { id: 'persistent-rage', name: 'Persistent Rage', text: 'Out of combat adrenaline builds up instead of draining (no effect in the trainer).' },
+];
+
+export function newLoadout(name = 'Default'): Loadout {
+  return {
+    id: crypto.randomUUID(),
+    name,
+    startAdrenaline: 0,
+    mainHand: null,
+    offHand: null,
+    twoHand: null,
+    switches: [],
+    prayerBook: 'Curses',
+    eofSpec: null,
+    armourSet: null,
+    armourPieces: 0,
+    items: [],
+    weaponGizmos: [{ ancient: false, perks: [] }, { ancient: false, perks: [] }],
+    armourGizmos: [{ ancient: false, perks: [] }, { ancient: false, perks: [] }],
+    relics: [],
+    spiritPact: 0,
+  };
+}
+
+/** Loadout shape of builds before September 2026 (flags only). */
+export interface LegacyLoadout {
+  startAdrenaline: number;
   ringOfVigour: boolean;
-  /** Invention perk: rank × 9% chance that a basic ability gives +3% extra */
-  impatientRank: 0 | 1 | 2 | 3 | 4;
-  /** Archaeology relic: basic abilities generate +1% */
+  impatientRank: number;
   furyOfTheSmall: boolean;
-  /** Archaeology relic: +10% adrenaline back after an ultimate */
   conservationOfEnergy: boolean;
-  /** Archaeology relic: maximum adrenaline +10% */
   heightenedSenses: boolean;
-  /** Vestments of havoc 4-piece: maximum adrenaline +20% (melee weapon) */
   vestmentsOfHavoc: boolean;
   /** active prayer book – standard prayers or Ancient Curses; never mixed inside a session */
   prayerBook?: 'Prayers' | 'Curses';
@@ -251,9 +394,11 @@ export interface ActionBarSetup {
   bindings: Record<Style4, (number | null)[]>;
   /** keybinds belong to position + slot, like in the game */
   slotKeybinds: (Keybind | null)[][];
-  weaponKeybinds: Record<Style4, Keybind | null>;
-  weapons: Record<Style4, WeaponType>;
-  startWeapon: Style4;
+  /** one key per carried weapon (weapon item id → key); legacy builds used the style names as keys */
+  weaponKeybinds: Record<string, Keybind | null>;
+  /** legacy (builds before the loadout held the weapons) – ignored */
+  weapons?: Record<Style4, WeaponType>;
+  startWeapon?: Style4;
   /** last local edit (ms); missing = never edited */
   updatedAt?: number;
   /** server updated_at (ms) of the last successful sync; missing = never synced */
@@ -281,9 +426,7 @@ export function defaultActionBars(): ActionBarSetup {
     positions: [1, 2, 3, 4, 5],
     bindings: { Melee: none(), Ranged: none(), Magic: none(), Necromancy: none() },
     slotKeybinds,
-    weaponKeybinds: { Melee: null, Ranged: null, Magic: null, Necromancy: null },
-    weapons: { Melee: 'two-handed', Ranged: 'two-handed', Magic: 'two-handed', Necromancy: 'two-handed' },
-    startWeapon: 'Melee',
+    weaponKeybinds: {},
     actionKeybinds: { 'target-cycle': null },
   };
 }
@@ -293,16 +436,28 @@ export function visiblePresets(setup: ActionBarSetup, style: Style4): (number | 
   return setup.positions.map((p, i) => setup.bindings[style]?.[i] ?? p);
 }
 
-export const DEFAULT_LOADOUT: Loadout = {
-  startAdrenaline: 0,
-  ringOfVigour: false,
-  impatientRank: 0,
-  furyOfTheSmall: false,
-  conservationOfEnergy: false,
-  heightenedSenses: false,
-  vestmentsOfHavoc: false,
-  prayerBook: 'Curses',
-};
+export function migrateLegacyLoadout(old: Partial<LegacyLoadout>): Loadout {
+  const l = newLoadout('Default');
+  l.startAdrenaline = old.startAdrenaline ?? 0;
+  if (old.ringOfVigour) l.items.push('ring-of-vigour');
+  if (old.furyOfTheSmall) l.relics.push('fury-of-the-small');
+  if (old.conservationOfEnergy) l.relics.push('conservation-of-energy');
+  if (old.heightenedSenses) l.relics.push('heightened-senses');
+  if (old.vestmentsOfHavoc) {
+    l.armourSet = 'vestments-of-havoc';
+    l.armourPieces = 4;
+  }
+  if (old.impatientRank) l.armourGizmos[0].perks.push({ perk: 'impatient', rank: old.impatientRank });
+  l.prayerBook = old.prayerBook ?? 'Curses';
+  return l;
+}
+
+/** Weapon ids a loadout carries: the starting set plus the switches. */
+export function loadoutWeapons(l: Loadout): string[] {
+  const out: string[] = [];
+  for (const id of [l.twoHand, l.mainHand, l.offHand, ...l.switches]) if (id && !out.includes(id)) out.push(id);
+  return out;
+}
 
 /** Simulated enemy for prayer training: attacks in a fixed rhythm, the matching overhead must be active on the hit tick. */
 export type AttackPattern = 'random' | 'no-repeat' | 'cycle' | 'streak';

@@ -223,13 +223,6 @@ export class Bars {
     this.save((s) => (s.bindings[style][pos] = id));
   }
 
-  setWeaponType(style: Style4, type: WeaponType): void {
-    this.save((s) => (s.weapons[style] = type));
-  }
-
-  setStartWeapon(style: Style4): void {
-    this.save((s) => (s.startWeapon = style));
-  }
 
   subtitle(e: Entity): string {
     if (e.ability) return e.ability.basicAttack ? 'auto-attack' : e.ability.type + (e.ability.triggersGcd ? '' : ' · no GCD');

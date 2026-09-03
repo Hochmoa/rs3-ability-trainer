@@ -1,18 +1,30 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_LOADOUT, Loadout } from '../core/models';
+import { ResolvedLoadout, defaultResolvedLoadout } from './loadout-resolved';
 import { EngineConfig, EngineEntity, TrainerEngine } from './trainer-engine';
 
-const off: EngineConfig = { pingMs: 0, jitterMs: 0, abilityQueueing: false, loop: false, loadout: { ...DEFAULT_LOADOUT } };
+/** old-style loadout knobs used by these tests */
+interface Loadout { startAdrenaline?: number; ringOfVigour?: boolean; conservationOfEnergy?: boolean; furyOfTheSmall?: boolean; heightenedSenses?: boolean; vestmentsOfHavoc?: boolean; impatientRank?: number }
+function resolved(l: Loadout): ResolvedLoadout {
+  const r = defaultResolvedLoadout();
+  r.startAdrenaline = l.startAdrenaline ?? 0;
+  r.ultimateRefund = (l.ringOfVigour ? 10 : 0) + (l.conservationOfEnergy ? 10 : 0);
+  r.basicGainAdd = l.furyOfTheSmall ? 1 : 0;
+  r.maxAdrenaline = 100 + (l.heightenedSenses ? 10 : 0) + (l.vestmentsOfHavoc ? 20 : 0);
+  r.impatientRank = l.impatientRank ?? 0;
+  return r;
+}
+
+const off: EngineConfig = { pingMs: 0, jitterMs: 0, abilityQueueing: false, loop: false, loadout: defaultResolvedLoadout() };
 const on: EngineConfig = { ...off, abilityQueueing: true };
 
 function ability(key: string, extra: Partial<EngineEntity> = {}): EngineEntity {
-  return { key, kind: 'ability', name: key, icon: '', gcd: true, abilityType: 'Basic', adrenaline: 9, cooldownTicks: 0, buffs: [], ...extra };
+  return { key, id: key, kind: 'ability', name: key, icon: '', gcd: true, abilityType: 'Basic', adrenaline: 9, cooldownTicks: 0, buffs: [], ...extra };
 }
 function prayer(key: string): EngineEntity {
-  return { key, kind: 'prayer', name: key, icon: '', gcd: false, adrenaline: 0, cooldownTicks: 0, buffs: [{ id: key, name: key, kind: 'Buff', on: 'self', icon: null, durationTicks: null }] };
+  return { key, id: key, kind: 'prayer', name: key, icon: '', gcd: false, adrenaline: 0, cooldownTicks: 0, buffs: [{ id: key, name: key, kind: 'Buff', on: 'self', icon: null, durationTicks: null }] };
 }
 function potion(key: string): EngineEntity {
-  return { key, kind: 'special', name: key, icon: '', gcd: false, adrenaline: 25, cooldownTicks: 200, sharedCooldown: 'pot', buffs: [] };
+  return { key, id: key, kind: 'special', name: key, icon: '', gcd: false, adrenaline: 25, cooldownTicks: 200, sharedCooldown: 'pot', buffs: [] };
 }
 
 const A = ability('a');
@@ -25,7 +37,9 @@ const POT = potion('pot');
 const CATALOG = new Map([A, B, C, ULT, ENH, PRAY, POT].map((e) => [e.key, e]));
 
 function make(steps: EngineEntity[], cfg: Partial<EngineConfig> = {}, loadout: Partial<Loadout> = {}): TrainerEngine {
-  return new TrainerEngine(steps, CATALOG, { ...off, ...cfg, loadout: { ...DEFAULT_LOADOUT, ...loadout } });
+  const e = new TrainerEngine(steps, CATALOG, { ...off, ...cfg, loadout: resolved(loadout) });
+  e.random = () => 0.99;
+  return e;
 }
 
 /** a,b,c started at t=0; 'a' cast at tick 1 (t=600) → GCD ends at tick 4 (t=2400). */
@@ -296,8 +310,8 @@ describe('off-GCD steps (prayers, potions)', () => {
 });
 
 describe('PvME companions (same tick / 2t) and notes', () => {
-  const NOTE: EngineEntity = { key: 'note:1', kind: 'action', name: 'improv', icon: '', gcd: false, adrenaline: 0, cooldownTicks: 0, buffs: [], isNote: true };
-  const TC: EngineEntity = { key: 'action:target-cycle', kind: 'action', name: 'tc', icon: '', gcd: false, adrenaline: 0, cooldownTicks: 0, buffs: [] };
+  const NOTE: EngineEntity = { key: 'note:1', kind: 'action', id: 'note-1', name: 'improv', icon: '', gcd: false, adrenaline: 0, cooldownTicks: 0, buffs: [], isNote: true };
+  const TC: EngineEntity = { key: 'action:target-cycle', kind: 'action', id: 'target-cycle', name: 'tc', icon: '', gcd: false, adrenaline: 0, cooldownTicks: 0, buffs: [] };
   const CAT = new Map([...CATALOG, [TC.key, TC]]);
 
   it('same-tick companion is perfect on the cast tick, late afterwards', () => {
@@ -338,7 +352,8 @@ describe('PvME companions (same tick / 2t) and notes', () => {
   it('notes are skipped automatically and never missed', () => {
     const e = new TrainerEngine([NOTE, A, NOTE, TC, B], CAT, on);
     e.start(0);
-    expect(e.currentStep?.key).toBe('note:1');
+    expect(e.currentStep?.key).toBe('a'); // the leading note is skipped at start
+    expect(e.isDone(0)).toBe(true);
     e.press('a', 100);
     e.update(600);
     expect(e.index).toBe(3); // both notes done, tc expected
@@ -348,10 +363,10 @@ describe('PvME companions (same tick / 2t) and notes', () => {
   });
 
   it('the generic spec key fires the spec the rotation expects for the wielded weapon', () => {
-    const SPEC: EngineEntity = { key: 'spec:death-essence', kind: 'spec', name: 'Death Essence', icon: '', gcd: true, abilityType: 'Special', style: 'Necromancy', adrenaline: -30, cooldownTicks: 100, buffs: [] };
-    const GENERIC: EngineEntity = { key: 'ability:weapon-special-attack', kind: 'ability', name: 'Weapon Special Attack', icon: '', gcd: true, abilityType: 'Special', style: 'Constitution', adrenaline: 0, cooldownTicks: 0, buffs: [] };
+    const SPEC: EngineEntity = { key: 'spec:death-essence', kind: 'spec', id: 'death-essence', name: 'Death Essence', icon: '', gcd: true, abilityType: 'Special', style: 'Necromancy', adrenaline: -30, cooldownTicks: 100, buffs: [] };
+    const GENERIC: EngineEntity = { key: 'ability:weapon-special-attack', kind: 'ability', id: 'weapon-special-attack', name: 'Weapon Special Attack', icon: '', gcd: true, abilityType: 'Special', style: 'Constitution', adrenaline: 0, cooldownTicks: 0, buffs: [] };
     const cat = new Map([...CAT, [SPEC.key, SPEC], [GENERIC.key, GENERIC]]);
-    const e = new TrainerEngine([SPEC, A], cat, { ...on, loadout: { ...DEFAULT_LOADOUT, startAdrenaline: 50 }, weaponSetup: { start: 'Necromancy', types: { Melee: 'two-handed', Ranged: 'two-handed', Magic: 'two-handed', Necromancy: 'dual-wield' } } });
+    const e = new TrainerEngine([SPEC, A], cat, { ...on, loadout: { ...resolved({ startAdrenaline: 50 }), style: 'Necromancy', weaponSpec: SPEC } });
     e.start(0);
     e.press('ability:weapon-special-attack', 100);
     e.update(600);

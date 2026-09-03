@@ -1,7 +1,7 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, computed, signal } from '@angular/core';
 import { IDBPDatabase, deleteDB, openDB } from 'idb';
 import { Subject } from 'rxjs';
-import { ActionBarSetup, DEFAULT_ENEMY, DEFAULT_LOADOUT, EnemyConfig, DEFAULT_SETTINGS, Keybind, Loadout, Rotation, RotationStep, Session, Settings, defaultActionBars } from './models';
+import { ActionBarSetup, DEFAULT_ENEMY, DEFAULT_SETTINGS, EnemyConfig, Keybind, LegacyLoadout, Loadout, Rotation, RotationStep, Session, Settings, defaultActionBars, migrateLegacyLoadout, newLoadout } from './models';
 
 const DB_NAME = 'rs3trainer';
 const CONSENT_KEY = 'rs3trainer.consent';
@@ -15,7 +15,10 @@ export class StorageService {
   readonly consent = signal(readConsent());
   readonly ready = signal(false);
   readonly settings = signal<Settings>({ ...DEFAULT_SETTINGS });
-  readonly loadout = signal<Loadout>({ ...DEFAULT_LOADOUT });
+  /** named loadouts; the active one drives the simulation */
+  readonly loadouts = signal<Loadout[]>([newLoadout()]);
+  readonly activeLoadoutId = signal<string>(this.loadouts()[0].id);
+  readonly loadout = computed<Loadout>(() => this.loadouts().find((l) => l.id === this.activeLoadoutId()) ?? this.loadouts()[0]);
   /** simulated enemy for prayer training */
   readonly enemy = signal<EnemyConfig>({ ...DEFAULT_ENEMY });
   /** action bar presets, positions, style bindings, slot + weapon keybinds */
@@ -60,8 +63,19 @@ export class StorageService {
       const db = await this.open();
       const settings = await db.get('settings', 'settings');
       if (settings) this.settings.set(migrateSettings(settings));
-      const loadout = await db.get('settings', 'loadout');
-      if (loadout) this.loadout.set({ ...DEFAULT_LOADOUT, ...loadout });
+      const stored = (await db.get('settings', 'loadouts')) as { loadouts: Loadout[]; active: string } | undefined;
+      if (stored?.loadouts?.length) {
+        this.loadouts.set(stored.loadouts.map(normaliseLoadout));
+        this.activeLoadoutId.set(stored.loadouts.some((l) => l.id === stored.active) ? stored.active : stored.loadouts[0].id);
+      } else {
+        const legacy = (await db.get('settings', 'loadout')) as Partial<LegacyLoadout> | undefined; // builds before Sept 2026
+        if (legacy) {
+          const l = migrateLegacyLoadout(legacy);
+          this.loadouts.set([l]);
+          this.activeLoadoutId.set(l.id);
+          await db.put('settings', { loadouts: [l], active: l.id }, 'loadouts');
+        }
+      }
       const enemy = await db.get('settings', 'enemy');
       if (enemy) this.enemy.set({ ...DEFAULT_ENEMY, ...enemy });
       const bars = await db.get('settings', 'actionbars');
@@ -98,7 +112,7 @@ export class StorageService {
     this.consent.set(true);
     const db = await this.open();
     await db.put('settings', this.settings(), 'settings');
-    await db.put('settings', this.loadout(), 'loadout');
+    await db.put('settings', { loadouts: this.loadouts(), active: this.activeLoadoutId() }, 'loadouts');
     await db.put('settings', this.enemy(), 'enemy');
     await db.put('settings', this.actionBars(), 'actionbars');
     for (const [id, kb] of Object.entries(this.keybinds())) await db.put('keybinds', kb, id);
@@ -116,8 +130,26 @@ export class StorageService {
   }
 
   async saveLoadout(l: Loadout): Promise<void> {
-    this.loadout.set({ ...l });
-    if (this.consent()) await (await this.open()).put('settings', this.loadout(), 'loadout');
+    const copy = normaliseLoadout({ ...l });
+    const list = this.loadouts().some((x) => x.id === copy.id) ? this.loadouts().map((x) => (x.id === copy.id ? copy : x)) : [...this.loadouts(), copy];
+    this.loadouts.set(list);
+    await this.persistLoadouts();
+  }
+
+  async deleteLoadout(id: string): Promise<void> {
+    const list = this.loadouts().filter((x) => x.id !== id);
+    this.loadouts.set(list.length ? list : [newLoadout()]);
+    if (!this.loadouts().some((x) => x.id === this.activeLoadoutId())) this.activeLoadoutId.set(this.loadouts()[0].id);
+    await this.persistLoadouts();
+  }
+
+  async setActiveLoadout(id: string): Promise<void> {
+    if (this.loadouts().some((x) => x.id === id)) this.activeLoadoutId.set(id);
+    await this.persistLoadouts();
+  }
+
+  private async persistLoadouts(): Promise<void> {
+    if (this.consent()) await (await this.open()).put('settings', { loadouts: this.loadouts(), active: this.activeLoadoutId() }, 'loadouts');
   }
 
   async saveActionBars(setup: ActionBarSetup): Promise<void> {
@@ -195,7 +227,8 @@ export class StorageService {
     await deleteDB(DB_NAME);
     this.consent.set(false);
     this.settings.set({ ...DEFAULT_SETTINGS });
-    this.loadout.set({ ...DEFAULT_LOADOUT });
+    this.loadouts.set([newLoadout()]);
+    this.activeLoadoutId.set(this.loadouts()[0].id);
     this.enemy.set({ ...DEFAULT_ENEMY });
     this.actionBars.set(defaultActionBars());
     this.keybinds.set({});
@@ -215,9 +248,7 @@ function mergeActionBars(stored: Partial<ActionBarSetup>): ActionBarSetup {
     positions: d.positions.map((p, i) => stored.positions?.[i] ?? p),
     bindings: { ...d.bindings, ...(stored.bindings ?? {}) },
     slotKeybinds: d.slotKeybinds.map((row, p) => row.map((kb, i) => (stored.slotKeybinds?.[p] ? stored.slotKeybinds[p][i] ?? null : kb))),
-    weaponKeybinds: { ...d.weaponKeybinds, ...(stored.weaponKeybinds ?? {}) },
-    weapons: { ...d.weapons, ...(stored.weapons ?? {}) },
-    startWeapon: stored.startWeapon ?? d.startWeapon,
+    weaponKeybinds: { ...(stored.weaponKeybinds ?? {}) },
     layout: stored.layout,
     updatedAt: stored.updatedAt,
     syncedAt: stored.syncedAt,
@@ -246,6 +277,21 @@ function cleanStep(s: RotationStep): RotationStep {
 /** Older builds stored steps as plain ability ids. */
 function migrateRotation(r: Rotation & { steps: (string | RotationStep)[] }): Rotation {
   return { ...r, steps: r.steps.map((s) => (typeof s === 'string' ? { kind: 'ability', id: s } : s)) };
+}
+
+/** Fills fields added after a loadout was saved. */
+function normaliseLoadout(l: Partial<Loadout>): Loadout {
+  const base = newLoadout(l.name ?? 'Default');
+  const out: Loadout = { ...base, ...l, id: l.id ?? base.id };
+  out.items = [...(l.items ?? [])];
+  out.relics = [...(l.relics ?? [])];
+  out.switches = [...(l.switches ?? [])];
+  out.prayerBook = l.prayerBook === 'Prayers' ? 'Prayers' : 'Curses';
+  out.weaponGizmos = (l.weaponGizmos ?? base.weaponGizmos).map((g) => ({ ancient: !!g.ancient, perks: [...(g.perks ?? [])] }));
+  out.armourGizmos = (l.armourGizmos ?? base.armourGizmos).map((g) => ({ ancient: !!g.ancient, perks: [...(g.perks ?? [])] }));
+  while (out.weaponGizmos.length < 2) out.weaponGizmos.push({ ancient: false, perks: [] });
+  while (out.armourGizmos.length < 2) out.armourGizmos.push({ ancient: false, perks: [] });
+  return out;
 }
 
 function readConsent(): boolean {

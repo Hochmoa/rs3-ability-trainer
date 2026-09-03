@@ -26,7 +26,7 @@
       Ping {{ storage.settings().pingMs }} ms ± {{ storage.settings().jitterMs }} · ability queueing
       {{ storage.settings().abilityQueueing ? 'on' : 'off' }}
       @if (storage.settings().loop) { · loop }
-      · start {{ storage.loadout().startAdrenaline }}% adrenaline · {{ prayerBook() === 'Curses' ? 'curses' : 'standard prayers' }}
+      · loadout <a routerLink="/loadout">{{ storage.loadout().name }}</a> · start {{ storage.loadout().startAdrenaline }}% · {{ prayerBook() === 'Curses' ? 'curses' : 'standard prayers' }}
     </span>
   </div>
 
@@ -114,6 +114,15 @@
       {{ unknownSteps() }} step(s) of this rotation refer to abilities that were removed from the game. <a routerLink="/rotations">Edit the rotation</a> to fix it.
     </div>
   }
+  @if (equipmentWarnings().length) {
+    <div class="panel warning">
+      The active loadout cannot perform:
+      @for (w of equipmentWarnings(); track w) {
+        <div>{{ w }}</div>
+      }
+      <a routerLink="/loadout">Change the loadout</a> or the rotation. You can still train; those steps will be refused like in game.
+    </div>
+  }
 
   <div class="panel arena">
     <div class="queue-strip">
@@ -129,8 +138,8 @@
               [ability]="s.entity"
               [keyLabel]="s.key"
               [px]="s.kind === 'current' ? 72 : s.kind === 'next' ? 48 : 40"
-              [gcdPhase]="s.kind === 'current' && running() && (s.entity.kind === 'ability' || s.entity.kind === 'spec') ? gcdPhase() : 1"
-              [remainingMs]="s.kind === 'current' && running() && (s.entity.kind === 'ability' || s.entity.kind === 'spec') ? gcdRemaining() : 0"
+              [gcdPhase]="s.kind === 'current' && running() && (s.entity.kind === 'ability' || s.entity.kind === 'spec') ? gcdPhase() : running() && s.kind === 'next' ? cdPhase(s) : 1"
+              [remainingMs]="s.kind === 'current' && running() && (s.entity.kind === 'ability' || s.entity.kind === 'spec') ? gcdRemaining() : running() && s.kind === 'next' ? cdRemaining(s) : 0"
               [state]="s.done ? 'done' : s.kind === 'current' && running() ? iconState() : 'idle'"
             />
             <span class="name">{{ s.entity.name }}</span>
@@ -141,6 +150,9 @@
             }
             @if (s.hint) {
               <span class="tag hint">{{ s.hint }}</span>
+            }
+            @if (channelling() === s.entity.key) {
+              <span class="tag">channelling</span>
             }
           </div>
         }
@@ -185,6 +197,7 @@
           @for (b of selfBuffs(); track b.id) {
             <div class="status buff" [title]="b.name">
               @if (b.icon) { <img [src]="b.icon" [alt]="b.name" /> } @else { <span class="fallback">{{ b.name.slice(0, 2) }}</span> }
+              @if (b.stacks) { <span class="stacks">{{ b.stacks }}</span> }
               @if (b.remainingS !== null) { <span class="timer">{{ b.remainingS | number: '1.0-0' }}</span> }
             </div>
           } @empty {
@@ -202,6 +215,17 @@
             <span class="muted none">–</span>
           }
         </div>
+        @if (stacks().length) {
+          <div class="status-bar stacks-bar">
+            <span class="label">Stacks</span>
+            @for (s of stacks(); track s.id) {
+              <div class="stack" [class]="'stack ' + s.id" [title]="s.name">
+                <span class="stack-name">{{ s.name }}</span>
+                <b>{{ s.value }}</b>
+              </div>
+            }
+          </div>
+        }
       </div>
       <div class="status-bar prayers">
         <span class="label">Prayers</span>
@@ -244,10 +268,10 @@
         </div>
       }
       <div class="weapons">
-        @for (st of STYLES4; track st) {
-          <div class="weapon" [class.active]="(running() ? weapon() : storage.actionBars().startWeapon) === st" [title]="st + ' weapon'">
-            <img [src]="weaponIcon(st)" [alt]="st" />
-            <span class="key">{{ weaponKey(st) || '–' }}</span>
+        @for (w of carriedWeapons(); track w.entity.id) {
+          <div class="weapon" [class.active]="wielded().includes(w.entity.id)" [title]="w.entity.name" [entityTip]="w.entity">
+            <img [src]="w.entity.icon" [alt]="w.entity.name" />
+            <span class="key">{{ w.key || '–' }}</span>
           </div>
         }
       </div>

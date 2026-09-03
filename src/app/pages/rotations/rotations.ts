@@ -8,6 +8,7 @@ import { Rotation, RotationStep, STYLES } from '../../core/models';
 import { StorageService } from '../../core/storage.service';
 import { SupabaseService } from '../../core/supabase.service';
 import { SyncService } from '../../core/sync.service';
+import { ruleFor } from '../../engine/rules';
 import { AbilityIcon } from '../../shared/ability-icon';
 import { EntityTip } from '../../shared/tooltip';
 
@@ -50,6 +51,32 @@ export class Rotations {
       if (a.prayer && b.prayer) return a.prayer.level - b.prayer.level || a.name.localeCompare(b.name);
       return a.name.localeCompare(b.name);
     });
+  });
+
+  /** in-game impossibilities in the rotation being edited */
+  readonly editWarnings = computed<string[]>(() => {
+    const r = this.editing();
+    if (!r) return [];
+    const out: string[] = [];
+    const ids = r.steps.filter((s) => s.kind === 'ability').map((s) => s.id);
+    const set = new Set(ids);
+    for (const id of set) {
+      const rule = ruleFor(id);
+      if (rule?.replaces && set.has(rule.replaces)) {
+        out.push(this.data.get('ability:' + id)?.name + ' replaces ' + this.data.get('ability:' + rule.replaces)?.name + ' in game – both cannot be on the action bar.');
+      }
+      for (const req of rule?.requires ?? []) {
+        if (req.spirit && !ids.slice(0, ids.indexOf(id)).includes('conjure-' + req.spirit) && !ids.slice(0, ids.indexOf(id)).includes('conjure-undead-army')) {
+          out.push(this.data.get('ability:' + id)?.name + ' needs its conjure earlier in the rotation.');
+        }
+        if (req.sequence) {
+          const prev = ids.slice(0, ids.indexOf(id));
+          const base = req.sequence.group === 'dismember' ? ['dismember', 'slaughter'][req.sequence.step - 2] : 'spectral-scythe';
+          if (base && !prev.includes(base)) out.push(this.data.get('ability:' + id)?.name + ' needs ' + this.data.get('ability:' + base)?.name + ' first (same action bar slot).');
+        }
+      }
+    }
+    return [...new Set(out)];
   });
 
   keyOf(e: Entity): string {

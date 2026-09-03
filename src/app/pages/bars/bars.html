@@ -128,25 +128,7 @@
 
       <div class="panel">
         <h2>Weapons</h2>
-        <p class="muted small">One weapon per style. The type decides which abilities are usable (Two-handed / Dual wield / Shield requirements).</p>
-        <div class="weapons">
-          @for (st of STYLES4; track st) {
-            <label>
-              <span>{{ st }}</span>
-              <select [ngModel]="setup().weapons[st]" (ngModelChange)="setWeaponType(st, $event)">
-                @for (t of WEAPON_TYPES; track t) {
-                  <option [ngValue]="t">{{ t === 'two-handed' ? 'Two-handed' : t === 'dual-wield' ? 'Dual wield' : 'One-handed + shield' }}</option>
-                }
-              </select>
-            </label>
-          }
-          <label>
-            <span>Weapon at session start</span>
-            <select [ngModel]="setup().startWeapon" (ngModelChange)="setStartWeapon($event)">
-              @for (st of STYLES4; track st) { <option [ngValue]="st">{{ st }}</option> }
-            </select>
-          </label>
-        </div>
+        <p class="muted small">The weapons you wield and carry are part of the <a routerLink="/loadout">loadout</a>; bars are bound per combat style, the wielded weapon's style decides which set is shown.</p>
       </div>
     </div>
   </div>
