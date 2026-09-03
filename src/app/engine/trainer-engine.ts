@@ -469,7 +469,23 @@ export class TrainerEngine {
     let ready = this.readyTick.get(acting.key) ?? 0;
     const shared = rule?.sharedCooldown ?? acting.sharedCooldown;
     if (shared) ready = Math.max(ready, this.readyTick.get('shared:' + shared) ?? 0);
+    // Command X right after the conjure: the game shows it as a short cooldown on the morphed slot
+    const age = rule?.requires?.find((r) => r.spirit && r.spiritAgeMin !== undefined);
+    if (age) {
+      const sp = this.spirits.get(age.spirit!);
+      if (sp) ready = Math.max(ready, sp.sinceTick + age.spiritAgeMin!);
+    }
     return Math.max(0, ready - tick);
+  }
+
+  /** Length of the cooldown a slot sweep should show for `key` (its own cooldown, or the conjure-to-command wait). */
+  cooldownTotalTicks(key: string): number {
+    const e = this.catalog.get(key);
+    if (!e) return 0;
+    const rule = this.ruleOf(e);
+    const own = rule?.cooldownTicks ?? (this.specFor(e) ?? e).cooldownTicks ?? 0;
+    const age = rule?.requires?.find((r) => r.spirit && r.spiritAgeMin !== undefined);
+    return own || age?.spiritAgeMin || 0;
   }
 
   /** Remaining internal cooldown of an entity in ms at `now`. */

@@ -810,11 +810,13 @@ export class Train implements OnDestroy {
     const tick = e.currentTick(now);
     const state = new Map<string, { usable: UsableReason; cooldownS: number; cooldownPhase: number }>();
     for (const key of e.catalog.keys()) {
-      const cd = e.cooldownLeft(key, tick);
+      // a morphed slot (Conjure → Command while the spirit lives) shows the state of what it will fire
+      const shown = e.morphOf(key, tick)?.key ?? key;
+      const cd = e.cooldownLeft(shown, tick);
       // an ability on cooldown keeps its colour (the sweep + seconds show the cooldown); only missing
       // adrenaline / resources / gear grey it out, like in the game
-      const usable = e.usable(key, tick);
-      const total = e.catalog.get(key)?.cooldownTicks ?? 0;
+      const usable = e.usable(shown, tick);
+      const total = e.cooldownTotalTicks(shown);
       const remainingMs = cd > 0 ? e.tickTime(tick + cd) - now : 0;
       state.set(key, {
         usable: usable === 'cooldown' ? 'ok' : usable,
