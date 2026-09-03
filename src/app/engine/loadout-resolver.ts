@@ -4,6 +4,7 @@
  */
 import { EquipSlot, GearItem, Gizmo, ItemRef, Loadout, Perk, SetEffect, Style, WEAPON_SETS, Weapon, WeaponSpec, loadoutWield } from '../core/models';
 import { abilityDamageOf } from './damage';
+import { ruleFor } from './rules';
 import { ResolvedLoadout, defaultResolvedLoadout } from './loadout-resolved';
 import type { EngineEntity } from './trainer-engine';
 
@@ -281,7 +282,10 @@ function applyEffect(r: ResolvedLoadout, effect: Record<string, unknown> & { kin
       r.channelOverrides[e['ability']] = { ticks: Math.max(...(e['hits'] as number[])), hits: e['hits'] as number[], onComplete: [{ kind: 'buff', id: 'channelled-might' }] };
       break;
     case 'ability-override':
-      if (e['hits']) r.hitsOverrides[e['ability']] = Array.from({ length: Number(e['hits']) }, (_, i) => (i === 0 ? 0 : 1));
+      if (e['hits']) {
+        const base = ruleFor(e['ability'])?.hits?.[0] ?? 0; // Overpower lands at +3: both Igneous hits do
+        r.hitsOverrides[e['ability']] = Array.from({ length: Number(e['hits']) }, (_, i) => (base > 0 ? base : i === 0 ? 0 : 1));
+      }
       if (e['bounces']) r.hitsOverrides[e['ability']] = Array.from({ length: Number(e['bounces']) + 1 }, (_, i) => i * 2);
       if (e['damageMin'] !== undefined && e['damageMax'] !== undefined) r.damageOverrides[e['ability']] = { min: Number(e['damageMin']), max: Number(e['damageMax']) };
       break;

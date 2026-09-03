@@ -201,6 +201,10 @@ interface ScheduledHit {
   mult: number;
   /** share of the ability damage added flat (Searing Winds, Frostblades, Caroming), snapshotted at the cast */
   flat: number;
+  /** multiplier of a consumed buff (Chaos Roar) taken at the cast */
+  castMult: number;
+  /** flags the cast set (Bloodlust spent) – conditions of its hits read them */
+  flags: Set<string>;
 }
 
 interface SequenceState {
@@ -229,6 +233,8 @@ export class TrainerEngine {
   spirits = new Map<string, Spirit>();
   /** buffs that start a few ticks after their cast (Death's Swiftness, Sunshine) */
   private deferred: { tick: number; apply: () => void }[] = [];
+  /** flags set by the cast being activated (consume-stack → flag) */
+  private castFlags = new Set<string>();
   channel: ActiveChannel | null = null;
   /** weapons in hand */
   wield: Wield = { mainHand: null, offHand: null, twoHand: null };
@@ -632,7 +638,8 @@ export class TrainerEngine {
     const gcdEnd = this.gcdEndTick;
     const gcdRunning = gcdEnd !== null && tickP < gcdEnd && tickP > (this.castTick ?? -1);
     const rule = this.ruleOf(entity);
-    if (!entity.gcd || rule?.offGcd || (rule?.offGcdNoGain && gcdRunning)) {
+    // Bladed Dive / Provoke: off the GCD only while one runs, otherwise a normal basic
+    if ((!entity.gcd && !rule?.offGcdNoGain) || rule?.offGcd || (rule?.offGcdNoGain && gcdRunning)) {
       this.handleOffGcd(entity, tickP, gcdRunning);
       return;
     }
@@ -933,6 +940,10 @@ export class TrainerEngine {
     if (baseCost > 0 || this.isThreshold(entity, rule)) {
       for (const g of globals) if (g.consumes && g.discount && this.hasBuff(g.consumes)) this.removeBuff(g.consumes);
     }
+    if (rule?.cost?.perStack) {
+      const p = rule.cost.perStack;
+      this.setStacks(p.stack, this.stack(p.stack) - Math.min(this.stack(p.stack), p.maxStacks), tick, entity.key);
+    }
     let delta = 0;
     if (cost > 0) {
       let paid = cost;
@@ -942,10 +953,6 @@ export class TrainerEngine {
       }
       if (this.isThreshold(entity, rule) && this.loadout.thresholdFreeChance > 0 && this.random() < this.loadout.thresholdFreeChance) paid = 0;
       delta -= paid;
-      if (rule?.cost?.perStack) {
-        const p = rule.cost.perStack;
-        this.setStacks(p.stack, this.stack(p.stack) - Math.min(this.stack(p.stack), p.maxStacks), tick, entity.key);
-      }
       if (entity.abilityType === 'Ultimate' && rule?.cost?.ultimate !== false && !spec) {
         delta += this.loadout.ultimateRefund;
         const havoc = this.loadout.adrenalineAfterUltimate;
@@ -990,12 +997,23 @@ export class TrainerEngine {
       for (const b of acting.buffs) if (!this.modelledDataBuff(b)) this.applyDataBuff(b, tick, entity.key);
     }
 
+    // what the cast's hits inherit before the effects change the state: a consumed buff's multiplier (Chaos Roar),
+    // Endless Assault turning a channel into a DoT, the idle ticks of Greater Barge
+    const channelSpecEarly = this.loadout.channelOverrides[entity.id] ?? rule?.channel ?? acting.channel;
+    const asDot = !!channelSpecEarly?.asDotWhen && this.conditionMet(channelSpecEarly.asDotWhen, tick, 0);
+    let castMult = 1;
+    for (const g of globals) if (g.damageMult && (!g.consumes || this.hasBuff(g.consumes))) castMult *= g.damageMult.mult;
+    const castMultFirstOnly = globals.some((g) => g.damageMult?.firstHitOnly);
+    const idleTicks = tick - this.lastAttackTick;
+    this.castFlags = new Set();
+
     // effects
     for (const eff of rule?.onCast ?? []) this.applyEffect(eff, tick, entity, 0);
     for (const g of globals) {
       for (const eff of g.onCast ?? []) this.applyEffect(eff, tick, entity, 0);
       if (g.consumes && !g.discount && this.hasBuff(g.consumes)) this.removeBuff(g.consumes);
     }
+    const flags = this.castFlags;
 
     // sequences (staged abilities advance by their current cast and reset after the last one)
     if (rule?.sequence) {
@@ -1005,37 +1023,58 @@ export class TrainerEngine {
       else this.sequences.set(rule.sequence.group, { openStep: step + 1, untilTick: tick + rule.sequence.windowTicks });
     }
 
-    // hits / channel
-    const channel = this.loadout.channelOverrides[entity.id] ?? rule?.channel ?? acting.channel;
-    let hits = this.loadout.hitsOverrides[entity.id] ?? rule?.hits ?? acting.hits ?? (this.isDamaging(acting, rule) ? [0] : undefined);
+    // hits / channel (a cast inside the GCD that gives no adrenaline – Bladed Dive – deals no damage either)
+    const channel = opt.noGain ? undefined : channelSpecEarly;
+    let hits = opt.noGain ? undefined : this.loadout.hitsOverrides[entity.id] ?? rule?.hits ?? acting.hits ?? (this.isDamaging(acting, rule) ? [0] : undefined);
     if (rule?.hitsPerStack) hits = Array(Math.max(1, stacksBefore)).fill(0);
     const override = this.loadout.damageOverrides[entity.id];
-    const damage = override ?? (acting.damageMin !== undefined && acting.damageMax !== undefined ? { min: acting.damageMin, max: acting.damageMax } : null);
+    let damage = override ?? (acting.damageMin !== undefined && acting.damageMax !== undefined ? { min: acting.damageMin, max: acting.damageMax } : null);
+    if (damage && rule?.damageRamp) {
+      const k = Math.max(0, Math.min(rule.damageRamp.maxTicks, idleTicks));
+      damage = { min: damage.min + k * rule.damageRamp.perTick.min, max: damage.max + k * rule.damageRamp.perTick.max };
+    }
     // style buffs and flat bonuses count as they are at the cast (a Snipe cast on the last Death's Swiftness tick keeps the 1.5x)
     const mult = this.styleMultiplier(acting.style, false);
     const dotMult = this.styleMultiplier(acting.style, true);
     const flat = this.flatShare(acting.style, entity.id, false);
-    const hitDamage = (i: number) => rule?.hitDamage?.[i] ?? damage;
-    if (channel) {
+    const hitDamage = (i: number) => {
+      const h = rule?.hitDamage?.[i];
+      return h ? { min: h.min, max: h.max } : damage;
+    };
+    const hitWanted = (i: number) => {
+      const w = rule?.hitDamage?.[i]?.when;
+      return !w || this.conditionMet(w, tick, i, flags);
+    };
+    const multAt = (i: number) => (castMultFirstOnly && i > 0 ? 1 : castMult);
+    if (channel && asDot) {
+      // Endless Assault: the channel's hits land on their normal ticks but nothing can cancel them
+      channel.hits.forEach((offset, i) =>
+        this.scheduled.push({ key: entity.key, entity, rule, tick: tick + offset, index: i, total: channel.hits.length, channel: null, guaranteedCrit: !!channel.guaranteedCrit || !!rule?.guaranteedCrit, damage: hitDamage(i), mult, flat, castMult: multAt(i), flags }),
+      );
+      this.lastAttackTick = tick;
+    } else if (channel) {
       this.channel = { key: entity.key, castTick: tick, endTick: tick + channel.ticks, hits: channel.hits.length, hitsDone: 0, cancelled: false };
       channel.hits.forEach((offset, i) =>
-        this.scheduled.push({ key: entity.key, entity, rule, tick: tick + offset, index: i, total: channel.hits.length, channel: this.channel, guaranteedCrit: !!channel.guaranteedCrit || !!rule?.guaranteedCrit, damage: hitDamage(i), mult, flat }),
+        this.scheduled.push({ key: entity.key, entity, rule, tick: tick + offset, index: i, total: channel.hits.length, channel: this.channel, guaranteedCrit: !!channel.guaranteedCrit || !!rule?.guaranteedCrit, damage: hitDamage(i), mult, flat, castMult: multAt(i), flags }),
       );
       this.lastAttackTick = tick;
     } else if (rule?.bleed) {
       const b = rule.bleed;
-      const per = damage && b.splitTotal ? { min: damage.min / b.hits, max: damage.max / b.hits } : damage;
-      if (b.direct) this.scheduled.push({ key: entity.key, entity, rule, tick, index: 0, total: 1, channel: null, guaranteedCrit: !!rule?.guaranteedCrit, damage, mult, flat });
+      const per = b.damage ?? (damage && b.splitTotal ? { min: damage.min / b.hits, max: damage.max / b.hits } : damage);
+      // a recast restarts the DoT: the previous cast's remaining ticks are dropped
+      this.scheduled = this.scheduled.filter((h) => !(h.dot && h.key === entity.key));
+      if (b.direct) this.scheduled.push({ key: entity.key, entity, rule, tick, index: 0, total: 1, channel: null, guaranteedCrit: !!rule?.guaranteedCrit, damage, mult, flat, castMult, flags });
       for (let i = 0; i < b.hits; i++) {
         const f = b.factors?.[i] ?? 1;
         const offset = (b.startTicks ?? b.everyTicks) + i * b.everyTicks;
-        this.scheduled.push({ key: entity.key, entity, rule, tick: tick + offset, index: i, total: b.hits, channel: null, guaranteedCrit: false, dot: true, damage: per ? { min: per.min * f, max: per.max * f } : null, mult: dotMult, flat: 0 });
+        this.scheduled.push({ key: entity.key, entity, rule, tick: tick + offset, index: i, total: b.hits, channel: null, guaranteedCrit: false, dot: true, damage: per ? { min: per.min * f, max: per.max * f } : null, mult: dotMult, flat: 0, castMult: b.direct ? 1 : multAt(i), flags });
       }
       this.lastAttackTick = tick;
     } else if (hits) {
-      hits.forEach((offset, i) =>
-        this.scheduled.push({ key: entity.key, entity, rule, tick: tick + offset, index: i, total: hits.length, channel: null, guaranteedCrit: !!rule?.guaranteedCrit, damage: hitDamage(i), mult, flat }),
-      );
+      hits.forEach((offset, i) => {
+        if (!hitWanted(i)) return;
+        this.scheduled.push({ key: entity.key, entity, rule, tick: tick + offset, index: i, total: hits.length, channel: null, guaranteedCrit: !!rule?.guaranteedCrit, damage: hitDamage(i), mult, flat, castMult, flags });
+      });
       this.lastAttackTick = tick;
     }
     this.processHits(tick);
@@ -1071,8 +1110,9 @@ export class TrainerEngine {
     if (acting.kind === 'prayer' || acting.kind === 'special' || acting.kind === 'action' || acting.kind === 'weapon') return false;
     if (rule?.offGcd) return false;
     if (rule?.onHit || rule?.hitBuffs) return true;
-    // self-buff abilities (Berserk, Sunshine ...) have wiki buffs and no hit line; keep them hit-less
-    return acting.buffs.length === 0 && !rule?.buffs && !rule?.onCast?.some((e) => e.kind === 'buff' || e.kind === 'conjure');
+    // self-buff abilities (Berserk, Sunshine ...) have wiki buffs and no hit line; keep them hit-less. A wiki link to a
+    // buff the rules model themselves (Bloodlust on Punish, Necrosis on Touch of Death) says nothing about damage.
+    return !acting.buffs.some((b) => !this.modelledDataBuff(b)) && !rule?.buffs && !rule?.onCast?.some((e) => e.kind === 'buff' || e.kind === 'conjure');
   }
 
   private processHits(tick: number): void {
@@ -1110,7 +1150,13 @@ export class TrainerEngine {
     for (const id of h.rule?.hitBuffs ?? []) this.applyBuff(id, h.tick, h.entity.key);
     let critAdd = this.loadout.critChanceAdd;
     for (const [id, c] of Object.entries(this.loadout.buffCritAdd)) if ((!c.style || c.style === h.entity.style) && this.hasBuff(id)) critAdd += c.add;
-    const crit = !h.dot && (h.guaranteedCrit || (this.hasBuff('greater-fury') && h.index === 0 && h.entity.style === 'Melee') || this.random() < BASE_CRIT_CHANCE + critAdd);
+    for (const b of this.buffs) {
+      const c = BUFF_BY_ID.get(b.id)?.crit;
+      if (!c || (c.style && c.style !== h.entity.style) || (c.firstHitOnly && h.index !== 0)) continue;
+      if (b.sourceKey === h.key && b.startTick === (h.channel?.castTick ?? h.tick)) continue; // granted by this very cast
+      critAdd += c.add;
+    }
+    const crit = !h.dot && (h.guaranteedCrit || critAdd >= 1 || this.random() < BASE_CRIT_CHANCE + critAdd);
     if (h.damage) this.dealHit(h, crit);
     for (const g of globals) {
       for (const eff of g.onHit ?? []) this.applyEffect(eff, h.tick, h.entity, h.index);
@@ -1158,6 +1204,8 @@ export class TrainerEngine {
   private dealHit(h: ScheduledHit, crit: boolean): void {
     const l = this.loadout;
     let { min, max } = h.damage!;
+    const rules = (h.rule?.damageRules ?? []).filter((d) => this.conditionMet(d.when, h.tick, h.index, h.flags));
+    for (const d of rules) if (d.damage) ({ min, max } = d.damage);
     if (!h.dot) {
       if (l.preciseRank) min = Math.min(max, min + 0.015 * l.preciseRank * max);
       if (l.equilibriumRank) {
@@ -1170,9 +1218,16 @@ export class TrainerEngine {
     const style = h.entity.style;
     amount *= h.mult;
     if (h.entity.abilityType === 'Ultimate' && !h.dot) amount *= l.ultimateDamageMult;
-    if (style === 'Melee' && h.index === 0 && this.hasBuff('chaos-roar')) amount *= 1.75;
-    for (const m of TARGET_DAMAGE_MULT) if (this.hasBuff(m.buff)) amount *= m.mult;
-    for (const d of h.rule?.damageRules ?? []) if (this.conditionMet(d.when, h.tick, h.index)) amount *= d.mult;
+    amount *= h.castMult;
+    for (const m of TARGET_DAMAGE_MULT) if ((!m.dotsOnly || h.dot) && this.hasBuff(m.buff)) amount *= m.mult;
+    for (const d of rules) {
+      if (d.mult !== undefined) amount *= d.mult;
+      if (d.perMissingLp) {
+        const lp = this.config.targetLifePoints;
+        const missing = lp ? Math.max(0, 1 - this.targetHp / lp) * 100 : 0;
+        amount *= 1 + Math.min(d.perMissingLp.max, d.perMissingLp.per * missing);
+      }
+    }
     this.applyDamage(h.key, Math.floor(amount + 1e-6), crit, !!h.dot, h.tick); // epsilon: 0.175 + 0.12 is 0.29499… in floating point
   }
 
@@ -1330,6 +1385,8 @@ export class TrainerEngine {
         this.sequences.delete(eff.group);
         break;
       case 'flag':
+        if (eff.value) this.castFlags.add(eff.flag);
+        else this.castFlags.delete(eff.flag);
         break;
       case 'conjure': {
         if (this.spirits.has(eff.spirit)) break;
@@ -1352,8 +1409,13 @@ export class TrainerEngine {
     }
   }
 
-  private conditionMet(c: Condition, tick: number, hitIndex: number): boolean {
+  private conditionMet(c: Condition, tick: number, hitIndex: number, flags: Set<string> = this.castFlags): boolean {
     if (c.buff && !this.hasBuff(c.buff)) return false;
+    if (c.flag !== undefined && !flags.has(c.flag)) return false;
+    if (c.targetLpBelow !== undefined) {
+      const lp = this.config.targetLifePoints;
+      if (!lp || this.targetHp / lp >= c.targetLpBelow) return false;
+    }
     if (c.notBuff && this.hasBuff(c.notBuff)) return false;
     if (c.stackMin && this.stack(c.stackMin.stack) < c.stackMin.min) return false;
     if (c.stackMax && this.stack(c.stackMax.stack) > c.stackMax.max) return false;
@@ -1431,8 +1493,9 @@ export class TrainerEngine {
 
   /** Sets the counter of a stacking buff (capped; a rule may raise the cap, e.g. Berserk); 0 removes a timer-less one, like in the game. */
   private setStacks(id: StackId, n: number, tick: number, sourceKey: string, cap = this.stackCap(id)): void {
-    const value = Math.max(0, Math.min(cap, Math.round(n)));
     const existing = this.buff(id);
+    // adding never pushes a count above the cap, but a count already above it (Bloodlust 5–8 after Berserk) is kept
+    const value = Math.max(0, Math.min(Math.max(cap, existing?.stacks ?? 0), Math.round(n)));
     if (value <= 0) {
       if (!existing) return;
       if ((BUFF_BY_ID.get(id)?.durationTicks ?? null) === null) this.removeBuff(id);
@@ -1478,7 +1541,7 @@ export class TrainerEngine {
     this.overTime = this.overTime.filter((o) => tick < o.untilTick);
     for (const b of this.buffs) {
       const def = BUFF_BY_ID.get(b.id);
-      if (def?.adrenalinePerTick) this.addAdrenaline(def.adrenalinePerTick);
+      if (def?.adrenalinePerTick && (!def.adrenalinePerTickStyle || this.loadout.style === def.adrenalinePerTickStyle)) this.addAdrenaline(def.adrenalinePerTick);
     }
     this.buffs = this.buffs.filter((b) => b.endTick === null || b.endTick > tick);
     // conjured spirits attack on their own (Necromancy Spirit damage, no crits)

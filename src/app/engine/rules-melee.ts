@@ -17,7 +17,10 @@ export const MELEE_RULES: AbilityRule[] = [
   {
     ability: 'rend',
     notes: ['Generates 2 Bloodlust instead of 1 (' + W + 'Rend )', 'With gloves of passage: next melee attack +10% and the target takes +20% bleed damage (' + W + 'Rend )'],
-    onCast: [{ kind: 'stack', stack: 'bloodlust', amount: 1 }],
+    onCast: [
+      { kind: 'stack', stack: 'bloodlust', amount: 1, when: { notBuff: 'berserk' } },
+      { kind: 'stack', stack: 'bloodlust', amount: 2, cap: 8, when: { buff: 'berserk' } },
+    ],
     onHit: [
       { kind: 'buff', id: 'enduring-ruin', when: { item: 'gloves-of-passage' } },
       { kind: 'buff', id: 'corrupted-wounds', when: { item: 'gloves-of-passage' } },
@@ -31,18 +34,21 @@ export const MELEE_RULES: AbilityRule[] = [
   {
     ability: 'greater-fury',
     replaces: 'fury',
-    notes: ['Next non-bleed melee hit within 25 ticks is a guaranteed critical strike; bleeds neither use nor consume it (' + W + 'Greater_Fury )'],
+    notes: ['120–140% hit; the next non-bleed melee hit within 25 ticks is a guaranteed critical strike; bleeds neither use nor consume it (' + W + 'Greater_Fury )'],
+    hits: [0],
     onCast: [{ kind: 'buff', id: 'greater-fury' }],
   },
   {
     ability: 'backhand',
     charges: 2,
-    notes: ['Stuns and binds the target for 3 ticks; 2 charges at level 54 (' + W + 'Backhand )'],
+    notes: ['Stuns and binds the target for 3 ticks; 2 charges at level 54; the hit lands the tick after the activation (' + W + 'Backhand )'],
+    hits: [1],
     onHit: [{ kind: 'buff', id: 'stunned', durationTicks: 3 }, { kind: 'buff', id: 'bound', durationTicks: 3 }],
   },
   {
     ability: 'punish',
     notes: ['2.5x damage against targets below 50% life points (' + W + 'Punish )'],
+    damageRules: [{ when: { targetLpBelow: 0.5 }, mult: 2.5 }],
   },
   {
     ability: 'barge',
@@ -59,6 +65,7 @@ export const MELEE_RULES: AbilityRule[] = [
       'Binds the target for 11 ticks (' + W + 'Barge )',
     ],
     hits: [1],
+    damageRamp: { perTick: { min: 5, max: 7 }, maxTicks: 10 },
     onCast: [{ kind: 'buff', id: 'endless-assault', when: { idleMin: 8 } }],
     onHit: [{ kind: 'buff', id: 'bound', durationTicks: 11 }],
   },
@@ -84,50 +91,54 @@ export const MELEE_RULES: AbilityRule[] = [
   },
   {
     ability: 'assault',
-    channel: { ticks: 7, hits: [1, 3, 5, 7] },
+    channel: { ticks: 7, hits: [1, 3, 5, 7], asDotWhen: { buff: 'endless-assault' } },
+    damageRules: [{ when: { flag: 'bloodlust' }, damage: { min: 170, max: 190 } }],
     notes: [
       'Channelled: 4 hits over 7 ticks (ticks 1, 3, 5, 7); can move while channelling; cancelled by pressing another ability after the GCD (' + W + 'Assault )',
       'Consumes 4 Bloodlust when you have at least 4: 170–190% per hit instead of 130–150% (' + W + 'Bloodlust )',
       'With Endless Assault it is dealt as an un-cancellable damage over time (' + W + 'Endless_Assault )',
     ],
     onCast: [
-      { kind: 'consume-stack', stack: 'bloodlust', amount: 4, min: 4 },
+      { kind: 'consume-stack', stack: 'bloodlust', amount: 4, min: 4, then: [{ kind: 'flag', flag: 'bloodlust', value: true }] },
       { kind: 'remove-buff', id: 'endless-assault' },
     ],
   },
   {
     ability: 'hurricane',
-    hits: [0, 0],
+    hits: [0, 0, 0],
+    hitDamage: [{ min: 135, max: 165 }, { min: 155, max: 185 }, { min: 75, max: 95, when: { flag: 'bloodlust' } }],
     requires: [{ text: 'needs a two-handed weapon', equipment: '2h' }],
     notes: [
       'Two-handed only. Two hits; with 4 Bloodlust a third AoE hit of 75–95% (' + W + 'Hurricane )',
       'Its own cooldown is reduced by 5 ticks per enemy hit (' + W + 'Hurricane )',
     ],
-    onCast: [{ kind: 'consume-stack', stack: 'bloodlust', amount: 4, min: 4 }],
+    onCast: [{ kind: 'consume-stack', stack: 'bloodlust', amount: 4, min: 4, then: [{ kind: 'flag', flag: 'bloodlust', value: true }] }],
     onHit: [{ kind: 'cooldown-reduce', ability: 'hurricane', ticks: 5, when: { hit: 0 } }],
   },
   {
     ability: 'flurry',
-    channel: { ticks: 8, hits: [1, 2, 3, 4, 5, 6, 7, 8] },
+    channel: { ticks: 8, hits: [1, 2, 3, 4, 5, 6, 7, 8], asDotWhen: { buff: 'endless-assault' } },
+    damageRules: [{ when: { flag: 'bloodlust' }, perMissingLp: { per: 0.01, max: 0.65 } }],
     notes: [
       'Channelled: 8 hits on 8 consecutive ticks, AoE; stuns and binds the main target for 6 ticks (' + W + 'Flurry )',
       'Consumes 4 Bloodlust: +1% damage per 1% life points the target is missing, max +65% (' + W + 'Bloodlust )',
     ],
-    onCast: [{ kind: 'consume-stack', stack: 'bloodlust', amount: 4, min: 4 }, { kind: 'remove-buff', id: 'endless-assault' }],
+    onCast: [{ kind: 'consume-stack', stack: 'bloodlust', amount: 4, min: 4, then: [{ kind: 'flag', flag: 'bloodlust', value: true }] }, { kind: 'remove-buff', id: 'endless-assault' }],
     onHit: [{ kind: 'buff', id: 'stunned', durationTicks: 6, when: { hit: 0 } }, { kind: 'buff', id: 'bound', durationTicks: 6, when: { hit: 0 } }],
   },
   {
     ability: 'greater-flurry',
     replaces: 'flurry',
-    channel: { ticks: 8, hits: [1, 2, 3, 4, 5, 6, 7, 8] },
+    channel: { ticks: 8, hits: [1, 2, 3, 4, 5, 6, 7, 8], asDotWhen: { buff: 'endless-assault' } },
+    damageRules: [{ when: { flag: 'bloodlust' }, perMissingLp: { per: 0.01, max: 0.65 } }],
     notes: [
       'Channelled: 8 hits on 8 consecutive ticks (' + W + 'Greater_Flurry )',
       'Every hit extends an active Berserk by 1 tick, max +8 per cast (' + W + 'Greater_Flurry )',
       'Consumes 4 Bloodlust: +1% damage per 1% life points the target is missing, max +65% (' + W + 'Bloodlust )',
     ],
-    onCast: [{ kind: 'consume-stack', stack: 'bloodlust', amount: 4, min: 4 }, { kind: 'remove-buff', id: 'endless-assault' }],
+    onCast: [{ kind: 'consume-stack', stack: 'bloodlust', amount: 4, min: 4, then: [{ kind: 'flag', flag: 'bloodlust', value: true }] }, { kind: 'remove-buff', id: 'endless-assault' }],
     onHit: [
-      { kind: 'extend-buff', buff: 'berserk', ticks: 1, maxTotal: 8 },
+      { kind: 'extend-buff', buff: 'berserk', ticks: 1 }, // 8 hits per cast = the wiki's "+8 per cast"; a second cast extends again
       { kind: 'buff', id: 'stunned', durationTicks: 6, when: { hit: 0 } },
       { kind: 'buff', id: 'bound', durationTicks: 6, when: { hit: 0 } },
     ],
@@ -154,17 +165,17 @@ export const MELEE_RULES: AbilityRule[] = [
   {
     ability: 'massacre',
     sequence: { group: 'dismember', step: 3, windowTicks: 40, last: true },
-    bleed: { hits: 6, everyTicks: 4, direct: true },
+    bleed: { hits: 6, everyTicks: 4, direct: true, damage: { min: 100, max: 100 } },
     cooldownTicks: 0,
     requires: [{ text: 'only within 40 ticks after Slaughter', sequence: { group: 'dismember', step: 3 } }],
-    notes: ['Third cast of the Dismember slot: 25% adrenaline, direct hit then a bleed of 6 hits every 4 ticks; resets the slot to Dismember (' + W + 'Massacre )'],
+    notes: ['Third cast of the Dismember slot: 25% adrenaline, a 110–130% hit then a bleed of 6 hits of a flat 100% every 4 ticks; resets the slot to Dismember (' + W + 'Massacre )'],
     onCast: [{ kind: 'buff', id: 'massacre', refresh: true }],
   },
   {
     ability: 'overpower',
     hits: [3],
     cooldownRules: [{ ticks: 15, when: { buff: 'berserk' } }],
-    notes: ['60% adrenaline. While Berserk is active the cooldown is 15 ticks instead of 50 (a running cooldown is not reset) (' + W + 'Berserk )', 'Igneous Kal-Ket / Kal-Zuk: two hits of 310–370% (' + W + 'Igneous_Kal-Zuk )'],
+    notes: ['60% adrenaline. While Berserk is active the cooldown is 15 ticks instead of 50 (a running cooldown is not reset) (' + W + 'Berserk )', 'Igneous Kal-Ket / Kal-Zuk: two hits of 280–340%, both landing 3 ticks after the cast (' + W + 'Igneous_Kal-Zuk )'],
   },
   {
     ability: 'pulverise',
@@ -184,7 +195,8 @@ export const MELEE_RULES: AbilityRule[] = [
   },
   {
     ability: 'meteor-strike',
-    notes: ['60% adrenaline. For 50 ticks +4.5% adrenaline per tick with a melee weapon and 1.5x adrenaline from melee basic abilities; recasting refreshes it (' + W + 'Meteor_Strike )'],
+    notes: ['60% adrenaline, 220–250% hit. For 50 ticks +4.5% adrenaline per tick with a melee weapon and 1.5x adrenaline from melee basic abilities; recasting refreshes it (' + W + 'Meteor_Strike )'],
+    hits: [0],
     onCast: [{ kind: 'buff', id: 'meteor-strike', refresh: true }],
   },
 ];

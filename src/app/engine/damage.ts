@@ -41,6 +41,7 @@ export const BASE_CRIT_CHANCE = 0.1;
 /** self buffs that multiply the damage of one style (bleeds / burns excluded where the wiki says so) */
 export const BUFF_DAMAGE_MULT: { buff: string; style: Style; mult: number; dots: boolean }[] = [
   { buff: 'berserk', style: 'Melee', mult: 1.75, dots: false },
+  { buff: 'enduring-ruin', style: 'Melee', mult: 1.1, dots: false },
   { buff: 'sunshine', style: 'Magic', mult: 1.5, dots: false },
   { buff: 'greater-sunshine', style: 'Magic', mult: 1.5, dots: false },
   { buff: 'death-s-swiftness', style: 'Ranged', mult: 1.5, dots: false },
@@ -57,10 +58,11 @@ export const BUFF_FLAT_ADD: { buff: string; style: Style; pct: number; dots: boo
   { buff: 'frostblades', style: 'Melee', pct: 24, dots: false },
 ];
 
-/** target debuffs that raise the damage it takes */
-export const TARGET_DAMAGE_MULT: { buff: string; mult: number }[] = [
+/** target debuffs that raise the damage it takes (dotsOnly: bleed / burn hits only – Corrupted Wounds) */
+export const TARGET_DAMAGE_MULT: { buff: string; mult: number; dotsOnly?: boolean }[] = [
   { buff: 'haunted', mult: 1.1 },
   { buff: 'special:vulnerability-bomb', mult: 1.1 },
+  { buff: 'corrupted-wounds', mult: 1.2, dotsOnly: true },
 ];
 
 /** conjured spirits attack on their own: % of ability damage every n ticks (wiki conjure pages); spirits cannot crit */

@@ -46,6 +46,10 @@ export interface BuffDef {
   stacks?: { max: number };
   /** adrenaline granted every tick while active (Meteor Strike) */
   adrenalinePerTick?: number;
+  /** ... only while a weapon of this style is wielded */
+  adrenalinePerTickStyle?: Style;
+  /** critical strike chance added to hits (add ≥ 1 = guaranteed) of `style`; firstHitOnly = first hit of a multi-hit / channel; never for a hit of the cast that created the buff */
+  crit?: { add: number; style?: Style; firstHitOnly?: boolean };
   /** icon path override (else the wiki buff icon, else the source ability's icon) */
   icon?: string;
   /** effect description for the tooltip */
@@ -76,6 +80,8 @@ export interface Condition {
   hit?: number;
   /** stack count at most */
   stackMax?: { stack: StackId; max: number };
+  /** target life points below this share of its maximum (Punish 2.5x under 50%); false when the target has no life points */
+  targetLpBelow?: number;
 }
 
 export type Effect =
@@ -148,6 +154,8 @@ export interface BleedSpec {
   splitTotal?: boolean;
   /** per-hit factor of the base roll (Corruption Shot 1.0 / 0.8 / 0.6 / 0.4 / 0.2) */
   factors?: number[];
+  /** roll of the DoT hits when it differs from the ability's (Massacre: flat 100% after a 110–130% opener) */
+  damage?: { min: number; max: number };
 }
 
 export interface ChannelSpec {
@@ -163,6 +171,8 @@ export interface ChannelSpec {
   adrenalinePerHit?: number;
   /** effects only when every hit landed */
   onComplete?: Effect[];
+  /** Endless Assault: when this holds at the cast the hits are dealt as an un-cancellable damage over time (still crit / style-buffed) */
+  asDotWhen?: Condition;
   /** every hit is a critical strike (Smoke Tendrils) */
   guaranteedCrit?: boolean;
 }
@@ -189,8 +199,10 @@ export interface AbilityRule {
   onHit?: Effect[];
   /** non-channel multi-hit schedule (tick offsets), default [0] */
   hits?: number[];
-  /** per-hit damage roll (% of ability damage) for multi-hits whose hits differ (Ricochet's returning arrows); index-aligned with `hits`, missing entries use the data roll */
-  hitDamage?: { min: number; max: number }[];
+  /** per-hit damage roll (% of ability damage) for multi-hits whose hits differ (Ricochet's returning arrows); index-aligned with `hits`, missing entries use the data roll; a hit whose `when` fails at the cast is skipped (Hurricane's Bloodlust hit) */
+  hitDamage?: { min: number; max: number; when?: Condition }[];
+  /** Greater Barge: +per tick since the last attack, up to maxTicks (snapshotted at the cast) */
+  damageRamp?: { perTick: { min: number; max: number }; maxTicks: number };
   /** every hit is a critical strike (Shadow Tendrils) */
   guaranteedCrit?: boolean;
   /** the ability moves the player (Surge, Escape, Dive, Bladed Dive): cancels a channel that is not movable */
@@ -208,7 +220,14 @@ export interface AbilityRule {
   /** one hit per stack held (Volley of Souls) */
   hitsPerStack?: StackId;
   /** situational damage multipliers (Finger of Death 1.5x under Living Death) */
-  damageRules?: { when: Condition; mult: number }[];
+  damageRules?: {
+    when: Condition;
+    mult?: number;
+    /** replaces the roll (Assault 170–190% with 4 Bloodlust) */
+    damage?: { min: number; max: number };
+    /** +per × missing life points % of the target, capped (Flurry with 4 Bloodlust: 1% per 1%, max 65%) */
+    perMissingLp?: { per: number; max: number };
+  }[];
   sharedCooldown?: string;
   /** buffs applied on cast (overrides the wiki buff link) */
   buffs?: string[];
@@ -249,6 +268,8 @@ export interface GlobalRule {
   critAdrenaline?: number;
   /** consume this buff when the ability matches (Flow, Chaos Roar, Greater Fury) */
   consumes?: string;
+  /** damage multiplier of the matching cast, taken before `consumes` removes the buff (Chaos Roar 1.75x); firstHitOnly = only the first hit of a channel / bleed */
+  damageMult?: { mult: number; firstHitOnly?: boolean };
   /** cost discount taken from a buff before consuming it */
   discount?: number;
 }

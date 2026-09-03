@@ -34,8 +34,9 @@ export const GLOBAL_RULES: GlobalRule[] = [
   {
     id: 'chaos-roar-consume',
     notes: ['Chaos Roar is consumed by the next damaging melee ability (' + W + 'Chaos_Roar )'],
-    when: { style: 'Melee', buff: 'chaos-roar', excludeAbilities: ['chaos-roar', 'dive', 'bladed-dive', 'berserk', 'meteor-strike'] },
+    when: { style: 'Melee', buff: 'chaos-roar', excludeAbilities: ['chaos-roar', 'dive', 'bladed-dive', 'berserk'] },
     consumes: 'chaos-roar',
+    damageMult: { mult: 1.75, firstHitOnly: true },
   },
   {
     id: 'greater-fury-consume',

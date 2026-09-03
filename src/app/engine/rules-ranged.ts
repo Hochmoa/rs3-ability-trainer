@@ -77,7 +77,7 @@ export const RANGED_RULES: AbilityRule[] = [
       'Binds the target for 10 ticks; every hit extends Searing Winds by 1 tick (max +8) (' + W + 'Rapid_Fire )',
       'Dracolich armour: +0.2 adrenaline per piece per tick while channelling (elite 0.5) (' + W + 'Dracolich_armour )',
     ],
-        onHit: [{ kind: 'buff', id: 'bound', durationTicks: 10, when: { hit: 0 } }, { kind: 'extend-buff', buff: 'searing-winds', ticks: 1, maxTotal: 8 }],
+        onHit: [{ kind: 'buff', id: 'bound', durationTicks: 10, when: { hit: 0 } }, { kind: 'extend-buff', buff: 'searing-winds', ticks: 1 }],
   },
   {
     ability: 'corruption-shot',

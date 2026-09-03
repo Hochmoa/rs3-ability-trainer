@@ -231,7 +231,7 @@ export class DataService {
         id: a.id,
         name: a.name,
         icon: a.icon,
-        gcd: a.triggersGcd && !rule?.offGcd,
+        gcd: (a.triggersGcd || !!rule?.offGcdNoGain) && !rule?.offGcd, // Bladed Dive / Provoke: a normal basic outside the GCD
         style: a.style,
         abilityType: a.type,
         adrenaline: a.adrenaline ?? 0,
