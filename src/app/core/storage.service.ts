@@ -43,7 +43,7 @@ export class StorageService {
     try {
       const db = await this.open();
       const settings = await db.get('settings', 'settings');
-      if (settings) this.settings.set({ ...DEFAULT_SETTINGS, ...settings });
+      if (settings) this.settings.set(migrateSettings(settings));
       const keys = (await db.getAllKeys('keybinds')) as string[];
       const values = (await db.getAll('keybinds')) as Keybind[];
       this.keybinds.set(Object.fromEntries(keys.map((k, i) => [k, values[i]])));
@@ -119,6 +119,14 @@ export class StorageService {
     this.keybinds.set({});
     this.rotations.set([]);
   }
+}
+
+/** Older builds stored `queueWindowTicks` (1..3) instead of the in-game on/off setting. */
+function migrateSettings(stored: Partial<Settings> & { queueWindowTicks?: number }): Settings {
+  const { queueWindowTicks, ...rest } = stored;
+  const s: Settings = { ...DEFAULT_SETTINGS, ...rest };
+  if (typeof queueWindowTicks === 'number' && typeof stored.abilityQueueing !== 'boolean') s.abilityQueueing = queueWindowTicks >= 3;
+  return s;
 }
 
 function readConsent(): boolean {

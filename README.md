@@ -8,9 +8,15 @@ Live at **https://rs3trainer.hochware.com** (GitHub Pages).
 - The game tick is 0.6 s; every ability starts a 1.8 s (3 tick) global cooldown (GCD).
 - A simulated ping (default 60 ms ± 20 ms jitter) delays each key press before the "server" sees it; the press is
   processed at the next tick boundary.
-- The *ability queue* shows the next ability of your rotation with its keybind and a cooldown overlay. Press the key
-  in the queue window (default: the last tick of the GCD) and the ability fires exactly when the GCD ends – **perfect**.
-  Press earlier: **too early** (ignored). Press after the GCD: the ability fires on that tick – **late by n ticks**.
+- The *ability queue* shows the next ability of your rotation with its keybind and a cooldown overlay. Press the key so
+  that it is processed on the tick the GCD ends and the ability casts right then – **perfect**. Press later: it casts on
+  that tick – **late by n ticks**.
+- The in-game **Ability queueing** setting is simulated (Settings page, off by default like for new accounts):
+  - **Off:** presses during the GCD are ignored (*too early*); you have to press in the last tick (0.6 s) of the GCD.
+  - **On:** a press any time during the GCD is queued and casts when the GCD ends. A later press replaces the queued
+    ability; a different ability pressed on the last tick casts instead and the queued one stays queued for the next
+    GCD end (the game's bypass rule).
+- A wrong ability that gets cast starts a GCD like in the game; the step stays open until the right one is cast.
 - Two bars above the queue show the tick (0.6 s) and the GCD (1.8 s) progress.
 - Rotations, keybinds (with Ctrl/Shift/Alt), settings and session results are stored in IndexedDB after you accept
   the storage banner.

@@ -8,14 +8,21 @@ export const GCD_TICKS = 3;
 export interface EngineConfig {
   pingMs: number;
   jitterMs: number;
-  queueWindowTicks: number;
+  /** In-game "Ability queueing" setting. On: a press during the GCD is queued and fires when the GCD ends. Off: it is ignored. */
+  abilityQueueing: boolean;
   loop: boolean;
 }
 
 export type EngineEvent =
-  | { kind: 'queued'; abilityId: string; fireTick: number; marginMs: number }
+  /** ability accepted; fires at fireTick (queued during the GCD, or cast on the tick it was processed) */
+  | { kind: 'queued'; abilityId: string; expected: string; fireTick: number; marginMs: number }
+  /** the expected ability fired – step done */
   | { kind: 'fired'; result: StepResult }
+  /** a different ability fired (started a GCD) – step not done */
+  | { kind: 'wrong-fired'; abilityId: string; expected: string; tick: number }
+  /** queueing off: press of the expected ability during the GCD, ignored */
   | { kind: 'too-early'; abilityId: string; ticksEarly: number }
+  /** queueing off: press of a different ability during the GCD, ignored */
   | { kind: 'wrong'; abilityId: string; expected: string }
   | { kind: 'finished' };
 
@@ -25,11 +32,13 @@ interface PendingInput {
   arrival: number;
 }
 
-interface PendingFire {
+/** The single queue slot of the game: one ability waiting to be cast at `tick`. */
+interface Pending {
+  abilityId: string;
   tick: number;
-  outcome: 'perfect' | 'late';
-  lateTicks: number;
-  offsetMs: number;
+  arrival: number;
+  /** in-game bypass: the ability that stays queued for the next GCD end after this one casts */
+  bypassed?: Pending;
 }
 
 /**
@@ -37,11 +46,18 @@ interface PendingFire {
  * (performance.now()); the caller feeds `now` into press()/update().
  *
  * Server tick k happens at t0 + k * TICK_MS. A key press at client time t reaches the
- * server at t + ping (+ jitter) and is processed at the first tick at or after that.
- * The ability that fired last started the GCD at castTick; the next one may fire at
- * castTick + GCD_TICKS. Presses processed within the queue window before that tick are
- * queued and fire exactly then ("perfect"); earlier presses are ignored ("too early");
- * later presses fire at the tick they were processed ("late by n ticks").
+ * server at t + ping (+ jitter) and is processed at the first tick at or after that
+ * (`tickP`). The last cast started the GCD at `castTick`; abilities may be cast again
+ * from `gcdEnd = castTick + GCD_TICKS`.
+ *
+ * - tickP > gcdEnd (GCD over): the ability casts at tickP. Expected ability → late by
+ *   (tickP − gcdEnd) ticks, or perfect if there was no GCD.
+ * - tickP == gcdEnd (press in the last GCD tick): casts exactly at gcdEnd → perfect.
+ * - tickP < gcdEnd: queueing off → ignored ("too early" / "wrong"). Queueing on →
+ *   queued, casts at gcdEnd → perfect. A later press replaces the queued ability,
+ *   except the in-game bypass: a different ability pressed on the last tick casts
+ *   instead, and the queued one stays queued for the next GCD end.
+ * - A wrong ability that casts starts a GCD like any other; the step is not advanced.
  */
 export class TrainerEngine {
   state: 'idle' | 'running' | 'finished' = 'idle';
@@ -54,7 +70,7 @@ export class TrainerEngine {
   random: () => number = Math.random;
 
   private inflight: PendingInput[] = [];
-  private pendingFire: PendingFire | null = null;
+  private pending: Pending | null = null;
   private tooEarly = 0;
   private wrong = 0;
 
@@ -66,7 +82,7 @@ export class TrainerEngine {
     this.castTick = null;
     this.results = [];
     this.inflight = [];
-    this.pendingFire = null;
+    this.pending = null;
     this.tooEarly = 0;
     this.wrong = 0;
     this.events.length = 0;
@@ -81,8 +97,14 @@ export class TrainerEngine {
     return this.steps[this.index];
   }
 
+  /** Ability waiting in the queue slot, if any. */
+  get queuedAbility(): string | null {
+    return this.pending?.abilityId ?? null;
+  }
+
+  /** True when the expected ability is queued / about to cast. */
   get isQueued(): boolean {
-    return this.pendingFire !== null;
+    return this.pending !== null && this.pending.abilityId === this.currentAbility;
   }
 
   get gcdEndTick(): number | null {
@@ -126,63 +148,91 @@ export class TrainerEngine {
   update(now: number): void {
     if (this.state !== 'running') return;
     this.inflight.sort((a, b) => a.arrival - b.arrival);
-    while (this.inflight.length && this.inflight[0].arrival <= now) {
-      this.handle(this.inflight.shift()!);
-    }
-    if (this.pendingFire && now >= this.tickTime(this.pendingFire.tick)) {
-      this.fire();
+    // interleave casts and inputs in time order
+    for (;;) {
+      const next = this.inflight[0];
+      const castAt = this.pending ? this.tickTime(this.pending.tick) : Infinity;
+      if (castAt <= now && (!next || castAt <= next.arrival)) {
+        this.cast();
+        if (this.state !== 'running') return;
+      } else if (next && next.arrival <= now) {
+        this.inflight.shift();
+        this.handle(next);
+      } else {
+        break;
+      }
     }
   }
 
   private handle(input: PendingInput): void {
     const expected = this.steps[this.index];
-    if (input.abilityId !== expected) {
-      this.wrong++;
-      this.events.push({ kind: 'wrong', abilityId: input.abilityId, expected });
-      return;
-    }
-    if (this.pendingFire) return; // already queued – repeated presses change nothing
     const tickP = this.tickOf(input.arrival);
     const gcdEnd = this.gcdEndTick;
-    if (gcdEnd === null) {
-      this.pendingFire = { tick: tickP, outcome: 'perfect', lateTicks: 0, offsetMs: 0 };
-      this.events.push({ kind: 'queued', abilityId: input.abilityId, fireTick: tickP, marginMs: 0 });
-    } else if (tickP <= gcdEnd) {
-      const earliest = gcdEnd - this.config.queueWindowTicks + 1;
-      if (tickP >= earliest) {
-        const marginMs = this.tickTime(gcdEnd) - input.arrival;
-        this.pendingFire = { tick: gcdEnd, outcome: 'perfect', lateTicks: 0, offsetMs: marginMs };
-        this.events.push({ kind: 'queued', abilityId: input.abilityId, fireTick: gcdEnd, marginMs });
-      } else {
-        this.tooEarly++;
-        this.events.push({ kind: 'too-early', abilityId: input.abilityId, ticksEarly: earliest - tickP });
-      }
-    } else {
-      this.pendingFire = {
-        tick: tickP,
-        outcome: 'late',
-        lateTicks: tickP - gcdEnd,
-        offsetMs: input.arrival - this.tickTime(gcdEnd),
-      };
+
+    if (gcdEnd === null || tickP > gcdEnd) {
+      // no GCD running when the input is processed: cast on that tick
+      this.accept(input, tickP, expected);
+      return;
     }
+    if (tickP === gcdEnd) {
+      // last tick of the GCD: casts exactly when the GCD ends
+      if (this.pending && this.pending.abilityId !== input.abilityId && this.config.abilityQueueing) {
+        // bypass: the pressed ability casts now, the queued one waits for the next GCD end
+        const queued = this.pending;
+        this.accept(input, gcdEnd, expected);
+        this.pending!.bypassed = queued;
+      } else {
+        this.accept(input, gcdEnd, expected);
+      }
+      return;
+    }
+    // earlier during the GCD
+    if (!this.config.abilityQueueing) {
+      if (input.abilityId === expected) {
+        this.tooEarly++;
+        this.events.push({ kind: 'too-early', abilityId: input.abilityId, ticksEarly: gcdEnd - tickP });
+      } else {
+        this.wrong++;
+        this.events.push({ kind: 'wrong', abilityId: input.abilityId, expected });
+      }
+      return;
+    }
+    if (this.pending?.abilityId === input.abilityId) return; // already queued – repeated presses change nothing
+    this.accept(input, gcdEnd, expected);
   }
 
-  private fire(): void {
-    const pf = this.pendingFire!;
-    this.pendingFire = null;
+  private accept(input: PendingInput, tick: number, expected: string): void {
+    this.pending = { abilityId: input.abilityId, tick, arrival: input.arrival };
+    const gcdEnd = this.gcdEndTick;
+    const marginMs = gcdEnd === null ? 0 : this.tickTime(gcdEnd) - input.arrival;
+    this.events.push({ kind: 'queued', abilityId: input.abilityId, expected, fireTick: tick, marginMs });
+  }
+
+  private cast(): void {
+    const p = this.pending!;
+    this.pending = p.bypassed ? { ...p.bypassed, tick: p.tick + GCD_TICKS } : null;
+    const expected = this.steps[this.index];
+    const gcdEnd = this.gcdEndTick;
+    this.castTick = p.tick;
+
+    if (p.abilityId !== expected) {
+      this.wrong++;
+      this.events.push({ kind: 'wrong-fired', abilityId: p.abilityId, expected, tick: p.tick });
+      return;
+    }
+    const lateTicks = gcdEnd === null ? 0 : Math.max(0, p.tick - gcdEnd);
     const result: StepResult = {
       step: this.index,
-      abilityId: this.steps[this.index],
-      outcome: pf.outcome,
-      lateTicks: pf.lateTicks,
-      offsetMs: Math.round(pf.offsetMs),
+      abilityId: expected,
+      outcome: lateTicks ? 'late' : 'perfect',
+      lateTicks,
+      offsetMs: gcdEnd === null ? 0 : Math.round(Math.abs(this.tickTime(gcdEnd) - p.arrival)),
       tooEarly: this.tooEarly,
       wrong: this.wrong,
-      firedAtTick: pf.tick,
+      firedAtTick: p.tick,
     };
     this.results.push(result);
     this.events.push({ kind: 'fired', result });
-    this.castTick = pf.tick;
     this.tooEarly = 0;
     this.wrong = 0;
     this.index++;

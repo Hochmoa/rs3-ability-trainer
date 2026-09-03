@@ -20,15 +20,15 @@ import { StorageService } from '../../core/storage.service';
           <input type="number" min="0" max="500" step="5" [ngModel]="s().jitterMs" (ngModelChange)="set('jitterMs', $event)" />
           <small>Random variation added to every press. 0 disables it.</small>
         </label>
-        <label>
-          <span>Queue window</span>
-          <select [ngModel]="s().queueWindowTicks" (ngModelChange)="set('queueWindowTicks', $event)">
-            <option [ngValue]="1">Last tick only (0.6 s) – strict</option>
-            <option [ngValue]="2">Last 2 ticks (1.2 s)</option>
-            <option [ngValue]="3">Whole GCD (1.8 s) – like ability queueing in game</option>
-          </select>
-          <small>How early before the global cooldown ends a press still counts as queued.</small>
+        <label class="check">
+          <input type="checkbox" [ngModel]="s().abilityQueueing" (ngModelChange)="set('abilityQueueing', $event)" />
+          <span>Ability queueing</span>
         </label>
+        <small class="indent">
+          The in-game setting (Gameplay → Combat &amp; Action Bar → Action Bar). <b>On:</b> pressing during the global cooldown
+          queues the ability, it casts the moment the cooldown ends. <b>Off:</b> presses during the cooldown are ignored – you
+          have to press in the last tick (0.6 s) to cast right when the cooldown ends. Off is the default for new accounts.
+        </small>
         <label class="check">
           <input type="checkbox" [ngModel]="s().loop" (ngModelChange)="set('loop', $event)" />
           <span>Loop the rotation until stopped (Esc)</span>
@@ -66,6 +66,10 @@ import { StorageService } from '../../core/storage.service';
       flex-direction: row;
       align-items: center;
       gap: 8px;
+    }
+    small.indent {
+      color: var(--muted);
+      margin: -8px 0 0 26px;
     }
   `,
 })

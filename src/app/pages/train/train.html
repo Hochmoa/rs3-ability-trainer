@@ -22,8 +22,8 @@
       <button class="btn" (click)="stop()">Stop (Esc)</button>
     }
     <span class="muted hint">
-      Ping {{ storage.settings().pingMs }} ms ± {{ storage.settings().jitterMs }} · queue window
-      {{ storage.settings().queueWindowTicks }} tick{{ storage.settings().queueWindowTicks === 1 ? '' : 's' }}
+      Ping {{ storage.settings().pingMs }} ms ± {{ storage.settings().jitterMs }} · ability queueing
+      {{ storage.settings().abilityQueueing ? 'on' : 'off' }}
       @if (storage.settings().loop) { · loop }
     </span>
   </div>
@@ -51,7 +51,7 @@
         <span class="bar-label">GCD <small>1.8 s</small></span>
         <div class="bar gcd">
           <div class="fill" [style.width.%]="(running() ? gcdPhase() : 0) * 100"></div>
-          <div class="window" [style.width.%]="(storage.settings().queueWindowTicks / 3) * 100"></div>
+          <div class="window" [style.width.%]="storage.settings().abilityQueueing ? 100 : 100 / 3" title="press window"></div>
         </div>
       </div>
     </div>
@@ -76,7 +76,7 @@
     </div>
 
     <div class="feedback" [class]="'feedback ' + (feedback()?.cls ?? '')">
-      {{ feedback()?.text ?? (canStart() ? 'Press Start, then hit the keybind shown on the big icon during the last tick of the cooldown.' : '') }}
+      {{ feedback()?.text ?? (canStart() ? (storage.settings().abilityQueueing ? 'Press Start, then hit the keybind shown on the big icon any time during the cooldown – it casts when the cooldown ends.' : 'Press Start, then hit the keybind shown on the big icon during the last tick of the cooldown.') : '') }}
     </div>
 
     <div class="counts">

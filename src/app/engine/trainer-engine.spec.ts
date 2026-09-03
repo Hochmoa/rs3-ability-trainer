@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { EngineConfig, TrainerEngine } from './trainer-engine';
 
-const base: EngineConfig = { pingMs: 0, jitterMs: 0, queueWindowTicks: 1, loop: false };
+const off: EngineConfig = { pingMs: 0, jitterMs: 0, abilityQueueing: false, loop: false };
+const on: EngineConfig = { ...off, abilityQueueing: true };
 
-/** Engine with 3 steps, started at t=0, first ability fired at tick 1 (t=600) → GCD ends at tick 4 (t=2400). */
+/** Engine with steps a,b,c started at t=0; 'a' fired at tick 1 (t=600) → GCD ends at tick 4 (t=2400). */
 function afterFirstFire(cfg: Partial<EngineConfig> = {}): TrainerEngine {
-  const e = new TrainerEngine(['a', 'b', 'c'], { ...base, ...cfg });
+  const e = new TrainerEngine(['a', 'b', 'c'], { ...off, ...cfg });
   e.start(0);
   e.press('a', 100);
   e.update(600);
@@ -15,9 +16,9 @@ function afterFirstFire(cfg: Partial<EngineConfig> = {}): TrainerEngine {
   return e;
 }
 
-describe('TrainerEngine', () => {
-  it('fires the first ability at the next tick after the press', () => {
-    const e = new TrainerEngine(['a', 'b'], base);
+describe('TrainerEngine – common', () => {
+  it('casts the first ability at the next tick after the press', () => {
+    const e = new TrainerEngine(['a', 'b'], off);
     e.start(0);
     e.press('a', 100);
     e.update(599);
@@ -29,62 +30,41 @@ describe('TrainerEngine', () => {
     expect(e.gcdEndTick).toBe(4);
   });
 
-  it('queues a press in the last tick of the GCD and fires exactly when the GCD ends', () => {
-    const e = afterFirstFire();
-    e.press('b', 1900); // tick 4 = last GCD tick
-    e.update(1900);
-    expect(e.events[0]).toMatchObject({ kind: 'queued', fireTick: 4, marginMs: 500 });
-    e.update(2399);
-    expect(e.results.length).toBe(1);
-    e.update(2400);
-    expect(e.results[1]).toMatchObject({ abilityId: 'b', outcome: 'perfect', lateTicks: 0, offsetMs: 500, firedAtTick: 4 });
+  it('a press in the last GCD tick casts exactly when the GCD ends (both modes)', () => {
+    for (const cfg of [off, on]) {
+      const e = afterFirstFire(cfg);
+      e.press('b', 1900); // processed at tick 4 = gcdEnd
+      e.update(1900);
+      expect(e.events[0]).toMatchObject({ kind: 'queued', fireTick: 4, marginMs: 500 });
+      e.update(2399);
+      expect(e.results.length).toBe(1);
+      e.update(2400);
+      expect(e.results[1]).toMatchObject({ abilityId: 'b', outcome: 'perfect', lateTicks: 0, offsetMs: 500, firedAtTick: 4 });
+    }
   });
 
-  it('treats a press two ticks before the GCD end as too early with a 1-tick window', () => {
-    const e = afterFirstFire();
-    e.press('b', 1300); // tick 3
-    e.update(1300);
-    expect(e.events[0]).toMatchObject({ kind: 'too-early', ticksEarly: 1 });
-    expect(e.isQueued).toBe(false);
-    e.update(2400);
-    expect(e.results.length).toBe(1);
-    // the late follow-up press records the too-early count on the step
-    e.press('b', 2500);
-    e.update(3000);
-    expect(e.results[1]).toMatchObject({ outcome: 'late', lateTicks: 1, tooEarly: 1 });
-  });
-
-  it('accepts the same early press with a 3-tick window (whole GCD)', () => {
-    const e = afterFirstFire({ queueWindowTicks: 3 });
-    e.press('b', 700); // tick 2, first tick of the GCD
-    e.update(700);
-    expect(e.events[0]).toMatchObject({ kind: 'queued', fireTick: 4 });
-    e.update(2400);
-    expect(e.results[1]).toMatchObject({ outcome: 'perfect' });
-  });
-
-  it('fires late presses at the tick they are processed', () => {
+  it('late presses cast at the tick they are processed', () => {
     const e = afterFirstFire();
     e.press('b', 2500); // tick 5
     e.update(2500);
     expect(e.results.length).toBe(1);
     e.update(3000);
     expect(e.results[1]).toMatchObject({ outcome: 'late', lateTicks: 1, offsetMs: 100, firedAtTick: 5 });
-    e.press('c', 4300); // GCD ends tick 8 (t=4800), press processed at tick 8 → perfect
+    e.press('c', 4300); // GCD ends tick 8 (t=4800): processed at tick 8 → perfect
     e.update(4800);
     expect(e.results[2]).toMatchObject({ outcome: 'perfect', firedAtTick: 8 });
   });
 
   it('ping pushes a press across the tick boundary', () => {
     const e = afterFirstFire({ pingMs: 60 });
-    e.press('b', 2380); // arrives at 2440 → tick 5 instead of 4
+    e.press('b', 2380); // arrives 2440 → tick 5 instead of 4
     e.update(2440);
     e.update(3000);
     expect(e.results[1]).toMatchObject({ outcome: 'late', lateTicks: 1, offsetMs: 40 });
   });
 
   it('jitter is bounded by jitterMs', () => {
-    const e = new TrainerEngine(['a', 'b'], { ...base, pingMs: 60, jitterMs: 20 });
+    const e = new TrainerEngine(['a', 'b'], { ...off, pingMs: 60, jitterMs: 20 });
     e.random = () => 1; // +20 ms
     e.start(0);
     e.press('a', 520); // arrival 600 → tick 1
@@ -96,15 +76,17 @@ describe('TrainerEngine', () => {
     expect(e.results[1]).toMatchObject({ outcome: 'perfect' });
   });
 
-  it('counts wrong keys without firing anything', () => {
+  it('a wrong ability pressed after the GCD casts, starts a GCD and keeps the step', () => {
     const e = afterFirstFire();
-    e.press('c', 1900);
-    e.update(1900);
-    expect(e.events[0]).toMatchObject({ kind: 'wrong', abilityId: 'c', expected: 'b' });
-    expect(e.isQueued).toBe(false);
-    e.press('b', 2000);
-    e.update(2400);
-    expect(e.results[1]).toMatchObject({ outcome: 'perfect', wrong: 1 });
+    e.press('c', 2500); // tick 5, GCD over → c casts
+    e.update(3000);
+    expect(e.events[0]).toMatchObject({ kind: 'queued', abilityId: 'c', expected: 'b' });
+    expect(e.events[1]).toMatchObject({ kind: 'wrong-fired', abilityId: 'c', expected: 'b', tick: 5 });
+    expect(e.index).toBe(1);
+    expect(e.castTick).toBe(5);
+    e.press('b', 4700); // new GCD ends tick 8 (t=4800): last tick → perfect, but wrong=1 on the step
+    e.update(4800);
+    expect(e.results[1]).toMatchObject({ abilityId: 'b', outcome: 'perfect', wrong: 1 });
   });
 
   it('finishes after the last step unless looping', () => {
@@ -134,5 +116,89 @@ describe('TrainerEngine', () => {
     expect(e.gcdPhase(1500)).toBeCloseTo(0.5);
     expect(e.gcdPhase(2400)).toBe(1);
     expect(e.gcdRemainingMs(1200)).toBe(1200);
+  });
+});
+
+describe('TrainerEngine – ability queueing OFF', () => {
+  it('ignores the expected ability pressed before the last tick (too early)', () => {
+    const e = afterFirstFire();
+    e.press('b', 1300); // tick 3
+    e.update(1300);
+    expect(e.events[0]).toMatchObject({ kind: 'too-early', ticksEarly: 1 });
+    expect(e.isQueued).toBe(false);
+    e.update(2400);
+    expect(e.results.length).toBe(1);
+    e.press('b', 2500);
+    e.update(3000);
+    expect(e.results[1]).toMatchObject({ outcome: 'late', lateTicks: 1, tooEarly: 1 });
+  });
+
+  it('ignores a wrong ability pressed during the GCD', () => {
+    const e = afterFirstFire();
+    e.press('c', 1300);
+    e.update(1300);
+    expect(e.events[0]).toMatchObject({ kind: 'wrong', abilityId: 'c', expected: 'b' });
+    expect(e.castTick).toBe(1);
+    e.press('b', 2000);
+    e.update(2400);
+    expect(e.results[1]).toMatchObject({ outcome: 'perfect', wrong: 1 });
+  });
+
+  it('a wrong ability in the last tick casts instead', () => {
+    const e = afterFirstFire();
+    e.press('c', 2000); // tick 4 → c casts at 4
+    e.update(2400);
+    expect(e.events.at(-1)).toMatchObject({ kind: 'wrong-fired', abilityId: 'c', tick: 4 });
+    expect(e.castTick).toBe(4);
+    expect(e.index).toBe(1);
+  });
+});
+
+describe('TrainerEngine – ability queueing ON', () => {
+  it('queues a press anywhere during the GCD and casts at the GCD end', () => {
+    const e = afterFirstFire(on);
+    e.press('b', 700); // tick 2, first GCD tick
+    e.update(700);
+    expect(e.events[0]).toMatchObject({ kind: 'queued', fireTick: 4, marginMs: 1700 });
+    expect(e.isQueued).toBe(true);
+    e.update(2400);
+    expect(e.results[1]).toMatchObject({ outcome: 'perfect', offsetMs: 1700, firedAtTick: 4 });
+  });
+
+  it('repeated presses of the queued ability change nothing', () => {
+    const e = afterFirstFire(on);
+    e.press('b', 700);
+    e.press('b', 1500);
+    e.update(1500);
+    expect(e.events.filter((x) => x.kind === 'queued').length).toBe(1);
+    e.update(2400);
+    expect(e.results.length).toBe(2);
+  });
+
+  it('a different ability pressed earlier in the GCD replaces the queued one', () => {
+    const e = afterFirstFire(on);
+    e.press('b', 700);
+    e.press('c', 1300); // tick 3 → replaces b in the queue slot
+    e.update(1300);
+    expect(e.queuedAbility).toBe('c');
+    expect(e.isQueued).toBe(false);
+    e.update(2400);
+    expect(e.events.at(-1)).toMatchObject({ kind: 'wrong-fired', abilityId: 'c', tick: 4 });
+    expect(e.index).toBe(1);
+  });
+
+  it('bypass: another ability on the last tick casts now, the queued one stays queued for the next GCD end', () => {
+    const e = afterFirstFire(on);
+    e.press('b', 700); // queued for tick 4
+    e.press('c', 2000); // tick 4 → c casts at 4, b waits until tick 7
+    e.update(2400);
+    expect(e.events.at(-1)).toMatchObject({ kind: 'wrong-fired', abilityId: 'c', tick: 4 });
+    expect(e.queuedAbility).toBe('b');
+    expect(e.isQueued).toBe(true);
+    e.update(4199);
+    expect(e.results.length).toBe(1);
+    e.update(4200);
+    expect(e.results[1]).toMatchObject({ abilityId: 'b', outcome: 'perfect', firedAtTick: 7, wrong: 1 });
+    expect(e.queuedAbility).toBeNull();
   });
 });

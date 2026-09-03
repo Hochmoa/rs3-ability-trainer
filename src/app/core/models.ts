@@ -34,12 +34,12 @@ export interface Rotation {
 export interface Settings {
   pingMs: number;
   jitterMs: number;
-  /** how many ticks before the GCD ends a press still counts as queued (1 = last tick only, 3 = whole GCD) */
-  queueWindowTicks: number;
+  /** in-game "Ability queueing": on = a press during the GCD is queued and casts when the GCD ends; off = ignored */
+  abilityQueueing: boolean;
   loop: boolean;
 }
 
-export const DEFAULT_SETTINGS: Settings = { pingMs: 60, jitterMs: 20, queueWindowTicks: 1, loop: false };
+export const DEFAULT_SETTINGS: Settings = { pingMs: 60, jitterMs: 20, abilityQueueing: false, loop: false };
 
 export interface StepResult {
   step: number;

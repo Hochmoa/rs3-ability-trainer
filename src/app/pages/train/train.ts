@@ -132,7 +132,7 @@ export class Train implements OnDestroy {
     this.startedAt = Date.now();
     this.results.set([]);
     this.counts.set({ perfect: 0, late: 0, early: 0, wrong: 0 });
-    this.feedback.set({ text: 'Press ' + this.slots().find((s) => s.kind === 'current')?.key + ' to fire the first ability.', cls: 'info' });
+    this.feedback.set({ text: 'Press ' + this.slots().find((s) => s.kind === 'current')?.key + ' to cast the first ability.', cls: 'info' });
     this.finished.set(false);
     this.running.set(true);
     this.index.set(0);
@@ -186,9 +186,16 @@ export class Train implements OnDestroy {
 
   private applyEvent(ev: EngineEvent, now: number): void {
     switch (ev.kind) {
-      case 'queued':
-        this.feedback.set({ text: 'Queued – fires in ' + Math.round(this.engine!.tickTime(ev.fireTick) - now) + ' ms', cls: 'info' });
+      case 'queued': {
+        const inMs = Math.max(0, Math.round(this.engine!.tickTime(ev.fireTick) - now));
+        if (ev.abilityId === ev.expected) {
+          this.feedback.set({ text: 'Queued – casts in ' + inMs + ' ms', cls: 'info' });
+        } else {
+          this.feedback.set({ text: 'Wrong ability queued: ' + this.abilityName(ev.abilityId) + ' – expected ' + this.abilityName(ev.expected), cls: 'bad' });
+          this.flash('wrong', now, inMs + 200);
+        }
         break;
+      }
       case 'fired': {
         const r = ev.result;
         this.results.update((list) => [...list, r]);
@@ -201,14 +208,19 @@ export class Train implements OnDestroy {
         this.flash('fired', now, 200);
         break;
       }
+      case 'wrong-fired':
+        this.counts.update((c) => ({ ...c, wrong: c.wrong + 1 }));
+        this.feedback.set({ text: this.abilityName(ev.abilityId) + ' cast instead of ' + this.abilityName(ev.expected) + ' – new cooldown, try again', cls: 'bad' });
+        this.flash('wrong', now, 300);
+        break;
       case 'too-early':
         this.counts.update((c) => ({ ...c, early: c.early + 1 }));
-        this.feedback.set({ text: 'Too early – ' + ev.ticksEarly + (ev.ticksEarly === 1 ? ' tick' : ' ticks') + ' before the queue window', cls: 'bad' });
+        this.feedback.set({ text: 'Too early – ' + ev.ticksEarly + (ev.ticksEarly === 1 ? ' tick' : ' ticks') + ' before the last cooldown tick (queueing is off)', cls: 'bad' });
         this.flash('too-early', now, 250);
         break;
       case 'wrong':
         this.counts.update((c) => ({ ...c, wrong: c.wrong + 1 }));
-        this.feedback.set({ text: 'Wrong ability: ' + this.abilityName(ev.abilityId) + ' – expected ' + this.abilityName(ev.expected), cls: 'bad' });
+        this.feedback.set({ text: 'Wrong ability: ' + this.abilityName(ev.abilityId) + ' – ignored, on cooldown', cls: 'bad' });
         this.flash('wrong', now, 250);
         break;
       case 'finished': {
