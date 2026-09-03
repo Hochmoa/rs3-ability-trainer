@@ -18,7 +18,11 @@
   <a href="https://runescape.wiki" target="_blank" rel="noopener">RuneScape Wiki</a> (CC BY-NC-SA 3.0). Non-commercial fan tool ·
   <a href="https://github.com/Hochmoa/rs3-ability-trainer" target="_blank" rel="noopener">source</a> ·
   <a href="https://hochware.com" target="_blank" rel="noopener">hochware.com</a>
+  @if (supportUrl) {
+    · <a class="support" [href]="supportUrl" target="_blank" rel="noopener">☕ {{ supportLabel }}</a>
+  }
 </footer>
 
 <consent-banner />
 <entity-tooltip />
+<support-nudge />

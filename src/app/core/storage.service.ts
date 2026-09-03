@@ -18,6 +18,8 @@ export class StorageService {
   /** entity key ("ability:sever", "prayer:turmoil", ...) → keybind */
   readonly keybinds = signal<Record<string, Keybind>>({});
   readonly rotations = signal<Rotation[]>([]);
+  /** number of training sessions saved in this page load (consent or not) – used for engagement counting */
+  readonly sessionsSaved = signal(0);
 
   private db: Promise<IDBPDatabase> | null = null;
 
@@ -119,6 +121,7 @@ export class StorageService {
   }
 
   async addSession(s: Session): Promise<void> {
+    this.sessionsSaved.update((n) => n + 1);
     if (this.consent()) await (await this.open()).add('sessions', s);
   }
 
