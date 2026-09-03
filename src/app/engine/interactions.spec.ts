@@ -156,11 +156,11 @@ describe('ranged: Snipe economy and self-buffs', () => {
 
   it("Death's Swiftness lasts 63 ticks with Planted Feet", () => {
     const plain = make(['death-s-swiftness'], { style: 'Ranged', startAdrenaline: 100 });
-    cast(plain, 'death-s-swiftness', 0, 1 * T);
-    expect(plain.buff('death-s-swiftness')!.endTick).toBe(51);
+    cast(plain, 'death-s-swiftness', 0, 2 * T); // the buff starts one tick after the cast
+    expect(plain.buff('death-s-swiftness')!.endTick).toBe(52);
     const pf = make(['death-s-swiftness'], { style: 'Ranged', startAdrenaline: 100, items: new Set(['planted-feet']) });
-    cast(pf, 'death-s-swiftness', 0, 1 * T);
-    expect(pf.buff('death-s-swiftness')!.endTick).toBe(64);
+    cast(pf, 'death-s-swiftness', 0, 2 * T);
+    expect(pf.buff('death-s-swiftness')!.endTick).toBe(65);
   });
 
   it('Binding Shot has two charges', () => {

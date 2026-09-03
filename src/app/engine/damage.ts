@@ -47,6 +47,16 @@ export const BUFF_DAMAGE_MULT: { buff: string; style: Style; mult: number; dots:
   { buff: 'greater-death-s-swiftness', style: 'Ranged', mult: 1.5, dots: false },
 ];
 
+/**
+ * Self buffs that add a flat share of the ability damage to every hit of a style (Searing Winds: +20% of
+ * ability damage per ranged hit, Frostblades: +24% per melee hit). Added to the roll before crits and style
+ * multipliers, like the base damage. Snapshotted at the cast, so a Snipe cast on the last buff tick keeps it.
+ */
+export const BUFF_FLAT_ADD: { buff: string; style: Style; pct: number; dots: boolean }[] = [
+  { buff: 'searing-winds', style: 'Ranged', pct: 20, dots: false },
+  { buff: 'frostblades', style: 'Melee', pct: 24, dots: false },
+];
+
 /** target debuffs that raise the damage it takes */
 export const TARGET_DAMAGE_MULT: { buff: string; mult: number }[] = [
   { buff: 'haunted', mult: 1.1 },

@@ -18,6 +18,7 @@ function sonicWave(normal: string, charged: string): Effect[] {
 export const MAGIC_RULES: AbilityRule[] = [
   {
     ability: 'surge',
+    moves: true,
     offGcd: true,
     notes: ['Ignores the global cooldown, no adrenaline; shares a cooldown with Escape only in PvP (' + W + 'Surge )'],
   },
@@ -131,14 +132,14 @@ export const MAGIC_RULES: AbilityRule[] = [
       'Planted Feet: 63 ticks and no periodic damage (' + W + 'Planted_Feet )',
     ],
     onCast: [
-      { kind: 'choose', when: { item: 'planted-feet' }, then: [{ kind: 'buff', id: 'sunshine', durationTicks: 63 }], otherwise: [{ kind: 'buff', id: 'sunshine' }] },
+      { kind: 'choose', when: { item: 'planted-feet' }, then: [{ kind: 'buff', id: 'sunshine', durationTicks: 63, delayTicks: 1 }], otherwise: [{ kind: 'buff', id: 'sunshine', delayTicks: 1 }] },
     ],
   },
   {
     ability: 'greater-sunshine',
     replaces: 'sunshine',
     notes: ['100% adrenaline: Magic attacks inside the area deal 1.5x for 63 ticks; Planted Feet only removes the periodic damage (' + W + 'Greater_Sunshine )'],
-    onCast: [{ kind: 'buff', id: 'greater-sunshine' }],
+    onCast: [{ kind: 'buff', id: 'greater-sunshine', durationTicks: 62, delayTicks: 1 }],
   },
   {
     ability: 'tsunami',

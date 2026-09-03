@@ -86,7 +86,8 @@ export type Effect =
   /** take stacks away (only when at least `min` are held); `then` runs after a successful consume */
   | { kind: 'consume-stack'; stack: StackId; amount: number | 'all'; min?: number; when?: Condition; then?: Effect[] }
   /** `untilSpirit`: the buff lives exactly as long as that conjured spirit (Haunted while the commanded ghost hits) */
-  | { kind: 'buff'; id: string; durationTicks?: number; refresh?: boolean; when?: Condition; stacks?: number; untilSpirit?: string }
+  /** `delayTicks`: the buff appears that many ticks after the cast (Death's Swiftness / Sunshine start 1 tick later) */
+  | { kind: 'buff'; id: string; durationTicks?: number; refresh?: boolean; when?: Condition; stacks?: number; untilSpirit?: string; delayTicks?: number }
   | { kind: 'extend-buff'; buff: string; ticks: number; maxTotal?: number; when?: Condition }
   /** Life Transfer: every active conjured spirit lives `ticks` longer */
   | { kind: 'extend-spirits'; ticks: number }
@@ -156,6 +157,8 @@ export interface ChannelSpec {
   hits: number[];
   /** moving does not cancel it */
   movable?: boolean;
+  /** moving does not cancel it while this item (loadout passive id) is worn – Snipe with nightmare gauntlets */
+  movableWith?: string;
   /** Onslaught: adrenaline drained per hit, channel ends when adrenaline is short */
   adrenalinePerHit?: number;
   /** effects only when every hit landed */
@@ -186,6 +189,12 @@ export interface AbilityRule {
   onHit?: Effect[];
   /** non-channel multi-hit schedule (tick offsets), default [0] */
   hits?: number[];
+  /** per-hit damage roll (% of ability damage) for multi-hits whose hits differ (Ricochet's returning arrows); index-aligned with `hits`, missing entries use the data roll */
+  hitDamage?: { min: number; max: number }[];
+  /** every hit is a critical strike (Shadow Tendrils) */
+  guaranteedCrit?: boolean;
+  /** the ability moves the player (Surge, Escape, Dive, Bladed Dive): cancels a channel that is not movable */
+  moves?: boolean;
   channel?: ChannelSpec;
   /** the cast counts as this sequence step (group + step) and opens the next one */
   sequence?: { group: string; step: number; windowTicks: number; last?: boolean };

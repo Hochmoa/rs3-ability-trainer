@@ -69,12 +69,14 @@ export const MELEE_RULES: AbilityRule[] = [
   },
   {
     ability: 'dive',
+    moves: true,
     offGcd: true,
     sharedCooldown: 'dive',
     notes: ['Ignores the global cooldown, generates no adrenaline; shares its 34-tick cooldown with Bladed Dive (' + W + 'Dive )'],
   },
   {
     ability: 'bladed-dive',
+    moves: true,
     offGcdNoGain: true,
     sharedCooldown: 'dive',
     adrenaline: 9,

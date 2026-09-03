@@ -6,6 +6,7 @@ const W = 'https://runescape.wiki/w/';
 export const RANGED_RULES: AbilityRule[] = [
   {
     ability: 'escape',
+    moves: true,
     offGcd: true,
     notes: ['Ignores the global cooldown, no adrenaline, 34-tick cooldown (17 with Mobile); no longer shares a cooldown with Surge outside PvP (' + W + 'Escape )'],
   },
@@ -33,15 +34,18 @@ export const RANGED_RULES: AbilityRule[] = [
   {
     ability: 'galeshot',
     notes: ['Applies Searing Winds for 10 ticks: every ranged hit +20% ability damage flat (' + W + 'Galeshot )'],
+    hits: [0],
     onCast: [{ kind: 'buff', id: 'searing-winds' }],
   },
   {
     ability: 'ricochet',
+    hitDamage: [{ min: 75, max: 85 }, { min: 15, max: 20 }, { min: 15, max: 20 }],
     hits: [0, 1, 1],
     notes: ['Hits up to 2 secondary targets; missing secondaries return to the primary as extra hits 1 tick later (' + W + 'Ricochet )'],
   },
   {
     ability: 'greater-ricochet',
+    hitDamage: [{ min: 75, max: 85 }, { min: 15, max: 20 }, { min: 15, max: 20 }, { min: 4, max: 6 }, { min: 4, max: 6 }, { min: 4, max: 6 }, { min: 4, max: 6 }],
     replaces: 'ricochet',
     hits: [0, 1, 1, 1, 1, 1, 1],
     notes: ['Hits up to 6 secondary targets; missing secondaries return to the primary 1 tick later (' + W + 'Greater_Ricochet )'],
@@ -54,7 +58,7 @@ export const RANGED_RULES: AbilityRule[] = [
   },
   {
     ability: 'snipe',
-    channel: { ticks: 3, hits: [3] },
+    channel: { ticks: 3, hits: [3], movableWith: 'nightmare-gauntlets' },
     notes: [
       '0% adrenaline, 100-tick cooldown applied at the start of the 3-tick channel; cancelled by any other ability or by moving (nightmare gauntlets allow moving) (' + W + 'Snipe )',
       'Piercing Shot hits shorten the cooldown by 4 ticks (6 with fleeting boots) (' + W + 'Snipe )',
@@ -73,8 +77,7 @@ export const RANGED_RULES: AbilityRule[] = [
       'Binds the target for 10 ticks; every hit extends Searing Winds by 1 tick (max +8) (' + W + 'Rapid_Fire )',
       'Dracolich armour: +0.2 adrenaline per piece per tick while channelling (elite 0.5) (' + W + 'Dracolich_armour )',
     ],
-    onCast: [{ kind: 'buff', id: 'bound', durationTicks: 10 }],
-    onHit: [{ kind: 'extend-buff', buff: 'searing-winds', ticks: 1, maxTotal: 8 }],
+        onHit: [{ kind: 'buff', id: 'bound', durationTicks: 10, when: { hit: 0 } }, { kind: 'extend-buff', buff: 'searing-winds', ticks: 1, maxTotal: 8 }],
   },
   {
     ability: 'corruption-shot',
@@ -85,6 +88,7 @@ export const RANGED_RULES: AbilityRule[] = [
   },
   {
     ability: 'shadow-tendrils',
+    guaranteedCrit: true,
     notes: ['0% adrenaline, 75-tick cooldown, guaranteed critical strike with self-damage; extends Shadow Imbued by 6 ticks (' + W + 'Shadow_Tendrils )'],
     onCast: [{ kind: 'extend-buff', buff: 'shadow-imbued', ticks: 6 }],
   },
@@ -105,13 +109,13 @@ export const RANGED_RULES: AbilityRule[] = [
       'Planted Feet: 63 ticks (' + W + 'Planted_Feet )',
     ],
     onCast: [
-      { kind: 'choose', when: { item: 'planted-feet' }, then: [{ kind: 'buff', id: 'death-s-swiftness', durationTicks: 63 }], otherwise: [{ kind: 'buff', id: 'death-s-swiftness' }] },
+      { kind: 'choose', when: { item: 'planted-feet' }, then: [{ kind: 'buff', id: 'death-s-swiftness', durationTicks: 63, delayTicks: 1 }], otherwise: [{ kind: 'buff', id: 'death-s-swiftness', delayTicks: 1 }] },
     ],
   },
   {
     ability: 'greater-death-s-swiftness',
     replaces: 'death-s-swiftness',
     notes: ['100% adrenaline: ranged hits deal 1.5x for 63 ticks; not affected by Planted Feet (' + W + "Greater_Death's_Swiftness )"],
-    onCast: [{ kind: 'buff', id: 'greater-death-s-swiftness' }],
+    onCast: [{ kind: 'buff', id: 'greater-death-s-swiftness', durationTicks: 62, delayTicks: 1 }],
   },
 ];

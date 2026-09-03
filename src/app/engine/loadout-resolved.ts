@@ -36,6 +36,12 @@ export interface ResolvedLoadout {
   channelOverrides: Record<string, ChannelSpec>;
   /** ability id → hit schedule replacing the rule's (Igneous capes) */
   hitsOverrides: Record<string, number[]>;
+  /** ability id → damage roll replacing the data roll (Igneous capes: Deadshot 8 × 55–75%) */
+  damageOverrides: Record<string, { min: number; max: number }>;
+  /** ability id → share of the ability damage added to every hit (Caroming: Ricochet +4% per rank) */
+  flatAddPerAbility: Record<string, number>;
+  /** Ultimatums: damage of ultimate abilities × (1 + 0.03 + 0.01 per rank) */
+  ultimateDamageMult: number;
   /** ability id → adrenaline per tick while channelling (Dracolich Rapid Fire) */
   channelAdrenalinePerTick: Record<string, number>;
   /** ability id → buffs a full channel grants (Dracolich infusion after Rapid Fire with a bow) */
@@ -86,6 +92,9 @@ export function defaultResolvedLoadout(): ResolvedLoadout {
     stackCaps: {},
     channelOverrides: {},
     hitsOverrides: {},
+    damageOverrides: {},
+    flatAddPerAbility: {},
+    ultimateDamageMult: 1,
     channelAdrenalinePerTick: {},
     fullChannelBuffs: {},
     buffCritAdd: {},

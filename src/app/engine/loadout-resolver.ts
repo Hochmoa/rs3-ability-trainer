@@ -211,6 +211,12 @@ function applyPerk(r: ResolvedLoadout, perk: Perk, rank: number): void {
     case 'invigorating': r.invigoratingRank = rank; break;
     case 'relentless': r.relentlessRank = rank; break;
     case 'planted-feet': r.items.add('planted-feet'); break;
+    case 'caroming':
+      for (const a of ['ricochet', 'greater-ricochet']) r.flatAddPerAbility[a] = (r.flatAddPerAbility[a] ?? 0) + Number(p['ricochetPerRank']) * rank;
+      break;
+    case 'ultimatums':
+      r.ultimateDamageMult *= 1 + Number(p['ultimateBase']) + Number(p['ultimatePerRank']) * rank;
+      break;
     case 'mobile':
       for (const a of (p['abilities'] as string[]) ?? []) r.cooldownMult[a] = 0.5;
       break;
@@ -277,6 +283,7 @@ function applyEffect(r: ResolvedLoadout, effect: Record<string, unknown> & { kin
     case 'ability-override':
       if (e['hits']) r.hitsOverrides[e['ability']] = Array.from({ length: Number(e['hits']) }, (_, i) => (i === 0 ? 0 : 1));
       if (e['bounces']) r.hitsOverrides[e['ability']] = Array.from({ length: Number(e['bounces']) + 1 }, (_, i) => i * 2);
+      if (e['damageMin'] !== undefined && e['damageMax'] !== undefined) r.damageOverrides[e['ability']] = { min: Number(e['damageMin']), max: Number(e['damageMax']) };
       break;
     case 'vigour':
       r.ultimateRefund += Number(e['ultimateRefund']);
