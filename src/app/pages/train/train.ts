@@ -4,9 +4,10 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DataService, Entity, SPEC_KEY } from '../../core/data.service';
 import { keybindFromEvent, keybindKey, keybindLabel } from '../../core/keybind.util';
-import { BAR_POSITIONS, STYLES4, StepResult, Style4, entityKey, visiblePresets, RotationStep } from '../../core/models';
+import { AttackPattern, BAR_POSITIONS, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, PrayerStats, STYLES4, StepResult, Style4, entityKey, visiblePresets, RotationStep } from '../../core/models';
 import { StorageService } from '../../core/storage.service';
 import { ActiveBuff, EngineEntity, EngineEvent, GCD_TICKS, TICK_MS, TrainerEngine, UsableReason } from '../../engine/trainer-engine';
+import { SOUL_SPLIT } from '../../engine/prayer-rules';
 import { AbilityIcon, IconState } from '../../shared/ability-icon';
 import { ActionBar, SlotView } from '../../shared/action-bar';
 import { EntityTip } from '../../shared/tooltip';
@@ -44,6 +45,21 @@ interface BarView {
   slots: SlotView[];
 }
 
+interface IncomingView {
+  style: Style4 | null;
+  /** style not visible yet */
+  hidden: boolean;
+  ticksLeft: number;
+  /** 0..1 until the hit lands */
+  progress: number;
+  /** overhead needed for this attack (entity key) */
+  needed: string;
+  /** the needed overhead is active right now */
+  covered: boolean;
+}
+
+const EMPTY_PRAYER_STATS: PrayerStats = { ticks: 0, soulSplitTicks: 0, attacks: 0, prayed: 0, hits: 0 };
+
 @Component({
   selector: 'app-train',
   imports: [AbilityIcon, ActionBar, RouterLink, FormsModule, EntityTip, DecimalPipe],
@@ -58,6 +74,15 @@ export class Train implements OnDestroy {
   readonly TICK_MS = TICK_MS;
   readonly GCD_MS = TICK_MS * GCD_TICKS;
   readonly STYLES4 = STYLES4;
+  readonly ENEMY_PRESETS = ENEMY_PRESETS;
+  readonly PATTERNS: { id: AttackPattern; label: string }[] = [
+    { id: 'random', label: 'random' },
+    { id: 'no-repeat', label: 'random, never the same style twice' },
+    { id: 'cycle', label: 'in order' },
+    { id: 'streak', label: 'streaks of n, then next style' },
+  ];
+  readonly enemy = this.storage.enemy;
+  readonly enemyOpen = signal(false);
 
   readonly selectedId = signal<string | null>(null);
   readonly rotation = computed(() => this.storage.rotations().find((r) => r.id === this.selectedId()) ?? null);
@@ -125,6 +150,17 @@ export class Train implements OnDestroy {
   readonly flashKey = signal<{ key: string; kind: 'fired' | 'wrong' } | null>(null);
   /** per visible entity: usability + own cooldown, refreshed every frame */
   readonly slotState = signal<Map<string, { usable: UsableReason; cooldownS: number }>>(new Map());
+  /** active prayers as entities (icon + tooltip) */
+  readonly activePrayers = signal<Entity[]>([]);
+  readonly prayerStats = signal<PrayerStats>({ ...EMPTY_PRAYER_STATS });
+  readonly incoming = signal<IncomingView | null>(null);
+  readonly attackLog = signal<{ style: Style4; prayed: boolean; tick: number }[]>([]);
+  /** Soul Split ticks + prayed attacks, out of all ticks */
+  readonly prayerScore = computed(() => {
+    const s = this.prayerStats();
+    return { score: s.soulSplitTicks + s.prayed, max: s.ticks, pct: s.ticks ? Math.round(((s.soulSplitTicks + s.prayed) / s.ticks) * 100) : 0 };
+  });
+  readonly prayerBook = computed(() => this.storage.loadout().prayerBook ?? 'Curses');
 
   readonly accuracy = computed(() => {
     const r = this.results();
@@ -261,11 +297,20 @@ export class Train implements OnDestroy {
     for (const id of Object.keys(setup.actionKeybinds ?? {})) add('action:' + id);
     for (const st of STYLES4) add('weapon:' + st.toLowerCase());
     for (const s of steps) catalog.set(s.key, s);
+    const enemy = this.enemy();
     this.engine = new TrainerEngine(steps, catalog, {
       ...this.storage.settings(),
       loadout: { ...this.storage.loadout() },
       weaponSetup: { start: setup.startWeapon, types: { ...setup.weapons } },
+      prayerBook: this.prayerBook(),
+      enemy: enemy.enabled ? { ...enemy, styles: [...enemy.styles] } : undefined,
     });
+    // every prayer of the book is pressable even when it is on no bar (touch / click users get it via the bars only)
+    for (const p of this.data.prayers()) add('prayer:' + p.id);
+    this.activePrayers.set([]);
+    this.prayerStats.set({ ...EMPTY_PRAYER_STATS });
+    this.incoming.set(null);
+    this.attackLog.set([]);
     this.startedAt = Date.now();
     this.results.set([]);
     this.counts.set({ perfect: 0, late: 0, early: 0, wrong: 0, missed: 0 });
@@ -322,6 +367,7 @@ export class Train implements OnDestroy {
     this.expectedKey.set(e.currentStep?.key ?? null);
     this.queuedKey.set(e.queuedKey);
     this.buffs.set(e.buffs.map((b) => this.buffView(b, now)));
+    this.syncPrayers(e, now);
     if (now >= this.flashUntil) {
       this.iconState.set(e.isQueued ? 'queued' : 'idle');
       if (this.flashKey()) this.flashKey.set(null);
@@ -342,6 +388,34 @@ export class Train implements OnDestroy {
       return false;
     }
     return true;
+  }
+
+  private syncPrayers(e: TrainerEngine, now: number): void {
+    const ids = [...e.activePrayers];
+    const current = this.activePrayers();
+    if (ids.length !== current.length || ids.some((id, i) => current[i]?.id !== id)) {
+      this.activePrayers.set(ids.map((id) => this.data.get('prayer:' + id)).filter((x): x is Entity => !!x));
+    }
+    this.prayerStats.set({ ...e.prayerStats });
+    const a = e.nextAttack;
+    if (!a) {
+      if (this.incoming()) this.incoming.set(null);
+      return;
+    }
+    const tick = e.currentTick(now);
+    const interval = Math.max(1, this.enemy().intervalTicks);
+    const startTime = e.tickTime(a.tick - interval);
+    const progress = Math.max(0, Math.min(1, (now - startTime) / (e.tickTime(a.tick) - startTime)));
+    const hidden = tick < a.revealTick;
+    const needed = 'prayer:' + e.protectionFor(a.style);
+    this.incoming.set({
+      style: hidden ? null : a.style,
+      hidden,
+      ticksLeft: Math.max(0, a.tick - tick),
+      progress,
+      needed,
+      covered: e.activePrayers.has(e.protectionFor(a.style)),
+    });
   }
 
   private buffView(b: ActiveBuff, now: number): BuffView {
@@ -406,6 +480,30 @@ export class Train implements OnDestroy {
         break;
       case 'weapon':
         break;
+      case 'prayer': {
+        const name = this.data.name('prayer:' + ev.id);
+        if (ev.on) {
+          this.feedback.set({ text: name + ' on' + (ev.replaced.length ? ' – replaced ' + ev.replaced.map((r) => this.data.name('prayer:' + r)).join(', ') : ''), cls: 'info' });
+        } else {
+          this.feedback.set({ text: name + ' off', cls: 'info' });
+        }
+        break;
+      }
+      case 'wrong-book':
+        this.counts.update((c) => ({ ...c, wrong: c.wrong + 1 }));
+        this.feedback.set({ text: this.data.name('prayer:' + ev.id) + ' is a ' + (ev.book === 'Curses' ? 'curse' : 'standard prayer') + ' – your book is ' + (this.prayerBook() === 'Curses' ? 'Ancient Curses' : 'standard prayers') + ' (Loadout)', cls: 'bad' });
+        this.flash('wrong', 'prayer:' + ev.id, now, 300);
+        break;
+      case 'attack': {
+        this.attackLog.update((l) => [...l.slice(-19), { style: ev.style, prayed: ev.prayed, tick: ev.tick }]);
+        const needed = this.data.name('prayer:' + ev.needed);
+        if (ev.prayed) {
+          this.feedback.set({ text: ev.style + ' attack blocked by ' + needed, cls: 'good' });
+        } else {
+          this.feedback.set({ text: 'Hit by a ' + ev.style + ' attack – ' + needed + ' was not active', cls: 'bad' });
+        }
+        break;
+      }
       case 'no-adrenaline':
         this.feedback.set({ text: this.name(ev.key) + ' needs ' + ev.need + '% adrenaline, you have ' + Math.floor(ev.have) + '%' + (this.storage.settings().abilityQueueing ? ' – queued until you have it' : ''), cls: 'bad' });
         this.flash('wrong', ev.key, now, 300);
@@ -435,7 +533,7 @@ export class Train implements OnDestroy {
   private saveSession(): void {
     const rot = this.rotation();
     const results = this.results();
-    if (!rot || !results.length) return;
+    if (!rot || (!results.length && !(this.enemy().enabled && this.prayerStats().attacks))) return;
     void this.storage.addSession({
       rotationId: rot.id,
       rotationName: rot.name,
@@ -444,7 +542,40 @@ export class Train implements OnDestroy {
       settings: { ...this.storage.settings() },
       loadout: { ...this.storage.loadout() },
       results,
+      enemy: this.enemy().enabled ? { ...this.enemy() } : undefined,
+      prayerStats: this.enemy().enabled ? { ...this.prayerStats() } : undefined,
     });
+  }
+
+  // ------------------------------------------------------------------ enemy config
+
+  setEnemy<K extends keyof EnemyConfig>(key: K, value: EnemyConfig[K]): void {
+    const e = { ...this.enemy(), [key]: value, preset: key === 'enabled' ? this.enemy().preset : null };
+    if (key === 'enabled') e.preset = this.enemy().preset;
+    void this.storage.saveEnemy(e);
+  }
+
+  applyPreset(id: string): void {
+    const p = ENEMY_PRESETS.find((x) => x.preset === id);
+    void this.storage.saveEnemy(p ? { ...p, styles: [...p.styles], enabled: true } : { ...DEFAULT_ENEMY, enabled: this.enemy().enabled });
+  }
+
+  toggleStyle(style: Style4): void {
+    const styles = this.enemy().styles.includes(style) ? this.enemy().styles.filter((s) => s !== style) : [...this.enemy().styles, style];
+    if (!styles.length) return;
+    this.setEnemy('styles', styles);
+  }
+
+  numberOf(v: unknown, min: number, max: number): number {
+    return Math.max(min, Math.min(max, Math.round(Number(v) || min)));
+  }
+
+  neededName(key: string): string {
+    return this.data.name(key);
+  }
+
+  hasSoulSplit(): boolean {
+    return this.activePrayers().some((p) => p.id === SOUL_SPLIT);
   }
 
   /** click on a bar slot while training = press it (for touch / mouse users) */

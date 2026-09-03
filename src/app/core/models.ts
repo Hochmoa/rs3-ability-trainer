@@ -207,6 +207,8 @@ export interface Loadout {
   heightenedSenses: boolean;
   /** Vestments of havoc 4-piece: maximum adrenaline +20% (melee weapon) */
   vestmentsOfHavoc: boolean;
+  /** active prayer book – standard prayers or Ancient Curses; never mixed inside a session */
+  prayerBook?: 'Prayers' | 'Curses';
 }
 
 /** One saved action bar (in-game "Action bar preset 1..18"), 14 slots. */
@@ -278,7 +280,59 @@ export const DEFAULT_LOADOUT: Loadout = {
   conservationOfEnergy: false,
   heightenedSenses: false,
   vestmentsOfHavoc: false,
+  prayerBook: 'Curses',
 };
+
+/** Simulated enemy for prayer training: attacks in a fixed rhythm, the matching overhead must be active on the hit tick. */
+export type AttackPattern = 'random' | 'no-repeat' | 'cycle' | 'streak';
+
+export interface EnemyConfig {
+  enabled: boolean;
+  /** preset id or null for custom */
+  preset: string | null;
+  name: string;
+  styles: Style4[];
+  pattern: AttackPattern;
+  /** streak pattern: how many attacks of one style before switching */
+  streak: number;
+  /** ticks between two attacks (5 = 3.0 s like most bosses) */
+  intervalTicks: number;
+  /** the style of the next attack becomes visible this many ticks before it lands */
+  warningTicks: number;
+  /** first attack lands this many ticks after the session start */
+  firstAttackTicks: number;
+}
+
+export const DEFAULT_ENEMY: EnemyConfig = {
+  enabled: false,
+  preset: null,
+  name: 'Custom',
+  styles: ['Melee', 'Magic'],
+  pattern: 'no-repeat',
+  streak: 3,
+  intervalTicks: 5,
+  warningTicks: 3,
+  firstAttackTicks: 8,
+};
+
+/** Boss presets from runescape.wiki (auto-attack styles and rate; specials are not simulated). */
+export const ENEMY_PRESETS: EnemyConfig[] = [
+  { ...DEFAULT_ENEMY, enabled: true, preset: 'nakatra', name: 'Nakatra, Devourer Eternal', styles: ['Magic', 'Ranged'], pattern: 'streak', streak: 3, intervalTicks: 5, warningTicks: 3 },
+  { ...DEFAULT_ENEMY, enabled: true, preset: 'zamorak', name: 'Zamorak, Lord of Chaos', styles: ['Magic', 'Ranged'], pattern: 'random', intervalTicks: 5, warningTicks: 3 },
+  { ...DEFAULT_ENEMY, enabled: true, preset: 'raksha', name: 'Raksha, the Shadow Colossus', styles: ['Melee', 'Ranged', 'Magic'], pattern: 'no-repeat', intervalTicks: 5, warningTicks: 3 },
+];
+
+export interface PrayerStats {
+  /** ticks of the session */
+  ticks: number;
+  /** ticks (without an attack) in which Soul Split was active */
+  soulSplitTicks: number;
+  attacks: number;
+  /** attacks that met the right overhead */
+  prayed: number;
+  /** attacks that landed without the right overhead */
+  hits: number;
+}
 
 export type StepOutcome = 'perfect' | 'late' | 'early' | 'done' | 'missed';
 
@@ -307,4 +361,6 @@ export interface Session {
   settings: Settings;
   loadout?: Loadout;
   results: StepResult[];
+  enemy?: EnemyConfig;
+  prayerStats?: PrayerStats;
 }

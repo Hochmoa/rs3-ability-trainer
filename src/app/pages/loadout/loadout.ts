@@ -55,6 +55,15 @@ import { StorageService } from '../../core/storage.service';
           <input type="checkbox" [ngModel]="l().heightenedSenses" (ngModelChange)="set('heightenedSenses', $event)" />
           <span>Heightened Senses <small>– maximum adrenaline +10%</small></span>
         </label>
+        <h3>Prayer book</h3>
+        <label>
+          <span>Active book</span>
+          <select [ngModel]="l().prayerBook ?? 'Curses'" (ngModelChange)="set('prayerBook', $event)">
+            <option value="Curses">Ancient Curses (Deflects, Soul Split, Turmoil, …)</option>
+            <option value="Prayers">Standard prayers (Protect from …, Piety, …)</option>
+          </select>
+          <small>Only one book is active in a session, like in the game: prayers of the other book are greyed out and ignored.</small>
+        </label>
         <p class="muted small">Adrenaline potions are steps in the rotation (catalog tab "Special"), not part of the loadout.</p>
       </div>
     </div>

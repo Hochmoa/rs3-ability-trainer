@@ -155,7 +155,7 @@ export class DataService {
         gcd: false,
         adrenaline: 0,
         cooldownTicks: 0,
-        buffs: [{ id: e.key, name: p.name, kind: 'Buff', on: 'self', icon: p.icon, durationTicks: null }],
+        buffs: [],
       };
     }
     if (e.weapon) {

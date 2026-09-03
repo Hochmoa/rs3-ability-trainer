@@ -1,4 +1,5 @@
-import { AbilityType, DEFAULT_LOADOUT, EntityKind, Loadout, SPEC_KEY, StepResult, Style4, WeaponType, isStyle4 } from '../core/models';
+import { AbilityType, DEFAULT_LOADOUT, EnemyConfig, EntityKind, Loadout, PrayerStats, SPEC_KEY, StepResult, Style4, WeaponType, isStyle4 } from '../core/models';
+import { PROTECTION, PrayerBook, SOUL_SPLIT, bookOf, togglePrayer } from './prayer-rules';
 
 /** One RS3 game tick / server cycle. */
 export const TICK_MS = 600;
@@ -14,9 +15,20 @@ export interface EngineConfig {
   loadout: Loadout;
   /** wielded weapon at session start and the weapon type per style (2h / dual wield / one-hand + shield) */
   weaponSetup?: { start: Style4; types: Record<Style4, WeaponType> };
+  /** prayer book of the session (default Curses); prayers of the other book are ignored */
+  prayerBook?: PrayerBook;
+  /** simulated enemy; only used when enabled */
+  enemy?: EnemyConfig;
 }
 
-export type UsableReason = 'ok' | 'weapon' | 'equipment' | 'adrenaline' | 'cooldown';
+export type UsableReason = 'ok' | 'weapon' | 'equipment' | 'adrenaline' | 'cooldown' | 'book';
+
+export interface IncomingAttack {
+  tick: number;
+  style: Style4;
+  /** the style is visible from this tick on */
+  revealTick: number;
+}
 
 /** A status effect an entity applies when it casts / activates. */
 export interface EngineBuff {
@@ -85,6 +97,12 @@ export type EngineEvent =
   | { kind: 'wrong-weapon'; key: string; reason: 'weapon' | 'equipment' }
   /** weapon switched */
   | { kind: 'weapon'; style: Style4 }
+  /** prayer toggled; `replaced` = conflicting prayers that were switched off */
+  | { kind: 'prayer'; id: string; on: boolean; replaced: string[] }
+  /** prayer of the other book – ignored */
+  | { kind: 'wrong-book'; id: string; book: PrayerBook }
+  /** enemy attack landed */
+  | { kind: 'attack'; style: Style4; tick: number; prayed: boolean; needed: string }
   | { kind: 'finished' };
 
 interface PendingInput {
@@ -130,6 +148,10 @@ export class TrainerEngine {
   castTick: number | null = null;
   adrenaline = 0;
   weapon: Style4 = 'Melee';
+  /** ids of the active prayers (e.g. "soul-split") */
+  activePrayers = new Set<string>();
+  prayerStats: PrayerStats = { ticks: 0, soulSplitTicks: 0, attacks: 0, prayed: 0, hits: 0 };
+  nextAttack: IncomingAttack | null = null;
   results: StepResult[] = [];
   buffs: ActiveBuff[] = [];
   /** Events since the last drain; the UI empties this array. */
@@ -146,12 +168,23 @@ export class TrainerEngine {
   private lastTick = 0;
   /** tick of the last input that counted (cast or off-GCD activation) – reference for "+" / "2t" companions */
   private lastInputTick: number | null = null;
+  private attackHistory: Style4[] = [];
+  private cycleIndex = 0;
 
   constructor(
     readonly steps: EngineEntity[],
     readonly catalog: Map<string, EngineEntity>,
     public config: EngineConfig,
   ) {}
+
+  get prayerBook(): PrayerBook {
+    return this.config.prayerBook ?? 'Curses';
+  }
+
+  /** overhead that protects against `style` in the session's book */
+  protectionFor(style: Style4): string {
+    return PROTECTION[this.prayerBook][style];
+  }
 
   get maxAdrenaline(): number {
     const l = this.config.loadout ?? DEFAULT_LOADOUT;
@@ -175,8 +208,43 @@ export class TrainerEngine {
     this.overTime = [];
     this.lastTick = 0;
     this.lastInputTick = null;
+    this.activePrayers = new Set();
+    this.prayerStats = { ticks: 0, soulSplitTicks: 0, attacks: 0, prayed: 0, hits: 0 };
+    this.attackHistory = [];
+    this.cycleIndex = 0;
+    this.nextAttack = null;
+    const enemy = this.config.enemy;
+    if (enemy?.enabled && enemy.styles.length) this.scheduleAttack(Math.max(1, enemy.firstAttackTicks));
     this.events.length = 0;
     this.state = 'running';
+  }
+
+  private scheduleAttack(tick: number): void {
+    const enemy = this.config.enemy!;
+    const styles = enemy.styles;
+    const last = this.attackHistory.at(-1);
+    let style: Style4;
+    switch (enemy.pattern) {
+      case 'cycle':
+        style = styles[this.cycleIndex % styles.length];
+        this.cycleIndex++;
+        break;
+      case 'streak': {
+        const n = Math.max(1, enemy.streak);
+        const run = this.attackHistory.length;
+        style = styles[Math.floor(run / n) % styles.length];
+        break;
+      }
+      case 'no-repeat': {
+        const pool = styles.length > 1 && last ? styles.filter((s) => s !== last) : styles;
+        style = pool[Math.floor(this.random() * pool.length)];
+        break;
+      }
+      default:
+        style = styles[Math.floor(this.random() * styles.length)];
+    }
+    this.attackHistory.push(style);
+    this.nextAttack = { tick, style, revealTick: tick - Math.max(0, enemy.warningTicks) };
   }
 
   stop(): void {
@@ -253,6 +321,11 @@ export class TrainerEngine {
   usable(key: string, tick: number): UsableReason {
     const e = this.catalog.get(key);
     if (!e) return 'ok';
+    if (e.kind === 'prayer') {
+      const book = bookOf(prayerId(key));
+      if (book && book !== this.prayerBook) return 'book';
+      return 'ok';
+    }
     if (e.kind === 'ability' || e.kind === 'spec') {
       // utility abilities off the GCD (Surge, Escape, Dive) work with any weapon; only real casts need the style
       if (e.gcd && e.style && isStyle4(e.style) && e.style !== this.weapon) return 'weapon';
@@ -385,6 +458,19 @@ export class TrainerEngine {
   }
 
   private handleOffGcd(entity: EngineEntity, tick: number): void {
+    if (entity.kind === 'prayer') {
+      const id = prayerId(entity.key);
+      const book = bookOf(id);
+      if (book && book !== this.prayerBook) {
+        this.wrong++;
+        this.events.push({ kind: 'wrong-book', id, book });
+        return;
+      }
+      // a prayer that is already on and wanted later in the rotation: leave it, the step completes on its own
+      if (this.activePrayers.has(id) && this.openOffGcdStep(this.index, entity.key) < 0 && this.steps.some((s, i) => i >= this.index && !this.done.has(i) && s.key === entity.key)) {
+        return;
+      }
+    }
     const cd = this.cooldownLeft(entity.key, tick);
     if (cd > 0) {
       this.wrong++;
@@ -403,7 +489,14 @@ export class TrainerEngine {
       }
     }
     this.activate(entity, tick);
+    if (entity.kind === 'prayer' && !this.activePrayers.has(prayerId(entity.key))) {
+      // switched the prayer off – never completes a step; counts as wrong if the rotation wanted it on
+      if (stepIndex >= 0) this.wrong++;
+      return;
+    }
     if (stepIndex < 0) {
+      // prayers are free actions (flicking, Soul Split): never a wrong press; the prayer score judges them
+      if (entity.kind === 'prayer') return;
       this.wrong++;
       this.events.push({ kind: 'wrong-fired', key: entity.key, expected: this.currentStep?.key ?? '', tick });
       return;
@@ -486,7 +579,7 @@ export class TrainerEngine {
     const expectedIndex = this.steps.indexOf(expected, this.index);
     const missed: string[] = [];
     for (let i = this.index; i < expectedIndex; i++) {
-      if (this.steps[i].isNote) {
+      if (this.steps[i].isNote || this.autoSatisfied(i, p.tick)) {
         this.done.add(i);
         continue;
       }
@@ -523,9 +616,31 @@ export class TrainerEngine {
     this.advanceIndex();
   }
 
+  /** A prayer step whose prayer is already active counts as done (records a result once). */
+  private autoSatisfied(i: number, tick: number): boolean {
+    const s = this.steps[i];
+    if (this.done.has(i)) return true;
+    if (s.kind !== 'prayer' || !this.activePrayers.has(prayerId(s.key))) return false;
+    this.done.add(i);
+    const result: StepResult = {
+      step: i, key: s.key, name: s.name, kind: s.kind, outcome: 'done', lateTicks: 0, offsetMs: 0, tooEarly: 0, wrong: 0,
+      firedAtTick: tick, adrenaline: this.adrenaline,
+    };
+    this.results.push(result);
+    this.events.push({ kind: 'fired', result });
+    return true;
+  }
+
   /** Apply the effects of an entity that just cast / activated at `tick`. */
   private activate(entity: EngineEntity, tick: number): void {
     const l = this.config.loadout ?? DEFAULT_LOADOUT;
+    if (entity.kind === 'prayer') {
+      const id = prayerId(entity.key);
+      const t = togglePrayer(this.activePrayers, id);
+      this.activePrayers = t.active;
+      this.events.push({ kind: 'prayer', id, on: t.on, replaced: t.replaced });
+      return;
+    }
     if (entity.weapon) {
       this.weapon = entity.weapon.style;
       this.events.push({ kind: 'weapon', style: entity.weapon.style });
@@ -558,6 +673,19 @@ export class TrainerEngine {
 
   private advanceTick(tick: number): void {
     this.lastTick = tick;
+    this.prayerStats.ticks++;
+    if (this.nextAttack && this.nextAttack.tick === tick) {
+      const { style } = this.nextAttack;
+      const needed = this.protectionFor(style);
+      const prayed = this.activePrayers.has(needed);
+      this.prayerStats.attacks++;
+      if (prayed) this.prayerStats.prayed++;
+      else this.prayerStats.hits++;
+      this.events.push({ kind: 'attack', style, tick, prayed, needed });
+      this.scheduleAttack(tick + Math.max(1, this.config.enemy!.intervalTicks));
+    } else if (this.activePrayers.has(SOUL_SPLIT)) {
+      this.prayerStats.soulSplitTicks++;
+    }
     for (const o of this.overTime) {
       if (tick <= o.untilTick) this.adrenaline = Math.min(this.maxAdrenaline, this.adrenaline + o.perTick);
     }
@@ -572,6 +700,7 @@ export class TrainerEngine {
         this.done.add(this.index);
         continue;
       }
+      if (this.index < this.steps.length && this.autoSatisfied(this.index, this.lastTick)) continue;
       break;
     }
     if (this.index >= this.steps.length) {
@@ -584,4 +713,9 @@ export class TrainerEngine {
       }
     }
   }
+}
+
+/** "prayer:soul-split" → "soul-split" */
+function prayerId(key: string): string {
+  return key.replace(/^prayer:/, '');
 }

@@ -44,6 +44,13 @@ Live at **https://rs3trainer.hochware.com** (GitHub Pages).
   Presets can be copied into each other. Signed in, the whole setup syncs across devices (table `action_bars`).
 - **Weapon switches** are rotation steps (catalog tab "Weapons"); switching is instant. Each style has one weapon
   whose type (two-handed / dual wield / one-handed + shield) decides which abilities are usable.
+- **Prayers** behave like in the game: pressing toggles, conflicting prayers switch off automatically (one overhead at a
+  time, Turmoil-tier vs. saps/leeches, stat prayers vs. Piety & co.), the active ones are always shown, and the
+  *Loadout* fixes the prayer book (Ancient Curses or standard prayers) – the other book is greyed out.
+- **Incoming attacks** (checkbox on the Train page): a simulated enemy attacks in a fixed rhythm; the matching Protect /
+  Deflect prayer must be active on the tick the hit lands, Soul Split earns a point on every other tick. Styles, pattern
+  (random / never twice the same / in order / streaks), interval and warning time are configurable; presets for Nakatra,
+  Zamorak and Raksha use the wiki's auto-attack styles and 5-tick rate (specials are not simulated).
 - Two bars above the queue show the tick (0.6 s) and the GCD (1.8 s) progress, a third one the adrenaline.
 - Rotations, keybinds (with Ctrl/Shift/Alt), loadout, settings and session results are stored in IndexedDB after you
   accept the storage banner.
