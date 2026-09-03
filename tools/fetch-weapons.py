@@ -13,7 +13,7 @@ FIELDS = ["page_name", "page_name_sub", "combat_class", "equipment_slot", "equip
           "weapon_attack_speed", "equipment_tier", "degradation_charges", "json"]
 STYLE = {"melee": "Melee", "ranged": "Ranged", "magic": "Magic", "necromancy": "Necromancy"}
 SLOT = {"main hand weapon": "main", "off-hand weapon": "off", "2h weapon": "2h"}
-DYE = re.compile(r" \((blood|ice|shadow|Barrows|Third Age|Soulflame|or|Soul|broken|used)\)$")
+DYE = re.compile(r" \((blood|ice|shadow|aurora|barrows|third age|soulflame|or|soul|broken|used|lucky|crucible|deathmatch)\)$", re.I)
 SUB_RANK = {"": 0, "new": 0, "Normal": 0, "unbound": 1, "usable": 1, "charged": 2, "Innate Mastery": 3}
 SPEED = {"fastest": 4, "fast": 5, "average": 6, "slowest": 12}
 

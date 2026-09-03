@@ -1,0 +1,302 @@
+.head {
+  h2 {
+    margin-bottom: 8px;
+  }
+
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .chip {
+    padding: 5px 12px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: #26252c;
+    color: var(--muted);
+    font: inherit;
+    cursor: pointer;
+
+    &.active {
+      color: var(--gold);
+      border-color: var(--gold);
+    }
+  }
+
+  .name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+
+    input {
+      max-width: 280px;
+    }
+  }
+
+  .warnings {
+    margin-top: 8px;
+    color: var(--warn);
+    font-size: 13px;
+  }
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 14px;
+
+  &.small {
+    margin: 0;
+  }
+}
+
+.tab {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font: inherit;
+
+  &.active {
+    color: var(--gold);
+    border-color: var(--gold);
+  }
+}
+
+.equipped {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.slot-box {
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  .slot-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--muted);
+  }
+
+  select {
+    max-width: 100%;
+  }
+}
+
+.equip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  img {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+  }
+
+  span {
+    flex: 1;
+  }
+}
+
+.picker-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
+
+  input[type='search'] {
+    margin-left: auto;
+    min-width: 200px;
+  }
+
+  .tier input {
+    width: 70px;
+    margin-left: 4px;
+  }
+}
+
+.weapon-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 6px;
+  max-height: 420px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.weapon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 4px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+
+  &:hover {
+    border-color: var(--gold);
+  }
+
+  &.has-spec {
+    border-color: rgba(201, 162, 39, 0.35);
+  }
+
+  img,
+  .noicon {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+  }
+
+  .wname {
+    font-size: 12px;
+    text-align: center;
+    line-height: 1.2;
+  }
+
+  .wmeta {
+    font-size: 11px;
+    color: var(--muted);
+  }
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 760px;
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  label > span:first-child {
+    font-weight: 600;
+  }
+
+  label.check {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 8px;
+
+    > span:first-of-type {
+      font-weight: 400;
+    }
+  }
+
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  input[type='range'] {
+    flex: 1;
+    max-width: 320px;
+  }
+
+  .val {
+    min-width: 64px;
+  }
+}
+
+h3 {
+  margin: 10px 0 0;
+  color: var(--gold);
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.thresholds {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+
+  li {
+    color: var(--muted);
+    margin-bottom: 4px;
+
+    &.active {
+      color: var(--text);
+    }
+  }
+}
+
+.items {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 6px 18px;
+}
+
+.item.damage-only {
+  opacity: 0.7;
+}
+
+.src {
+  font-size: 12px;
+}
+
+.gizmos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 10px;
+}
+
+.gizmo {
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  &.unused {
+    opacity: 0.5;
+  }
+
+  .gizmo-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    .check {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+  }
+
+  .perk-row {
+    display: flex;
+    gap: 6px;
+
+    select:first-child {
+      flex: 1;
+    }
+  }
+}

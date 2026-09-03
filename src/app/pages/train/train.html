@@ -25,7 +25,7 @@
       Ping {{ storage.settings().pingMs }} ms ± {{ storage.settings().jitterMs }} · ability queueing
       {{ storage.settings().abilityQueueing ? 'on' : 'off' }}
       @if (storage.settings().loop) { · loop }
-      · start {{ storage.loadout().startAdrenaline }}% adrenaline
+      · loadout <a routerLink="/loadout">{{ storage.loadout().name }}</a> · start {{ storage.loadout().startAdrenaline }}%
     </span>
   </div>
 
@@ -41,6 +41,15 @@
   @if (unknownSteps()) {
     <div class="panel warning">
       {{ unknownSteps() }} step(s) of this rotation refer to abilities that were removed from the game. <a routerLink="/rotations">Edit the rotation</a> to fix it.
+    </div>
+  }
+  @if (equipmentWarnings().length) {
+    <div class="panel warning">
+      The active loadout cannot perform:
+      @for (w of equipmentWarnings(); track w) {
+        <div>{{ w }}</div>
+      }
+      <a routerLink="/loadout">Change the loadout</a> or the rotation. You can still train; those steps will be refused like in game.
     </div>
   }
 
@@ -75,6 +84,7 @@
         @for (b of selfBuffs(); track b.id) {
           <div class="status buff" [title]="b.name">
             @if (b.icon) { <img [src]="b.icon" [alt]="b.name" /> } @else { <span class="fallback">{{ b.name.slice(0, 2) }}</span> }
+            @if (b.stacks) { <span class="stacks">{{ b.stacks }}</span> }
             @if (b.remainingS !== null) { <span class="timer">{{ b.remainingS | number: '1.0-0' }}</span> }
           </div>
         } @empty {
@@ -92,6 +102,17 @@
           <span class="muted none">–</span>
         }
       </div>
+      @if (stacks().length) {
+        <div class="status-bar stacks-bar">
+          <span class="label">Stacks</span>
+          @for (s of stacks(); track s.id) {
+            <div class="stack" [class]="'stack ' + s.id" [title]="s.name">
+              <span class="stack-name">{{ s.name }}</span>
+              <b>{{ s.value }}</b>
+            </div>
+          }
+        </div>
+      }
     </div>
 
     <div class="ability-queue" [class.finished]="finished() && !running()">
@@ -101,13 +122,15 @@
             [ability]="s.entity"
             [keyLabel]="s.key"
             [px]="s.kind === 'current' ? 112 : s.kind === 'next' ? 64 : 48"
-            [gcdPhase]="s.kind === 'current' && running() && s.entity.kind === 'ability' ? gcdPhase() : 1"
-            [remainingMs]="s.kind === 'current' && running() && s.entity.kind === 'ability' ? gcdRemaining() : 0"
+            [gcdPhase]="s.kind === 'current' && running() && s.entity.kind === 'ability' ? gcdPhase() : running() && s.kind === 'next' ? cdPhase(s) : 1"
+            [remainingMs]="s.kind === 'current' && running() && s.entity.kind === 'ability' ? gcdRemaining() : running() && s.kind === 'next' ? cdRemaining(s) : 0"
             [state]="s.done ? 'done' : s.kind === 'current' && running() ? iconState() : 'idle'"
           />
           <span class="name">{{ s.entity.name }}</span>
           @if (s.entity.kind !== 'ability') {
             <span class="tag">{{ s.entity.kind === 'prayer' ? 'prayer' : 'potion' }} · no GCD</span>
+          } @else if (channelling() === s.entity.key) {
+            <span class="tag">channelling</span>
           }
         </div>
         @if (s.kind === 'current') {

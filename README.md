@@ -31,7 +31,19 @@ Live at **https://rs3trainer.hochware.com** (GitHub Pages).
 - Rotations, keybinds (with Ctrl/Shift/Alt), loadout, settings and session results are stored in IndexedDB after you
   accept the storage banner.
 
-Off-GCD abilities (Surge, Escape, Anticipation, …) are in the catalog as normal steps that ignore the GCD.
+- **Ability interactions** are simulated the way the wiki documents them (`docs/research/*.md`, ~190 rules,
+  `src/app/engine/rules-*.ts`): style resources (Bloodlust, Necrosis, Residual Souls, Storm Shards), cooldown
+  resets and overrides (Living Death → Death Skulls 17 ticks, Berserk → Overpower 15 ticks), per-hit effects
+  (Piercing Shot shortens Snipe, Rapid Fire extends Searing Winds, Shadow Imbued pays adrenaline per hit),
+  consumable buffs (Anima Charged → Flow, Chaos Roar, Greater Fury), sequence slots (Dismember → Slaughter →
+  Massacre, Spectral Scythe casts), conjures and commands, charges (Backhand, Impact, Binding Shot), channels with
+  their hit schedule (cancelled by the next ability), thresholds and Limitless, off-GCD abilities (Surge, Escape,
+  Dive, Bladed Dive, Provoke, Limitless, Runic Charge). Hover any ability for its "Interactions" list with wiki links.
+- **Loadouts** (several, switchable): main-hand / off-hand / two-handed weapon (all ~1 900 weapons, shields and
+  defenders), the weapon's special attack and an Essence of Finality spec (75 specs), armour set with piece count,
+  item passives, Invention perks in weapon and armour gizmos (all 69 perks; the 32 combat perks act), Archaeology
+  relics, Spirit Pact, start adrenaline. Equipment requirements (two-handed, shield, conduit, spec weapon) are checked
+  like in game.
 
 ## Development
 
@@ -50,7 +62,11 @@ Push to `main` deploys via `.github/workflows/deploy.yml`.
 python tools/fetch-abilities.py   # public/data/abilities.json + buffs.json, icons in public/assets/abilities + status
 python tools/fetch-prayers.py     # public/data/prayers.json, icons in public/assets/prayers
 python tools/fetch-specials.py    # public/data/specials.json (adrenaline potions), icons in public/assets/specials
+python tools/fetch-specs.py       # public/data/specs.json (weapon special attacks) – run before fetch-abilities.py
+python tools/fetch-weapons.py     # public/data/weapons.json (all weapons/shields/defenders), icons in public/assets/weapons
+python tools/fetch-perks.py       # public/data/perks.json (Invention perks), icons in public/assets/perks
 ```
+`public/data/set-effects.json` (armour sets and item passives) is hand-written from the wiki with a source URL per entry.
 
 The scripts read the RuneScape Wiki Bucket API (`infobox_ability`, `infobox_buff`, `infobox_prayer`, `infobox_item`)
 plus the wikitext of the linked status pages, drop abilities the wiki marks as removed (Combat Style Modernisation,

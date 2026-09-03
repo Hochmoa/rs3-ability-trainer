@@ -18,6 +18,11 @@
     <p class="muted small origin">Copied from "{{ r.sourceName }}"{{ r.sourceOwner ? ' by ' + r.sourceOwner : '' }}.</p>
   }
 
+  @if (editWarnings().length) {
+    <div class="panel warning">
+      @for (w of editWarnings(); track w) { <div>⚠ {{ w }}</div> }
+    </div>
+  }
   <div class="panel">
     <h2>Rotation <span class="muted">({{ r.steps.length }} steps)</span></h2>
     @if (!r.steps.length) {

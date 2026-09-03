@@ -6,6 +6,9 @@ import { DataService, Entity } from '../../core/data.service';
 import { keybindFromEvent, keybindKey, keybindLabel } from '../../core/keybind.util';
 import { StepResult } from '../../core/models';
 import { StorageService } from '../../core/storage.service';
+import { resolveLoadout } from '../../engine/loadout-resolver';
+import { BUFF_BY_ID, ruleFor } from '../../engine/rules';
+import { STACK_NAMES, StackId } from '../../engine/rules-model';
 import { ActiveBuff, EngineEntity, EngineEvent, GCD_TICKS, TICK_MS, TrainerEngine } from '../../engine/trainer-engine';
 import { AbilityIcon, IconState } from '../../shared/ability-icon';
 import { EntityTip } from '../../shared/tooltip';
@@ -29,6 +32,13 @@ interface BuffView {
   icon: string | null;
   kind: 'Buff' | 'Debuff';
   remainingS: number | null;
+  stacks: number;
+}
+
+interface StackView {
+  id: StackId;
+  name: string;
+  value: number;
 }
 
 @Component({
@@ -55,14 +65,51 @@ export class Train implements OnDestroy {
     return this.stepEntities().filter((e): e is Entity => !!e && !kb[e.key] && !seen.has(e.key) && !!seen.add(e.key));
   });
   readonly unknownSteps = computed(() => (this.data.loaded() ? this.stepEntities().filter((e) => !e).length : 0));
+  /** steps the active loadout cannot perform (no 2h, no shield, no spec weapon ...) */
+  readonly equipmentWarnings = computed<string[]>(() => {
+    if (!this.data.loaded()) return [];
+    const resolved = this.resolved();
+    const probe = new TrainerEngine([], new Map(), { ...this.storage.settings(), loadout: resolved });
+    probe.start(0);
+    const out = new Set<string>();
+    for (const e of this.stepEntities()) {
+      if (!e?.ability) continue;
+      const rule = ruleFor(e.ability.id);
+      for (const r of rule?.requires ?? []) {
+        if (r.equipment) {
+          const fail = probe.requirementFailure(this.data.toEngineEntity(e), 0);
+          if (fail && fail === r.text) out.add(e.name + ': ' + r.text);
+        }
+      }
+    }
+    return [...out];
+  });
   readonly canStart = computed(
     () => !!this.rotation() && this.stepEntities().length > 0 && this.missingBinds().length === 0 && this.unknownSteps() === 0,
+  );
+  readonly resolved = computed(() =>
+    resolveLoadout(this.storage.loadout(), {
+      weaponById: this.data.weaponById(),
+      specById: this.data.specById(),
+      perkById: this.data.perkById(),
+      setEffectById: this.data.setEffectById(),
+      specEntity: (s) => this.data.specEntity(s),
+    }),
   );
   /** keybind key → entity key, for resolving key presses while training */
   private readonly bindIndex = computed(() => {
     const m = new Map<string, string>();
     for (const [key, kb] of Object.entries(this.storage.keybinds())) m.set(keybindKey(kb), key);
     return m;
+  });
+  readonly styleStacks = computed<StackId[]>(() => {
+    const styles = new Set(this.stepEntities().map((e) => e?.ability?.style).filter((s): s is NonNullable<typeof s> => !!s));
+    const out: StackId[] = [];
+    if (styles.has('Melee')) out.push('bloodlust');
+    if (styles.has('Necromancy')) out.push('necrosis', 'residual-souls');
+    const ids = new Set(this.stepEntities().map((e) => e?.ability?.id));
+    if (ids.has('storm-shards') || ids.has('shatter')) out.push('storm-shards');
+    return out;
   });
 
   // live state
@@ -76,6 +123,10 @@ export class Train implements OnDestroy {
   readonly adrenaline = signal(0);
   readonly maxAdrenaline = signal(100);
   readonly buffs = signal<BuffView[]>([]);
+  readonly stacks = signal<StackView[]>([]);
+  /** entity key → remaining internal cooldown ms */
+  readonly cooldowns = signal<Record<string, { remainingMs: number; totalMs: number }>>({});
+  readonly channelling = signal<string | null>(null);
   readonly iconState = signal<IconState>('idle');
   readonly feedback = signal<Feedback | null>(null);
   readonly counts = signal({ perfect: 0, late: 0, early: 0, wrong: 0, missed: 0 });
@@ -116,7 +167,6 @@ export class Train implements OnDestroy {
 
   private engine: TrainerEngine | null = null;
   private raf = 0;
-  /** background tabs pause requestAnimationFrame; this keeps the engine ticking (coarsely) there */
   private fallback = 0;
   private flashUntil = 0;
   private startedAt = 0;
@@ -136,7 +186,19 @@ export class Train implements OnDestroy {
   }
 
   name(key: string): string {
+    if (key.startsWith('spec:')) return this.data.specById().get(key.slice(5))?.name ?? key;
     return this.data.name(key);
+  }
+
+  /** cooldown overlay for a queue slot: phase 1 = ready */
+  cdPhase(slot: QueueSlot): number {
+    const cd = this.cooldowns()[slot.entity.key];
+    if (!cd || cd.remainingMs <= 0 || cd.totalMs <= 0) return 1;
+    return 1 - cd.remainingMs / cd.totalMs;
+  }
+
+  cdRemaining(slot: QueueSlot): number {
+    return this.cooldowns()[slot.entity.key]?.remainingMs ?? 0;
   }
 
   start(): void {
@@ -149,12 +211,15 @@ export class Train implements OnDestroy {
       if (e) catalog.set(key, this.data.toEngineEntity(e));
     }
     for (const s of steps) catalog.set(s.key, s);
-    this.engine = new TrainerEngine(steps, catalog, { ...this.storage.settings(), loadout: { ...this.storage.loadout() } });
+    this.engine = new TrainerEngine(steps, catalog, { ...this.storage.settings(), loadout: this.resolved() });
     this.startedAt = Date.now();
     this.results.set([]);
     this.counts.set({ perfect: 0, late: 0, early: 0, wrong: 0, missed: 0 });
     this.doneSteps.set(new Set());
     this.buffs.set([]);
+    this.stacks.set([]);
+    this.cooldowns.set({});
+    this.channelling.set(null);
     this.maxAdrenaline.set(this.engine.maxAdrenaline);
     const first = this.slots().find((s) => s.kind === 'current');
     this.feedback.set({ text: 'Press ' + first?.key + ' (' + first?.entity.name + ') to start.', cls: 'info' });
@@ -201,6 +266,18 @@ export class Train implements OnDestroy {
     this.index.set(e.index);
     this.adrenaline.set(e.adrenaline);
     this.buffs.set(e.buffs.map((b) => this.buffView(b, now)));
+    this.stacks.set(this.styleStacks().map((id) => ({ id, name: STACK_NAMES[id], value: e.stack(id) })));
+    const cds: Record<string, { remainingMs: number; totalMs: number }> = {};
+    for (const s of this.slots()) {
+      const remainingMs = e.cooldownRemainingMs(s.entity.key, now);
+      if (remainingMs > 0) {
+        const ent = e.catalog.get(s.entity.key);
+        const total = ((ent ? (e.specFor(ent) ?? ent).cooldownTicks : 0) || 1) * TICK_MS;
+        cds[s.entity.key] = { remainingMs, totalMs: Math.max(total, remainingMs) };
+      }
+    }
+    this.cooldowns.set(cds);
+    this.channelling.set(e.channel && !e.channel.cancelled ? e.channel.key : null);
     if (now >= this.flashUntil) this.iconState.set(e.isQueued ? 'queued' : 'idle');
     if (e.state !== 'running') {
       this.stopLoops();
@@ -214,11 +291,17 @@ export class Train implements OnDestroy {
 
   private buffView(b: ActiveBuff, now: number): BuffView {
     const remaining = b.endTick === null ? null : Math.max(0, (this.engine!.tickTime(b.endTick) - now) / 1000);
-    return { id: b.id, name: b.name, icon: b.icon, kind: b.kind, remainingS: remaining };
+    let icon = b.icon;
+    if (!icon) {
+      const def = BUFF_BY_ID.get(b.id);
+      icon = this.data.buffIcon(def?.wikiId) ?? this.engine!.catalog.get(b.sourceKey)?.icon ?? null;
+    }
+    return { id: b.id, name: b.name, icon, kind: b.kind, remainingS: remaining, stacks: b.stacks };
   }
 
   private applyEvent(ev: EngineEvent, now: number): void {
     const e = this.engine!;
+    const queueing = this.storage.settings().abilityQueueing;
     switch (ev.kind) {
       case 'queued': {
         const inMs = Math.max(0, Math.round(e.tickTime(ev.fireTick) - now));
@@ -262,12 +345,19 @@ export class Train implements OnDestroy {
         this.flash('wrong', now, 250);
         break;
       case 'no-adrenaline':
-        this.feedback.set({ text: this.name(ev.key) + ' needs ' + ev.need + '% adrenaline, you have ' + Math.floor(ev.have) + '%' + (this.storage.settings().abilityQueueing ? ' – queued until you have it' : ''), cls: 'bad' });
+        this.feedback.set({ text: this.name(ev.key) + ' needs ' + ev.need + '% adrenaline, you have ' + Math.floor(ev.have) + '%' + (queueing ? ' – queued until you have it' : ''), cls: 'bad' });
         this.flash('wrong', now, 300);
         break;
       case 'on-cooldown':
-        this.feedback.set({ text: this.name(ev.key) + ' is on cooldown for ' + (ev.readyInTicks * TICK_MS) / 1000 + ' s' + (this.storage.settings().abilityQueueing ? ' – queued' : ''), cls: 'bad' });
+        this.feedback.set({ text: this.name(ev.key) + ' is on cooldown for ' + (ev.readyInTicks * TICK_MS) / 1000 + ' s' + (queueing ? ' – queued' : ''), cls: 'bad' });
         this.flash('wrong', now, 300);
+        break;
+      case 'requirement':
+        this.feedback.set({ text: this.name(ev.key) + ': ' + ev.text + (queueing ? ' – queued' : ''), cls: 'bad' });
+        this.flash('wrong', now, 300);
+        break;
+      case 'channel-cancelled':
+        this.feedback.set({ text: this.name(ev.key) + ' channel cancelled – ' + ev.hitsLost + (ev.hitsLost === 1 ? ' hit' : ' hits') + ' lost', cls: 'warn' });
         break;
       case 'missed':
         this.counts.update((c) => ({ ...c, missed: c.missed + ev.keys.length }));

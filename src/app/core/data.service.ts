@@ -1,8 +1,9 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { forkJoin } from 'rxjs';
+import { ruleFor } from '../engine/rules';
 import { EngineBuff, EngineEntity } from '../engine/trainer-engine';
-import { Ability, Buff, EntityKind, Prayer, RotationStep, Special, entityKey } from './models';
+import { Ability, Buff, EntityKind, Perk, Prayer, RotationStep, SetEffect, Special, Weapon, WeaponSpec, entityKey } from './models';
 
 /** Anything that can sit in a rotation / get a keybind, in one shape for lists and tooltips. */
 export interface Entity {
@@ -26,9 +27,17 @@ export class DataService {
   readonly buffs = signal<Buff[]>([]);
   readonly prayers = signal<Prayer[]>([]);
   readonly specials = signal<Special[]>([]);
+  readonly weapons = signal<Weapon[]>([]);
+  readonly specs = signal<WeaponSpec[]>([]);
+  readonly perks = signal<Perk[]>([]);
+  readonly setEffects = signal<SetEffect[]>([]);
   readonly loaded = signal(false);
 
   readonly buffById = computed(() => new Map(this.buffs().map((b) => [b.id, b])));
+  readonly weaponById = computed(() => new Map(this.weapons().map((w) => [w.id, w])));
+  readonly specById = computed(() => new Map(this.specs().map((s) => [s.id, s])));
+  readonly perkById = computed(() => new Map(this.perks().map((p) => [p.id, p])));
+  readonly setEffectById = computed(() => new Map(this.setEffects().map((s) => [s.id, s])));
   readonly entities = computed<Entity[]>(() => [
     ...this.abilities().map<Entity>((a) => ({ key: entityKey('ability', a.id), kind: 'ability', id: a.id, name: a.name, icon: a.icon, group: a.style, ability: a })),
     ...this.prayers().map<Entity>((p) => ({ key: entityKey('prayer', p.id), kind: 'prayer', id: p.id, name: p.name, icon: p.icon, group: p.book, prayer: p })),
@@ -42,12 +51,20 @@ export class DataService {
       buffs: this.http.get<Buff[]>('data/buffs.json'),
       prayers: this.http.get<Prayer[]>('data/prayers.json'),
       specials: this.http.get<Special[]>('data/specials.json'),
+      weapons: this.http.get<Weapon[]>('data/weapons.json'),
+      specs: this.http.get<WeaponSpec[]>('data/specs.json'),
+      perks: this.http.get<Perk[]>('data/perks.json'),
+      setEffects: this.http.get<SetEffect[]>('data/set-effects.json'),
     }).subscribe({
       next: (d) => {
         this.abilities.set(d.abilities);
         this.buffs.set(d.buffs);
         this.prayers.set(d.prayers);
         this.specials.set(d.specials);
+        this.weapons.set(d.weapons);
+        this.specs.set(d.specs);
+        this.perks.set(d.perks);
+        this.setEffects.set(d.setEffects);
         this.loaded.set(true);
       },
       error: (err) => console.error('data files failed to load', err),
@@ -66,30 +83,44 @@ export class DataService {
     return this.byKey().get(key)?.name ?? key;
   }
 
+  /** Buff icon for a rule buff id (via the wiki buff id in rules-buffs) or a wiki buff id. */
+  buffIcon(wikiId: number | undefined): string | null {
+    if (wikiId === undefined) return null;
+    const b = this.buffById().get(wikiId);
+    return b?.iconSelf ?? b?.iconTarget ?? null;
+  }
+
+  private dataBuffs(ids: number[], durationTicks: number | null): EngineBuff[] {
+    return ids
+      .map((id) => this.buffById().get(id))
+      .filter((b): b is Buff => !!b)
+      .map<EngineBuff>((b) => ({
+        id: 'buff:' + b.id,
+        name: b.name,
+        kind: b.kind,
+        on: b.kind === 'Debuff' && b.iconTarget ? 'target' : b.iconTarget && !b.iconSelf ? 'target' : 'self',
+        icon: b.iconSelf ?? b.iconTarget,
+        durationTicks: durationTicks ?? b.durationTicks ?? GCD_DEFAULT_BUFF_TICKS,
+      }));
+  }
+
   /** Engine view of an entity: numbers the simulation needs. */
   toEngineEntity(e: Entity): EngineEntity {
     if (e.ability) {
       const a = e.ability;
+      const rule = ruleFor(a.id);
       return {
         key: e.key,
         kind: 'ability',
+        id: a.id,
         name: a.name,
         icon: a.icon,
-        gcd: a.triggersGcd,
+        gcd: a.triggersGcd && !rule?.offGcd,
+        style: a.style,
         abilityType: a.type,
         adrenaline: a.adrenaline ?? 0,
         cooldownTicks: a.cooldownTicks ?? 0,
-        buffs: a.buffs
-          .map((id) => this.buffById().get(id))
-          .filter((b): b is Buff => !!b)
-          .map<EngineBuff>((b) => ({
-            id: 'buff:' + b.id,
-            name: b.name,
-            kind: b.kind,
-            on: b.kind === 'Debuff' && b.iconTarget ? 'target' : b.iconTarget && !b.iconSelf ? 'target' : 'self',
-            icon: b.iconSelf ?? b.iconTarget,
-            durationTicks: a.durationTicks ?? b.durationTicks ?? GCD_DEFAULT_BUFF_TICKS,
-          })),
+        buffs: this.dataBuffs(a.buffs, a.durationTicks),
       };
     }
     if (e.prayer) {
@@ -97,6 +128,7 @@ export class DataService {
       return {
         key: e.key,
         kind: 'prayer',
+        id: p.id,
         name: p.name,
         icon: p.icon,
         gcd: false,
@@ -109,6 +141,7 @@ export class DataService {
     return {
       key: e.key,
       kind: 'special',
+      id: s.id,
       name: s.name,
       icon: s.icon,
       gcd: false,
@@ -117,6 +150,26 @@ export class DataService {
       sharedCooldown: s.sharedCooldown,
       adrenalineOverTime: s.adrenalineOverTime > 0 ? { amount: s.adrenalineOverTime, ticks: s.overTimeTicks } : undefined,
       buffs: [],
+    };
+  }
+
+  /** Engine view of a weapon special attack (used by Weapon Special Attack / Essence of Finality steps). */
+  specEntity(spec: WeaponSpec): EngineEntity {
+    const hits = spec.damageMin !== null ? [0] : undefined;
+    return {
+      key: 'spec:' + spec.id,
+      kind: 'spec',
+      id: spec.id,
+      name: spec.name,
+      icon: spec.weaponIcons[0] ?? 'assets/abilities/weapon-special-attack.png',
+      gcd: !spec.ignoresGcd,
+      style: spec.style,
+      abilityType: 'Special',
+      adrenaline: -(spec.adrenaline ?? 0),
+      cooldownTicks: spec.cooldownTicks,
+      buffs: this.dataBuffs(spec.buffs.map((b) => b.id).filter((id) => id >= 0), spec.durationTicks),
+      hits,
+      channel: spec.channelled ? { ticks: 3, hits: [1, 2, 3] } : undefined,
     };
   }
 }

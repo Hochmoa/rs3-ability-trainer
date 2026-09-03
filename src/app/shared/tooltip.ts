@@ -1,6 +1,7 @@
 import { Component, Directive, ElementRef, HostListener, Injectable, computed, inject, input, signal } from '@angular/core';
 import { DataService, Entity } from '../core/data.service';
 import { Buff } from '../core/models';
+import { ruleFor } from '../engine/rules';
 import { TICK_MS } from '../engine/trainer-engine';
 
 interface TipState {
@@ -58,6 +59,11 @@ function seconds(ticks: number | null | undefined): string {
   return (ticks * TICK_MS) / 1000 + ' s (' + ticks + (ticks === 1 ? ' tick)' : ' ticks)');
 }
 
+interface Note {
+  text: string;
+  url: string | null;
+}
+
 @Component({
   selector: 'entity-tooltip',
   template: `
@@ -85,6 +91,17 @@ function seconds(ticks: number | null | undefined): string {
             @if (!a.triggersGcd) { <tr><th>GCD</th><td class="warn">does not trigger the global cooldown</td></tr> }
           </table>
           <p class="desc">{{ a.description }}</p>
+          @if (notes(a.id).length) {
+            <div class="rules">
+              <div class="rules-title">Interactions</div>
+              @for (n of notes(a.id); track $index) {
+                <div class="rule">
+                  <span>{{ n.text }}</span>
+                  @if (n.url) { <a class="src" [href]="n.url" target="_blank" rel="noopener">wiki</a> }
+                </div>
+              }
+            </div>
+          }
           @if (buffsOf(a.buffs).length) {
             <div class="buffs">
               @for (b of buffsOf(a.buffs); track b.id) {
@@ -123,8 +140,10 @@ function seconds(ticks: number | null | undefined): string {
     .tip {
       position: fixed;
       z-index: 100;
-      width: 340px;
+      width: 380px;
       max-width: calc(100vw - 16px);
+      max-height: calc(100vh - 16px);
+      overflow: hidden;
       padding: 10px 12px;
       background: #15140f;
       border: 1px solid var(--gold);
@@ -175,6 +194,31 @@ function seconds(ticks: number | null | undefined): string {
       margin: 4px 0 0;
       white-space: pre-wrap;
       line-height: 1.35;
+      font-size: 12px;
+    }
+    .rules {
+      margin-top: 8px;
+      border-top: 1px solid var(--border);
+      padding-top: 6px;
+    }
+    .rules-title {
+      color: var(--gold);
+      font-weight: 700;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 3px;
+    }
+    .rule {
+      font-size: 12px;
+      line-height: 1.35;
+      padding: 2px 0;
+      border-bottom: 1px dotted rgba(255, 255, 255, 0.08);
+    }
+    .rule .src {
+      margin-left: 6px;
+      color: var(--muted);
+      font-size: 11px;
     }
     .buffs {
       margin-top: 8px;
@@ -209,8 +253,8 @@ export class EntityTooltip {
   readonly pos = computed(() => {
     const s = this.tips.state();
     if (!s) return { x: 0, y: 0 };
-    const w = 340;
-    const h = 360;
+    const w = 380;
+    const h = Math.min(520, window.innerHeight - 16);
     const x = s.x + 16 + w > window.innerWidth ? Math.max(4, s.x - w - 12) : s.x + 16;
     const y = s.y + 12 + h > window.innerHeight ? Math.max(4, window.innerHeight - h - 8) : s.y + 12;
     return { x, y };
@@ -231,6 +275,14 @@ export class EntityTooltip {
   buffsOf(ids: number[]): Buff[] {
     const m = this.data.buffById();
     return ids.map((id) => m.get(id)).filter((b): b is Buff => !!b);
+  }
+
+  /** interaction rules of an ability, split into text + wiki link */
+  notes(abilityId: string): Note[] {
+    return (ruleFor(abilityId)?.notes ?? []).map((n) => {
+      const m = n.match(/\((https?:\/\/\S+)\s*\)\s*$/);
+      return m ? { text: n.slice(0, m.index).trim(), url: m[1] } : { text: n, url: null };
+    });
   }
 
   firstLine(s: string): string {

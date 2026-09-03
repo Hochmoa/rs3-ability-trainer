@@ -270,3 +270,43 @@
   text-transform: uppercase;
   letter-spacing: 0.3px;
 }
+
+.stacks-bar .stack {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: #0a0a0c;
+  font-size: 12px;
+
+  .stack-name {
+    color: var(--muted);
+  }
+
+  b {
+    color: var(--gold);
+    font-size: 14px;
+  }
+
+  &.bloodlust b {
+    color: #ff6f60;
+  }
+  &.necrosis b {
+    color: #b39ddb;
+  }
+  &.residual-souls b {
+    color: #80deea;
+  }
+}
+
+.status .stacks {
+  position: absolute;
+  left: 1px;
+  top: 0;
+  font-size: 10px;
+  font-weight: 700;
+  color: #ffe27a;
+  text-shadow: 0 0 3px #000, 0 0 3px #000;
+}
