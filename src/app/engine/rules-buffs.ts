@@ -7,6 +7,24 @@ import { BuffDef } from './rules-model';
 const W = 'https://runescape.wiki/w/';
 
 export const BUFFS: BuffDef[] = [
+  // ---------------------------------------------------------------- stacks / resources (no timer: stay until consumed)
+  { id: 'bloodlust', name: 'Bloodlust', kind: 'Buff', on: 'self', durationTicks: null, stacks: { max: 4 }, wikiId: 1453,
+    text: 'Melee basics grant 1 (Rend 2), max 4 – 8 during Berserk with 2 per basic. 4 stacks empower Assault, Hurricane, Flurry and Greater Flurry. No timer.', source: W + 'Bloodlust' },
+  { id: 'necrosis', name: 'Necrosis', kind: 'Buff', on: 'self', durationTicks: null, stacks: { max: 12 }, wikiId: 48333,
+    text: 'Touch of Death +4 (basic attack +2 during Living Death), max 12. Finger of Death costs 10% less per stack (up to 6) and consumes them; Death Grasp deals extra damage per stack. No timer.', source: W + 'Necrosis' },
+  { id: 'residual-souls', name: 'Residual Souls', kind: 'Buff', on: 'self', durationTicks: null, stacks: { max: 3 }, wikiId: 48334,
+    text: 'Soul Sap +1 per target hit, max 3 (5 with the Soulbound lantern). Soul Strike uses 1, Volley of Souls fires one hit per stack and consumes all. No timer.', source: W + 'Residual_Soul' },
+  { id: 'storm-shards', name: 'Storm Shards', kind: 'Buff', on: 'self', durationTicks: null, stacks: { max: 10 }, wikiId: 14675,
+    text: 'Storm Shards adds 1 per hit, max 10. Shatter consumes all of them for its damage. No timer.', source: W + 'Storm_Shards' },
+  { id: 'soul-reave', name: 'Soul Reave', kind: 'Buff', on: 'self', durationTicks: null, stacks: { max: 4 }, wikiId: 52064,
+    text: "Devourer's Guard: basic attacks add 1; at 4 the next basic attack is empowered and grants a Residual Soul.", source: W + 'Soul_Reave' },
+  { id: 'valour', name: 'Valour', kind: 'Buff', on: 'self', durationTicks: null, stacks: { max: 25 },
+    text: 'The Phantom Guardian gains 1 per hit you take, max 25; Command Phantom Guardian consumes them. No timer.', source: W + 'Valour' },
+  { id: 'glacial-embrace', name: 'Glacial Embrace', kind: 'Buff', on: 'self', durationTicks: null, stacks: { max: 10 },
+    text: 'Stacking magic resource (Wen). No timer.', source: W + 'Glacial_Embrace' },
+  { id: 'essence-corruption', name: 'Essence Corruption', kind: 'Buff', on: 'self', durationTicks: null, stacks: { max: 10 },
+    text: 'Stacking magic resource. No timer.', source: W + 'Essence_Corruption' },
+
   // ---------------------------------------------------------------- generic
   { id: 'stunned', name: 'Stunned', kind: 'Debuff', on: 'target', durationTicks: 3, text: 'Target cannot act.', source: W + 'Stun' },
   { id: 'bound', name: 'Bound', kind: 'Debuff', on: 'target', durationTicks: 10, text: 'Target cannot move.', source: W + 'Bind' },
@@ -70,7 +88,7 @@ export const BUFFS: BuffDef[] = [
     text: 'DoT: 5 hits every 2 ticks, decaying. Shares its cooldown with Corruption Shot.', source: W + 'Corruption_Blast' },
   { id: 'chain', name: 'Chain', kind: 'Buff', on: 'self', durationTicks: 10, wikiId: 45047,
     text: 'Next single-target Magic ability within 10 ticks is copied to the secondary targets at 0.3x (Greater Chain 0.5x).', source: W + 'Greater_Chain' },
-  { id: 'concentrated-crit', name: 'Concentrated Blast crit stacks', kind: 'Buff', on: 'self', durationTicks: null, stacks: true,
+  { id: 'concentrated-crit', name: 'Concentrated Blast crit stacks', kind: 'Buff', on: 'self', durationTicks: null, stacks: { max: 3 },
     text: '+5% critical strike chance per beam (Greater 7%; +10% more per beam when Anima Charged) for the next Magic ability. Lost on a main-hand swap.', source: W + 'Concentrated_Blast' },
   { id: 'channelled-might', name: 'Channelled Might', kind: 'Buff', on: 'self', durationTicks: 6, wikiId: 45563,
     text: '+15% critical strike damage after a full Asphyxiate channel (5 Tumeken pieces: 15 ticks, +35%).', source: W + 'Channelled_Might' },
@@ -108,7 +126,7 @@ export const BUFFS: BuffDef[] = [
     text: 'Conjured spirit. Command Vengeful Ghost makes its hits apply Haunted for the rest of its life.', source: W + 'Conjure_Vengeful_Ghost' },
   { id: 'spirit-phantom-guardian', name: 'Phantom Guardian', kind: 'Buff', on: 'self', durationTicks: 70, wikiId: 32349,
     text: 'Conjured spirit. Gains Valour when you are hit; Command Phantom Guardian (15-tick cooldown) consumes it.', source: W + 'Conjure_Phantom_Guardian' },
-  { id: 'death-spark', name: 'Death Spark', kind: 'Buff', on: 'self', durationTicks: null, stacks: true,
+  { id: 'death-spark', name: 'Death Spark', kind: 'Buff', on: 'self', durationTicks: null, stacks: { max: 5 }, wikiId: 48350,
     text: 'Omni guard: 5 basic attacks ready a double-damage basic attack.', source: W + 'Death_Spark_(status)' },
   { id: 'death-essence', name: 'Death Essence', kind: 'Buff', on: 'self', durationTicks: 50,
     text: 'For 30 s Touch of Death, Finger of Death and Death Skulls immediately ready Death Spark.', source: W + 'Death_Essence' },
@@ -128,7 +146,7 @@ export const BUFFS: BuffDef[] = [
     text: 'Every attack received reduces the Resonance/Divert cooldown by 5 ticks. Ends if the shield is removed.', source: W + 'Preparation' },
   { id: 'devotion', name: 'Devotion', kind: 'Buff', on: 'self', durationTicks: 16, wikiId: 25028,
     text: 'Protection prayers work at 100%. Kills extend it by 8 ticks up to 32.', source: W + 'Devotion' },
-  { id: 'revenge', name: 'Revenge', kind: 'Buff', on: 'self', durationTicks: 32, wikiId: 14718, stacks: true,
+  { id: 'revenge', name: 'Revenge', kind: 'Buff', on: 'self', durationTicks: 32, wikiId: 14718, stacks: { max: 10 },
     text: 'Each attack received adds a stack (max 10), +5% damage per stack. Ends if the shield is removed.', source: W + 'Revenge' },
   { id: 'reflect', name: 'Reflect', kind: 'Buff', on: 'self', durationTicks: 16, wikiId: 14716,
     text: 'Halves damage taken and reflects 50% of it.', source: W + 'Reflect' },

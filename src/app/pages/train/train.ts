@@ -9,8 +9,8 @@ import { keybindFromEvent, keybindKey, keybindLabel } from '../../core/keybind.u
 import { AttackPattern, BAR_POSITIONS, BarShape, barLayout, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, EquipSlot, ItemRef, Loadout, PrayerStats, Prebuild, STYLES4, Settings, StepResult, Style4, WeaponSpec, emptyPrebuild, entityKey, isStyle4, loadoutWeapons, loadoutWield, parseEntityKey, prebuildIsEmpty, visiblePresets, RotationStep } from '../../core/models';
 import { StorageService } from '../../core/storage.service';
 import { resolveLoadout } from '../../engine/loadout-resolver';
-import { BUFF_BY_ID, ruleFor } from '../../engine/rules';
-import { STACK_NAMES, STYLE_STACKS, StackId } from '../../engine/rules-model';
+import { BUFF_BY_ID, STACK_DEFS, ruleFor, stackMax, stackName } from '../../engine/rules';
+import { STYLE_STACKS, StackId } from '../../engine/rules-model';
 import { COMMAND_READY_AFTER, CONJURE_BASE_TICKS } from '../../engine/rules-necromancy';
 import { ActiveBuff, EngineEntity, EngineEvent, GCD_TICKS, TICK_MS, TrainerEngine, UsableReason, Wield } from '../../engine/trainer-engine';
 import { SOUL_SPLIT } from '../../engine/prayer-rules';
@@ -52,7 +52,9 @@ interface BuffView {
 interface StackView {
   id: StackId;
   name: string;
+  icon: string | null;
   value: number;
+  max: number;
 }
 
 interface BarView {
@@ -133,16 +135,10 @@ export class Train implements OnDestroy {
   readonly prebuildEmpty = computed(() => prebuildIsEmpty(this.prebuild()));
   /** combat styles the rotation uses */
   readonly rotationStyles = computed(() => new Set(this.stepEntities().map((e) => e?.ability?.style).filter((s): s is NonNullable<typeof s> => !!s)));
-  /** stacks worth pre-building for this rotation */
+  /** stacks worth pre-building for this rotation: the style resources with their cap under the active loadout */
   readonly prebuildStacks = computed<{ id: StackId; name: string; max: number }[]>(() => {
-    const styles = this.rotationStyles();
-    const out: { id: StackId; name: string; max: number }[] = [];
-    const add = (id: StackId, max: number) => !out.some((s) => s.id === id) && out.push({ id, name: STACK_NAMES[id], max });
-    const caps: Partial<Record<StackId, number>> = { bloodlust: 8, necrosis: 12, 'residual-souls': 5, 'storm-shards': 10, valour: 25, 'death-spark': 5, 'soul-reave': 4, 'glacial-embrace': 10, 'essence-corruption': 10 };
-    for (const st of styles) for (const id of STYLE_STACKS[st] ?? []) add(id, caps[id] ?? 10);
-    const ids = new Set(this.stepEntities().map((e) => e?.ability?.id));
-    if (ids.has('storm-shards') || ids.has('shatter')) add('storm-shards', 10);
-    return out;
+    const caps = this.resolved().stackCaps;
+    return this.styleStacks().map((id) => ({ id, name: stackName(id), max: stackMax(id, caps) }));
   });
   readonly SPIRITS = [
     { id: 'skeleton-warrior', name: 'Skeleton Warrior' },
@@ -236,7 +232,7 @@ export class Train implements OnDestroy {
     const p = this.prebuild();
     const parts: string[] = [];
     if (p.adrenaline !== undefined) parts.push(p.adrenaline + '% adrenaline');
-    for (const [id, n] of Object.entries(p.stacks)) if (n > 0) parts.push(n + ' ' + (STACK_NAMES[id as StackId] ?? id));
+    for (const [id, n] of Object.entries(p.stacks)) if (n > 0) parts.push(n + ' ' + stackName(id as StackId));
     const left = (key: string) => (p.remaining?.[key] !== undefined ? ' (' + this.prebuildLeftS(key) + ' s left)' : '');
     for (const s of p.spirits) parts.push((this.SPIRITS.find((x) => x.id === s)?.name ?? s) + left('spirit:' + s));
     for (const a of p.abilities) parts.push(this.data.name('ability:' + a) + left('ability:' + a));
@@ -317,13 +313,12 @@ export class Train implements OnDestroy {
     return this.stepEntities().filter((e): e is Entity => !!e && !e.key.startsWith('note:') && !r.has(e.key) && !seen.has(e.key) && !!seen.add(e.key));
   });
   readonly canStart = computed(() => !!this.rotation() && this.stepEntities().length > 0 && this.unreachable().length === 0 && this.unknownSteps() === 0);
+  /** resources shown for this rotation (STYLE_STACKS of its styles, plus Storm Shards when used) */
   readonly styleStacks = computed<StackId[]>(() => {
-    const styles = new Set(this.stepEntities().map((e) => e?.ability?.style).filter((s): s is NonNullable<typeof s> => !!s));
     const out: StackId[] = [];
-    if (styles.has('Melee')) out.push('bloodlust');
-    if (styles.has('Necromancy')) out.push('necrosis', 'residual-souls');
+    for (const st of this.rotationStyles()) for (const id of STYLE_STACKS[st] ?? []) if (!out.includes(id)) out.push(id);
     const ids = new Set(this.stepEntities().map((e) => e?.ability?.id));
-    if (ids.has('storm-shards') || ids.has('shatter')) out.push('storm-shards');
+    if ((ids.has('storm-shards') || ids.has('shatter')) && !out.includes('storm-shards')) out.push('storm-shards');
     return out;
   });
 
@@ -751,7 +746,8 @@ export class Train implements OnDestroy {
     this.expectedKey.set(e.currentStep?.key ?? null);
     this.queuedKey.set(e.queuedKey);
     this.buffs.set(e.buffs.map((b) => this.buffView(b, now)));
-    this.stacks.set(this.styleStacks().map((id) => ({ id, name: STACK_NAMES[id], value: e.stack(id) })));
+    const caps = this.resolved().stackCaps;
+    this.stacks.set(this.styleStacks().map((id) => ({ id, name: stackName(id), icon: this.data.buffIcon(STACK_DEFS[id]?.wikiId), value: e.stack(id), max: stackMax(id, caps) })));
     const cds: Record<string, { remainingMs: number; totalMs: number }> = {};
     for (const s of this.slots()) {
       const remainingMs = e.cooldownRemainingMs(s.entity.key, now);

@@ -220,7 +220,6 @@ export class TrainerEngine {
   adrenaline = 0;
   results: StepResult[] = [];
   buffs: ActiveBuff[] = [];
-  stacks = new Map<StackId, number>();
   spirits = new Map<string, Spirit>();
   channel: ActiveChannel | null = null;
   /** weapons in hand */
@@ -294,7 +293,6 @@ export class TrainerEngine {
     this.adrenaline = this.config.fullAdrenaline ? this.maxAdrenaline : Math.max(0, Math.min(this.maxAdrenaline, this.loadout.startAdrenaline));
     this.results = [];
     this.buffs = [];
-    this.stacks.clear();
     this.spirits.clear();
     this.channel = null;
     this.inflight = [];
@@ -362,8 +360,14 @@ export class TrainerEngine {
     return this.castTick === null ? null : this.castTick + GCD_TICKS;
   }
 
+  /** counter of a stacking buff (Bloodlust, Necrosis ...); 0 when it is not active */
   stack(id: StackId): number {
-    return this.stacks.get(id) ?? 0;
+    return this.buff(id)?.stacks ?? 0;
+  }
+
+  /** cap of a stack: loadout override (Soulbound lantern) else the definition's max */
+  stackCap(id: StackId): number {
+    return this.loadout.stackCaps[id] ?? BUFF_BY_ID.get(id)?.stacks?.max ?? Infinity;
   }
 
   hasBuff(id: string): boolean {
@@ -854,9 +858,10 @@ export class TrainerEngine {
       return;
     }
     if (entity.kind === 'action') return; // target cycle etc.: nothing to simulate
-    const stacksBefore = new Map(this.stacks);
 
     const rule = this.ruleOf(entity);
+    // Volley of Souls: one hit per stack held before the cast effects consume them
+    const stacksBefore = rule?.hitsPerStack ? this.stack(rule.hitsPerStack) : 0;
     const spec = this.specFor(entity);
     const acting = spec ?? entity; // weapon special attacks act with the spec's numbers
     const globals = this.matchingGlobals(entity);
@@ -895,7 +900,7 @@ export class TrainerEngine {
       delta -= paid;
       if (rule?.cost?.perStack) {
         const p = rule.cost.perStack;
-        this.stacks.set(p.stack, this.stack(p.stack) - Math.min(this.stack(p.stack), p.maxStacks));
+        this.setStacks(p.stack, this.stack(p.stack) - Math.min(this.stack(p.stack), p.maxStacks), tick, entity.key);
       }
       if (entity.abilityType === 'Ultimate' && rule?.cost?.ultimate !== false && !spec) {
         delta += this.loadout.ultimateRefund;
@@ -958,7 +963,7 @@ export class TrainerEngine {
     // hits / channel
     const channel = this.loadout.channelOverrides[entity.id] ?? rule?.channel ?? acting.channel;
     let hits = this.loadout.hitsOverrides[entity.id] ?? rule?.hits ?? acting.hits ?? (this.isDamaging(acting, rule) ? [0] : undefined);
-    if (rule?.hitsPerStack) hits = Array(Math.max(1, stacksBefore.get(rule.hitsPerStack) ?? 0)).fill(0);
+    if (rule?.hitsPerStack) hits = Array(Math.max(1, stacksBefore)).fill(0);
     const damage = acting.damageMin !== undefined && acting.damageMax !== undefined ? { min: acting.damageMin, max: acting.damageMax } : null;
     if (channel) {
       this.channel = { key: entity.key, castTick: tick, endTick: tick + channel.ticks, hits: channel.hits.length, hitsDone: 0, cancelled: false };
@@ -1063,7 +1068,7 @@ export class TrainerEngine {
     const pb = this.config.prebuild;
     if (!pb) return;
     if (pb.adrenaline !== undefined) this.adrenaline = Math.max(0, Math.min(this.maxAdrenaline, pb.adrenaline));
-    for (const [stack, n] of Object.entries(pb.stacks ?? {})) if (n > 0) this.stacks.set(stack as StackId, n);
+    for (const [stack, n] of Object.entries(pb.stacks ?? {})) if (n > 0) this.setStacks(stack as StackId, n, 0, 'prebuild');
     for (const spirit of pb.spirits ?? []) {
       const duration = Math.round((CONJURE_BASE_TICKS + this.loadout.conjureDurationAdd) * this.loadout.conjureDurationMult);
       // remaining lifetime from the pre-build; default: conjured 6 ticks ago, so it is commandable right away
@@ -1174,19 +1179,19 @@ export class TrainerEngine {
     if ('when' in eff && eff.when && eff.kind !== 'choose' && !this.conditionMet(eff.when, tick, hitIndex)) return;
     switch (eff.kind) {
       case 'stack': {
-        const cap = this.loadout.stackCaps[eff.stack] ?? eff.cap ?? Infinity;
-        this.stacks.set(eff.stack, Math.min(cap, this.stack(eff.stack) + eff.amount));
+        const cap = eff.cap ?? this.stackCap(eff.stack);
+        this.setStacks(eff.stack, this.stack(eff.stack) + eff.amount, tick, entity.key, cap);
         break;
       }
       case 'stack-set':
-        this.stacks.set(eff.stack, eff.amount);
+        this.setStacks(eff.stack, eff.amount, tick, entity.key);
         break;
       case 'consume-stack': {
         const have = this.stack(eff.stack);
         if (eff.min !== undefined && have < eff.min) break;
         const take = eff.amount === 'all' ? have : Math.min(have, eff.amount);
         if (take <= 0) break;
-        this.stacks.set(eff.stack, have - take);
+        this.setStacks(eff.stack, have - take, tick, entity.key);
         for (const e of eff.then ?? []) this.applyEffect(e, tick, entity, hitIndex);
         break;
       }
@@ -1307,14 +1312,16 @@ export class TrainerEngine {
 
   private applyBuff(id: string, tick: number, sourceKey: string, durationOverride?: number, stacks?: number, refresh = true): void {
     const def = BUFF_BY_ID.get(id);
-    let duration: number | null = durationOverride ?? def?.durationTicks ?? 3;
+    // null = no timer (stacks, spirits until dismissed); unknown buffs default to one GCD
+    let duration: number | null = durationOverride !== undefined ? durationOverride : def ? def.durationTicks : 3;
     if (duration !== null) {
       duration += this.loadout.buffDurationAdd[id] ?? 0;
       duration = Math.round(duration * (this.loadout.buffDurationMult[id] ?? 1));
     }
+    const cap = def?.stacks ? this.stackCap(id as StackId) : Infinity;
     const existing = this.buff(id);
     if (existing) {
-      if (stacks) existing.stacks += stacks;
+      if (stacks) existing.stacks = Math.min(cap, existing.stacks + stacks);
       if (refresh && duration !== null) {
         existing.endTick = tick + duration;
         existing.extended = 0;
@@ -1329,10 +1336,29 @@ export class TrainerEngine {
       icon: def?.icon ?? null,
       startTick: tick,
       endTick: duration === null ? null : tick + duration,
-      stacks: stacks ?? 0,
+      stacks: Math.min(cap, stacks ?? 0),
       extended: 0,
       sourceKey,
     });
+  }
+
+  /** Sets the counter of a stacking buff (capped; a rule may raise the cap, e.g. Berserk); 0 removes a timer-less one, like in the game. */
+  private setStacks(id: StackId, n: number, tick: number, sourceKey: string, cap = this.stackCap(id)): void {
+    const value = Math.max(0, Math.min(cap, Math.round(n)));
+    const existing = this.buff(id);
+    if (value <= 0) {
+      if (!existing) return;
+      if ((BUFF_BY_ID.get(id)?.durationTicks ?? null) === null) this.removeBuff(id);
+      else existing.stacks = 0;
+      return;
+    }
+    if (existing) {
+      existing.stacks = value;
+      return;
+    }
+    this.applyBuff(id, tick, sourceKey, undefined, 0, false);
+    const b = this.buff(id);
+    if (b) b.stacks = value;
   }
 
   private applyDataBuff(b: EngineBuff, tick: number, sourceKey: string): void {

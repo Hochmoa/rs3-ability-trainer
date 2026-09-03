@@ -9,7 +9,7 @@ export const GLOBAL_RULES: GlobalRule[] = [
     notes: ['Every basic melee ability except Bladed Dive grants 1 Bloodlust (Rend 2), cap 4; during Berserk twice as many and cap 8 (' + W + 'Bloodlust )'],
     when: { style: 'Melee', type: 'Basic', gcd: true, excludeAbilities: ['bladed-dive', 'dive'] },
     onCast: [
-      { kind: 'stack', stack: 'bloodlust', amount: 1, cap: 4, when: { notBuff: 'berserk' } },
+      { kind: 'stack', stack: 'bloodlust', amount: 1, when: { notBuff: 'berserk' } },
       { kind: 'stack', stack: 'bloodlust', amount: 2, cap: 8, when: { buff: 'berserk' } },
     ],
   },
@@ -17,13 +17,13 @@ export const GLOBAL_RULES: GlobalRule[] = [
     id: 'occultist-ring',
     notes: ["Occultist's ring: every Necromancy ability cast has a 10% chance to grant 2 Necrosis (" + W + 'Necrosis )'],
     when: { style: 'Necromancy', gcd: true },
-    onCast: [{ kind: 'stack', stack: 'necrosis', amount: 2, cap: 12, when: { item: 'occultist-s-ring', chance: 0.1 } }],
+    onCast: [{ kind: 'stack', stack: 'necrosis', amount: 2, when: { item: 'occultist-s-ring', chance: 0.1 } }],
   },
   {
     id: 'zorgoth-soul-ring',
     notes: ["Zorgoth's soul ring: every Necromancy hit has a 5% chance to grant a Residual Soul (" + W + 'Residual_Soul )'],
     when: { style: 'Necromancy', gcd: true },
-    onHit: [{ kind: 'stack', stack: 'residual-souls', amount: 1, cap: 3, when: { item: 'zorgoth-s-soul-ring', chance: 0.05 } }],
+    onHit: [{ kind: 'stack', stack: 'residual-souls', amount: 1, when: { item: 'zorgoth-s-soul-ring', chance: 0.05 } }],
   },
   {
     id: 'meteor-strike-basics',

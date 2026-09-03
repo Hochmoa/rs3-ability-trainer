@@ -316,9 +316,10 @@
           <div class="status-bar stacks-bar">
             <span class="label">Stacks</span>
             @for (s of stacks(); track s.id) {
-              <div class="stack" [class]="'stack ' + s.id" [title]="s.name">
+              <div class="stack" [class]="'stack ' + s.id" [title]="s.name + ' – max ' + s.max">
+                @if (s.icon) { <img [src]="s.icon" [alt]="s.name" /> }
                 <span class="stack-name">{{ s.name }}</span>
-                <b>{{ s.value }}</b>
+                <b>{{ s.value }}</b><span class="max">/{{ s.max }}</span>
               </div>
             }
           </div>

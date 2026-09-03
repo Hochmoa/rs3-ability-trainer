@@ -710,7 +710,7 @@
 
 .stacks-bar .stack {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 5px;
   padding: 3px 8px;
   border: 1px solid var(--border);
@@ -718,8 +718,18 @@
   background: #0a0a0c;
   font-size: 12px;
 
+  img {
+    width: 18px;
+    height: 18px;
+  }
+
   .stack-name {
     color: var(--muted);
+  }
+
+  .max {
+    color: var(--muted);
+    font-size: 11px;
   }
 
   b {

@@ -4,7 +4,11 @@
  */
 import { AbilityType, Style } from '../core/models';
 
-/** Style resources and counters. */
+/**
+ * Stacking buffs ("stacks"): counters like Bloodlust or Necrosis. They are ordinary buffs whose
+ * BuffDef carries `stacks: { max }`; timer-less ones stay until consumed. This union lists the ids
+ * the rules may reference, the definitions (name, cap, icon, text) live in rules-buffs.ts.
+ */
 export type StackId =
   | 'bloodlust'
   | 'necrosis'
@@ -14,21 +18,11 @@ export type StackId =
   | 'soul-reave'
   | 'valour'
   | 'glacial-embrace'
-  | 'essence-corruption';
+  | 'essence-corruption'
+  | 'concentrated-crit'
+  | 'revenge';
 
-export const STACK_NAMES: Record<StackId, string> = {
-  bloodlust: 'Bloodlust',
-  necrosis: 'Necrosis',
-  'residual-souls': 'Residual Souls',
-  'storm-shards': 'Storm Shards',
-  'death-spark': 'Death Spark',
-  'soul-reave': 'Soul Reave',
-  valour: 'Valour',
-  'glacial-embrace': 'Glacial Embrace',
-  'essence-corruption': 'Essence Corruption',
-};
-
-/** Which stacks a style shows on the training page. */
+/** Which stacks a style shows as resources on the training page (also with 0 stacks). */
 export const STYLE_STACKS: Record<Style, StackId[]> = {
   Melee: ['bloodlust'],
   Ranged: [],
@@ -48,8 +42,8 @@ export interface BuffDef {
   durationTicks: number | null;
   /** wiki buff id, for the icon from buffs.json */
   wikiId?: number;
-  /** stacking counter shown on the icon (Rage, Haunted stacks ...) */
-  stacks?: boolean;
+  /** stacking counter shown on the icon; `max` is the cap (loadout items may raise it) */
+  stacks?: { max: number };
   /** adrenaline granted every tick while active (Meteor Strike) */
   adrenalinePerTick?: number;
   /** icon path override (else the wiki buff icon, else the source ability's icon) */
@@ -85,8 +79,11 @@ export interface Condition {
 }
 
 export type Effect =
+  /** add stacks to a stacking buff; `cap` overrides the definition's max (Berserk: Bloodlust 8) */
   | { kind: 'stack'; stack: StackId; amount: number; cap?: number; when?: Condition }
+  /** set the counter; 0 removes a timer-less stacking buff */
   | { kind: 'stack-set'; stack: StackId; amount: number }
+  /** take stacks away (only when at least `min` are held); `then` runs after a successful consume */
   | { kind: 'consume-stack'; stack: StackId; amount: number | 'all'; min?: number; when?: Condition; then?: Effect[] }
   | { kind: 'buff'; id: string; durationTicks?: number; refresh?: boolean; when?: Condition; stacks?: number }
   | { kind: 'extend-buff'; buff: string; ticks: number; maxTotal?: number; when?: Condition }

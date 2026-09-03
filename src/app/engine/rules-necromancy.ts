@@ -26,17 +26,17 @@ export const NECROMANCY_RULES: AbilityRule[] = [
     ability: 'necromancy',
     hits: [0],
     notes: ['Basic attack: +9% adrenaline; under Living Death it also grants 2 Necrosis (' + W + 'Necromancy_(ability) )'],
-    onCast: [{ kind: 'stack', stack: 'necrosis', amount: 2, cap: 12, when: { buff: 'living-death' } }],
+    onCast: [{ kind: 'stack', stack: 'necrosis', amount: 2, when: { buff: 'living-death' } }],
   },
   {
     ability: 'touch-of-death',
     notes: ['Grants 4 Necrosis (cap 12) (' + W + 'Touch_of_Death )', 'Under Living Death +6% extra adrenaline (9% + 6%) and its cooldown was reset by the Living Death cast (' + W + 'Living_Death )'],
-    onCast: [{ kind: 'stack', stack: 'necrosis', amount: 4, cap: 12 }, { kind: 'adrenaline', amount: 6, when: { buff: 'living-death' } }],
+    onCast: [{ kind: 'stack', stack: 'necrosis', amount: 4 }, { kind: 'adrenaline', amount: 6, when: { buff: 'living-death' } }],
   },
   {
     ability: 'soul-sap',
     notes: ['Grants 1 Residual Soul per target hit (cap 3, 5 with the soulbound lantern) (' + W + 'Soul_Sap )'],
-    onHit: [{ kind: 'stack', stack: 'residual-souls', amount: 1, cap: 3 }],
+    onHit: [{ kind: 'stack', stack: 'residual-souls', amount: 1 }],
   },
   {
     ability: 'finger-of-death',
@@ -105,7 +105,7 @@ export const NECROMANCY_RULES: AbilityRule[] = [
       'Three casts in one slot: cast 1 (10%) starts the 25-tick cooldown and opens cast 2 (−20%) for 25 ticks, cast 2 opens cast 3 (−30%); cast 3 or an expired window resets to cast 1 (' + W + 'Spectral_Scythe )',
       'Casts 1 and 2 have a 25% chance per target to grant a Residual Soul; cast 3 deals up to 2x on low-health targets (' + W + 'Spectral_Scythe )',
     ],
-    onHit: [{ kind: 'stack', stack: 'residual-souls', amount: 1, cap: 3, when: { chance: 0.25 } }],
+    onHit: [{ kind: 'stack', stack: 'residual-souls', amount: 1, when: { chance: 0.25 } }],
   },
   {
     ability: 'volley-of-souls',

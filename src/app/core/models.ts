@@ -642,7 +642,7 @@ export const ENEMY_PRESETS: EnemyConfig[] = [
 export interface Prebuild {
   /** starting adrenaline; missing = loadout / "100% at start" setting */
   adrenaline?: number;
-  /** stack id (engine StackId) → count */
+  /** stacking buff id (engine StackId: bloodlust, necrosis ...) → count, capped by the loadout */
   stacks: Record<string, number>;
   /** conjured spirits already out (skeleton-warrior, putrid-zombie, vengeful-ghost, phantom-guardian) */
   spirits: string[];

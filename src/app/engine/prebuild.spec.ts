@@ -15,6 +15,7 @@ describe('pre-build', () => {
     const loadout = defaultResolvedLoadout();
     loadout.style = 'Necromancy';
     loadout.hasConduit = true;
+    loadout.stackCaps['residual-souls'] = 5; // Soulbound lantern
     const e = new TrainerEngine([command, finger], catalog, {
       pingMs: 0,
       jitterMs: 0,

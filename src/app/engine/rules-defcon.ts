@@ -117,7 +117,7 @@ export const DEFCON_RULES: AbilityRule[] = [
   {
     ability: 'storm-shards',
     notes: ['Stores 80–90% ability damage per stack (max 10); Shatter releases them (' + W + 'Storm_Shards )', 'Freedom halves the stacks (' + W + 'Freedom )'],
-    onHit: [{ kind: 'stack', stack: 'storm-shards', amount: 1, cap: 10 }],
+    onHit: [{ kind: 'stack', stack: 'storm-shards', amount: 1 }],
   },
   {
     ability: 'shatter',
