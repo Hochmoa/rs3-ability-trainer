@@ -1,0 +1,1379 @@
+[
+  {
+    "id": "dive",
+    "name": "Dive",
+    "style": "Melee",
+    "type": "Basic",
+    "level": 0,
+    "icon": "assets/abilities/dive.png",
+    "triggersGcd": false
+  },
+  {
+    "id": "lesser-dismember",
+    "name": "Lesser Dismember",
+    "style": "Melee",
+    "type": "Basic",
+    "level": 0,
+    "icon": "assets/abilities/lesser-dismember.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "lesser-havoc",
+    "name": "Lesser Havoc",
+    "style": "Melee",
+    "type": "Basic",
+    "level": 0,
+    "icon": "assets/abilities/lesser-havoc.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "lesser-sever",
+    "name": "Lesser Sever",
+    "style": "Melee",
+    "type": "Basic",
+    "level": 0,
+    "icon": "assets/abilities/lesser-sever.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "lesser-smash",
+    "name": "Lesser Smash",
+    "style": "Melee",
+    "type": "Basic",
+    "level": 0,
+    "icon": "assets/abilities/lesser-smash.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "slice",
+    "name": "Slice",
+    "style": "Melee",
+    "type": "Basic",
+    "level": 0,
+    "icon": "assets/abilities/slice.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "attack",
+    "name": "Attack",
+    "style": "Melee",
+    "type": "Basic",
+    "level": 1,
+    "icon": "assets/abilities/attack.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "assault",
+    "name": "Assault",
+    "style": "Melee",
+    "type": "Basic",
+    "level": 3,
+    "icon": "assets/abilities/assault.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "kick",
+    "name": "Kick",
+    "style": "Melee",
+    "type": "Basic",
+    "level": 3,
+    "icon": "assets/abilities/kick.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "havoc",
+    "name": "Havoc",
+    "style": "Melee",
+    "type": "Basic",
+    "level": 5,
+    "icon": "assets/abilities/havoc.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "adaptive-strike",
+    "name": "Adaptive Strike",
+    "style": "Melee",
+    "type": "Basic",
+    "level": 7,
+    "icon": "assets/abilities/adaptive-strike.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "rend",
+    "name": "Rend",
+    "style": "Melee",
+    "type": "Basic",
+    "level": 18,
+    "icon": "assets/abilities/rend.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "smash",
+    "name": "Smash",
+    "style": "Melee",
+    "type": "Basic",
+    "level": 20,
+    "icon": "assets/abilities/smash.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "fury",
+    "name": "Fury",
+    "style": "Melee",
+    "type": "Basic",
+    "level": 21,
+    "icon": "assets/abilities/fury.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "greater-fury",
+    "name": "Greater Fury",
+    "style": "Melee",
+    "type": "Basic",
+    "level": 21,
+    "icon": "assets/abilities/greater-fury.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "backhand",
+    "name": "Backhand",
+    "style": "Melee",
+    "type": "Basic",
+    "level": 31,
+    "icon": "assets/abilities/backhand.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "hurricane",
+    "name": "Hurricane",
+    "style": "Melee",
+    "type": "Basic",
+    "level": 37,
+    "icon": "assets/abilities/hurricane.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "flurry",
+    "name": "Flurry",
+    "style": "Melee",
+    "type": "Basic",
+    "level": 45,
+    "icon": "assets/abilities/flurry.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "greater-flurry",
+    "name": "Greater Flurry",
+    "style": "Melee",
+    "type": "Basic",
+    "level": 45,
+    "icon": "assets/abilities/greater-flurry.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "sever",
+    "name": "Sever",
+    "style": "Melee",
+    "type": "Basic",
+    "level": 45,
+    "icon": "assets/abilities/sever.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "cleave",
+    "name": "Cleave",
+    "style": "Melee",
+    "type": "Basic",
+    "level": 48,
+    "icon": "assets/abilities/cleave.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "dismember",
+    "name": "Dismember",
+    "style": "Melee",
+    "type": "Basic",
+    "level": 50,
+    "icon": "assets/abilities/dismember.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "punish",
+    "name": "Punish",
+    "style": "Melee",
+    "type": "Basic",
+    "level": 60,
+    "icon": "assets/abilities/punish.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "slaughter",
+    "name": "Slaughter",
+    "style": "Melee",
+    "type": "Basic",
+    "level": 60,
+    "icon": "assets/abilities/slaughter.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "barge",
+    "name": "Barge",
+    "style": "Melee",
+    "type": "Basic",
+    "level": 65,
+    "icon": "assets/abilities/barge.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "bladed-dive",
+    "name": "Bladed Dive",
+    "style": "Melee",
+    "type": "Basic",
+    "level": 65,
+    "icon": "assets/abilities/bladed-dive.png",
+    "triggersGcd": false
+  },
+  {
+    "id": "greater-barge",
+    "name": "Greater Barge",
+    "style": "Melee",
+    "type": "Basic",
+    "level": 65,
+    "icon": "assets/abilities/greater-barge.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "decimate",
+    "name": "Decimate",
+    "style": "Melee",
+    "type": "Basic",
+    "level": 67,
+    "icon": "assets/abilities/decimate.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "massacre",
+    "name": "Massacre",
+    "style": "Melee",
+    "type": "Basic",
+    "level": 75,
+    "icon": "assets/abilities/massacre.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "chaos-roar",
+    "name": "Chaos Roar",
+    "style": "Melee",
+    "type": "Basic",
+    "level": 92,
+    "icon": "assets/abilities/chaos-roar.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "stomp",
+    "name": "Stomp",
+    "style": "Melee",
+    "type": "Threshold",
+    "level": 3,
+    "icon": "assets/abilities/stomp.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "forceful-backhand",
+    "name": "Forceful Backhand",
+    "style": "Melee",
+    "type": "Threshold",
+    "level": 15,
+    "icon": "assets/abilities/forceful-backhand.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "destroy",
+    "name": "Destroy",
+    "style": "Melee",
+    "type": "Threshold",
+    "level": 37,
+    "icon": "assets/abilities/destroy.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "quake",
+    "name": "Quake",
+    "style": "Melee",
+    "type": "Threshold",
+    "level": 37,
+    "icon": "assets/abilities/quake.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "blood-tendrils",
+    "name": "Blood Tendrils",
+    "style": "Melee",
+    "type": "Threshold",
+    "level": 75,
+    "icon": "assets/abilities/blood-tendrils.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "overpower",
+    "name": "Overpower",
+    "style": "Melee",
+    "type": "Ultimate",
+    "level": 15,
+    "icon": "assets/abilities/overpower.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "pulverise",
+    "name": "Pulverise",
+    "style": "Melee",
+    "type": "Ultimate",
+    "level": 71,
+    "icon": "assets/abilities/pulverise.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "berserk",
+    "name": "Berserk",
+    "style": "Melee",
+    "type": "Ultimate",
+    "level": 76,
+    "icon": "assets/abilities/berserk.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "balanced-strike",
+    "name": "Balanced Strike",
+    "style": "Melee",
+    "type": "Ultimate",
+    "level": 85,
+    "icon": "assets/abilities/balanced-strike.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "frenzy",
+    "name": "Frenzy",
+    "style": "Melee",
+    "type": "Ultimate",
+    "level": 86,
+    "icon": "assets/abilities/frenzy.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "meteor-strike",
+    "name": "Meteor Strike",
+    "style": "Melee",
+    "type": "Ultimate",
+    "level": 90,
+    "icon": "assets/abilities/meteor-strike.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "escape",
+    "name": "Escape",
+    "style": "Ranged",
+    "type": "Basic",
+    "level": 0,
+    "icon": "assets/abilities/escape.png",
+    "triggersGcd": false
+  },
+  {
+    "id": "lesser-dazing-shot",
+    "name": "Lesser Dazing Shot",
+    "style": "Ranged",
+    "type": "Basic",
+    "level": 0,
+    "icon": "assets/abilities/lesser-dazing-shot.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "lesser-fragmentation-shot",
+    "name": "Lesser Fragmentation Shot",
+    "style": "Ranged",
+    "type": "Basic",
+    "level": 0,
+    "icon": "assets/abilities/lesser-fragmentation-shot.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "lesser-needle-strike",
+    "name": "Lesser Needle Strike",
+    "style": "Ranged",
+    "type": "Basic",
+    "level": 0,
+    "icon": "assets/abilities/lesser-needle-strike.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "lesser-snipe",
+    "name": "Lesser Snipe",
+    "style": "Ranged",
+    "type": "Basic",
+    "level": 0,
+    "icon": "assets/abilities/lesser-snipe.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "ranged",
+    "name": "Ranged",
+    "style": "Ranged",
+    "type": "Basic",
+    "level": 1,
+    "icon": "assets/abilities/ranged.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "snap-shot",
+    "name": "Snap Shot",
+    "style": "Ranged",
+    "type": "Basic",
+    "level": 2,
+    "icon": "assets/abilities/snap-shot.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "snipe",
+    "name": "Snipe",
+    "style": "Ranged",
+    "type": "Basic",
+    "level": 7,
+    "icon": "assets/abilities/snipe.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "dazing-shot",
+    "name": "Dazing Shot",
+    "style": "Ranged",
+    "type": "Basic",
+    "level": 8,
+    "icon": "assets/abilities/dazing-shot.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "greater-dazing-shot",
+    "name": "Greater Dazing Shot",
+    "style": "Ranged",
+    "type": "Basic",
+    "level": 8,
+    "icon": "assets/abilities/greater-dazing-shot.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "needle-strike",
+    "name": "Needle Strike",
+    "style": "Ranged",
+    "type": "Basic",
+    "level": 12,
+    "icon": "assets/abilities/needle-strike.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "piercing-shot",
+    "name": "Piercing Shot",
+    "style": "Ranged",
+    "type": "Basic",
+    "level": 13,
+    "icon": "assets/abilities/piercing-shot.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "fragmentation-shot",
+    "name": "Fragmentation Shot",
+    "style": "Ranged",
+    "type": "Basic",
+    "level": 20,
+    "icon": "assets/abilities/fragmentation-shot.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "binding-shot",
+    "name": "Binding Shot",
+    "style": "Ranged",
+    "type": "Basic",
+    "level": 31,
+    "icon": "assets/abilities/binding-shot.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "bombardment",
+    "name": "Bombardment",
+    "style": "Ranged",
+    "type": "Basic",
+    "level": 36,
+    "icon": "assets/abilities/bombardment.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "galeshot",
+    "name": "Galeshot",
+    "style": "Ranged",
+    "type": "Basic",
+    "level": 58,
+    "icon": "assets/abilities/galeshot.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "rapid-fire",
+    "name": "Rapid Fire",
+    "style": "Ranged",
+    "type": "Basic",
+    "level": 62,
+    "icon": "assets/abilities/rapid-fire.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "greater-ricochet",
+    "name": "Greater Ricochet",
+    "style": "Ranged",
+    "type": "Basic",
+    "level": 67,
+    "icon": "assets/abilities/greater-ricochet.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "ricochet",
+    "name": "Ricochet",
+    "style": "Ranged",
+    "type": "Basic",
+    "level": 67,
+    "icon": "assets/abilities/ricochet.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "corruption-shot",
+    "name": "Corruption Shot",
+    "style": "Ranged",
+    "type": "Basic",
+    "level": 70,
+    "icon": "assets/abilities/corruption-shot.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "shadow-tendrils",
+    "name": "Shadow Tendrils",
+    "style": "Ranged",
+    "type": "Basic",
+    "level": 75,
+    "icon": "assets/abilities/shadow-tendrils.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "imbue-shadows",
+    "name": "Imbue: Shadows",
+    "style": "Ranged",
+    "type": "Basic",
+    "level": 90,
+    "icon": "assets/abilities/imbue-shadows.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "tight-bindings",
+    "name": "Tight Bindings",
+    "style": "Ranged",
+    "type": "Threshold",
+    "level": 3,
+    "icon": "assets/abilities/tight-bindings.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "rout",
+    "name": "Rout",
+    "style": "Ranged",
+    "type": "Threshold",
+    "level": 15,
+    "icon": "assets/abilities/rout.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "salt-the-wound",
+    "name": "Salt the Wound",
+    "style": "Ranged",
+    "type": "Threshold",
+    "level": 65,
+    "icon": "assets/abilities/salt-the-wound.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "deadshot",
+    "name": "Deadshot",
+    "style": "Ranged",
+    "type": "Ultimate",
+    "level": 21,
+    "icon": "assets/abilities/deadshot.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "incendiary-shot",
+    "name": "Incendiary Shot",
+    "style": "Ranged",
+    "type": "Ultimate",
+    "level": 66,
+    "icon": "assets/abilities/incendiary-shot.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "death-s-swiftness",
+    "name": "Death's Swiftness",
+    "style": "Ranged",
+    "type": "Ultimate",
+    "level": 76,
+    "icon": "assets/abilities/death-s-swiftness.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "greater-death-s-swiftness",
+    "name": "Greater Death's Swiftness",
+    "style": "Ranged",
+    "type": "Ultimate",
+    "level": 76,
+    "icon": "assets/abilities/greater-death-s-swiftness.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "unload",
+    "name": "Unload",
+    "style": "Ranged",
+    "type": "Ultimate",
+    "level": 81,
+    "icon": "assets/abilities/unload.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "lesser-combust",
+    "name": "Lesser Combust",
+    "style": "Magic",
+    "type": "Basic",
+    "level": 0,
+    "icon": "assets/abilities/lesser-combust.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "lesser-concentrated-blast",
+    "name": "Lesser Concentrated Blast",
+    "style": "Magic",
+    "type": "Basic",
+    "level": 0,
+    "icon": "assets/abilities/lesser-concentrated-blast.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "lesser-dragon-breath",
+    "name": "Lesser Dragon Breath",
+    "style": "Magic",
+    "type": "Basic",
+    "level": 0,
+    "icon": "assets/abilities/lesser-dragon-breath.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "lesser-sonic-wave",
+    "name": "Lesser Sonic Wave",
+    "style": "Magic",
+    "type": "Basic",
+    "level": 0,
+    "icon": "assets/abilities/lesser-sonic-wave.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "surge",
+    "name": "Surge",
+    "style": "Magic",
+    "type": "Basic",
+    "level": 0,
+    "icon": "assets/abilities/surge.png",
+    "triggersGcd": false
+  },
+  {
+    "id": "wrack",
+    "name": "Wrack",
+    "style": "Magic",
+    "type": "Basic",
+    "level": 0,
+    "icon": "assets/abilities/wrack.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "wrack-and-ruin",
+    "name": "Wrack and Ruin",
+    "style": "Magic",
+    "type": "Basic",
+    "level": 0,
+    "icon": "assets/abilities/wrack-and-ruin.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "magic",
+    "name": "Magic",
+    "style": "Magic",
+    "type": "Basic",
+    "level": 1,
+    "icon": "assets/abilities/magic.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "wild-magic",
+    "name": "Wild Magic",
+    "style": "Magic",
+    "type": "Basic",
+    "level": 3,
+    "icon": "assets/abilities/wild-magic.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "greater-sonic-wave",
+    "name": "Greater Sonic Wave",
+    "style": "Magic",
+    "type": "Basic",
+    "level": 6,
+    "icon": "assets/abilities/greater-sonic-wave.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "sonic-wave",
+    "name": "Sonic Wave",
+    "style": "Magic",
+    "type": "Basic",
+    "level": 6,
+    "icon": "assets/abilities/sonic-wave.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "shock",
+    "name": "Shock",
+    "style": "Magic",
+    "type": "Basic",
+    "level": 10,
+    "icon": "assets/abilities/shock.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "dragon-breath",
+    "name": "Dragon Breath",
+    "style": "Magic",
+    "type": "Basic",
+    "level": 19,
+    "icon": "assets/abilities/dragon-breath.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "impact",
+    "name": "Impact",
+    "style": "Magic",
+    "type": "Basic",
+    "level": 31,
+    "icon": "assets/abilities/impact.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "combust",
+    "name": "Combust",
+    "style": "Magic",
+    "type": "Basic",
+    "level": 38,
+    "icon": "assets/abilities/combust.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "chain",
+    "name": "Chain",
+    "style": "Magic",
+    "type": "Basic",
+    "level": 51,
+    "icon": "assets/abilities/chain.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "greater-chain",
+    "name": "Greater Chain",
+    "style": "Magic",
+    "type": "Basic",
+    "level": 51,
+    "icon": "assets/abilities/greater-chain.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "asphyxiate",
+    "name": "Asphyxiate",
+    "style": "Magic",
+    "type": "Basic",
+    "level": 59,
+    "icon": "assets/abilities/asphyxiate.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "concentrated-blast",
+    "name": "Concentrated Blast",
+    "style": "Magic",
+    "type": "Basic",
+    "level": 66,
+    "icon": "assets/abilities/concentrated-blast.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "greater-concentrated-blast",
+    "name": "Greater Concentrated Blast",
+    "style": "Magic",
+    "type": "Basic",
+    "level": 66,
+    "icon": "assets/abilities/greater-concentrated-blast.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "corruption-blast",
+    "name": "Corruption Blast",
+    "style": "Magic",
+    "type": "Basic",
+    "level": 70,
+    "icon": "assets/abilities/corruption-blast.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "smoke-tendrils",
+    "name": "Smoke Tendrils",
+    "style": "Magic",
+    "type": "Basic",
+    "level": 75,
+    "icon": "assets/abilities/smoke-tendrils.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "magma-tempest",
+    "name": "Magma Tempest",
+    "style": "Magic",
+    "type": "Basic",
+    "level": 85,
+    "icon": "assets/abilities/magma-tempest.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "deep-impact",
+    "name": "Deep Impact",
+    "style": "Magic",
+    "type": "Threshold",
+    "level": 3,
+    "icon": "assets/abilities/deep-impact.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "horror",
+    "name": "Horror",
+    "style": "Magic",
+    "type": "Threshold",
+    "level": 15,
+    "icon": "assets/abilities/horror.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "detonate",
+    "name": "Detonate",
+    "style": "Magic",
+    "type": "Threshold",
+    "level": 37,
+    "icon": "assets/abilities/detonate.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "omnipower",
+    "name": "Omnipower",
+    "style": "Magic",
+    "type": "Ultimate",
+    "level": 12,
+    "icon": "assets/abilities/omnipower.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "metamorphosis",
+    "name": "Metamorphosis",
+    "style": "Magic",
+    "type": "Ultimate",
+    "level": 66,
+    "icon": "assets/abilities/metamorphosis.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "greater-sunshine",
+    "name": "Greater Sunshine",
+    "style": "Magic",
+    "type": "Ultimate",
+    "level": 76,
+    "icon": "assets/abilities/greater-sunshine.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "sunshine",
+    "name": "Sunshine",
+    "style": "Magic",
+    "type": "Ultimate",
+    "level": 76,
+    "icon": "assets/abilities/sunshine.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "tsunami",
+    "name": "Tsunami",
+    "style": "Magic",
+    "type": "Ultimate",
+    "level": 90,
+    "icon": "assets/abilities/tsunami.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "necromancy",
+    "name": "Necromancy",
+    "style": "Necromancy",
+    "type": "Basic",
+    "level": 1,
+    "icon": "assets/abilities/necromancy.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "conjure-skeleton-warrior",
+    "name": "Conjure Skeleton Warrior",
+    "style": "Necromancy",
+    "type": "Basic",
+    "level": 2,
+    "icon": "assets/abilities/conjure-skeleton-warrior.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "finger-of-death",
+    "name": "Finger of Death",
+    "style": "Necromancy",
+    "type": "Basic",
+    "level": 8,
+    "icon": "assets/abilities/finger-of-death.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "touch-of-death",
+    "name": "Touch of Death",
+    "style": "Necromancy",
+    "type": "Basic",
+    "level": 13,
+    "icon": "assets/abilities/touch-of-death.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "command-skeleton-warrior",
+    "name": "Command Skeleton Warrior",
+    "style": "Necromancy",
+    "type": "Basic",
+    "level": 20,
+    "icon": "assets/abilities/command-skeleton-warrior.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "blood-siphon",
+    "name": "Blood Siphon",
+    "style": "Necromancy",
+    "type": "Basic",
+    "level": 36,
+    "icon": "assets/abilities/blood-siphon.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "conjure-putrid-zombie",
+    "name": "Conjure Putrid Zombie",
+    "style": "Necromancy",
+    "type": "Basic",
+    "level": 40,
+    "icon": "assets/abilities/conjure-putrid-zombie.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "conjure-vengeful-ghost",
+    "name": "Conjure Vengeful Ghost",
+    "style": "Necromancy",
+    "type": "Basic",
+    "level": 40,
+    "icon": "assets/abilities/conjure-vengeful-ghost.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "bloat",
+    "name": "Bloat",
+    "style": "Necromancy",
+    "type": "Basic",
+    "level": 48,
+    "icon": "assets/abilities/bloat.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "soul-sap",
+    "name": "Soul Sap",
+    "style": "Necromancy",
+    "type": "Basic",
+    "level": 54,
+    "icon": "assets/abilities/soul-sap.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "soul-strike",
+    "name": "Soul Strike",
+    "style": "Necromancy",
+    "type": "Basic",
+    "level": 54,
+    "icon": "assets/abilities/soul-strike.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "command-putrid-zombie",
+    "name": "Command Putrid Zombie",
+    "style": "Necromancy",
+    "type": "Basic",
+    "level": 60,
+    "icon": "assets/abilities/command-putrid-zombie.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "command-vengeful-ghost",
+    "name": "Command Vengeful Ghost",
+    "style": "Necromancy",
+    "type": "Basic",
+    "level": 60,
+    "icon": "assets/abilities/command-vengeful-ghost.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "spectral-scythe",
+    "name": "Spectral Scythe",
+    "style": "Necromancy",
+    "type": "Basic",
+    "level": 62,
+    "icon": "assets/abilities/spectral-scythe.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "volley-of-souls",
+    "name": "Volley of Souls",
+    "style": "Necromancy",
+    "type": "Basic",
+    "level": 66,
+    "icon": "assets/abilities/volley-of-souls.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "conjure-phantom-guardian",
+    "name": "Conjure Phantom Guardian",
+    "style": "Necromancy",
+    "type": "Basic",
+    "level": 70,
+    "icon": "assets/abilities/conjure-phantom-guardian.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "command-phantom-guardian",
+    "name": "Command Phantom Guardian",
+    "style": "Necromancy",
+    "type": "Basic",
+    "level": 80,
+    "icon": "assets/abilities/command-phantom-guardian.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "conjure-undead-army",
+    "name": "Conjure Undead Army",
+    "style": "Necromancy",
+    "type": "Basic",
+    "level": 99,
+    "icon": "assets/abilities/conjure-undead-army.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "death-skulls",
+    "name": "Death Skulls",
+    "style": "Necromancy",
+    "type": "Ultimate",
+    "level": 28,
+    "icon": "assets/abilities/death-skulls.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "living-death",
+    "name": "Living Death",
+    "style": "Necromancy",
+    "type": "Ultimate",
+    "level": 76,
+    "icon": "assets/abilities/living-death.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "anticipation",
+    "name": "Anticipation",
+    "style": "Defence",
+    "type": "Basic",
+    "level": 3,
+    "icon": "assets/abilities/anticipation.png",
+    "triggersGcd": false
+  },
+  {
+    "id": "bash",
+    "name": "Bash",
+    "style": "Defence",
+    "type": "Basic",
+    "level": 8,
+    "icon": "assets/abilities/bash.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "provoke",
+    "name": "Provoke",
+    "style": "Defence",
+    "type": "Basic",
+    "level": 24,
+    "icon": "assets/abilities/provoke.png",
+    "triggersGcd": false
+  },
+  {
+    "id": "freedom",
+    "name": "Freedom",
+    "style": "Defence",
+    "type": "Basic",
+    "level": 34,
+    "icon": "assets/abilities/freedom.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "divert",
+    "name": "Divert",
+    "style": "Defence",
+    "type": "Basic",
+    "level": 48,
+    "icon": "assets/abilities/divert.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "resonance",
+    "name": "Resonance",
+    "style": "Defence",
+    "type": "Basic",
+    "level": 48,
+    "icon": "assets/abilities/resonance.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "preparation",
+    "name": "Preparation",
+    "style": "Defence",
+    "type": "Basic",
+    "level": 67,
+    "icon": "assets/abilities/preparation.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "devotion",
+    "name": "Devotion",
+    "style": "Defence",
+    "type": "Threshold",
+    "level": 1,
+    "icon": "assets/abilities/devotion.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "revenge",
+    "name": "Revenge",
+    "style": "Defence",
+    "type": "Threshold",
+    "level": 15,
+    "icon": "assets/abilities/revenge.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "reflect",
+    "name": "Reflect",
+    "style": "Defence",
+    "type": "Threshold",
+    "level": 37,
+    "icon": "assets/abilities/reflect.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "debilitate",
+    "name": "Debilitate",
+    "style": "Defence",
+    "type": "Threshold",
+    "level": 55,
+    "icon": "assets/abilities/debilitate.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "immortality",
+    "name": "Immortality",
+    "style": "Defence",
+    "type": "Ultimate",
+    "level": 29,
+    "icon": "assets/abilities/immortality.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "rejuvenate",
+    "name": "Rejuvenate",
+    "style": "Defence",
+    "type": "Ultimate",
+    "level": 52,
+    "icon": "assets/abilities/rejuvenate.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "barricade",
+    "name": "Barricade",
+    "style": "Defence",
+    "type": "Ultimate",
+    "level": 81,
+    "icon": "assets/abilities/barricade.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "natural-instinct",
+    "name": "Natural Instinct",
+    "style": "Defence",
+    "type": "Ultimate",
+    "level": 85,
+    "icon": "assets/abilities/natural-instinct.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "limitless",
+    "name": "Limitless",
+    "style": "Constitution",
+    "type": "Basic",
+    "level": 1,
+    "icon": "assets/abilities/limitless.png",
+    "triggersGcd": false
+  },
+  {
+    "id": "sacrifice",
+    "name": "Sacrifice",
+    "style": "Constitution",
+    "type": "Basic",
+    "level": 1,
+    "icon": "assets/abilities/sacrifice.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "momentum",
+    "name": "Momentum",
+    "style": "Constitution",
+    "type": "Basic",
+    "level": 10,
+    "icon": "assets/abilities/momentum.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "reckless-stance",
+    "name": "Reckless Stance",
+    "style": "Constitution",
+    "type": "Basic",
+    "level": 10,
+    "icon": "assets/abilities/reckless-stance.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "siphon",
+    "name": "Siphon",
+    "style": "Constitution",
+    "type": "Basic",
+    "level": 20,
+    "icon": "assets/abilities/siphon.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "tuska-s-wrath",
+    "name": "Tuska's Wrath",
+    "style": "Constitution",
+    "type": "Basic",
+    "level": 50,
+    "icon": "assets/abilities/tuska-s-wrath.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "storm-shards",
+    "name": "Storm Shards",
+    "style": "Constitution",
+    "type": "Basic",
+    "level": 70,
+    "icon": "assets/abilities/storm-shards.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "demoralise",
+    "name": "Demoralise",
+    "style": "Constitution",
+    "type": "Threshold",
+    "level": 37,
+    "icon": "assets/abilities/demoralise.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "shatter",
+    "name": "Shatter",
+    "style": "Constitution",
+    "type": "Threshold",
+    "level": 70,
+    "icon": "assets/abilities/shatter.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "reprisal",
+    "name": "Reprisal",
+    "style": "Constitution",
+    "type": "Threshold",
+    "level": 85,
+    "icon": "assets/abilities/reprisal.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "transfigure",
+    "name": "Transfigure",
+    "style": "Constitution",
+    "type": "Ultimate",
+    "level": 1,
+    "icon": "assets/abilities/transfigure.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "guthix-s-blessing",
+    "name": "Guthix's Blessing",
+    "style": "Constitution",
+    "type": "Ultimate",
+    "level": 85,
+    "icon": "assets/abilities/guthix-s-blessing.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "onslaught",
+    "name": "Onslaught",
+    "style": "Constitution",
+    "type": "Ultimate",
+    "level": 90,
+    "icon": "assets/abilities/onslaught.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "ice-asylum",
+    "name": "Ice Asylum",
+    "style": "Constitution",
+    "type": "Ultimate",
+    "level": 91,
+    "icon": "assets/abilities/ice-asylum.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "essence-of-finality",
+    "name": "Essence of Finality",
+    "style": "Constitution",
+    "type": "Special",
+    "level": 1,
+    "icon": "assets/abilities/essence-of-finality.png",
+    "triggersGcd": true
+  },
+  {
+    "id": "weapon-special-attack",
+    "name": "Weapon Special Attack",
+    "style": "Constitution",
+    "type": "Special",
+    "level": 1,
+    "icon": "assets/abilities/weapon-special-attack.png",
+    "triggersGcd": true
+  }
+]
