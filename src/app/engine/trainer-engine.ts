@@ -4,7 +4,7 @@ import { ResolvedLoadout, defaultResolvedLoadout } from './loadout-resolved';
 import { PROTECTION, PrayerBook, SOUL_SPLIT, bookOf, togglePrayer } from './prayer-rules';
 import { BASE_CRIT_CHANCE, BUFF_DAMAGE_MULT, SPIRIT_ATTACKS, TARGET_DAMAGE_MULT, critMultiplier } from './damage';
 import { MORPH_TARGETS } from './morphs';
-import { BUFF_BY_ID, GLOBALS, ruleFor } from './rules';
+import { BUFF_BY_ID, MODELLED_WIKI_BUFFS, GLOBALS, ruleFor } from './rules';
 import { AbilityRule, ChannelSpec, Condition, Effect, GlobalRule, Requirement, StackId } from './rules-model';
 
 /** One RS3 game tick / server cycle. */
@@ -949,11 +949,12 @@ export class TrainerEngine {
     }
 
     // buffs: rules first, wiki data as fallback
-    const ruleAppliesBuffs = !!rule?.buffs || !!rule?.onCast?.some((e) => e.kind === 'buff' || e.kind === 'choose' || e.kind === 'conjure') || !!rule?.onHit?.some((e) => e.kind === 'buff' || e.kind === 'choose') || !!rule?.hitBuffs;
+    const appliesBuff = (e: Effect) => e.kind === 'buff' || e.kind === 'choose' || e.kind === 'conjure' || e.kind === 'stack' || e.kind === 'stack-set';
+    const ruleAppliesBuffs = !!rule?.buffs || !!rule?.onCast?.some(appliesBuff) || !!rule?.onHit?.some(appliesBuff) || !!rule?.hitBuffs;
     if (rule?.buffs) {
       for (const id of rule.buffs) this.applyBuff(id, tick, entity.key);
     } else if (!ruleAppliesBuffs) {
-      for (const b of acting.buffs) this.applyDataBuff(b, tick, entity.key);
+      for (const b of acting.buffs) if (!this.modelledDataBuff(b)) this.applyDataBuff(b, tick, entity.key);
     }
 
     // effects
@@ -1099,7 +1100,7 @@ export class TrainerEngine {
       if (!e) continue;
       const left = pb.remaining?.['ability:' + id];
       const ruleBuffs = (ruleFor(id)?.onCast ?? []).filter((eff): eff is Extract<Effect, { kind: 'buff' }> => eff.kind === 'buff');
-      for (const b of e.buffs) this.applyDataBuff(left !== undefined && b.durationTicks !== null ? { ...b, durationTicks: Math.min(left, b.durationTicks) } : b, 0, e.key);
+      for (const b of e.buffs) if (!this.modelledDataBuff(b)) this.applyDataBuff(left !== undefined && b.durationTicks !== null ? { ...b, durationTicks: Math.min(left, b.durationTicks) } : b, 0, e.key);
       for (const eff of ruleBuffs) {
         const full = eff.durationTicks ?? BUFF_BY_ID.get(eff.id)?.durationTicks ?? null;
         this.applyEffect(left !== undefined && full !== null ? { ...eff, durationTicks: Math.min(left, full) } : eff, 0, e, 0);
@@ -1377,6 +1378,11 @@ export class TrainerEngine {
     this.applyBuff(id, tick, sourceKey, undefined, 0, false);
     const b = this.buff(id);
     if (b) b.stacks = value;
+  }
+
+  /** A wiki buff link ("buff:<wiki id>") the rules already model (Residual Soul, Necrosis, Berserk ...) – no second icon. */
+  private modelledDataBuff(b: EngineBuff): boolean {
+    return b.id.startsWith('buff:') && MODELLED_WIKI_BUFFS.has(Number(b.id.slice(5)));
   }
 
   private applyDataBuff(b: EngineBuff, tick: number, sourceKey: string): void {

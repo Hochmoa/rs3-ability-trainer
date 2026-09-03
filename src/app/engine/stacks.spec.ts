@@ -53,6 +53,15 @@ describe('stacks are buffs', () => {
     expect(e.buffs.some((b) => b.id === 'necrosis')).toBe(false);
   });
 
+  it('the wiki buff link of an ability does not add a second, timed icon next to the modelled stack', () => {
+    const sap = ability('soul-sap', 'Necromancy', { buffs: [{ id: 'buff:48334', name: 'Residual Soul', kind: 'Buff', on: 'self', icon: null, durationTicks: 3 }] });
+    const e = engine([sap], 'Necromancy');
+    cast(e, sap.key, 1);
+    e.update(3 * TICK_MS);
+    expect(e.buffs.map((b) => b.id)).toEqual(['residual-souls']);
+    expect(e.stack('residual-souls')).toBe(1);
+  });
+
   it('caps come from the definition and can be raised by the loadout', () => {
     const sap = ability('soul-sap', 'Necromancy');
     const e = engine([sap], 'Necromancy');

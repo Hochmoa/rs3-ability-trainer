@@ -17,6 +17,9 @@ export function ruleFor(abilityId: string): AbilityRule | undefined {
   return RULE_BY_ABILITY.get(abilityId);
 }
 
+/** wiki buff ids the rules model themselves – the raw wiki buff link of an ability must not add a second icon */
+export const MODELLED_WIKI_BUFFS = new Set(BUFFS.map((b) => b.wikiId).filter((id): id is number => id !== undefined));
+
 /** definitions of the stacking buffs (Bloodlust, Necrosis ...), keyed by id */
 export const STACK_DEFS = Object.fromEntries(BUFFS.filter((b) => b.stacks).map((b) => [b.id, b])) as Record<StackId, BuffDef>;
 
