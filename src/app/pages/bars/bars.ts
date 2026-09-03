@@ -158,11 +158,18 @@ export class Bars {
   }
 
   private makeGhost(e: Entity): HTMLElement {
+    // appended to <body>, so the component's scoped styles do not reach it: style it inline
     const g = document.createElement('div');
     g.className = 'drag-ghost';
+    Object.assign(g.style, {
+      position: 'fixed', zIndex: '200', width: '48px', height: '48px', pointerEvents: 'none',
+      border: '2px solid #c9a227', borderRadius: '6px', background: '#000', overflow: 'hidden',
+      boxShadow: '0 6px 18px rgba(0,0,0,0.7)', left: '-100px', top: '-100px',
+    } as Partial<CSSStyleDeclaration>);
     const img = document.createElement('img');
     img.src = e.icon;
     img.alt = e.name;
+    Object.assign(img.style, { width: '100%', height: '100%', display: 'block' } as Partial<CSSStyleDeclaration>);
     g.appendChild(img);
     document.body.appendChild(g);
     return g;
