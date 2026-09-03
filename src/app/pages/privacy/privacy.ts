@@ -23,6 +23,12 @@ import { environment } from '../../../environments/environment';
         only to you. Supabase sends the confirmation and password-reset e-mails.
       </p>
       <p>"Delete my account" on the <a routerLink="/account">account page</a> removes everything stored online.</p>
+      <h3>Feedback</h3>
+      <p>
+        Bug reports and suggestions go to the same Supabase project. Stored with the text: the page you sent it from, your
+        browser version and, if you are signed in, your user id and display name, otherwise the contact you typed in (if any).
+        Nothing else.
+      </p>
       <h3>No tracking</h3>
       <p>No analytics, no ads, no third-party cookies. The site is hosted on GitHub Pages, which logs requests like any web server.</p>
       <p class="muted small">Contact: office&#64;hochware.com</p>

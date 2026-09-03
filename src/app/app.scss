@@ -47,6 +47,21 @@
         border: 1px solid var(--border);
       }
     }
+
+    .feedback {
+      padding: 6px 12px;
+      border: none;
+      border-radius: 4px;
+      background: none;
+      color: var(--muted);
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+
+      &:hover {
+        color: var(--text);
+      }
+    }
   }
 }
 
