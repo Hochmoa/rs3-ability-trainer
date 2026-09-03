@@ -86,3 +86,11 @@ footer .support {
   color: var(--gold);
   font-weight: 600;
 }
+
+.topbar nav a.admin-link {
+  color: var(--warn);
+}
+
+.blocked {
+  margin-bottom: 16px;
+}
