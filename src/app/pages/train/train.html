@@ -15,9 +15,25 @@
   <div class="panel controls">
     <label>
       Rotation
-      <select [ngModel]="selectedId()" (ngModelChange)="selectedId.set($event)" [disabled]="running()">
+      <select [ngModel]="selectedId()" (ngModelChange)="pickRotation($event)" [disabled]="running()">
         @for (r of storage.rotations(); track r.id) {
           <option [value]="r.id">{{ r.name }} ({{ r.steps.length }})</option>
+        }
+      </select>
+    </label>
+    <label title="Gear, backpack and prayer book (Loadout page)">
+      Loadout
+      <select [ngModel]="storage.activeLoadoutId()" (ngModelChange)="pickLoadout($event)" [disabled]="running()">
+        @for (l of storage.loadouts(); track l.id) {
+          <option [value]="l.id">{{ l.name }}</option>
+        }
+      </select>
+    </label>
+    <label title="Action bar setup: presets, positions, style bindings and keys (Action bars page)">
+      Bars
+      <select [ngModel]="storage.activeBarProfileId()" (ngModelChange)="pickBars($event)" [disabled]="running()">
+        @for (p of storage.barProfiles(); track p.id) {
+          <option [value]="p.id">{{ p.name }}</option>
         }
       </select>
     </label>
@@ -39,7 +55,7 @@
       Ping {{ storage.settings().pingMs }} ms ± {{ storage.settings().jitterMs }} · ability queueing
       {{ storage.settings().abilityQueueing ? 'on' : 'off' }}
       @if (storage.settings().loop) { · loop }
-      · loadout <a routerLink="/loadout">{{ storage.loadout().name }}</a> · {{ prayerBook() === 'Curses' ? 'curses' : 'standard prayers' }}
+      · {{ prayerBook() === 'Curses' ? 'curses' : 'standard prayers' }}
     </span>
   </div>
 

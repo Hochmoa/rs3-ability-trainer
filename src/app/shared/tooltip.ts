@@ -17,11 +17,83 @@ export class TooltipService {
   readonly state = signal<TipState | null>(null);
 }
 
-/** Put on any element: shows the full entity details while hovering. Accepts an Entity or an entity key. */
+/** how long a finger has to rest on an icon before the tooltip opens (touch devices) */
+const LONG_PRESS_MS = 450;
+/** emulated mouse / focus events arriving this soon after a touch are ignored */
+const TOUCH_SHADOW_MS = 1500;
+
+/**
+ * Hover tooltip on mouse devices; on touch devices the tooltip opens on a long press only and closes
+ * when the finger lifts – a tap stays a tap (bar slots are pressed by tapping) and the big tooltip
+ * does not pop up on every touch. The emulated mouse events a tap produces are ignored.
+ */
+@Directive()
+abstract class TipBase {
+  protected tips = inject(TooltipService);
+  protected lastTouch = 0;
+  private timer = 0;
+  private pressed = false;
+
+  protected abstract stateAt(x: number, y: number): TipState | null;
+
+  @HostListener('mouseenter', ['$event'])
+  @HostListener('mousemove', ['$event'])
+  show(e: MouseEvent): void {
+    if (Date.now() - this.lastTouch < TOUCH_SHADOW_MS) return;
+    const s = this.stateAt(e.clientX, e.clientY);
+    if (s) this.tips.state.set(s);
+  }
+
+  @HostListener('mouseleave')
+  hide(): void {
+    this.tips.state.set(null);
+  }
+
+  @HostListener('touchstart', ['$event'])
+  onTouchStart(e: TouchEvent): void {
+    this.lastTouch = Date.now();
+    this.pressed = false;
+    const t = e.touches[0];
+    if (!t) return;
+    const x = t.clientX;
+    const y = t.clientY;
+    window.clearTimeout(this.timer);
+    this.timer = window.setTimeout(() => {
+      const s = this.stateAt(x, y);
+      if (s) {
+        this.pressed = true;
+        this.tips.state.set(s);
+      }
+    }, LONG_PRESS_MS);
+  }
+
+  @HostListener('touchmove')
+  onTouchMove(): void {
+    window.clearTimeout(this.timer); // scrolling is not a press
+  }
+
+  @HostListener('touchend', ['$event'])
+  @HostListener('touchcancel', ['$event'])
+  onTouchEnd(e: TouchEvent): void {
+    window.clearTimeout(this.timer);
+    this.lastTouch = Date.now();
+    if (this.pressed) {
+      this.pressed = false;
+      this.tips.state.set(null);
+      e.preventDefault(); // the long press was for the tooltip, not a click
+    }
+  }
+
+  @HostListener('contextmenu', ['$event'])
+  onContextMenu(e: Event): void {
+    if (Date.now() - this.lastTouch < TOUCH_SHADOW_MS) e.preventDefault(); // no "save image" menu on a long press
+  }
+}
+
+/** Put on any element: shows the full entity details while hovering (long press on touch). Accepts an Entity or an entity key. */
 @Directive({ selector: '[entityTip]' })
-export class EntityTip {
+export class EntityTip extends TipBase {
   readonly entityTip = input.required<Entity | string | null | undefined>();
-  private tips = inject(TooltipService);
   private data = inject(DataService);
   private el = inject(ElementRef<HTMLElement>);
 
@@ -31,20 +103,14 @@ export class EntityTip {
     return typeof v === 'string' ? this.data.get(v) : v;
   }
 
-  @HostListener('mouseenter', ['$event'])
-  @HostListener('mousemove', ['$event'])
-  show(e: MouseEvent): void {
+  protected stateAt(x: number, y: number): TipState | null {
     const entity = this.resolve();
-    if (entity) this.tips.state.set({ entity, x: e.clientX, y: e.clientY });
-  }
-
-  @HostListener('mouseleave')
-  hide(): void {
-    this.tips.state.set(null);
+    return entity ? { entity, x, y } : null;
   }
 
   @HostListener('focus')
   focus(): void {
+    if (Date.now() - this.lastTouch < TOUCH_SHADOW_MS) return; // a tap focuses the slot – no tooltip for that
     const entity = this.resolve();
     const r = this.el.nativeElement.getBoundingClientRect();
     if (entity) this.tips.state.set({ entity, x: r.right, y: r.top });
@@ -56,22 +122,14 @@ export class EntityTip {
   }
 }
 
-/** Put on a gear-panel cell: shows the item (name, tier, set / passive text, perks) while hovering. */
+/** Put on a gear-panel cell: shows the item (name, tier, set / passive text, perks) while hovering (long press on touch). */
 @Directive({ selector: '[gearTip]' })
-export class GearTip {
+export class GearTip extends TipBase {
   readonly gearTip = input.required<GearView | null | undefined>();
-  private tips = inject(TooltipService);
 
-  @HostListener('mouseenter', ['$event'])
-  @HostListener('mousemove', ['$event'])
-  show(e: MouseEvent): void {
+  protected stateAt(x: number, y: number): TipState | null {
     const gear = this.gearTip();
-    if (gear) this.tips.state.set({ gear, x: e.clientX, y: e.clientY });
-  }
-
-  @HostListener('mouseleave')
-  hide(): void {
-    this.tips.state.set(null);
+    return gear ? { gear, x, y } : null;
   }
 }
 

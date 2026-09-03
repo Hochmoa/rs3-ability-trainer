@@ -31,6 +31,7 @@ export class Bars {
   readonly WEAPON_TYPES = WEAPON_TYPES;
   readonly POSITIONS = BAR_POSITION_NAMES;
   readonly setup = this.storage.actionBars;
+  readonly activeProfile = computed(() => this.storage.barProfiles().find((p) => p.id === this.storage.activeBarProfileId()));
   readonly selectedId = signal(1);
   readonly tab = signal<Tab>('Melee');
   readonly search = signal('');
@@ -47,6 +48,35 @@ export class Bars {
 
   /** "Hide obscure abilities / prayers" – slayer passives, sub-36 standard prayers, saps & leeches … (core/obscure.ts) */
   readonly hideObscure = computed(() => this.storage.settings().hideObscureAbilities);
+
+  // ---------------------------------------------------------------- bar profiles
+
+  switchProfile(id: string): void {
+    void this.storage.switchBarProfile(id);
+  }
+
+  async newProfile(): Promise<void> {
+    const id = await this.storage.addBarProfile('Bar setup ' + (this.storage.barProfiles().length + 1));
+    await this.storage.switchBarProfile(id);
+  }
+
+  async duplicateProfile(): Promise<void> {
+    const cur = this.storage.actionBars();
+    const id = await this.storage.addBarProfile((this.activeProfile()?.name ?? 'Bar setup') + ' copy', cur);
+    await this.storage.switchBarProfile(id);
+  }
+
+  async deleteProfile(): Promise<void> {
+    const p = this.activeProfile();
+    if (!p || this.storage.barProfiles().length <= 1) return;
+    if (!(await this.dialogs.confirm('Delete the bar setup "' + p.name + '" with all its presets and bindings?', { title: 'Delete bar setup', ok: 'Delete', danger: true }))) return;
+    await this.storage.deleteBarProfile(p.id);
+  }
+
+  renameProfile(name: string): void {
+    const p = this.activeProfile();
+    if (p) void this.storage.renameBarProfile(p.id, name);
+  }
 
   setHideObscure(v: boolean): void {
     void this.storage.saveSettings({ ...this.storage.settings(), hideObscureAbilities: v });

@@ -1,7 +1,7 @@
 import { Injectable, computed, signal } from '@angular/core';
 import { IDBPDatabase, deleteDB, openDB } from 'idb';
 import { Subject } from 'rxjs';
-import { ActionBarSetup, DEFAULT_ENEMY, DEFAULT_SETTINGS, EnemyConfig, Equipment, INVENTORY_SIZE, ItemRef, Keybind, LegacyLoadout, Loadout, Prebuild, Rotation, RotationStep, Session, SetupBundle, SetupMeta, Settings, defaultActionBars, migrateLegacyLoadout, newLoadout } from './models';
+import { ActionBarSetup, BarProfile, BarProfileData, DEFAULT_BAR_PROFILE_ID, DEFAULT_ENEMY, activateProfile, profileData, snapshotActiveProfile, DEFAULT_SETTINGS, EnemyConfig, Equipment, INVENTORY_SIZE, ItemRef, Keybind, LegacyLoadout, Loadout, Prebuild, Rotation, RotationStep, Session, SetupBundle, SetupMeta, Settings, defaultActionBars, migrateLegacyLoadout, newLoadout } from './models';
 
 const DB_NAME = 'rs3trainer';
 const CONSENT_KEY = 'rs3trainer.consent';
@@ -23,8 +23,11 @@ export class StorageService {
   readonly enemy = signal<EnemyConfig>({ ...DEFAULT_ENEMY });
   /** rotation id → pre-built state the session starts with */
   readonly prebuilds = signal<Record<string, Prebuild>>({});
-  /** action bar presets, positions, style bindings, slot + weapon keybinds */
+  /** action bar presets, positions, style bindings, slot + weapon keybinds (the active bar profile) */
   readonly actionBars = signal<ActionBarSetup>(defaultActionBars());
+  /** named bar setups, switchable on the Train page */
+  readonly barProfiles = computed<BarProfile[]>(() => this.actionBars().profiles ?? []);
+  readonly activeBarProfileId = computed(() => this.actionBars().activeProfileId ?? DEFAULT_BAR_PROFILE_ID);
   /** sync bookkeeping for settings + loadouts + enemy */
   readonly setupMeta = signal<SetupMeta>({});
   /** entity key ("ability:sever", "prayer:turmoil", ...) → keybind */
@@ -229,8 +232,38 @@ export class StorageService {
   }
 
   async saveActionBars(setup: ActionBarSetup): Promise<void> {
-    await this.putActionBars({ ...setup, updatedAt: Date.now() });
+    await this.putActionBars(snapshotActiveProfile({ ...setup, updatedAt: Date.now() }));
     this.actionBarsChanged.next(this.actionBars());
+  }
+
+  // ---------------------------------------------------------------- bar profiles
+
+  async switchBarProfile(id: string): Promise<void> {
+    if (id === this.activeBarProfileId() || !this.barProfiles().some((p) => p.id === id)) return;
+    await this.saveActionBars(activateProfile(this.actionBars(), id));
+  }
+
+  /** Adds a profile (default: the current keys with empty bars) and returns its id. */
+  async addBarProfile(name: string, data?: BarProfileData, presetId?: string): Promise<string> {
+    const cur = snapshotActiveProfile(this.actionBars());
+    const base = data ?? { ...profileData(cur), ...profileData(defaultActionBars()), slotKeybinds: structuredClone(cur.slotKeybinds), weaponKeybinds: structuredClone(cur.weaponKeybinds), actionKeybinds: structuredClone(cur.actionKeybinds), layout: cur.layout };
+    const profile: BarProfile = { ...profileData(base), id: crypto.randomUUID(), name: name.slice(0, 40) || 'Bar setup', presetId };
+    await this.saveActionBars({ ...cur, profiles: [...cur.profiles!, profile] });
+    return profile.id;
+  }
+
+  async renameBarProfile(id: string, name: string): Promise<void> {
+    const cur = snapshotActiveProfile(this.actionBars());
+    await this.saveActionBars({ ...cur, profiles: cur.profiles!.map((p) => (p.id === id ? { ...p, name: name.slice(0, 40) } : p)) });
+  }
+
+  /** Removes a profile; deleting the active one switches to the first remaining. The last profile cannot be deleted. */
+  async deleteBarProfile(id: string): Promise<void> {
+    const cur = snapshotActiveProfile(this.actionBars());
+    const rest = cur.profiles!.filter((p) => p.id !== id);
+    if (!rest.length) return;
+    const next = { ...cur, profiles: rest };
+    await this.saveActionBars(cur.activeProfileId === id ? activateProfile(next, rest[0].id) : next);
   }
 
   /** Stores the setup as-is (keeps updatedAt / syncedAt) without firing the sync hook. */
@@ -320,16 +353,19 @@ function mergeActionBars(stored: Partial<ActionBarSetup>): ActionBarSetup {
     const s = stored.presets?.find((x) => x.id === p.id);
     return s ? { ...p, ...s, slots: Array.from({ length: p.slots.length }, (_, i) => s.slots?.[i] ?? null) } : p;
   });
-  return {
+  return snapshotActiveProfile({
     presets,
     positions: d.positions.map((p, i) => stored.positions?.[i] ?? p),
     bindings: { ...d.bindings, ...(stored.bindings ?? {}) },
     slotKeybinds: d.slotKeybinds.map((row, p) => row.map((kb, i) => (stored.slotKeybinds?.[p] ? stored.slotKeybinds[p][i] ?? null : kb))),
     weaponKeybinds: { ...(stored.weaponKeybinds ?? {}) },
+    actionKeybinds: { ...(d.actionKeybinds ?? {}), ...(stored.actionKeybinds ?? {}) },
     layout: stored.layout,
+    profiles: stored.profiles?.map((p) => ({ ...p })),
+    activeProfileId: stored.activeProfileId,
     updatedAt: stored.updatedAt,
     syncedAt: stored.syncedAt,
-  };
+  });
 }
 
 /** Older builds stored `queueWindowTicks` (1..3) instead of the in-game on/off setting. */

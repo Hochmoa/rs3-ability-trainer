@@ -6,7 +6,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DataService, Entity, SPEC_KEY } from '../../core/data.service';
 import { applyWield, equip, unequip } from '../../core/equipment';
 import { keybindFromEvent, keybindKey, keybindLabel } from '../../core/keybind.util';
-import { AttackPattern, BAR_POSITIONS, BarShape, barLayout, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, EquipSlot, ItemRef, Loadout, PrayerStats, Prebuild, STYLES4, Settings, StepResult, Style4, WeaponSpec, emptyPrebuild, entityKey, isStyle4, loadoutWeapons, loadoutWield, parseEntityKey, prebuildIsEmpty, visiblePresets, RotationStep } from '../../core/models';
+import { AttackPattern, BAR_POSITIONS, BarShape, barLayout, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, EquipSlot, ItemRef, Loadout, PrayerStats, Prebuild, Rotation, STYLES4, Settings, StepResult, Style4, WeaponSpec, emptyPrebuild, entityKey, isStyle4, loadoutWeapons, loadoutWield, parseEntityKey, prebuildIsEmpty, visiblePresets, RotationStep } from '../../core/models';
 import { StorageService } from '../../core/storage.service';
 import { resolveLoadout } from '../../engine/loadout-resolver';
 import { BUFF_BY_ID, ruleFor, stackMax, stackName } from '../../engine/rules';
@@ -549,7 +549,39 @@ export class Train implements OnDestroy {
       if (this.selectedId() && rotations.some((r) => r.id === this.selectedId())) return;
       const pick = rotations.find((r) => r.id === wanted) ?? rotations[0];
       this.selectedId.set(pick ? pick.id : null);
+      if (pick && pick.id === wanted) void this.linkPreset(pick);
     });
+  }
+
+  /** Rotation dropdown: a rotation from a PvME preset brings its loadout and bar setup along. */
+  pickRotation(id: string): void {
+    this.selectedId.set(id);
+    const r = this.storage.rotations().find((x) => x.id === id);
+    if (r) void this.linkPreset(r);
+  }
+
+  pickLoadout(id: string): void {
+    void this.storage.setActiveLoadout(id);
+  }
+
+  pickBars(id: string): void {
+    void this.storage.switchBarProfile(id);
+  }
+
+  private async linkPreset(r: Rotation): Promise<void> {
+    if (!r.presetId) return;
+    const loadout = this.storage.loadouts().find((l) => l.presetId === r.presetId);
+    const bars = this.storage.barProfiles().find((p) => p.presetId === r.presetId);
+    const switched: string[] = [];
+    if (loadout && loadout.id !== this.storage.activeLoadoutId()) {
+      await this.storage.setActiveLoadout(loadout.id);
+      switched.push('loadout "' + loadout.name + '"');
+    }
+    if (bars && bars.id !== this.storage.activeBarProfileId()) {
+      await this.storage.switchBarProfile(bars.id);
+      switched.push('bars "' + bars.name + '"');
+    }
+    if (switched.length) this.toast.show('Switched to ' + switched.join(' and ') + ' for this preset.');
   }
 
   ngOnDestroy(): void {

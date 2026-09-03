@@ -160,6 +160,8 @@ export interface Rotation {
   name: string;
   steps: RotationStep[];
   updatedAt: number;
+  /** PvME boss preset this came from (presets.json id) – the Train page switches loadout and bars along with it */
+  presetId?: string;
   /** visible in the online explorer (missing = true) */
   isPublic?: boolean;
   /** origin when copied from the explorer */
@@ -391,6 +393,8 @@ export function sameRef(a: ItemRef | null | undefined, b: ItemRef | null | undef
 export interface Loadout {
   id: string;
   name: string;
+  /** PvME boss preset this came from (presets.json id) */
+  presetId?: string;
   /** start of a training session, 0..100 */
   startAdrenaline: number;
   /** worn items per slot */
@@ -521,6 +525,48 @@ export interface ActionBarSetup {
   actionKeybinds?: Record<string, Keybind | null>;
   /** on-screen arrangement of the 5 positions (missing = all wide, in order) */
   layout?: BarLayout;
+  /**
+   * Named bar setups ("Rasial Necromancy", "Zamorak Ranged"): each holds its own presets, positions, style
+   * bindings and keys. The top-level fields are always the active profile; switching swaps them.
+   */
+  profiles?: BarProfile[];
+  activeProfileId?: string;
+}
+
+/** the switchable part of the action bar setup */
+export type BarProfileData = Pick<ActionBarSetup, 'presets' | 'positions' | 'bindings' | 'slotKeybinds' | 'weaponKeybinds' | 'actionKeybinds' | 'layout'>;
+
+export interface BarProfile extends BarProfileData {
+  id: string;
+  name: string;
+  /** PvME boss preset this came from (presets.json id) */
+  presetId?: string;
+}
+
+export const DEFAULT_BAR_PROFILE_ID = 'default';
+
+/** deep copy of the switchable fields of a setup */
+export function profileData(s: BarProfileData): BarProfileData {
+  return structuredClone({ presets: s.presets, positions: s.positions, bindings: s.bindings, slotKeybinds: s.slotKeybinds, weaponKeybinds: s.weaponKeybinds, actionKeybinds: s.actionKeybinds, layout: s.layout });
+}
+
+/** Writes the top-level fields into the active profile (creating "Default" when there is none), so the list is always current. */
+export function snapshotActiveProfile(s: ActionBarSetup): ActionBarSetup {
+  const profiles = (s.profiles ?? []).map((p) => ({ ...p }));
+  const id = s.activeProfileId && profiles.some((p) => p.id === s.activeProfileId) ? s.activeProfileId : profiles[0]?.id ?? DEFAULT_BAR_PROFILE_ID;
+  const i = profiles.findIndex((p) => p.id === id);
+  const snap = { ...(i >= 0 ? profiles[i] : { id, name: 'Default' }), ...profileData(s) };
+  if (i >= 0) profiles[i] = snap;
+  else profiles.push(snap);
+  return { ...s, profiles, activeProfileId: id };
+}
+
+/** The setup with `profile` as the active one (the previous active one is snapshotted first). */
+export function activateProfile(s: ActionBarSetup, profileId: string): ActionBarSetup {
+  const snapped = snapshotActiveProfile(s);
+  const p = snapped.profiles!.find((x) => x.id === profileId);
+  if (!p) return snapped;
+  return { ...snapped, ...profileData(p), activeProfileId: p.id, updatedAt: Date.now() };
 }
 
 const MAIN_BAR_DEFAULT_CODES = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0', 'Minus', 'Equal'];
@@ -535,7 +581,7 @@ export function defaultActionBars(): ActionBarSetup {
     );
   }
   const none = () => Array(BAR_POSITIONS).fill(null) as (number | null)[];
-  return {
+  const setup: ActionBarSetup = {
     presets,
     positions: [1, 2, 3, 4, 5],
     bindings: { Melee: none(), Ranged: none(), Magic: none(), Necromancy: none() },
@@ -543,6 +589,7 @@ export function defaultActionBars(): ActionBarSetup {
     weaponKeybinds: {},
     actionKeybinds: { 'target-cycle': null },
   };
+  return snapshotActiveProfile(setup);
 }
 
 /** Preset ids visible at the 5 positions while wielding `style`. */

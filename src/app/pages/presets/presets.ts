@@ -3,7 +3,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { DataService, GearView } from '../../core/data.service';
 import { parsePvme } from '../../core/pvme';
-import { ActionBarSetup, BAR_POSITIONS, BAR_SLOTS, EquipSlot, Equipment, INVENTORY_SIZE, ItemRef, Loadout, Rotation, RotationStep, SPEC_KEY, Style4, entityKey, isStyle4, newLoadout } from '../../core/models';
+import { BAR_POSITIONS, BAR_SLOTS, BarProfileData, EquipSlot, Equipment, INVENTORY_SIZE, ItemRef, Loadout, Rotation, RotationStep, SPEC_KEY, Style4, defaultActionBars, entityKey, isStyle4, newLoadout, profileData } from '../../core/models';
 import { StorageService } from '../../core/storage.service';
 import { DialogService } from '../../shared/dialog';
 import { GearTip } from '../../shared/tooltip';
@@ -102,7 +102,7 @@ export class Presets {
 
   async load(p: BossPreset): Promise<void> {
     const ok = await this.dialogs.confirm(
-      'Add "' + p.title + '"?\n\nThis creates a new loadout with the PvME gear, adds ' + p.rotations.length + ' rotations and puts the abilities they use on free action bars bound to ' + p.style + '. Nothing of yours is replaced.',
+      'Add "' + p.title + '"?\n\nThis creates a loadout with the PvME gear, ' + p.rotations.length + ' rotations and an action bar setup of its own with the abilities they use (your keys are kept). Nothing of yours is replaced – pick the rotation on the Train page and loadout and bars switch with it.',
       { ok: 'Add', title: p.boss + ' – ' + p.style },
     );
     if (!ok) return;
@@ -110,6 +110,7 @@ export class Presets {
     try {
       // loadout: re-slot every item (a two-hander sits in the main-hand slot of the PvME preset)
       const l: Loadout = newLoadout(p.title.slice(0, 40));
+      l.presetId = p.id;
       const eq: Equipment = {};
       for (const ref of Object.values(p.equipment)) {
         if (!ref) continue;
@@ -129,10 +130,10 @@ export class Presets {
       // rotations
       const parsed = this.parse(p);
       const now = Date.now();
-      const rotations: Rotation[] = parsed.map((r, i) => ({ id: crypto.randomUUID(), name: p.boss + ' – ' + r.name, steps: r.steps, updatedAt: now - i }));
+      const rotations: Rotation[] = parsed.map((r, i) => ({ id: crypto.randomUUID(), name: p.boss + ' – ' + r.name, steps: r.steps, updatedAt: now - i, presetId: p.id }));
       for (const r of rotations) await this.storage.saveRotation(r);
 
-      // action bars: every ability / prayer / potion the rotations use, 14 per free bar, bound to the style
+      // action bars: an own bar setup for the preset – the current keys, empty bars, the abilities of the rotations on bars 1..5 bound to the style
       const keys: string[] = [];
       for (const r of parsed) {
         for (const s of r.steps) {
@@ -141,26 +142,26 @@ export class Presets {
           if (!keys.includes(key)) keys.push(key);
         }
       }
-      const setup: ActionBarSetup = structuredClone(this.storage.actionBars());
-      const used = new Set<number>();
-      setup.positions.forEach((id) => id !== null && used.add(id));
-      for (const b of Object.values(setup.bindings)) b.forEach((id) => id !== null && used.add(id));
-      const free = setup.presets.filter((pr) => !used.has(pr.id) && !pr.slots.some(Boolean));
+      const cur = this.storage.actionBars();
+      const fresh = defaultActionBars();
+      const setup: BarProfileData = { ...profileData(fresh), slotKeybinds: structuredClone(cur.slotKeybinds), weaponKeybinds: structuredClone(cur.weaponKeybinds), actionKeybinds: structuredClone(cur.actionKeybinds), layout: cur.layout };
       const style: Style4 = isStyle4(p.style) ? p.style : 'Melee';
       const barsNeeded = Math.min(BAR_POSITIONS, Math.ceil(keys.length / BAR_SLOTS));
       let placed = 0;
-      for (let b = 0; b < barsNeeded && b < free.length; b++) {
-        const preset = free[b];
+      for (let b = 0; b < barsNeeded; b++) {
+        const preset = setup.presets[b];
         preset.name = (p.boss.split(',')[0] + ' ' + p.style + ' ' + (b + 1)).slice(0, 30);
         for (let i = 0; i < BAR_SLOTS && placed < keys.length; i++, placed++) {
           const { kind, id } = splitKey(keys[placed]);
           preset.slots[i] = { kind, id } as RotationStep;
         }
+        setup.positions[b] = preset.id;
         setup.bindings[style][b] = preset.id;
       }
-      await this.storage.saveActionBars(setup);
+      const profileId = await this.storage.addBarProfile(p.title.slice(0, 40), setup, p.id);
+      await this.storage.switchBarProfile(profileId);
       const left = keys.length - placed;
-      this.toast.show('Added loadout "' + l.name + '", ' + rotations.length + ' rotations and ' + Math.min(barsNeeded, free.length) + ' action bars' + (left > 0 ? ' (' + left + ' abilities did not fit – no free bars)' : ''));
+      this.toast.show('Added loadout "' + l.name + '", ' + rotations.length + ' rotations and the bar setup "' + l.name + '" (' + barsNeeded + ' bars)' + (left > 0 ? ' – ' + left + ' abilities did not fit on 5 bars' : ''));
       void this.router.navigate(['/'], { queryParams: { rotation: rotations[0]?.id } });
     } finally {
       this.busy.set(null);

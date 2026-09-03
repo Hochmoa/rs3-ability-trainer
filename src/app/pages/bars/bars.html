@@ -2,6 +2,22 @@
 @if (!data.loaded()) {
   <p class="muted">Loading…</p>
 } @else {
+  <div class="panel head profiles">
+    <div class="chips">
+      <span class="muted small">Bar setup</span>
+      @for (p of storage.barProfiles(); track p.id) {
+        <button class="chip" [class.active]="p.id === storage.activeBarProfileId()" (click)="switchProfile(p.id)">{{ p.name }}</button>
+      }
+      <button class="btn btn-sm" (click)="newProfile()" title="Empty bars, your keys">New</button>
+      <button class="btn btn-sm" (click)="duplicateProfile()">Duplicate</button>
+      <button class="btn btn-sm danger" (click)="deleteProfile()" [disabled]="storage.barProfiles().length <= 1">Delete</button>
+      <label class="name">
+        Name
+        <input type="text" [ngModel]="activeProfile()?.name ?? ''" (ngModelChange)="renameProfile($event)" maxlength="40" />
+      </label>
+    </div>
+    <p class="muted small">A bar setup holds all 18 presets, the positions, the style bindings and the keys. Switch it on the Train page before you practise; PvME boss presets bring their own.</p>
+  </div>
   <div class="layout">
     <div class="panel presets">
       <h2>Presets</h2>
