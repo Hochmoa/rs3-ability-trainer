@@ -1,4 +1,4 @@
-import { AbilityType, DEFAULT_LOADOUT, EntityKind, Loadout, StepResult } from '../core/models';
+import { AbilityType, DEFAULT_LOADOUT, EntityKind, Loadout, StepResult, Style4, WeaponType, isStyle4 } from '../core/models';
 
 /** One RS3 game tick / server cycle. */
 export const TICK_MS = 600;
@@ -12,7 +12,11 @@ export interface EngineConfig {
   abilityQueueing: boolean;
   loop: boolean;
   loadout: Loadout;
+  /** wielded weapon at session start and the weapon type per style (2h / dual wield / one-hand + shield) */
+  weaponSetup?: { start: Style4; types: Record<Style4, WeaponType> };
 }
+
+export type UsableReason = 'ok' | 'weapon' | 'equipment' | 'adrenaline' | 'cooldown';
 
 /** A status effect an entity applies when it casts / activates. */
 export interface EngineBuff {
@@ -42,6 +46,12 @@ export interface EngineEntity {
   sharedCooldown?: string;
   adrenalineOverTime?: { amount: number; ticks: number };
   buffs: EngineBuff[];
+  /** abilities: combat style ("Melee", ..., "Defence", "Constitution") */
+  style?: string;
+  /** abilities: wiki equipment requirement ("Any", "Two-handed", "Dual wield", "Shield", ...) */
+  equipment?: string;
+  /** weapon-switch entities: the style wielded after the switch */
+  weapon?: { style: Style4 };
 }
 
 export interface ActiveBuff extends EngineBuff {
@@ -67,6 +77,10 @@ export type EngineEvent =
   | { kind: 'on-cooldown'; key: string; readyInTicks: number }
   /** off-GCD steps skipped because the next GCD ability cast first */
   | { kind: 'missed'; keys: string[] }
+  /** ability needs another weapon style / weapon type – ignored like in the game */
+  | { kind: 'wrong-weapon'; key: string; reason: 'weapon' | 'equipment' }
+  /** weapon switched */
+  | { kind: 'weapon'; style: Style4 }
   | { kind: 'finished' };
 
 interface PendingInput {
@@ -111,6 +125,7 @@ export class TrainerEngine {
   index = 0;
   castTick: number | null = null;
   adrenaline = 0;
+  weapon: Style4 = 'Melee';
   results: StepResult[] = [];
   buffs: ActiveBuff[] = [];
   /** Events since the last drain; the UI empties this array. */
@@ -141,6 +156,7 @@ export class TrainerEngine {
     this.t0 = now;
     this.index = 0;
     this.castTick = null;
+    this.weapon = this.config.weaponSetup?.start ?? 'Melee';
     this.adrenaline = Math.max(0, Math.min(this.maxAdrenaline, this.config.loadout?.startAdrenaline ?? 0));
     this.results = [];
     this.buffs = [];
@@ -222,6 +238,28 @@ export class TrainerEngine {
     return end === null ? 0 : Math.max(0, this.tickTime(end) - now);
   }
 
+  get weaponType(): WeaponType {
+    return this.config.weaponSetup?.types[this.weapon] ?? 'two-handed';
+  }
+
+  /** Why an entity could not be used at `tick` (weapon and equipment first, like the greyed-out bar in the game). */
+  usable(key: string, tick: number): UsableReason {
+    const e = this.catalog.get(key);
+    if (!e) return 'ok';
+    if (e.kind === 'ability') {
+      // utility abilities off the GCD (Surge, Escape, Dive) work with any weapon; only real casts need the style
+      if (e.gcd && e.style && isStyle4(e.style) && e.style !== this.weapon) return 'weapon';
+      const eq = (e.equipment ?? 'Any').toLowerCase();
+      const t = this.weaponType;
+      if (eq.startsWith('two-handed') && t !== 'two-handed') return 'equipment';
+      if (eq.startsWith('dual wield') && t !== 'dual-wield') return 'equipment';
+      if (eq.startsWith('shield') && t !== 'shield') return 'equipment';
+    }
+    if (this.cooldownLeft(key, tick) > 0) return 'cooldown';
+    if (e.adrenaline < 0 && this.adrenaline < -e.adrenaline) return 'adrenaline';
+    return 'ok';
+  }
+
   /** Ticks until `key` is off its own / shared cooldown at `tick` (0 = ready). */
   cooldownLeft(key: string, tick: number): number {
     const e = this.catalog.get(key);
@@ -265,6 +303,12 @@ export class TrainerEngine {
     const entity = this.catalog.get(input.key);
     if (!entity) return;
     const tickP = this.tickOf(input.arrival);
+    const gear = this.usable(entity.key, tickP);
+    if (gear === 'weapon' || gear === 'equipment') {
+      this.wrong++;
+      this.events.push({ kind: 'wrong-weapon', key: entity.key, reason: gear });
+      return;
+    }
     if (!entity.gcd) {
       this.handleOffGcd(entity, tickP);
       return;
@@ -375,6 +419,14 @@ export class TrainerEngine {
   private cast(): void {
     const p = this.pending!;
     const entity = this.catalog.get(p.key)!;
+    // the weapon may have changed since the press: the queued ability just fails, like in the game
+    const gear = this.usable(entity.key, p.tick);
+    if (gear === 'weapon' || gear === 'equipment') {
+      this.pending = p.bypassed ? { ...p.bypassed, tick: p.tick } : null;
+      this.wrong++;
+      this.events.push({ kind: 'wrong-weapon', key: entity.key, reason: gear });
+      return;
+    }
     // queueing on: wait until adrenaline and cooldown allow it
     const cd = this.cooldownLeft(entity.key, p.tick);
     const need = entity.adrenaline < 0 ? -entity.adrenaline : 0;
@@ -438,6 +490,10 @@ export class TrainerEngine {
   /** Apply the effects of an entity that just cast / activated at `tick`. */
   private activate(entity: EngineEntity, tick: number): void {
     const l = this.config.loadout ?? DEFAULT_LOADOUT;
+    if (entity.weapon) {
+      this.weapon = entity.weapon.style;
+      this.events.push({ kind: 'weapon', style: entity.weapon.style });
+    }
     if (entity.cooldownTicks > 0) this.readyTick.set(entity.key, tick + entity.cooldownTicks);
     if (entity.sharedCooldown) this.readyTick.set('shared:' + entity.sharedCooldown, tick + entity.cooldownTicks);
 

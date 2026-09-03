@@ -27,6 +27,13 @@ Live at **https://rs3trainer.hochware.com** (GitHub Pages).
   durations; prayers stay until the session ends.
 - Hover any icon for the full wiki data: adrenaline, cooldown, damage range and hits, target, duration, description,
   buffs applied.
+- **Action bars like in the game**: five visible bars (main + additional 1–4, 14 slots each), 18 presets you fill by
+  drag & drop on the *Action bars* page, positions and *action bar binding* per weapon style (Melee / Ranged /
+  Magic / Necromancy → which position shows which preset). Keybinds belong to position + slot (*Keybinds* page),
+  plus one key per weapon switch. While training, the slot of the next step glows, GCD abilities get the cooldown
+  overlay, abilities you can't use are greyed out (wrong weapon, equipment requirement, adrenaline, cooldown).
+- **Weapon switches** are rotation steps (catalog tab "Weapons"); switching is instant. Each style has one weapon
+  whose type (two-handed / dual wield / one-handed + shield) decides which abilities are usable.
 - Two bars above the queue show the tick (0.6 s) and the GCD (1.8 s) progress, a third one the adrenaline.
 - Rotations, keybinds (with Ctrl/Shift/Alt), loadout, settings and session results are stored in IndexedDB after you
   accept the storage banner.

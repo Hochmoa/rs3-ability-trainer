@@ -1,0 +1,30 @@
+[
+ {
+  "id": "melee",
+  "name": "Melee weapon",
+  "style": "Melee",
+  "description": "Melee weapon (main hand)",
+  "icon": "assets/weapons/melee.png"
+ },
+ {
+  "id": "ranged",
+  "name": "Ranged weapon",
+  "style": "Ranged",
+  "description": "Ranged weapon (main hand)",
+  "icon": "assets/weapons/ranged.png"
+ },
+ {
+  "id": "magic",
+  "name": "Magic weapon",
+  "style": "Magic",
+  "description": "Magic weapon (main hand)",
+  "icon": "assets/weapons/magic.png"
+ },
+ {
+  "id": "necromancy",
+  "name": "Necromancy weapon",
+  "style": "Necromancy",
+  "description": "Necromancy weapon (main hand)",
+  "icon": "assets/weapons/necromancy.png"
+ }
+]

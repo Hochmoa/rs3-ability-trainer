@@ -10,7 +10,7 @@ import { SyncService } from '../../core/sync.service';
 import { AbilityIcon } from '../../shared/ability-icon';
 import { EntityTip } from '../../shared/tooltip';
 
-const TABS = [...STYLES, 'Prayers', 'Curses', 'Special'] as const;
+const TABS = [...STYLES, 'Prayers', 'Curses', 'Special', 'Weapons'] as const;
 type Tab = (typeof TABS)[number];
 const TYPE_ORDER: Record<string, number> = { Basic: 0, Enhanced: 1, Threshold: 2, Ultimate: 3, Special: 4 };
 
@@ -57,9 +57,10 @@ export class Rotations {
   }
 
   subtitle(e: Entity): string {
-    if (e.ability) return e.ability.type + (e.ability.triggersGcd ? '' : ' · no GCD');
+    if (e.ability) return e.ability.basicAttack ? 'auto-attack' : e.ability.type + (e.ability.triggersGcd ? '' : ' · no GCD');
     if (e.prayer) return 'level ' + e.prayer.level;
     if (e.special) return '+' + (e.special.adrenaline || e.special.adrenalineOverTime) + '% adrenaline';
+    if (e.weapon) return 'weapon switch · no GCD';
     return '';
   }
 

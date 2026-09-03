@@ -1,7 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 import { IDBPDatabase, deleteDB, openDB } from 'idb';
 import { Subject } from 'rxjs';
-import { DEFAULT_LOADOUT, DEFAULT_SETTINGS, Keybind, Loadout, Rotation, RotationStep, Session, Settings } from './models';
+import { ActionBarSetup, DEFAULT_LOADOUT, DEFAULT_SETTINGS, Keybind, Loadout, Rotation, RotationStep, Session, Settings, defaultActionBars } from './models';
 
 const DB_NAME = 'rs3trainer';
 const CONSENT_KEY = 'rs3trainer.consent';
@@ -16,6 +16,8 @@ export class StorageService {
   readonly ready = signal(false);
   readonly settings = signal<Settings>({ ...DEFAULT_SETTINGS });
   readonly loadout = signal<Loadout>({ ...DEFAULT_LOADOUT });
+  /** action bar presets, positions, style bindings, slot + weapon keybinds */
+  readonly actionBars = signal<ActionBarSetup>(defaultActionBars());
   /** entity key ("ability:sever", "prayer:turmoil", ...) → keybind */
   readonly keybinds = signal<Record<string, Keybind>>({});
   readonly rotations = signal<Rotation[]>([]);
@@ -57,6 +59,8 @@ export class StorageService {
       if (settings) this.settings.set(migrateSettings(settings));
       const loadout = await db.get('settings', 'loadout');
       if (loadout) this.loadout.set({ ...DEFAULT_LOADOUT, ...loadout });
+      const bars = await db.get('settings', 'actionbars');
+      if (bars) this.actionBars.set(mergeActionBars(bars));
 
       const keys = (await db.getAllKeys('keybinds')) as string[];
       const values = (await db.getAll('keybinds')) as Keybind[];
@@ -90,6 +94,7 @@ export class StorageService {
     const db = await this.open();
     await db.put('settings', this.settings(), 'settings');
     await db.put('settings', this.loadout(), 'loadout');
+    await db.put('settings', this.actionBars(), 'actionbars');
     for (const [id, kb] of Object.entries(this.keybinds())) await db.put('keybinds', kb, id);
     for (const r of this.rotations()) await db.put('rotations', r);
   }
@@ -102,6 +107,11 @@ export class StorageService {
   async saveLoadout(l: Loadout): Promise<void> {
     this.loadout.set({ ...l });
     if (this.consent()) await (await this.open()).put('settings', this.loadout(), 'loadout');
+  }
+
+  async saveActionBars(setup: ActionBarSetup): Promise<void> {
+    this.actionBars.set(structuredClone(setup));
+    if (this.consent()) await (await this.open()).put('settings', this.actionBars(), 'actionbars');
   }
 
   async setKeybind(key: string, kb: Keybind | null): Promise<void> {
@@ -169,9 +179,28 @@ export class StorageService {
     this.consent.set(false);
     this.settings.set({ ...DEFAULT_SETTINGS });
     this.loadout.set({ ...DEFAULT_LOADOUT });
+    this.actionBars.set(defaultActionBars());
     this.keybinds.set({});
     this.rotations.set([]);
   }
+}
+
+/** Fills anything a stored setup lacks (older builds, new fields) with defaults. */
+function mergeActionBars(stored: Partial<ActionBarSetup>): ActionBarSetup {
+  const d = defaultActionBars();
+  const presets = d.presets.map((p) => {
+    const s = stored.presets?.find((x) => x.id === p.id);
+    return s ? { ...p, ...s, slots: Array.from({ length: p.slots.length }, (_, i) => s.slots?.[i] ?? null) } : p;
+  });
+  return {
+    presets,
+    positions: d.positions.map((p, i) => stored.positions?.[i] ?? p),
+    bindings: { ...d.bindings, ...(stored.bindings ?? {}) },
+    slotKeybinds: d.slotKeybinds.map((row, p) => row.map((kb, i) => (stored.slotKeybinds?.[p] ? stored.slotKeybinds[p][i] ?? null : kb))),
+    weaponKeybinds: { ...d.weaponKeybinds, ...(stored.weaponKeybinds ?? {}) },
+    weapons: { ...d.weapons, ...(stored.weapons ?? {}) },
+    startWeapon: stored.startWeapon ?? d.startWeapon,
+  };
 }
 
 /** Older builds stored `queueWindowTicks` (1..3) instead of the in-game on/off setting. */
