@@ -172,6 +172,8 @@ export type EngineEvent =
   | { kind: 'wrong-book'; id: string; book: PrayerBook }
   /** enemy attack landed */
   | { kind: 'attack'; style: Style4; tick: number; prayed: boolean; needed: string }
+  /** an ability with a running buff was pressed again and released it (Reprisal) */
+  | { kind: 'recast'; key: string; tick: number }
   | { kind: 'missed'; keys: string[] }
   /** a hit landed on the target (key = source ability / "spirit:<name>") */
   | { kind: 'hit'; key: string; amount: number; crit: boolean; dot: boolean; tick: number }
@@ -531,7 +533,12 @@ export class TrainerEngine {
       return { need: c, cost: c };
     }
     if (this.isThreshold(e, rule)) {
-      return { need: this.hasBuff('limitless') ? 15 : 50, cost: 15 };
+      let need = 50;
+      for (const b of this.buffs) {
+        const n = BUFF_BY_ID.get(b.id)?.thresholdNeed;
+        if (n !== undefined) need = Math.min(need, n);
+      }
+      return { need, cost: 15 };
     }
     let cost = rule?.adrenaline !== undefined ? Math.max(0, -rule.adrenaline) : e.adrenaline < 0 ? -e.adrenaline : 0;
     if (rule?.cost?.cost !== undefined) cost = rule.cost.cost;
@@ -651,6 +658,11 @@ export class TrainerEngine {
     const gcdEnd = this.gcdEndTick;
     const gcdRunning = gcdEnd !== null && tickP < gcdEnd && tickP > (this.castTick ?? -1);
     const rule = this.ruleOf(entity);
+    if (rule?.recast && this.hasBuff(rule.recast.whileBuff)) {
+      this.removeBuff(rule.recast.whileBuff);
+      this.events.push({ kind: 'recast', key: entity.key, tick: tickP });
+      return;
+    }
     // Bladed Dive / Provoke: off the GCD only while one runs, otherwise a normal basic
     if ((!entity.gcd && !rule?.offGcdNoGain) || rule?.offGcd || (rule?.offGcdNoGain && gcdRunning)) {
       this.handleOffGcd(entity, tickP, gcdRunning);
@@ -714,6 +726,8 @@ export class TrainerEngine {
   /** Why an entity cannot cast at `tick` (cooldown, adrenaline, rule requirement), or null. */
   private blocker(entity: EngineEntity, tick: number): EngineEvent | null {
     if (entity.kind === 'special' && this.config.hasItem && !this.config.hasItem(entity.key)) return { kind: 'requirement', key: entity.key, text: 'not in your inventory' };
+    const lock = this.buffs.find((b) => BUFF_BY_ID.get(b.id)?.locksAbilities);
+    if (lock && entity.kind !== 'prayer') return { kind: 'requirement', key: entity.key, text: 'no abilities while ' + lock.name + ' stuns you' };
     const cd = this.cooldownLeft(entity.key, tick);
     if (cd > 0) return { kind: 'on-cooldown', key: entity.key, readyInTicks: cd };
     const req = this.requirementFailure(entity, tick);
@@ -909,6 +923,10 @@ export class TrainerEngine {
       this.events.push({ kind: 'prayer', id, on: t.on, replaced: t.replaced });
       return;
     }
+    if (this.channel && !this.channel.cancelled && tick < this.channel.endTick && (entity.weapon || entity.kind === 'special')) {
+      const chRule = this.ruleOf(this.catalog.get(this.channel.key)!);
+      if (chRule?.channel?.cancelledBy?.includes(entity.weapon ? 'weapon' : 'special')) this.cancelChannel();
+    }
     if (entity.weapon) {
       this.switchWeapon(entity.weapon);
       return;
@@ -1028,6 +1046,7 @@ export class TrainerEngine {
     const idleTicks = tick - this.lastAttackTick;
     this.castFlags = new Set();
     if (rule?.stages && stage >= rule.stages.length) this.castFlags.add('last-stage');
+    const stacksAtCast = rule?.damagePerStack ? this.stack(rule.damagePerStack.stack) : 0;
     for (const d of rule?.damageRules ?? []) if (d.perStackAtCast) castMult *= 1 + d.perStackAtCast.mult * this.stack(d.perStackAtCast.stack);
 
     // effects
@@ -1049,10 +1068,15 @@ export class TrainerEngine {
     // hits / channel (a cast inside the GCD that gives no adrenaline – Bladed Dive – deals no damage either)
     const channel = opt.noGain ? undefined : channelSpecEarly;
     const bleed = opt.noGain ? undefined : bleedEarly;
-    let hits = opt.noGain ? undefined : this.loadout.hitsOverrides[entity.id] ?? rule?.hits ?? acting.hits ?? (this.isDamaging(acting, rule) ? [0] : undefined);
+    let hits = opt.noGain || rule?.noDamage ? undefined : this.loadout.hitsOverrides[entity.id] ?? rule?.hits ?? acting.hits ?? (this.isDamaging(acting, rule) ? [0] : undefined);
     if (rule?.hitsPerStack) hits = Array(Math.max(1, stacksBefore)).fill(0);
     const override = this.loadout.damageOverrides[entity.id];
-    let damage = override ?? rule?.stages?.[Math.min(stage, rule.stages.length) - 1]?.damage ?? (acting.damageMin !== undefined && acting.damageMax !== undefined ? { min: acting.damageMin, max: acting.damageMax } : null);
+    let damage: { min: number; max: number } | null = override ?? rule?.stages?.[Math.min(stage, rule.stages.length) - 1]?.damage ?? (acting.damageMin !== undefined && acting.damageMax !== undefined ? { min: acting.damageMin, max: acting.damageMax } : null);
+    if (rule?.damagePerStack) {
+      const n = stacksAtCast;
+      damage = n > 0 ? { min: rule.damagePerStack.min * n, max: rule.damagePerStack.max * n } : null;
+      if (damage && hits === undefined) hits = [0];
+    }
     if (damage && rule?.damageRamp) {
       const k = Math.max(0, Math.min(rule.damageRamp.maxTicks, idleTicks));
       damage = { min: damage.min + k * rule.damageRamp.perTick.min, max: damage.max + k * rule.damageRamp.perTick.max };
@@ -1063,9 +1087,12 @@ export class TrainerEngine {
     const flat = this.flatShare(acting.style, entity.id, false);
     const hitDamage = (i: number) => {
       const h = rule?.hitDamage?.[i];
-      const d = h ? { min: h.min, max: h.max } : damage;
+      let d = h ? { min: h.min, max: h.max } : damage;
       const m = channel?.damageMult;
-      return d && m !== undefined ? { min: d.min * m, max: d.max * m } : d;
+      if (d && m !== undefined) d = { min: d.min * m, max: d.max * m };
+      const ramp = channel?.damageRamp;
+      if (d && ramp) d = { min: d.min + i * ramp.min, max: d.max + i * ramp.max };
+      return d;
     };
     const hitWanted = (i: number) => {
       const w = rule?.hitDamage?.[i]?.when;
@@ -1150,11 +1177,11 @@ export class TrainerEngine {
       if (h.channel) {
         if (h.channel.cancelled) continue;
         if (ch?.adrenalinePerHit) {
-          if (this.adrenaline < ch.adrenalinePerHit) {
+          if (this.adrenaline < ch.adrenalinePerHit && !ch.continueWithoutAdrenaline) {
             this.cancelChannel();
             continue;
           }
-          this.addAdrenaline(-ch.adrenalinePerHit);
+          this.addAdrenaline(-Math.min(this.adrenaline, ch.adrenalinePerHit));
         }
         h.channel.hitsDone++;
       }
@@ -1282,6 +1309,7 @@ export class TrainerEngine {
       const spec = this.loadout.channelOverrides[h.entity.id] ?? h.rule?.channel ?? h.entity.channel;
       if (spec?.finalAddsPriorShare && h.index === h.total - 1) amount += spec.finalAddsPriorShare * h.channel.dealt;
     }
+    if (h.rule?.damagePerStack?.cap) amount = Math.min(amount, h.rule.damagePerStack.cap);
     const dealt = Math.floor(amount + 1e-6); // epsilon: 0.175 + 0.12 is 0.29499… in floating point
     if (h.channel) h.channel.dealt += dealt;
     this.applyDamage(h.key, dealt, crit, !!h.dot, h.tick);
@@ -1509,6 +1537,7 @@ export class TrainerEngine {
     if (r.buff && !this.hasBuff(r.buff)) return false;
     if (r.notBuff && this.hasBuff(r.notBuff)) return false;
     if (r.stackMin && this.stack(r.stackMin.stack) < r.stackMin.min) return false;
+    if (r.stackMax && this.stack(r.stackMax.stack) > r.stackMax.max) return false;
     if (r.anySpirit && this.spirits.size === 0) return false;
     if (r.spirit) {
       const s = this.spirits.get(r.spirit);
@@ -1518,7 +1547,7 @@ export class TrainerEngine {
     if (r.sequence && this.sequenceStep(r.sequence.group, tick) !== r.sequence.step) return false;
     if (r.adrenalineBelow !== undefined && this.adrenaline >= r.adrenalineBelow) return false;
     if (r.adrenalineMin !== undefined && this.adrenaline < r.adrenalineMin) return false;
-    if (r.notStunImmune && (this.hasBuff('anticipation') || this.hasBuff('freedom') || this.hasBuff('transfigure-immunity'))) return false;
+    if (r.notStunImmune && this.buffs.some((b) => BUFF_BY_ID.get(b.id)?.stunImmune)) return false;
     if (r.style && this.loadout.style !== r.style) return false;
     if (r.equipment) {
       const l = this.loadout;
@@ -1538,9 +1567,14 @@ export class TrainerEngine {
     const def = BUFF_BY_ID.get(id);
     // null = no timer (stacks, spirits until dismissed); unknown buffs default to one GCD
     let duration: number | null = durationOverride !== undefined ? durationOverride : def ? def.durationTicks : 3;
+    if (durationOverride === undefined && def?.durationByShieldTier) {
+      const t = def.durationByShieldTier;
+      const tier = this.loadout.shieldTier;
+      duration = t.base + (tier > 0 ? (t.bonusIfAny ?? 0) + Math.floor(tier / 10) * t.perTen : 0);
+    }
     if (duration !== null) {
       duration += this.loadout.buffDurationAdd[id] ?? 0;
-      duration = Math.round(duration * (this.loadout.buffDurationMult[id] ?? 1));
+      duration = Math.floor(duration * (this.loadout.buffDurationMult[id] ?? 1) + 1e-6);
     }
     const cap = def?.stacks ? this.stackCap(id as StackId) : Infinity;
     const existing = this.buff(id);
@@ -1720,8 +1754,8 @@ export class TrainerEngine {
     for (const r of rule?.cooldownRules ?? []) {
       if (this.conditionMet(r.when, tick, 0)) ticks = r.ticks;
     }
-    const mult = this.loadout.cooldownMult[acting.id];
-    if (mult !== undefined) ticks = Math.round(ticks * mult);
+    const mult = this.loadout.cooldownMult[acting.id]; // applied with floor, like the game's perk pages
+    if (mult !== undefined) ticks = Math.floor(ticks * mult + 1e-6);
     return ticks;
   }
 

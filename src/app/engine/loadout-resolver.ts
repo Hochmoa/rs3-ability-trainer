@@ -124,6 +124,7 @@ export function resolveLoadout(l: Loadout, data: LoadoutData): ResolvedLoadout {
   r.style = main?.style ?? null;
   r.has2h = !!two;
   r.hasShield = off?.slot === 'shield';
+  r.shieldTier = off?.slot === 'shield' ? off.tier : off?.role === 'defender' ? off.tier / 2 : 0;
   r.hasDefender = off?.role === 'defender';
   r.hasConduit = main?.role === 'siphon' && off?.role === 'conduit';
   r.weaponType = main ? weaponType(main) : null;

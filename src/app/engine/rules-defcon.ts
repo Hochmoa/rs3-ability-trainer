@@ -42,8 +42,8 @@ export const DEFCON_RULES: AbilityRule[] = [
   },
   {
     ability: 'preparation',
-    requires: [{ text: 'needs a shield', equipment: 'shield' }],
-    notes: ['Shield only, 16 ticks: every attack received reduces the Resonance/Divert cooldown by 5 ticks (' + W + 'Preparation )', 'Preparation perk: +15% duration and cooldown per rank (' + W + 'Preparation_(perk) )'],
+    requires: [{ text: 'needs a shield or defender', equipment: 'defender-or-shield' }],
+    notes: ['Shield or defender, 16 ticks: every attack received reduces the Resonance/Divert cooldown by 5 ticks (' + W + 'Preparation )', 'Preparation perk: +15% duration and cooldown per rank (' + W + 'Preparation_(perk) )'],
     onCast: [{ kind: 'buff', id: 'preparation' }],
   },
   {
@@ -62,32 +62,33 @@ export const DEFCON_RULES: AbilityRule[] = [
   {
     ability: 'reflect',
     cost: THRESHOLD,
+    requires: [{ text: 'needs a shield or defender', equipment: 'defender-or-shield' }],
     notes: ['Threshold: halves damage taken and reflects 50% for 16 ticks; without a target it costs nothing (' + W + 'Reflect )'],
     onCast: [{ kind: 'buff', id: 'reflect' }],
   },
   {
     ability: 'debilitate',
     cost: THRESHOLD,
-    notes: ['Threshold: the target deals 50% less damage; duration scales with the shield tier (T90 shield 23 ticks) (' + W + 'Debilitate )'],
+    notes: ['Threshold: the target deals 50% less damage; duration by shield tier – none 13 ticks, T10 15 … T90 23, a defender counts half its tier (T90 defender 18) (' + W + 'Debilitate )'],
     onHit: [{ kind: 'buff', id: 'debilitate' }],
   },
   {
     ability: 'immortality',
-    requires: [{ text: 'needs a shield', equipment: 'shield' }],
-    notes: ['Ultimate, shield only: damage taken -25% for 50 ticks and a one-time revival (' + W + 'Immortality )'],
+    requires: [{ text: 'needs a shield or defender', equipment: 'defender-or-shield' }],
+    notes: ['Ultimate, shield or defender: damage taken -25% for 50 ticks and a one-time revival (' + W + 'Immortality )'],
     onCast: [{ kind: 'buff', id: 'immortality' }],
   },
   {
     ability: 'rejuvenate',
     sharedCooldown: 'rejuvenate',
-    requires: [{ text: 'needs a shield', equipment: 'shield' }],
-    notes: ['Ultimate, shield only: heals 40% over 17 ticks; shares its 500-tick cooldown with Guthix\'s Blessing and Ice Asylum (Brief Respite -5% per rank) (' + W + 'Rejuvenate )'],
+    requires: [{ text: 'needs a shield or defender', equipment: 'defender-or-shield' }],
+    notes: ['Ultimate, shield or defender: heals 40% over 17 ticks; shares its 500-tick cooldown with Guthix\'s Blessing and Ice Asylum (Brief Respite -5% per rank) (' + W + 'Rejuvenate )'],
     onCast: [{ kind: 'buff', id: 'rejuvenate' }],
   },
   {
     ability: 'barricade',
     requires: [{ text: 'needs a shield or defender', equipment: 'defender-or-shield' }],
-    notes: ['Ultimate: blocks all damage for 8 + tier/10 ticks (T90: 17); Turtling +10% duration and cooldown per rank; Malletops totem +3/+6 ticks (' + W + 'Barricade )'],
+    notes: ['Ultimate: blocks all damage for 8 + ⌊tier/10⌋ ticks (T90 shield 17, T90 defender 12); Turtling +10% duration and cooldown per rank; Malletops totem +3/+6 ticks (' + W + 'Barricade )'],
     onCast: [{ kind: 'buff', id: 'barricade' }],
   },
   {
@@ -108,6 +109,7 @@ export const DEFCON_RULES: AbilityRule[] = [
   },
   {
     ability: 'siphon',
+    hits: [],
     notes: ['0% adrenaline: steals 10% adrenaline from a player, +10% against NPCs with adrenaline (' + W + 'Siphon_(Constitution_ability) )'],
   },
   {
@@ -116,26 +118,30 @@ export const DEFCON_RULES: AbilityRule[] = [
   },
   {
     ability: 'storm-shards',
-    notes: ['Stores 80–90% ability damage per stack (max 10); Shatter releases them (' + W + 'Storm_Shards )', 'Freedom halves the stacks (' + W + 'Freedom )'],
-    onHit: [{ kind: 'stack', stack: 'storm-shards', amount: 1 }],
+    noDamage: true,
+    requires: [{ text: 'the target already holds 10 Storm Shards', stackMax: { stack: 'storm-shards', max: 9 } }],
+    notes: ['Deals no damage itself: stores 80–90% ability damage per stack (max 10, cannot be cast at 10); Shatter releases them (' + W + 'Storm_Shards )', 'Freedom halves the stacks (' + W + 'Freedom )'],
+    onCast: [{ kind: 'stack', stack: 'storm-shards', amount: 1 }],
   },
   {
     ability: 'shatter',
     cost: THRESHOLD,
+    damagePerStack: { stack: 'storm-shards', min: 80, max: 90, cap: 30000 },
     cooldownRules: [{ ticks: 0, when: { stackMax: { stack: 'storm-shards', max: 0 } } }],
-    notes: ['Threshold: deals the stored Storm Shards damage (cap 30,000) and consumes all stacks; with 0 stacks the adrenaline is lost but no cooldown starts (' + W + 'Shatter )'],
+    notes: ['Threshold: one hit of 80–90% per Storm Shard held (cap 30,000) and consumes all stacks; with 0 stacks the adrenaline is lost but no cooldown starts (' + W + 'Shatter )'],
     onCast: [{ kind: 'consume-stack', stack: 'storm-shards', amount: 'all' }],
   },
   {
     ability: 'reprisal',
     cost: THRESHOLD,
+    recast: { whileBuff: 'reprisal' },
     notes: ['Threshold: stores all damage taken for 10 ticks and releases it (cap 30,000); recast outside the GCD to fire early (' + W + 'Reprisal )'],
     onCast: [{ kind: 'buff', id: 'reprisal' }],
   },
   {
     ability: 'transfigure',
     requires: [{ text: 'cannot be used while immune to stuns or stunned', notStunImmune: true }],
-    notes: ['Ultimate: self-stun for 10 ticks, then heals 250% of the damage taken and grants 25 ticks of stun and bind immunity; cannot be used while stun-immune (Anticipation, Freedom) (' + W + 'Transfigure )'],
+    notes: ['Ultimate: self-stun for 10 ticks in which no ability (not even Freedom) can be used, then heals 250% of the damage taken and grants 25 ticks of stun and bind immunity; cannot be used while stun-immune (Anticipation, Freedom) (' + W + 'Transfigure )'],
     onCast: [{ kind: 'buff', id: 'transfigure' }, { kind: 'buff', id: 'transfigure-immunity', durationTicks: 35 }],
   },
   {
@@ -149,9 +155,9 @@ export const DEFCON_RULES: AbilityRule[] = [
     adrenaline: 0,
     cost: { threshold: false, ultimate: false },
     requires: [{ text: 'needs 100% adrenaline', adrenalineMin: 100 }],
-    channel: { ticks: 51, hits: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44, 46, 48, 50], adrenalinePerHit: 25 },
+    channel: { ticks: 51, hits: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44, 46, 48, 50], adrenalinePerHit: 25, continueWithoutAdrenaline: true, damageRamp: { min: 18, max: 22 }, cancelledBy: ['special', 'weapon'] },
     notes: [
-      'Ultimate channel: a hit every 2 ticks (max 26), 25% adrenaline paid per hit instead of 100% up front; once adrenaline runs out the channel ends and you take damage instead; Ring of vigour and Conservation of Energy do not apply (' + W + 'Onslaught )',
+      'Ultimate channel: a hit every 2 ticks (max 26), hit n deals 100+18(n−1) – 120+22(n−1)%; 25% adrenaline paid per hit instead of 100% up front and, once it runs out, life points instead – the channel goes on; Ring of vigour and Conservation of Energy do not apply (' + W + 'Onslaught )',
       'Cancelled by moving, any other ability, food, potions or weapon swaps; ignores Berserk, Sunshine and Death\'s Swiftness (' + W + 'Onslaught )',
     ],
   },

@@ -56,6 +56,14 @@ export interface BuffDef {
   critDamageAdd?: number;
   /** swapping the main-hand weapon removes it (Concentrated Blast stacks) */
   removedOnMainHandSwap?: boolean;
+  /** stun and bind immunity while active (Anticipation, Freedom, Transfigure's second phase) */
+  stunImmune?: boolean;
+  /** threshold abilities need this much adrenaline while active (Limitless 15) */
+  thresholdNeed?: number;
+  /** no ability can be used while active (Transfigure's self-stun) */
+  locksAbilities?: boolean;
+  /** duration from the shield tier (defenders count half): base + bonusIfAny + ⌊tier / 10⌋ · perTen (Barricade 8 + ⌊t/10⌋, Debilitate 13 / 14 + ⌊t/10⌋) */
+  durationByShieldTier?: { base: number; perTen: number; bonusIfAny?: number };
   /** icon path override (else the wiki buff icon, else the source ability's icon) */
   icon?: string;
   /** effect description for the tooltip */
@@ -125,6 +133,8 @@ export interface Requirement {
   buff?: string;
   notBuff?: string;
   stackMin?: { stack: StackId; min: number };
+  /** stack count at most (Storm Shards cannot be cast at 10) */
+  stackMax?: { stack: StackId; max: number };
   spirit?: string;
   spiritAgeMin?: number;
   /** any conjured spirit must be out (Life Transfer) */
@@ -181,6 +191,12 @@ export interface ChannelSpec {
   movableWith?: string;
   /** Onslaught: adrenaline drained per hit, channel ends when adrenaline is short */
   adrenalinePerHit?: number;
+  /** Onslaught since the modernisation: with too little adrenaline the channel goes on (paid in life points) */
+  continueWithoutAdrenaline?: boolean;
+  /** Onslaught: hit n rolls (min + n · ramp.min) … (max + n · ramp.max) */
+  damageRamp?: { min: number; max: number };
+  /** these entity kinds cancel the channel when used (Onslaught: potions and weapon switches) */
+  cancelledBy?: ('special' | 'weapon')[];
   /** effects only when every hit landed */
   onComplete?: Effect[];
   /** Endless Assault: when this holds at the cast the hits are dealt as an un-cancellable damage over time (still crit / style-buffed) */
@@ -239,6 +255,12 @@ export interface AbilityRule {
   bleedWhen?: { when: Condition; bleed: BleedSpec }[];
   /** critical strike modifiers of the ability itself (Wild Magic +10% chance / +20% damage; Magma Tempest never crits) */
   crit?: { chanceAdd?: number; damageAdd?: number; never?: boolean };
+  /** the ability's damage numbers are stored, not dealt (Storm Shards) */
+  noDamage?: boolean;
+  /** one hit of (stacks × min) … (stacks × max) % of the ability damage, capped (Shatter) */
+  damagePerStack?: { stack: StackId; min: number; max: number; cap?: number };
+  /** pressing again while this buff runs releases it: no cost, no cooldown, off the GCD (Reprisal) */
+  recast?: { whileBuff: string };
   /** one hit per stack held (Volley of Souls) */
   hitsPerStack?: StackId;
   /** situational damage multipliers (Finger of Death 1.5x under Living Death) */

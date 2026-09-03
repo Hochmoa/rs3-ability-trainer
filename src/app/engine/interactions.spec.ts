@@ -17,6 +17,7 @@ function ability(id: string): EngineEntity {
   return {
     key: 'ability:' + id, kind: 'ability', id, name: a.name, icon: a.icon, gcd: a.triggersGcd, style: a.style, abilityType: a.type,
     adrenaline: a.adrenaline ?? 0, cooldownTicks: a.cooldownTicks ?? 0,
+    damageMin: a.damageMin ?? undefined, damageMax: a.damageMax ?? undefined,
     buffs: a.buffs.map((b) => ({ id: 'buff:' + b, name: String(b), kind: 'Buff' as const, on: 'self' as const, icon: null, durationTicks: a.durationTicks ?? 3 })),
   };
 }
@@ -323,12 +324,14 @@ describe('defence / constitution', () => {
     expect(e.cooldownLeft('ability:shatter', 7)).toBe(200);
   });
 
-  it('Onslaught pays 25% per hit and ends when adrenaline runs out', () => {
-    const e = make(['onslaught'], { startAdrenaline: 100 });
-    cast(e, 'onslaught', 0, 1 * T); // hits at ticks 1,3,5,7 → 100 → 0, 5th hit cancels
+  it('Onslaught pays 25% per hit and keeps channelling once adrenaline is gone (paid in life points)', () => {
+    const e = make(['onslaught'], { startAdrenaline: 100, abilityDamage: 1000 });
+    cast(e, 'onslaught', 0, 1 * T); // hits at ticks 1,3,5,7 → 100 → 0, the channel goes on
     e.update(10 * T);
     expect(e.adrenaline).toBe(0);
-    expect(e.events.some((x) => x.kind === 'channel-cancelled')).toBe(true);
+    expect(e.events.some((x) => x.kind === 'channel-cancelled')).toBe(false);
+    e.update(52 * T);
+    expect(e.events.filter((x) => x.kind === 'hit').length).toBe(26);
   });
 
   it('Anticipation is a normal GCD basic (+9%) and Provoke inside the GCD gives nothing', () => {

@@ -60,6 +60,8 @@ export interface ResolvedLoadout {
   style: Style | null;
   has2h: boolean;
   hasShield: boolean;
+  /** tier of the shield in the off-hand; a defender counts half; 0 without */
+  shieldTier: number;
   hasDefender: boolean;
   /** necromancy siphon + conduit */
   hasConduit: boolean;
@@ -111,6 +113,7 @@ export function defaultResolvedLoadout(): ResolvedLoadout {
     style: null,
     has2h: false,
     hasShield: false,
+    shieldTier: 0,
     hasDefender: false,
     hasConduit: false,
     weaponType: null,

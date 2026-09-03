@@ -1010,6 +1010,9 @@ export class Train implements OnDestroy {
         this.feedback.set({ text: this.name(ev.key) + ': ' + ev.text + (queueing ? ' – queued' : ''), cls: 'bad' });
         this.flash('wrong', ev.key, now, 300);
         break;
+      case 'recast':
+        this.feedback.set({ text: this.name(ev.key) + ' released early', cls: 'good' });
+        break;
       case 'channel-cancelled':
         this.cancelNote = this.name(ev.key) + ' channel cancelled, ' + ev.hitsLost + (ev.hitsLost === 1 ? ' hit' : ' hits') + ' lost';
         this.feedback.set({ text: this.cancelNote, cls: 'warn' });
