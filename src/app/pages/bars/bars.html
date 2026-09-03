@@ -24,6 +24,17 @@
             <input type="text" [ngModel]="preset().name" (ngModelChange)="rename($event)" maxlength="30" />
           </label>
           <span class="muted small">{{ usage(preset().id) || 'not shown anywhere yet' }}</span>
+          <label class="copy">
+            <span class="muted small">Copy from</span>
+            <select #copySel (change)="copyFrom(copySel.value); copySel.value = ''">
+              <option value="">– preset –</option>
+              @for (p of setup().presets; track p.id) {
+                @if (p.id !== preset().id && filled(p.id)) {
+                  <option [value]="p.id">{{ p.id }} · {{ p.name }}</option>
+                }
+              }
+            </select>
+          </label>
           <button class="btn btn-sm danger" (click)="clearAll()">Empty</button>
         </div>
         <div class="bar-editor">

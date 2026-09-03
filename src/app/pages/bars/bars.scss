@@ -86,6 +86,17 @@
   .small {
     flex: 1;
   }
+
+  .copy {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    select {
+      padding: 4px 6px;
+      font-size: 13px;
+    }
+  }
 }
 
 .bar-editor {

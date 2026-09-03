@@ -32,6 +32,7 @@ Live at **https://rs3trainer.hochware.com** (GitHub Pages).
   Magic / Necromancy → which position shows which preset). Keybinds belong to position + slot (*Keybinds* page),
   plus one key per weapon switch. While training, the slot of the next step glows, GCD abilities get the cooldown
   overlay, abilities you can't use are greyed out (wrong weapon, equipment requirement, adrenaline, cooldown).
+  Presets can be copied into each other. Signed in, the whole setup syncs across devices (table `action_bars`).
 - **Weapon switches** are rotation steps (catalog tab "Weapons"); switching is instant. Each style has one weapon
   whose type (two-handed / dual wield / one-handed + shield) decides which abilities are usable.
 - Two bars above the queue show the tick (0.6 s) and the GCD (1.8 s) progress, a third one the adrenaline.

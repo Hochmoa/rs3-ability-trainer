@@ -29,6 +29,7 @@ export class StorageService {
   readonly rotationDeleted = new Subject<string>();
   readonly keybindChanged = new Subject<{ key: string; kb: Keybind | null }>();
   readonly sessionAdded = new Subject<Session>();
+  readonly actionBarsChanged = new Subject<ActionBarSetup>();
 
   private db: Promise<IDBPDatabase> | null = null;
 
@@ -110,6 +111,12 @@ export class StorageService {
   }
 
   async saveActionBars(setup: ActionBarSetup): Promise<void> {
+    await this.putActionBars({ ...setup, updatedAt: Date.now() });
+    this.actionBarsChanged.next(this.actionBars());
+  }
+
+  /** Stores the setup as-is (keeps updatedAt / syncedAt) without firing the sync hook. */
+  async putActionBars(setup: ActionBarSetup): Promise<void> {
     this.actionBars.set(structuredClone(setup));
     if (this.consent()) await (await this.open()).put('settings', this.actionBars(), 'actionbars');
   }
@@ -200,6 +207,8 @@ function mergeActionBars(stored: Partial<ActionBarSetup>): ActionBarSetup {
     weaponKeybinds: { ...d.weaponKeybinds, ...(stored.weaponKeybinds ?? {}) },
     weapons: { ...d.weapons, ...(stored.weapons ?? {}) },
     startWeapon: stored.startWeapon ?? d.startWeapon,
+    updatedAt: stored.updatedAt,
+    syncedAt: stored.syncedAt,
   };
 }
 
