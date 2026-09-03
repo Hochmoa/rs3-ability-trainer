@@ -42,6 +42,8 @@ Live at **https://rs3trainer.hochware.com** (GitHub Pages).
   plus one key per weapon switch. While training, the slot of the next step glows, GCD abilities get the cooldown
   overlay, abilities you can't use are greyed out (wrong weapon, equipment requirement, adrenaline, cooldown).
   Presets can be copied into each other. Signed in, the whole setup syncs across devices (table `action_bars`).
+  *Layout* on the Train page arranges the five bars: drag to reorder, make a bar half as wide (two rows of seven) so
+  two of them share a line.
 - **Weapon switches** are rotation steps (catalog tab "Weapons"); switching is instant. Each style has one weapon
   whose type (two-handed / dual wield / one-handed + shield) decides which abilities are usable.
 - **Prayers** behave like in the game: pressing toggles, conflicting prayers switch off automatically (one overhead at a
