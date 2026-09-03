@@ -635,6 +635,32 @@ export const ENEMY_PRESETS: EnemyConfig[] = [
   { ...DEFAULT_ENEMY, enabled: false, preset: 'dummy', name: 'Training dummy', styles: ['Melee'], pattern: 'cycle', intervalTicks: 5, warningTicks: 3, lifePoints: 0 },
 ];
 
+/**
+ * State a session starts with, instead of building it at a dummy first (PvME "pre-build"): stacks, live
+ * conjures, active incantations / buffs of abilities, prayers and adrenaline. Stored per rotation.
+ */
+export interface Prebuild {
+  /** starting adrenaline; missing = loadout / "100% at start" setting */
+  adrenaline?: number;
+  /** stack id (engine StackId) → count */
+  stacks: Record<string, number>;
+  /** conjured spirits already out (skeleton-warrior, putrid-zombie, vengeful-ghost, phantom-guardian) */
+  spirits: string[];
+  /** ability ids whose buffs are active at the start (split-soul, invoke-death ...) */
+  abilities: string[];
+  /** prayer ids switched on at the start */
+  prayers: string[];
+}
+
+export function emptyPrebuild(): Prebuild {
+  return { stacks: {}, spirits: [], abilities: [], prayers: [] };
+}
+
+export function prebuildIsEmpty(p: Prebuild | undefined): boolean {
+  if (!p) return true;
+  return p.adrenaline === undefined && !Object.values(p.stacks).some((n) => n > 0) && !p.spirits.length && !p.abilities.length && !p.prayers.length;
+}
+
 export interface PrayerStats {
   /** ticks of the session */
   ticks: number;

@@ -860,3 +860,68 @@
 .damage-summary {
   margin: 0 0 10px;
 }
+
+// pre-build
+.prebuild {
+  &.on {
+    border-color: rgba(201, 162, 39, 0.5);
+  }
+
+  .prebuild-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+
+    .spacer {
+      flex: 1;
+    }
+  }
+
+  .prebuild-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 22px;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 13px;
+
+      > span:first-child {
+        color: var(--muted);
+      }
+
+      input[type='number'] {
+        width: 90px;
+      }
+    }
+
+    .checks {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px 12px;
+    }
+
+    .check {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+
+      img {
+        width: 18px;
+        height: 18px;
+      }
+    }
+
+    .note {
+      flex-basis: 100%;
+      margin: 0;
+    }
+  }
+}

@@ -110,6 +110,61 @@
     }
   </div>
 
+  <div class="panel prebuild" [class.on]="!prebuildEmpty()">
+    <div class="prebuild-head">
+      <b>Pre-build</b>
+      <span class="muted small">{{ prebuildEmpty() ? 'Start from nothing – or pick the stacks, conjures, incantations and prayers you would build at a dummy first.' : prebuildSummary() }}</span>
+      <span class="spacer"></span>
+      @if (!prebuildEmpty()) { <button class="btn btn-sm" (click)="clearPrebuild()" [disabled]="running()">Clear</button> }
+      <button class="btn btn-sm" (click)="prebuildOpen.set(!prebuildOpen())">{{ prebuildOpen() ? 'Hide' : 'Edit' }}</button>
+    </div>
+    @if (prebuildOpen()) {
+      <div class="prebuild-form">
+        <label class="field">
+          <span>Adrenaline %</span>
+          <input type="number" min="0" max="120" placeholder="loadout" [ngModel]="prebuild().adrenaline ?? ''" (ngModelChange)="setPrebuildAdrenaline($event)" [disabled]="running()" />
+        </label>
+        @for (s of prebuildStacks(); track s.id) {
+          <label class="field">
+            <span>{{ s.name }} <small class="muted">max {{ s.max }}</small></span>
+            <input type="number" min="0" [max]="s.max" [ngModel]="prebuild().stacks[s.id] ?? 0" (ngModelChange)="setPrebuildStack(s.id, $event, s.max)" [disabled]="running()" />
+          </label>
+        }
+        @if (rotationStyles().has('Necromancy')) {
+          <div class="field">
+            <span>Conjures out</span>
+            <div class="checks">
+              @for (sp of SPIRITS; track sp.id) {
+                <label class="check"><input type="checkbox" [checked]="prebuild().spirits.includes(sp.id)" (change)="togglePrebuildList('spirits', sp.id)" [disabled]="running()" /> {{ sp.name }}</label>
+              }
+            </div>
+          </div>
+        }
+        @if (prebuildAbilities().length) {
+          <div class="field">
+            <span>Active at the start</span>
+            <div class="checks">
+              @for (a of prebuildAbilities(); track a.key) {
+                <label class="check" [entityTip]="a"><input type="checkbox" [checked]="prebuild().abilities.includes(a.id)" (change)="togglePrebuildList('abilities', a.id)" [disabled]="running()" /> <img [src]="a.icon" alt="" /> {{ a.name }}</label>
+              }
+            </div>
+          </div>
+        }
+        @if (prebuildPrayers().length) {
+          <div class="field">
+            <span>Prayers on</span>
+            <div class="checks">
+              @for (p of prebuildPrayers(); track p.key) {
+                <label class="check" [entityTip]="p"><input type="checkbox" [checked]="prebuild().prayers.includes(p.id)" (change)="togglePrebuildList('prayers', p.id)" [disabled]="running()" /> <img [src]="p.icon" alt="" /> {{ p.name }}</label>
+              }
+            </div>
+          </div>
+        }
+        <p class="muted small note">Saved per rotation. Conjures start commandable with most of their lifetime left; incantation buffs run their normal duration from the start.</p>
+      </div>
+    }
+  </div>
+
   <div cdkDropListGroup>
   @if (unreachable().length) {
     <div class="panel warning missing">

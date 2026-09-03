@@ -6,11 +6,11 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DataService, Entity, SPEC_KEY } from '../../core/data.service';
 import { applyWield, equip, unequip } from '../../core/equipment';
 import { keybindFromEvent, keybindKey, keybindLabel } from '../../core/keybind.util';
-import { AttackPattern, BAR_POSITIONS, BarShape, barLayout, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, EquipSlot, ItemRef, Loadout, PrayerStats, STYLES4, Settings, StepResult, Style4, WeaponSpec, entityKey, isStyle4, loadoutWeapons, loadoutWield, parseEntityKey, visiblePresets, RotationStep } from '../../core/models';
+import { AttackPattern, BAR_POSITIONS, BarShape, barLayout, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, EquipSlot, ItemRef, Loadout, PrayerStats, Prebuild, STYLES4, Settings, StepResult, Style4, WeaponSpec, emptyPrebuild, entityKey, isStyle4, loadoutWeapons, loadoutWield, parseEntityKey, prebuildIsEmpty, visiblePresets, RotationStep } from '../../core/models';
 import { StorageService } from '../../core/storage.service';
 import { resolveLoadout } from '../../engine/loadout-resolver';
 import { BUFF_BY_ID, ruleFor } from '../../engine/rules';
-import { STACK_NAMES, StackId } from '../../engine/rules-model';
+import { STACK_NAMES, STYLE_STACKS, StackId } from '../../engine/rules-model';
 import { ActiveBuff, EngineEntity, EngineEvent, GCD_TICKS, TICK_MS, TrainerEngine, UsableReason, Wield } from '../../engine/trainer-engine';
 import { SOUL_SPLIT } from '../../engine/prayer-rules';
 import { morphSourceOf, slotAbilities } from '../../engine/morphs';
@@ -122,6 +122,90 @@ export class Train implements OnDestroy {
     gearById: this.data.gearById(),
     specEntity: (s: WeaponSpec) => this.data.specEntity(s),
   }));
+  // ---------------------------------------------------------------- pre-build
+
+  readonly prebuildOpen = signal(false);
+  readonly prebuild = computed<Prebuild>(() => {
+    const id = this.selectedId();
+    return (id && this.storage.prebuilds()[id]) || emptyPrebuild();
+  });
+  readonly prebuildEmpty = computed(() => prebuildIsEmpty(this.prebuild()));
+  /** combat styles the rotation uses */
+  readonly rotationStyles = computed(() => new Set(this.stepEntities().map((e) => e?.ability?.style).filter((s): s is NonNullable<typeof s> => !!s)));
+  /** stacks worth pre-building for this rotation */
+  readonly prebuildStacks = computed<{ id: StackId; name: string; max: number }[]>(() => {
+    const styles = this.rotationStyles();
+    const out: { id: StackId; name: string; max: number }[] = [];
+    const add = (id: StackId, max: number) => !out.some((s) => s.id === id) && out.push({ id, name: STACK_NAMES[id], max });
+    const caps: Partial<Record<StackId, number>> = { bloodlust: 8, necrosis: 12, 'residual-souls': 5, 'storm-shards': 10, valour: 25, 'death-spark': 5, 'soul-reave': 4, 'glacial-embrace': 10, 'essence-corruption': 10 };
+    for (const st of styles) for (const id of STYLE_STACKS[st] ?? []) add(id, caps[id] ?? 10);
+    const ids = new Set(this.stepEntities().map((e) => e?.ability?.id));
+    if (ids.has('storm-shards') || ids.has('shatter')) add('storm-shards', 10);
+    return out;
+  });
+  readonly SPIRITS = [
+    { id: 'skeleton-warrior', name: 'Skeleton Warrior' },
+    { id: 'putrid-zombie', name: 'Putrid Zombie' },
+    { id: 'vengeful-ghost', name: 'Vengeful Ghost' },
+    { id: 'phantom-guardian', name: 'Phantom Guardian' },
+  ];
+  /** incantations / self buffs that are usually active before the fight */
+  readonly prebuildAbilities = computed<Entity[]>(() => {
+    const styles = this.rotationStyles();
+    return this.data
+      .abilities()
+      .filter((a) => a.type === 'Incantation' || ['sunshine', 'greater-sunshine', 'death-s-swiftness', 'greater-death-s-swiftness', 'berserk', 'anticipation', 'freedom'].includes(a.id))
+      .filter((a) => styles.has(a.style) || (a.type === 'Incantation' && styles.has('Necromancy')))
+      .map((a) => this.data.get(entityKey('ability', a.id)))
+      .filter((e): e is Entity => !!e);
+  });
+  /** prayers of the loadout's book that the rotation or the bars use, plus Soul Split */
+  readonly prebuildPrayers = computed<Entity[]>(() => {
+    const book = this.prayerBook();
+    const ids = new Set<string>([SOUL_SPLIT]);
+    for (const e of this.stepEntities()) if (e?.prayer) ids.add(e.id);
+    for (const key of this.reachable().keys()) if (key.startsWith('prayer:')) ids.add(key.slice(7));
+    return [...ids]
+      .map((id) => this.data.get('prayer:' + id))
+      .filter((e): e is Entity => !!e && e.prayer?.book === book);
+  });
+
+  setPrebuild(patch: Partial<Prebuild>): void {
+    const id = this.selectedId();
+    if (!id) return;
+    void this.storage.savePrebuild(id, { ...this.prebuild(), ...patch });
+  }
+
+  setPrebuildStack(id: StackId, v: unknown, max: number): void {
+    this.setPrebuild({ stacks: { ...this.prebuild().stacks, [id]: this.numberOf(v, 0, max) } });
+  }
+
+  togglePrebuildList(list: 'spirits' | 'abilities' | 'prayers', id: string): void {
+    const cur = this.prebuild()[list];
+    this.setPrebuild({ [list]: cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id] } as Partial<Prebuild>);
+  }
+
+  setPrebuildAdrenaline(v: unknown): void {
+    const s = String(v ?? '').trim();
+    this.setPrebuild({ adrenaline: s === '' ? undefined : this.numberOf(s, 0, 120) });
+  }
+
+  clearPrebuild(): void {
+    const id = this.selectedId();
+    if (id) void this.storage.savePrebuild(id, null);
+  }
+
+  prebuildSummary(): string {
+    const p = this.prebuild();
+    const parts: string[] = [];
+    if (p.adrenaline !== undefined) parts.push(p.adrenaline + '% adrenaline');
+    for (const [id, n] of Object.entries(p.stacks)) if (n > 0) parts.push(n + ' ' + (STACK_NAMES[id as StackId] ?? id));
+    for (const s of p.spirits) parts.push(this.SPIRITS.find((x) => x.id === s)?.name ?? s);
+    for (const a of p.abilities) parts.push(this.data.name('ability:' + a));
+    for (const pr of p.prayers) parts.push(this.data.name('prayer:' + pr));
+    return parts.join(' · ');
+  }
+
   /** equipment + backpack of the running session (weapon switches, drunk potions, swapped armour); null = not running */
   readonly live = signal<Loadout | null>(null);
   /** what the gear panel shows: the live state while training, the saved loadout otherwise */
@@ -504,6 +588,7 @@ export class Train implements OnDestroy {
       prayerBook: this.prayerBook(),
       enemy: enemy.enabled ? { ...enemy, styles: [...enemy.styles] } : undefined,
       targetLifePoints: enemy.lifePoints > 0 ? enemy.lifePoints : undefined,
+      prebuild: this.prebuildEmpty() ? undefined : this.prebuild(),
     });
     this.damage.set(0);
     this.hits.set(0);
@@ -513,6 +598,7 @@ export class Train implements OnDestroy {
     this.hitsplats.set([]);
     // every prayer of the book is pressable even when it is on no bar (touch / click users get it via the bars only)
     for (const p of this.data.prayers()) add('prayer:' + p.id);
+    for (const id of this.prebuild().abilities) add('ability:' + id);
     this.activePrayers.set([]);
     this.prayerStats.set({ ...EMPTY_PRAYER_STATS });
     this.incoming.set(null);

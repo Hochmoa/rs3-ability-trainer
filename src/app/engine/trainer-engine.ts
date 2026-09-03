@@ -1,4 +1,4 @@
-import { AbilityType, EnemyConfig, EntityKind, PrayerStats, SPEC_KEY, StepResult, Style, Style4, isStyle4 } from '../core/models';
+import { AbilityType, EnemyConfig, EntityKind, PrayerStats, Prebuild, SPEC_KEY, StepResult, Style, Style4, isStyle4 } from '../core/models';
 import { ResolvedLoadout, defaultResolvedLoadout } from './loadout-resolved';
 import { PROTECTION, PrayerBook, SOUL_SPLIT, bookOf, togglePrayer } from './prayer-rules';
 import { BASE_CRIT_CHANCE, BUFF_DAMAGE_MULT, SPIRIT_ATTACKS, TARGET_DAMAGE_MULT, critMultiplier } from './damage';
@@ -41,6 +41,8 @@ export interface EngineConfig {
   hasItem?: (key: string) => boolean;
   /** life points of the target; the session ends when they reach 0 (missing / 0 = unlimited) */
   targetLifePoints?: number;
+  /** state the session starts with (stacks, spirits, buffs, prayers, adrenaline) */
+  prebuild?: Prebuild;
   /** prayer book of the session (default Curses); prayers of the other book are ignored */
   prayerBook?: PrayerBook;
   /** simulated enemy; only used when enabled */
@@ -95,6 +97,8 @@ export interface EngineEntity {
   /** damage per hit in % of ability damage (abilities.json / specs.json) */
   damageMin?: number;
   damageMax?: number;
+  /** effect duration from the wiki text (used for pre-built incantations without a modelled buff) */
+  durationTicks?: number;
   /** weapon-switch entities: the item that goes into the hand */
   weapon?: { id: string; slot: 'main' | 'off' | '2h'; style: Style };
   /** rotation steps only: PvME "+" (0) / "2t" (2) – expected this many ticks after the previous input's tick */
@@ -316,6 +320,7 @@ export class TrainerEngine {
     this.damageDealt = 0;
     this.hitCount = 0;
     this.killedTick = null;
+    this.applyPrebuild();
     this.events.length = 0;
     this.state = 'running';
     const enemy = this.config.enemy;
@@ -1050,6 +1055,34 @@ export class TrainerEngine {
     }
     const perTick = this.loadout.channelAdrenalinePerTick[h.entity.id];
     if (perTick && h.channel) this.addAdrenaline(perTick);
+  }
+
+  /** Puts the pre-built state in place at tick 0 (see Prebuild). */
+  private applyPrebuild(): void {
+    const pb = this.config.prebuild;
+    if (!pb) return;
+    if (pb.adrenaline !== undefined) this.adrenaline = Math.max(0, Math.min(this.maxAdrenaline, pb.adrenaline));
+    for (const [stack, n] of Object.entries(pb.stacks ?? {})) if (n > 0) this.stacks.set(stack as StackId, n);
+    for (const spirit of pb.spirits ?? []) {
+      const duration = Math.round((70 + this.loadout.conjureDurationAdd) * this.loadout.conjureDurationMult);
+      // conjured a while ago: commandable right away, still most of its lifetime left
+      this.spirits.set(spirit, { spirit, sinceTick: -6, endTick: duration - 6 });
+      this.applyBuff('spirit-' + spirit, 0, 'prebuild', duration - 6);
+    }
+    for (const id of pb.abilities ?? []) {
+      const e = this.catalog.get('ability:' + id);
+      if (!e) continue;
+      const ruleBuffs = (ruleFor(id)?.onCast ?? []).filter((eff) => eff.kind === 'buff');
+      for (const b of e.buffs) this.applyDataBuff(b, 0, e.key);
+      for (const eff of ruleBuffs) this.applyEffect(eff, 0, e, 0);
+      // incantations without a modelled buff still show as active for their wiki duration
+      if (!e.buffs.length && !ruleBuffs.length) this.applyDataBuff({ id: e.key, name: e.name, kind: 'Buff', on: 'self', icon: e.icon, durationTicks: e.durationTicks ?? null }, 0, e.key);
+    }
+    for (const id of pb.prayers ?? []) {
+      if (this.activePrayers.has(id)) continue;
+      const t = togglePrayer(this.activePrayers, id);
+      this.activePrayers = t.active;
+    }
   }
 
   /** Rolls and applies the damage of one hit (engine/damage.ts). */

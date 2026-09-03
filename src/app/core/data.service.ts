@@ -239,6 +239,7 @@ export class DataService {
         buffs: this.dataBuffs(a.buffs, a.durationTicks),
         damageMin: a.damageMin ?? undefined,
         damageMax: a.damageMax ?? undefined,
+        durationTicks: a.durationTicks ?? undefined,
       };
     }
     if (e.prayer) {

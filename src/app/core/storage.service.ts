@@ -1,7 +1,7 @@
 import { Injectable, computed, signal } from '@angular/core';
 import { IDBPDatabase, deleteDB, openDB } from 'idb';
 import { Subject } from 'rxjs';
-import { ActionBarSetup, DEFAULT_ENEMY, DEFAULT_SETTINGS, EnemyConfig, Equipment, INVENTORY_SIZE, ItemRef, Keybind, LegacyLoadout, Loadout, Rotation, RotationStep, Session, SetupBundle, SetupMeta, Settings, defaultActionBars, migrateLegacyLoadout, newLoadout } from './models';
+import { ActionBarSetup, DEFAULT_ENEMY, DEFAULT_SETTINGS, EnemyConfig, Equipment, INVENTORY_SIZE, ItemRef, Keybind, LegacyLoadout, Loadout, Prebuild, Rotation, RotationStep, Session, SetupBundle, SetupMeta, Settings, defaultActionBars, migrateLegacyLoadout, newLoadout } from './models';
 
 const DB_NAME = 'rs3trainer';
 const CONSENT_KEY = 'rs3trainer.consent';
@@ -21,6 +21,8 @@ export class StorageService {
   readonly loadout = computed<Loadout>(() => this.loadouts().find((l) => l.id === this.activeLoadoutId()) ?? this.loadouts()[0]);
   /** simulated enemy for prayer training */
   readonly enemy = signal<EnemyConfig>({ ...DEFAULT_ENEMY });
+  /** rotation id → pre-built state the session starts with */
+  readonly prebuilds = signal<Record<string, Prebuild>>({});
   /** action bar presets, positions, style bindings, slot + weapon keybinds */
   readonly actionBars = signal<ActionBarSetup>(defaultActionBars());
   /** sync bookkeeping for settings + loadouts + enemy */
@@ -84,6 +86,8 @@ export class StorageService {
       }
       const enemy = await db.get('settings', 'enemy');
       if (enemy) this.enemy.set({ ...DEFAULT_ENEMY, ...enemy });
+      const prebuilds = await db.get('settings', 'prebuilds');
+      if (prebuilds) this.prebuilds.set(prebuilds);
       const bars = await db.get('settings', 'actionbars');
       if (bars) this.actionBars.set(mergeActionBars(bars));
       const meta = (await db.get('settings', 'setupmeta')) as SetupMeta | undefined;
@@ -132,6 +136,14 @@ export class StorageService {
     this.settings.set({ ...s });
     if (this.consent()) await (await this.open()).put('settings', this.settings(), 'settings');
     await this.touchSetup();
+  }
+
+  async savePrebuild(rotationId: string, p: Prebuild | null): Promise<void> {
+    const next = { ...this.prebuilds() };
+    if (p) next[rotationId] = { ...p, stacks: { ...p.stacks }, spirits: [...p.spirits], abilities: [...p.abilities], prayers: [...p.prayers] };
+    else delete next[rotationId];
+    this.prebuilds.set(next);
+    if (this.consent()) await (await this.open()).put('settings', next, 'prebuilds');
   }
 
   async saveEnemy(e: EnemyConfig): Promise<void> {
