@@ -11,6 +11,7 @@ import { SupportNudge, SUPPORT_LABEL, SUPPORT_URL } from './shared/support-nudge
 import { Dialog } from './shared/dialog';
 import { Toast } from './shared/toast';
 import { EntityTooltip } from './shared/tooltip';
+import { BUILD } from './version';
 
 @Component({
   selector: 'app-root',
@@ -21,6 +22,7 @@ import { EntityTooltip } from './shared/tooltip';
 export class App {
   readonly supportUrl = SUPPORT_URL;
   readonly supportLabel = SUPPORT_LABEL;
+  readonly build = BUILD;
   readonly supabase = inject(SupabaseService);
   readonly feedback = inject(FeedbackService);
   /** created at start-up so the login effect and the change hooks are wired immediately */
