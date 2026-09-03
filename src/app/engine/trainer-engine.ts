@@ -118,6 +118,9 @@ export interface ActiveChannel {
 
 export type EngineEvent =
   | { kind: 'queued'; key: string; expected: string; fireTick: number; marginMs: number }
+  /** the queued ability was pressed again and taken out of the queue */
+  | { kind: 'unqueued'; key: string }
+  /** the expected step finished – GCD ability cast or off-GCD thing activated */
   | { kind: 'fired'; result: StepResult }
   | { kind: 'wrong-fired'; key: string; expected: string; tick: number }
   | { kind: 'too-early'; key: string; ticksEarly: number }
@@ -472,16 +475,20 @@ export class TrainerEngine {
     this.inflight.sort((a, b) => a.arrival - b.arrival);
     for (;;) {
       const next = this.inflight[0];
+      // nothing happens instantly: an input is processed by the server on the first tick at or after its arrival
+      const inputAt = next ? this.tickTime(this.tickOf(next.arrival)) : Infinity;
       const castAt = this.pending ? this.tickTime(this.pending.tick) : Infinity;
       const tickAt = this.tickTime(this.lastTick + 1);
-      if (tickAt <= now && tickAt <= castAt && (!next || tickAt <= next.arrival)) {
+      if (inputAt <= now && inputAt <= tickAt && inputAt <= castAt) {
+        // inputs of a tick come first (a prayer switched on this tick counts for this tick's attack)
+        this.inflight.shift();
+        this.handle(next!);
+      } else if (tickAt <= now && tickAt <= castAt) {
+        // advance server ticks (over-time adrenaline, buff expiry) before anything scheduled later
         this.advanceTick(this.lastTick + 1);
-      } else if (castAt <= now && (!next || castAt <= next.arrival)) {
+      } else if (castAt <= now) {
         this.castPending();
         if (this.state !== 'running') return;
-      } else if (next && next.arrival <= now) {
-        this.inflight.shift();
-        this.handle(next);
       } else {
         break;
       }
@@ -536,7 +543,15 @@ export class TrainerEngine {
       }
       return;
     }
-    if (this.pending?.key === input.key) return;
+    if (this.pending?.key === input.key) {
+      // pressing the queued ability again cancels the queue – in game only if the icon disappears at least one
+      // tick before the cast, so on the cast tick itself the press changes nothing
+      if (tickP < this.pending.tick) {
+        this.pending = null;
+        this.events.push({ kind: 'unqueued', key: input.key });
+      }
+      return;
+    }
     this.accept(input, gcdEnd, expected);
   }
 

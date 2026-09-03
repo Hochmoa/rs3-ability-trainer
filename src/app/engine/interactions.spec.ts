@@ -294,7 +294,7 @@ describe('defence / constitution', () => {
     const e = make(['devotion', 'limitless'], { startAdrenaline: 40 });
     expect(e.costOf(ability('devotion'))).toEqual({ need: 50, cost: 15 });
     expect(e.requirementFailure(ability('limitless'), 0)).toBeNull();
-    cast(e, 'limitless', 0, 1);
+    cast(e, 'limitless', 0, 1 * T); // processed on tick 1 like every input
     expect(e.hasBuff('limitless')).toBe(true);
     expect(e.costOf(ability('devotion')).need).toBe(15);
     cast(e, 'devotion', 1 * T, 1 * T);
