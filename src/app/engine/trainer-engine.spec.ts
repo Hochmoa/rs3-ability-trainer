@@ -261,7 +261,7 @@ describe('off-GCD steps (prayers, potions)', () => {
     e.press('pray', 1000); // tick 2, during the GCD – fine, no GCD for prayers
     e.update(1200);
     expect(e.results[1]).toMatchObject({ key: 'pray', outcome: 'done', firedAtTick: 2 });
-    expect(e.buffs.some((b) => b.id === 'pray' && b.endTick === null)).toBe(true);
+    expect(e.activePrayers.has('pray')).toBe(true);
     expect(e.index).toBe(2);
     e.press('b', 2000);
     e.update(2400);

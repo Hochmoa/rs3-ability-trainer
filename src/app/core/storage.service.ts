@@ -1,7 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 import { IDBPDatabase, deleteDB, openDB } from 'idb';
 import { Subject } from 'rxjs';
-import { ActionBarSetup, DEFAULT_LOADOUT, DEFAULT_SETTINGS, Keybind, Loadout, Rotation, RotationStep, Session, Settings, defaultActionBars } from './models';
+import { ActionBarSetup, DEFAULT_ENEMY, DEFAULT_LOADOUT, EnemyConfig, DEFAULT_SETTINGS, Keybind, Loadout, Rotation, RotationStep, Session, Settings, defaultActionBars } from './models';
 
 const DB_NAME = 'rs3trainer';
 const CONSENT_KEY = 'rs3trainer.consent';
@@ -16,6 +16,8 @@ export class StorageService {
   readonly ready = signal(false);
   readonly settings = signal<Settings>({ ...DEFAULT_SETTINGS });
   readonly loadout = signal<Loadout>({ ...DEFAULT_LOADOUT });
+  /** simulated enemy for prayer training */
+  readonly enemy = signal<EnemyConfig>({ ...DEFAULT_ENEMY });
   /** action bar presets, positions, style bindings, slot + weapon keybinds */
   readonly actionBars = signal<ActionBarSetup>(defaultActionBars());
   /** entity key ("ability:sever", "prayer:turmoil", ...) → keybind */
@@ -60,6 +62,8 @@ export class StorageService {
       if (settings) this.settings.set(migrateSettings(settings));
       const loadout = await db.get('settings', 'loadout');
       if (loadout) this.loadout.set({ ...DEFAULT_LOADOUT, ...loadout });
+      const enemy = await db.get('settings', 'enemy');
+      if (enemy) this.enemy.set({ ...DEFAULT_ENEMY, ...enemy });
       const bars = await db.get('settings', 'actionbars');
       if (bars) this.actionBars.set(mergeActionBars(bars));
 
@@ -95,6 +99,7 @@ export class StorageService {
     const db = await this.open();
     await db.put('settings', this.settings(), 'settings');
     await db.put('settings', this.loadout(), 'loadout');
+    await db.put('settings', this.enemy(), 'enemy');
     await db.put('settings', this.actionBars(), 'actionbars');
     for (const [id, kb] of Object.entries(this.keybinds())) await db.put('keybinds', kb, id);
     for (const r of this.rotations()) await db.put('rotations', r);
@@ -103,6 +108,11 @@ export class StorageService {
   async saveSettings(s: Settings): Promise<void> {
     this.settings.set({ ...s });
     if (this.consent()) await (await this.open()).put('settings', this.settings(), 'settings');
+  }
+
+  async saveEnemy(e: EnemyConfig): Promise<void> {
+    this.enemy.set({ ...e, styles: [...e.styles] });
+    if (this.consent()) await (await this.open()).put('settings', this.enemy(), 'enemy');
   }
 
   async saveLoadout(l: Loadout): Promise<void> {
@@ -186,6 +196,7 @@ export class StorageService {
     this.consent.set(false);
     this.settings.set({ ...DEFAULT_SETTINGS });
     this.loadout.set({ ...DEFAULT_LOADOUT });
+    this.enemy.set({ ...DEFAULT_ENEMY });
     this.actionBars.set(defaultActionBars());
     this.keybinds.set({});
     this.rotations.set([]);

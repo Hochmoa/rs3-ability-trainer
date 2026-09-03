@@ -25,8 +25,71 @@
       Ping {{ storage.settings().pingMs }} ms ± {{ storage.settings().jitterMs }} · ability queueing
       {{ storage.settings().abilityQueueing ? 'on' : 'off' }}
       @if (storage.settings().loop) { · loop }
-      · start {{ storage.loadout().startAdrenaline }}% adrenaline
+      · start {{ storage.loadout().startAdrenaline }}% adrenaline · {{ prayerBook() === 'Curses' ? 'curses' : 'standard prayers' }}
     </span>
+  </div>
+
+  <div class="panel enemy" [class.on]="enemy().enabled">
+    <div class="enemy-head">
+      <label class="check">
+        <input type="checkbox" [checked]="enemy().enabled" (change)="setEnemy('enabled', !enemy().enabled)" [disabled]="running()" />
+        <b>Enable incoming attacks</b>
+      </label>
+      @if (enemy().enabled) {
+        <label>
+          Boss
+          <select [ngModel]="enemy().preset ?? ''" (ngModelChange)="applyPreset($event)" [disabled]="running()">
+            <option value="">custom</option>
+            @for (p of ENEMY_PRESETS; track p.preset) { <option [value]="p.preset">{{ p.name }}</option> }
+          </select>
+        </label>
+        <span class="muted small">
+          {{ enemy().styles.join(' / ') }} · every {{ enemy().intervalTicks }} ticks ({{ (enemy().intervalTicks * TICK_MS) / 1000 }} s) ·
+          {{ enemy().pattern === 'streak' ? 'streaks of ' + enemy().streak : enemy().pattern === 'no-repeat' ? 'never twice the same' : enemy().pattern }} ·
+          {{ enemy().warningTicks }} tick warning
+        </span>
+        <button class="btn btn-sm" (click)="enemyOpen.set(!enemyOpen())">{{ enemyOpen() ? 'Hide settings' : 'Settings' }}</button>
+      } @else {
+        <span class="muted small">The enemy attacks in a fixed rhythm. Have the matching Protect / Deflect prayer on when the hit lands, Soul Split the rest of the time.</span>
+      }
+    </div>
+    @if (enemy().enabled && enemyOpen()) {
+      <div class="enemy-form">
+        <div class="field">
+          <span>Attack styles</span>
+          <div class="styles">
+            @for (st of STYLES4; track st) {
+              <label class="check"><input type="checkbox" [checked]="enemy().styles.includes(st)" (change)="toggleStyle(st)" [disabled]="running()" /> {{ st }}</label>
+            }
+          </div>
+        </div>
+        <label class="field">
+          <span>Pattern</span>
+          <select [ngModel]="enemy().pattern" (ngModelChange)="setEnemy('pattern', $event)" [disabled]="running()">
+            @for (p of PATTERNS; track p.id) { <option [ngValue]="p.id">{{ p.label }}</option> }
+          </select>
+        </label>
+        @if (enemy().pattern === 'streak') {
+          <label class="field">
+            <span>Streak length</span>
+            <input type="number" min="1" max="10" [ngModel]="enemy().streak" (ngModelChange)="setEnemy('streak', numberOf($event, 1, 10))" [disabled]="running()" />
+          </label>
+        }
+        <label class="field">
+          <span>Ticks between attacks</span>
+          <input type="number" min="1" max="20" [ngModel]="enemy().intervalTicks" (ngModelChange)="setEnemy('intervalTicks', numberOf($event, 1, 20))" [disabled]="running()" />
+        </label>
+        <label class="field">
+          <span>Warning (ticks)</span>
+          <input type="number" min="0" max="20" [ngModel]="enemy().warningTicks" (ngModelChange)="setEnemy('warningTicks', numberOf($event, 0, 20))" [disabled]="running()" />
+        </label>
+        <label class="field">
+          <span>First attack after (ticks)</span>
+          <input type="number" min="1" max="50" [ngModel]="enemy().firstAttackTicks" (ngModelChange)="setEnemy('firstAttackTicks', numberOf($event, 1, 50))" [disabled]="running()" />
+        </label>
+        <p class="muted small note">Scoring: +1 for every tick with Soul Split active, +1 for every attack met with the right overhead. Specials of the bosses are not simulated; the presets use the auto-attack styles and rate from the wiki.</p>
+      </div>
+    }
   </div>
 
   @if (unreachable().length) {
@@ -132,6 +195,46 @@
           }
         </div>
       </div>
+      <div class="status-bar prayers">
+        <span class="label">Prayers</span>
+        @for (p of activePrayers(); track p.key) {
+          <div class="status prayer" [title]="p.name" [entityTip]="p">
+            <img [src]="p.icon" [alt]="p.name" />
+          </div>
+        } @empty {
+          <span class="muted none">none</span>
+        }
+      </div>
+      @if (enemy().enabled) {
+        <div class="incoming" [class.covered]="incoming()?.covered" [class.danger]="incoming() && !incoming()!.covered && !incoming()!.hidden && incoming()!.ticksLeft <= 1">
+          @if (incoming(); as a) {
+            <div class="icon">
+              @if (a.style) { <img [src]="weaponIcon(a.style)" [alt]="a.style" /> } @else { <span class="unknown">?</span> }
+            </div>
+            <div class="info">
+              <div class="line">
+                <b>{{ a.style ? a.style + ' attack' : 'Next attack' }}</b>
+                <span class="muted">in {{ a.ticksLeft }} {{ a.ticksLeft === 1 ? 'tick' : 'ticks' }}</span>
+              </div>
+              <div class="track"><div class="fill" [style.width.%]="a.progress * 100"></div></div>
+              <div class="line small">
+                @if (a.style) {
+                  <span [class]="a.covered ? 'good' : 'bad'">{{ neededName(a.needed) }} {{ a.covered ? 'active' : 'needed' }}</span>
+                } @else {
+                  <span class="muted">style revealed {{ enemy().warningTicks }} ticks before the hit</span>
+                }
+                @if (hasSoulSplit()) { <span class="good">· Soul Split</span> }
+              </div>
+            </div>
+          } @else {
+            <div class="info"><span class="muted small">{{ running() ? 'waiting for the enemy' : enemy().name + ' – attacks start ' + (enemy().firstAttackTicks * TICK_MS) / 1000 + ' s after Start' }}</span></div>
+          }
+          <div class="score">
+            <b>{{ prayerScore().score }}</b><span class="muted">/{{ prayerScore().max }}</span>
+            <small>{{ prayerScore().pct }}%</small>
+          </div>
+        </div>
+      }
       <div class="weapons">
         @for (st of STYLES4; track st) {
           <div class="weapon" [class.active]="(running() ? weapon() : storage.actionBars().startWeapon) === st" [title]="st + ' weapon'">
@@ -154,12 +257,33 @@
       <span class="bad">Too early {{ counts().early }}</span>
       <span class="bad">Wrong {{ counts().wrong }}</span>
       <span class="warn">Missed {{ counts().missed }}</span>
+      @if (enemy().enabled) {
+        <span class="good">Prayed {{ prayerStats().prayed }}/{{ prayerStats().attacks }}</span>
+        <span class="bad">Hits taken {{ prayerStats().hits }}</span>
+        <span class="muted">Soul Split ticks {{ prayerStats().soulSplitTicks }}</span>
+      }
     </div>
+    @if (enemy().enabled && attackLog().length) {
+      <div class="attack-log">
+        @for (a of attackLog(); track a.tick) {
+          <span class="hit" [class.good]="a.prayed" [class.bad]="!a.prayed" [title]="a.style + (a.prayed ? ' – prayed' : ' – hit')">
+            <img [src]="weaponIcon(a.style)" [alt]="a.style" />
+          </span>
+        }
+      </div>
+    }
   </div>
 
-  @if (finished() && results().length) {
+  @if (finished() && (results().length || (enemy().enabled && prayerStats().attacks))) {
     <div class="panel summary">
-      <h2>Session summary – {{ accuracy() }}% clean</h2>
+      <h2>Session summary{{ results().length ? ' – ' + accuracy() + '% clean' : '' }}</h2>
+      @if (enemy().enabled) {
+        <p class="prayer-summary">
+          <b>Prayer score {{ prayerScore().score }} / {{ prayerScore().max }} ({{ prayerScore().pct }}%)</b> ·
+          {{ prayerStats().prayed }} of {{ prayerStats().attacks }} {{ enemy().name }} attacks prayed, {{ prayerStats().hits }} hits taken,
+          Soul Split active on {{ prayerStats().soulSplitTicks }} of {{ prayerStats().ticks - prayerStats().attacks }} free ticks.
+        </p>
+      }
       <table>
         <thead>
           <tr><th>#</th><th>Step</th><th>Result</th><th>Offset</th><th>Adrenaline</th><th>Too early</th><th>Wrong</th></tr>
