@@ -1,4 +1,4 @@
-import { StepResult } from '../core/models';
+import { AbilityType, DEFAULT_LOADOUT, EntityKind, Loadout, StepResult } from '../core/models';
 
 /** One RS3 game tick / server cycle. */
 export const TICK_MS = 600;
@@ -8,83 +8,150 @@ export const GCD_TICKS = 3;
 export interface EngineConfig {
   pingMs: number;
   jitterMs: number;
-  /** In-game "Ability queueing" setting. On: a press during the GCD is queued and fires when the GCD ends. Off: it is ignored. */
+  /** In-game "Ability queueing" setting. On: a press during the GCD is queued and casts when the GCD ends. Off: it is ignored. */
   abilityQueueing: boolean;
   loop: boolean;
+  loadout: Loadout;
+}
+
+/** A status effect an entity applies when it casts / activates. */
+export interface EngineBuff {
+  id: string;
+  name: string;
+  kind: 'Buff' | 'Debuff';
+  on: 'self' | 'target';
+  icon: string | null;
+  /** null = until the session ends (prayers) */
+  durationTicks: number | null;
+}
+
+/** Everything the engine needs to know about a pressable thing (ability, prayer, potion). */
+export interface EngineEntity {
+  key: string;
+  kind: EntityKind;
+  name: string;
+  icon: string;
+  /** true for abilities that start / obey the global cooldown */
+  gcd: boolean;
+  abilityType?: AbilityType;
+  /** +gain / -cost in percent */
+  adrenaline: number;
+  /** internal cooldown after use */
+  cooldownTicks: number;
+  /** group name for shared cooldowns (adrenaline potions) */
+  sharedCooldown?: string;
+  adrenalineOverTime?: { amount: number; ticks: number };
+  buffs: EngineBuff[];
+}
+
+export interface ActiveBuff extends EngineBuff {
+  startTick: number;
+  endTick: number | null;
+  sourceKey: string;
 }
 
 export type EngineEvent =
-  /** ability accepted; fires at fireTick (queued during the GCD, or cast on the tick it was processed) */
-  | { kind: 'queued'; abilityId: string; expected: string; fireTick: number; marginMs: number }
-  /** the expected ability fired – step done */
+  /** entity accepted; casts at fireTick (queued during the GCD, or on the tick it was processed) */
+  | { kind: 'queued'; key: string; expected: string; fireTick: number; marginMs: number }
+  /** the expected step finished – GCD ability cast or off-GCD thing activated */
   | { kind: 'fired'; result: StepResult }
-  /** a different ability fired (started a GCD) – step not done */
-  | { kind: 'wrong-fired'; abilityId: string; expected: string; tick: number }
+  /** something other than the expected step was cast / activated */
+  | { kind: 'wrong-fired'; key: string; expected: string; tick: number }
   /** queueing off: press of the expected ability during the GCD, ignored */
-  | { kind: 'too-early'; abilityId: string; ticksEarly: number }
-  /** queueing off: press of a different ability during the GCD, ignored */
-  | { kind: 'wrong'; abilityId: string; expected: string }
+  | { kind: 'too-early'; key: string; ticksEarly: number }
+  /** queueing off: press of another ability during the GCD, ignored */
+  | { kind: 'wrong'; key: string; expected: string }
+  /** not enough adrenaline for the ability */
+  | { kind: 'no-adrenaline'; key: string; need: number; have: number }
+  /** entity still on its own (or shared) cooldown */
+  | { kind: 'on-cooldown'; key: string; readyInTicks: number }
+  /** off-GCD steps skipped because the next GCD ability cast first */
+  | { kind: 'missed'; keys: string[] }
   | { kind: 'finished' };
 
 interface PendingInput {
-  abilityId: string;
+  key: string;
   pressedAt: number;
   arrival: number;
 }
 
 /** The single queue slot of the game: one ability waiting to be cast at `tick`. */
 interface Pending {
-  abilityId: string;
+  key: string;
   tick: number;
   arrival: number;
   /** in-game bypass: the ability that stays queued for the next GCD end after this one casts */
   bypassed?: Pending;
+  /** a "waiting for adrenaline / cooldown" event was already emitted */
+  notified?: boolean;
 }
 
 /**
- * Pure timing model of the trainer. All times are milliseconds on one monotonic clock
- * (performance.now()); the caller feeds `now` into press()/update().
+ * Pure timing + resource model of the trainer. All times are milliseconds on one monotonic
+ * clock (performance.now()); the caller feeds `now` into press()/update().
  *
- * Server tick k happens at t0 + k * TICK_MS. A key press at client time t reaches the
- * server at t + ping (+ jitter) and is processed at the first tick at or after that
- * (`tickP`). The last cast started the GCD at `castTick`; abilities may be cast again
- * from `gcdEnd = castTick + GCD_TICKS`.
+ * Ticks: server tick k happens at t0 + k * TICK_MS. A key press at client time t reaches the
+ * server at t + ping (+ jitter) and is processed at the first tick at or after that (`tickP`).
  *
- * - tickP > gcdEnd (GCD over): the ability casts at tickP. Expected ability → late by
- *   (tickP − gcdEnd) ticks, or perfect if there was no GCD.
- * - tickP == gcdEnd (press in the last GCD tick): casts exactly at gcdEnd → perfect.
- * - tickP < gcdEnd: queueing off → ignored ("too early" / "wrong"). Queueing on →
- *   queued, casts at gcdEnd → perfect. A later press replaces the queued ability,
- *   except the in-game bypass: a different ability pressed on the last tick casts
- *   instead, and the queued one stays queued for the next GCD end.
- * - A wrong ability that casts starts a GCD like any other; the step is not advanced.
+ * GCD abilities: the last cast started the GCD at `castTick`; the next cast is possible from
+ * `gcdEnd = castTick + GCD_TICKS`. Press processed after the GCD → casts on that tick (late).
+ * Press processed on the last GCD tick → casts at gcdEnd (perfect). Earlier: queueing off →
+ * ignored; queueing on → queued for gcdEnd (perfect). A wrong ability that casts starts a GCD
+ * like any other. Adrenaline and the ability's own cooldown are checked when it would cast:
+ * queueing on keeps it queued until it is possible, queueing off drops the press.
+ *
+ * Off-GCD steps (prayers, potions, Surge, ...) activate on the tick they are processed. They
+ * belong to the group of off-GCD steps directly before the next GCD ability and may be pressed
+ * in any order inside that group; whatever is still open when that ability casts is "missed".
  */
 export class TrainerEngine {
   state: 'idle' | 'running' | 'finished' = 'idle';
   t0 = 0;
+  /** first step that is not done yet */
   index = 0;
   castTick: number | null = null;
+  adrenaline = 0;
   results: StepResult[] = [];
+  buffs: ActiveBuff[] = [];
   /** Events since the last drain; the UI empties this array. */
   readonly events: EngineEvent[] = [];
   random: () => number = Math.random;
 
   private inflight: PendingInput[] = [];
   private pending: Pending | null = null;
+  private done = new Set<number>();
   private tooEarly = 0;
   private wrong = 0;
+  private readyTick = new Map<string, number>();
+  private overTime: { key: string; perTick: number; untilTick: number }[] = [];
+  private lastTick = 0;
 
-  constructor(readonly steps: string[], public config: EngineConfig) {}
+  constructor(
+    readonly steps: EngineEntity[],
+    readonly catalog: Map<string, EngineEntity>,
+    public config: EngineConfig,
+  ) {}
+
+  get maxAdrenaline(): number {
+    const l = this.config.loadout ?? DEFAULT_LOADOUT;
+    return 100 + (l.heightenedSenses ? 10 : 0) + (l.vestmentsOfHavoc ? 20 : 0);
+  }
 
   start(now: number): void {
     this.t0 = now;
     this.index = 0;
     this.castTick = null;
+    this.adrenaline = Math.max(0, Math.min(this.maxAdrenaline, this.config.loadout?.startAdrenaline ?? 0));
     this.results = [];
+    this.buffs = [];
     this.inflight = [];
     this.pending = null;
+    this.done.clear();
     this.tooEarly = 0;
     this.wrong = 0;
+    this.readyTick.clear();
+    this.overTime = [];
+    this.lastTick = 0;
     this.events.length = 0;
     this.state = 'running';
   }
@@ -93,18 +160,31 @@ export class TrainerEngine {
     if (this.state === 'running') this.state = 'finished';
   }
 
-  get currentAbility(): string | undefined {
+  /** The step the player should do next (first open step). */
+  get currentStep(): EngineEntity | undefined {
     return this.steps[this.index];
   }
 
-  /** Ability waiting in the queue slot, if any. */
-  get queuedAbility(): string | null {
-    return this.pending?.abilityId ?? null;
+  /** The next GCD ability the rotation expects. */
+  get expectedAbility(): EngineEntity | undefined {
+    for (let i = this.index; i < this.steps.length; i++) {
+      if (this.steps[i].gcd) return this.steps[i];
+    }
+    return undefined;
+  }
+
+  isDone(stepIndex: number): boolean {
+    return this.done.has(stepIndex);
+  }
+
+  /** Entity key waiting in the queue slot, if any. */
+  get queuedKey(): string | null {
+    return this.pending?.key ?? null;
   }
 
   /** True when the expected ability is queued / about to cast. */
   get isQueued(): boolean {
-    return this.pending !== null && this.pending.abilityId === this.currentAbility;
+    return this.pending !== null && this.pending.key === this.expectedAbility?.key;
   }
 
   get gcdEndTick(): number | null {
@@ -118,6 +198,10 @@ export class TrainerEngine {
   /** Tick at which an input arriving at the server at `time` is processed. */
   tickOf(time: number): number {
     return Math.ceil((time - this.t0) / TICK_MS);
+  }
+
+  currentTick(now: number): number {
+    return Math.floor((now - this.t0) / TICK_MS);
   }
 
   /** 0..1 progress of the current tick. */
@@ -138,21 +222,32 @@ export class TrainerEngine {
     return end === null ? 0 : Math.max(0, this.tickTime(end) - now);
   }
 
-  press(abilityId: string, now: number): void {
+  /** Ticks until `key` is off its own / shared cooldown at `tick` (0 = ready). */
+  cooldownLeft(key: string, tick: number): number {
+    const e = this.catalog.get(key);
+    let ready = this.readyTick.get(key) ?? 0;
+    if (e?.sharedCooldown) ready = Math.max(ready, this.readyTick.get('shared:' + e.sharedCooldown) ?? 0);
+    return Math.max(0, ready - tick);
+  }
+
+  press(key: string, now: number): void {
     if (this.state !== 'running') return;
     const jitter = this.config.jitterMs > 0 ? (this.random() * 2 - 1) * this.config.jitterMs : 0;
     const arrival = now + Math.max(0, this.config.pingMs + jitter);
-    this.inflight.push({ abilityId, pressedAt: now, arrival });
+    this.inflight.push({ key, pressedAt: now, arrival });
   }
 
   update(now: number): void {
     if (this.state !== 'running') return;
     this.inflight.sort((a, b) => a.arrival - b.arrival);
-    // interleave casts and inputs in time order
     for (;;) {
       const next = this.inflight[0];
       const castAt = this.pending ? this.tickTime(this.pending.tick) : Infinity;
-      if (castAt <= now && (!next || castAt <= next.arrival)) {
+      const tickAt = this.tickTime(this.lastTick + 1);
+      // advance server ticks (over-time adrenaline, buff expiry) before anything scheduled later
+      if (tickAt <= now && tickAt <= castAt && (!next || tickAt <= next.arrival)) {
+        this.advanceTick(this.lastTick + 1);
+      } else if (castAt <= now && (!next || castAt <= next.arrival)) {
         this.cast();
         if (this.state !== 'running') return;
       } else if (next && next.arrival <= now) {
@@ -164,23 +259,28 @@ export class TrainerEngine {
     }
   }
 
+  // ---------------------------------------------------------------- input handling
+
   private handle(input: PendingInput): void {
-    const expected = this.steps[this.index];
+    const entity = this.catalog.get(input.key);
+    if (!entity) return;
     const tickP = this.tickOf(input.arrival);
+    if (!entity.gcd) {
+      this.handleOffGcd(entity, tickP);
+      return;
+    }
+    const expected = this.expectedAbility?.key ?? '';
     const gcdEnd = this.gcdEndTick;
 
     if (gcdEnd === null || tickP > gcdEnd) {
-      // no GCD running when the input is processed: cast on that tick
       this.accept(input, tickP, expected);
       return;
     }
     if (tickP === gcdEnd) {
-      // last tick of the GCD: casts exactly when the GCD ends
-      if (this.pending && this.pending.abilityId !== input.abilityId && this.config.abilityQueueing) {
-        // bypass: the pressed ability casts now, the queued one waits for the next GCD end
+      if (this.pending && this.pending.key !== input.key && this.config.abilityQueueing) {
         const queued = this.pending;
         this.accept(input, gcdEnd, expected);
-        this.pending!.bypassed = queued;
+        if (this.pending) this.pending.bypassed = queued;
       } else {
         this.accept(input, gcdEnd, expected);
       }
@@ -188,57 +288,197 @@ export class TrainerEngine {
     }
     // earlier during the GCD
     if (!this.config.abilityQueueing) {
-      if (input.abilityId === expected) {
+      if (input.key === expected) {
         this.tooEarly++;
-        this.events.push({ kind: 'too-early', abilityId: input.abilityId, ticksEarly: gcdEnd - tickP });
+        this.events.push({ kind: 'too-early', key: input.key, ticksEarly: gcdEnd - tickP });
       } else {
         this.wrong++;
-        this.events.push({ kind: 'wrong', abilityId: input.abilityId, expected });
+        this.events.push({ kind: 'wrong', key: input.key, expected });
       }
       return;
     }
-    if (this.pending?.abilityId === input.abilityId) return; // already queued – repeated presses change nothing
+    if (this.pending?.key === input.key) return; // already queued – repeated presses change nothing
     this.accept(input, gcdEnd, expected);
   }
 
+  /** Queueing off: check adrenaline / cooldown now; queueing on: the cast waits until possible. */
   private accept(input: PendingInput, tick: number, expected: string): void {
-    this.pending = { abilityId: input.abilityId, tick, arrival: input.arrival };
+    const entity = this.catalog.get(input.key)!;
+    if (!this.config.abilityQueueing) {
+      const cd = this.cooldownLeft(entity.key, tick);
+      if (cd > 0) {
+        this.countWrongPress(entity.key, expected);
+        this.events.push({ kind: 'on-cooldown', key: entity.key, readyInTicks: cd });
+        return;
+      }
+      if (entity.adrenaline < 0 && this.adrenaline < -entity.adrenaline) {
+        this.countWrongPress(entity.key, expected);
+        this.events.push({ kind: 'no-adrenaline', key: entity.key, need: -entity.adrenaline, have: this.adrenaline });
+        return;
+      }
+    }
+    this.pending = { key: entity.key, tick, arrival: input.arrival };
     const gcdEnd = this.gcdEndTick;
     const marginMs = gcdEnd === null ? 0 : this.tickTime(gcdEnd) - input.arrival;
-    this.events.push({ kind: 'queued', abilityId: input.abilityId, expected, fireTick: tick, marginMs });
+    this.events.push({ kind: 'queued', key: entity.key, expected, fireTick: tick, marginMs });
   }
+
+  private countWrongPress(key: string, expected: string): void {
+    if (key === expected) this.tooEarly++;
+    else this.wrong++;
+  }
+
+  private handleOffGcd(entity: EngineEntity, tick: number): void {
+    const cd = this.cooldownLeft(entity.key, tick);
+    if (cd > 0) {
+      this.wrong++;
+      this.events.push({ kind: 'on-cooldown', key: entity.key, readyInTicks: cd });
+      return;
+    }
+    // does it satisfy an open off-GCD step in the current group?
+    let stepIndex = -1;
+    for (let i = this.index; i < this.steps.length; i++) {
+      const s = this.steps[i];
+      if (s.gcd) break;
+      if (!this.done.has(i) && s.key === entity.key) {
+        stepIndex = i;
+        break;
+      }
+    }
+    this.activate(entity, tick);
+    if (stepIndex < 0) {
+      this.wrong++;
+      this.events.push({ kind: 'wrong-fired', key: entity.key, expected: this.currentStep?.key ?? '', tick });
+      return;
+    }
+    this.done.add(stepIndex);
+    const result: StepResult = {
+      step: stepIndex,
+      key: entity.key,
+      name: entity.name,
+      kind: entity.kind,
+      outcome: 'done',
+      lateTicks: 0,
+      offsetMs: 0,
+      tooEarly: 0,
+      wrong: 0,
+      firedAtTick: tick,
+      adrenaline: this.adrenaline,
+    };
+    this.results.push(result);
+    this.events.push({ kind: 'fired', result });
+    this.advanceIndex();
+  }
+
+  // ---------------------------------------------------------------- casting
 
   private cast(): void {
     const p = this.pending!;
-    this.pending = p.bypassed ? { ...p.bypassed, tick: p.tick + GCD_TICKS } : null;
-    const expected = this.steps[this.index];
-    const gcdEnd = this.gcdEndTick;
-    this.castTick = p.tick;
-
-    if (p.abilityId !== expected) {
-      this.wrong++;
-      this.events.push({ kind: 'wrong-fired', abilityId: p.abilityId, expected, tick: p.tick });
+    const entity = this.catalog.get(p.key)!;
+    // queueing on: wait until adrenaline and cooldown allow it
+    const cd = this.cooldownLeft(entity.key, p.tick);
+    const need = entity.adrenaline < 0 ? -entity.adrenaline : 0;
+    if (cd > 0 || this.adrenaline < need) {
+      if (!p.notified) {
+        if (cd > 0) this.events.push({ kind: 'on-cooldown', key: entity.key, readyInTicks: cd });
+        else this.events.push({ kind: 'no-adrenaline', key: entity.key, need, have: this.adrenaline });
+        p.notified = true;
+      }
+      p.tick += Math.max(1, cd); // re-check on the next possible tick
       return;
     }
+    this.pending = p.bypassed ? { ...p.bypassed, tick: p.tick + GCD_TICKS } : null;
+    const expected = this.expectedAbility;
+    const gcdEnd = this.gcdEndTick;
+    this.castTick = p.tick;
+    this.activate(entity, p.tick);
+
+    if (!expected || entity.key !== expected.key) {
+      this.wrong++;
+      this.events.push({ kind: 'wrong-fired', key: entity.key, expected: expected?.key ?? '', tick: p.tick });
+      return;
+    }
+    // off-GCD steps of this group that were not done are missed
+    const expectedIndex = this.steps.indexOf(expected, this.index);
+    const missed: string[] = [];
+    for (let i = this.index; i < expectedIndex; i++) {
+      if (!this.done.has(i)) {
+        missed.push(this.steps[i].key);
+        this.done.add(i);
+        this.results.push({
+          step: i, key: this.steps[i].key, name: this.steps[i].name, kind: this.steps[i].kind, outcome: 'missed',
+          lateTicks: 0, offsetMs: 0, tooEarly: 0, wrong: 0, firedAtTick: p.tick, adrenaline: this.adrenaline,
+        });
+      }
+    }
+    if (missed.length) this.events.push({ kind: 'missed', keys: missed });
+
     const lateTicks = gcdEnd === null ? 0 : Math.max(0, p.tick - gcdEnd);
     const result: StepResult = {
-      step: this.index,
-      abilityId: expected,
+      step: expectedIndex,
+      key: entity.key,
+      name: entity.name,
+      kind: entity.kind,
       outcome: lateTicks ? 'late' : 'perfect',
       lateTicks,
       offsetMs: gcdEnd === null ? 0 : Math.round(Math.abs(this.tickTime(gcdEnd) - p.arrival)),
       tooEarly: this.tooEarly,
       wrong: this.wrong,
       firedAtTick: p.tick,
+      adrenaline: this.adrenaline,
     };
     this.results.push(result);
     this.events.push({ kind: 'fired', result });
+    this.done.add(expectedIndex);
     this.tooEarly = 0;
     this.wrong = 0;
-    this.index++;
+    this.advanceIndex();
+  }
+
+  /** Apply the effects of an entity that just cast / activated at `tick`. */
+  private activate(entity: EngineEntity, tick: number): void {
+    const l = this.config.loadout ?? DEFAULT_LOADOUT;
+    if (entity.cooldownTicks > 0) this.readyTick.set(entity.key, tick + entity.cooldownTicks);
+    if (entity.sharedCooldown) this.readyTick.set('shared:' + entity.sharedCooldown, tick + entity.cooldownTicks);
+
+    let delta = entity.adrenaline;
+    if (entity.kind === 'ability' && entity.gcd && entity.abilityType === 'Basic' && entity.adrenaline > 0) {
+      if (l.furyOfTheSmall) delta += 1;
+      if (l.impatientRank > 0 && this.random() < 0.09 * l.impatientRank) delta += 3;
+    }
+    if (entity.abilityType === 'Ultimate' && entity.adrenaline < 0) {
+      if (l.ringOfVigour) delta += 10;
+      if (l.conservationOfEnergy) delta += 10;
+    }
+    this.adrenaline = Math.max(0, Math.min(this.maxAdrenaline, this.adrenaline + delta));
+    if (entity.adrenalineOverTime && entity.adrenalineOverTime.ticks > 0) {
+      this.overTime.push({
+        key: entity.key,
+        perTick: entity.adrenalineOverTime.amount / entity.adrenalineOverTime.ticks,
+        untilTick: tick + entity.adrenalineOverTime.ticks,
+      });
+    }
+    for (const b of entity.buffs) {
+      this.buffs = this.buffs.filter((x) => x.id !== b.id);
+      this.buffs.push({ ...b, startTick: tick, endTick: b.durationTicks === null ? null : tick + b.durationTicks, sourceKey: entity.key });
+    }
+  }
+
+  private advanceTick(tick: number): void {
+    this.lastTick = tick;
+    for (const o of this.overTime) {
+      if (tick <= o.untilTick) this.adrenaline = Math.min(this.maxAdrenaline, this.adrenaline + o.perTick);
+    }
+    this.overTime = this.overTime.filter((o) => tick < o.untilTick);
+    this.buffs = this.buffs.filter((b) => b.endTick === null || b.endTick > tick);
+  }
+
+  private advanceIndex(): void {
+    while (this.index < this.steps.length && this.done.has(this.index)) this.index++;
     if (this.index >= this.steps.length) {
       if (this.config.loop) {
         this.index = 0;
+        this.done.clear();
       } else {
         this.state = 'finished';
         this.events.push({ kind: 'finished' });

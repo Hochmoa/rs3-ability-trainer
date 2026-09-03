@@ -145,3 +145,23 @@
 .empty {
   text-align: center;
 }
+
+.step.prayer,
+.step.special {
+  border-left: 3px solid var(--gold);
+}
+
+.step.unknown {
+  border-left: 3px solid var(--bad);
+}
+
+.removed {
+  display: inline-flex;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--bad);
+  border-radius: 6px;
+  color: var(--bad);
+}

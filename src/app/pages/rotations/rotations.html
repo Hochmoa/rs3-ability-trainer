@@ -1,32 +1,38 @@
-@if (editing(); as e) {
+@if (editing(); as r) {
   <div class="panel editor-head">
     <label>
       Name
-      <input type="text" [ngModel]="e.name" (ngModelChange)="setName($event)" maxlength="60" />
+      <input type="text" [ngModel]="r.name" (ngModelChange)="setName($event)" maxlength="60" />
     </label>
     <div class="actions">
-      <button class="btn btn-primary" (click)="save()" [disabled]="!e.steps.length">Save</button>
+      <button class="btn btn-primary" (click)="save()" [disabled]="!r.steps.length">Save</button>
       <button class="btn" (click)="cancel()">Cancel</button>
     </div>
   </div>
 
   <div class="panel">
-    <h2>Rotation <span class="muted">({{ e.steps.length }} steps)</span></h2>
-    @if (!e.steps.length) {
-      <p class="muted">Click abilities in the catalog below to append them.</p>
+    <h2>Rotation <span class="muted">({{ r.steps.length }} steps)</span></h2>
+    @if (!r.steps.length) {
+      <p class="muted">Click abilities, prayers or potions in the catalog below to append them. Prayers and potions don't use the global cooldown – put them right before the ability they belong to.</p>
     }
     <div class="steps">
-      @for (id of e.steps; track $index) {
-        @if (ability(id); as a) {
-          <div class="step">
+      @for (s of r.steps; track $index) {
+        @if (entity(s); as e) {
+          <div class="step" [class]="'step ' + e.kind">
             <span class="num">{{ $index + 1 }}</span>
-            <ability-icon [ability]="a" [px]="44" [keyLabel]="keyOf(id)" />
-            <span class="name">{{ a.name }}</span>
+            <span [entityTip]="e"><ability-icon [ability]="e" [px]="44" [keyLabel]="keyOf(e)" /></span>
+            <span class="name">{{ e.name }} <span class="muted small">{{ subtitle(e) }}</span></span>
             <span class="step-actions">
               <button class="btn btn-sm" (click)="move($index, -1)" [disabled]="$first" title="Move up">↑</button>
               <button class="btn btn-sm" (click)="move($index, 1)" [disabled]="$last" title="Move down">↓</button>
               <button class="btn btn-sm danger" (click)="removeStep($index)" title="Remove">×</button>
             </span>
+          </div>
+        } @else {
+          <div class="step unknown">
+            <span class="num">{{ $index + 1 }}</span>
+            <span class="name warn">{{ s.id }} – removed from the game</span>
+            <span class="step-actions"><button class="btn btn-sm danger" (click)="removeStep($index)">×</button></span>
           </div>
         }
       }
@@ -34,31 +40,25 @@
   </div>
 
   <div class="panel">
-    <h2>Ability catalog</h2>
+    <h2>Catalog</h2>
     <div class="catalog-controls">
       <div class="tabs">
-        @for (s of STYLES; track s) {
-          <button class="tab" [class.active]="style() === s && !search()" (click)="style.set(s); search.set('')">{{ s }}</button>
+        @for (t of TABS; track t) {
+          <button class="tab" [class.active]="tab() === t && !search()" (click)="tab.set(t); search.set('')">{{ t }}</button>
         }
       </div>
-      <input type="search" placeholder="Search all styles…" [ngModel]="search()" (ngModelChange)="search.set($event)" />
+      <input type="search" placeholder="Search everything…" [ngModel]="search()" (ngModelChange)="search.set($event)" />
     </div>
     <div class="grid">
-      @for (a of catalog(); track a.id) {
-        <button
-          class="cell"
-          [class.off-gcd]="!a.triggersGcd"
-          (click)="add(a)"
-          [disabled]="!a.triggersGcd"
-          [title]="a.triggersGcd ? 'Add ' + a.name : a.name + ' ignores the global cooldown – queueing off-GCD abilities is coming later'"
-        >
-          <ability-icon [ability]="a" [px]="52" [keyLabel]="keyOf(a.id)" />
-          <span class="cell-name">{{ a.name }}</span>
-          <span class="cell-type">{{ a.type }} · {{ a.level }}</span>
+      @for (e of catalog(); track e.key) {
+        <button class="cell" (click)="add(e)" [entityTip]="e">
+          <ability-icon [ability]="e" [px]="52" [keyLabel]="keyOf(e)" />
+          <span class="cell-name">{{ e.name }}</span>
+          <span class="cell-type">{{ subtitle(e) }}</span>
         </button>
       }
     </div>
-    <p class="muted small">Greyed-out abilities (Surge, Escape, …) don't trigger the global cooldown and can't be queued yet.</p>
+    <p class="muted small">Hover an icon for cooldown, adrenaline, damage and effects. Data from the RuneScape Wiki, state after the Combat Style Modernisation (March 2026).</p>
   </div>
 } @else {
   <div class="panel list-head">
@@ -82,9 +82,11 @@
         </span>
       </div>
       <div class="preview">
-        @for (id of r.steps; track $index) {
-          @if (ability(id); as a) {
-            <ability-icon [ability]="a" [px]="40" [keyLabel]="keyOf(id)" />
+        @for (s of r.steps; track $index) {
+          @if (entity(s); as e) {
+            <span [entityTip]="e"><ability-icon [ability]="e" [px]="40" [keyLabel]="keyOf(e)" /></span>
+          } @else {
+            <span class="removed" title="removed from the game">?</span>
           }
         }
       </div>

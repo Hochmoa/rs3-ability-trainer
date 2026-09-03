@@ -1,4 +1,4 @@
-@if (!storage.ready() || !abilities.loaded()) {
+@if (!storage.ready() || !data.loaded()) {
   <p class="muted">Loading…</p>
 } @else if (!storage.rotations().length) {
   <div class="panel empty">
@@ -25,20 +25,23 @@
       Ping {{ storage.settings().pingMs }} ms ± {{ storage.settings().jitterMs }} · ability queueing
       {{ storage.settings().abilityQueueing ? 'on' : 'off' }}
       @if (storage.settings().loop) { · loop }
+      · start {{ storage.loadout().startAdrenaline }}% adrenaline
     </span>
   </div>
 
   @if (missingBinds().length) {
     <div class="panel warning">
       Missing keybinds for
-      @for (a of missingBinds(); track a.id) {
-        <b>{{ a.name }}</b>{{ $last ? '' : ', ' }}
+      @for (e of missingBinds(); track e.key) {
+        <b>{{ e.name }}</b>{{ $last ? '' : ', ' }}
       }
       – <a routerLink="/keybinds">bind them</a> before training.
     </div>
   }
-  @if (unknownSteps().length) {
-    <div class="panel warning">This rotation contains abilities that no longer exist in the catalog. Edit it to fix.</div>
+  @if (unknownSteps()) {
+    <div class="panel warning">
+      {{ unknownSteps() }} step(s) of this rotation refer to abilities that were removed from the game. <a routerLink="/rotations">Edit the rotation</a> to fix it.
+    </div>
   }
 
   <div class="panel arena">
@@ -54,20 +57,58 @@
           <div class="window" [style.width.%]="storage.settings().abilityQueueing ? 100 : 100 / 3" title="press window"></div>
         </div>
       </div>
+      <div class="bar-row">
+        <span class="bar-label">Adrenaline</span>
+        <div class="bar adrenaline">
+          <div class="fill" [style.width.%]="(adrenaline() / maxAdrenaline()) * 100"></div>
+          @if (maxAdrenaline() > 100) {
+            <div class="mark" [style.left.%]="(100 / maxAdrenaline()) * 100" title="100%"></div>
+          }
+          <span class="value">{{ adrenaline() | number: '1.0-0' }}%</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="status-bars">
+      <div class="status-bar">
+        <span class="label">Buffs</span>
+        @for (b of selfBuffs(); track b.id) {
+          <div class="status buff" [title]="b.name">
+            @if (b.icon) { <img [src]="b.icon" [alt]="b.name" /> } @else { <span class="fallback">{{ b.name.slice(0, 2) }}</span> }
+            @if (b.remainingS !== null) { <span class="timer">{{ b.remainingS | number: '1.0-0' }}</span> }
+          </div>
+        } @empty {
+          <span class="muted none">–</span>
+        }
+      </div>
+      <div class="status-bar">
+        <span class="label">Target</span>
+        @for (b of targetDebuffs(); track b.id) {
+          <div class="status debuff" [title]="b.name">
+            @if (b.icon) { <img [src]="b.icon" [alt]="b.name" /> } @else { <span class="fallback">{{ b.name.slice(0, 2) }}</span> }
+            @if (b.remainingS !== null) { <span class="timer">{{ b.remainingS | number: '1.0-0' }}</span> }
+          </div>
+        } @empty {
+          <span class="muted none">–</span>
+        }
+      </div>
     </div>
 
     <div class="ability-queue" [class.finished]="finished() && !running()">
-      @for (s of slots(); track $index) {
-        <div class="slot" [class]="'slot ' + s.kind">
+      @for (s of slots(); track s.stepIndex + '-' + s.kind) {
+        <div class="slot" [class]="'slot ' + s.kind + ' ' + s.entity.kind" [entityTip]="s.entity">
           <ability-icon
-            [ability]="s.ability"
+            [ability]="s.entity"
             [keyLabel]="s.key"
             [px]="s.kind === 'current' ? 112 : s.kind === 'next' ? 64 : 48"
-            [gcdPhase]="s.kind === 'current' && running() ? gcdPhase() : 1"
-            [remainingMs]="s.kind === 'current' && running() ? gcdRemaining() : 0"
-            [state]="s.kind === 'current' && running() ? iconState() : 'idle'"
+            [gcdPhase]="s.kind === 'current' && running() && s.entity.kind === 'ability' ? gcdPhase() : 1"
+            [remainingMs]="s.kind === 'current' && running() && s.entity.kind === 'ability' ? gcdRemaining() : 0"
+            [state]="s.done ? 'done' : s.kind === 'current' && running() ? iconState() : 'idle'"
           />
-          <span class="name">{{ s.ability.name }}</span>
+          <span class="name">{{ s.entity.name }}</span>
+          @if (s.entity.kind !== 'ability') {
+            <span class="tag">{{ s.entity.kind === 'prayer' ? 'prayer' : 'potion' }} · no GCD</span>
+          }
         </div>
         @if (s.kind === 'current') {
           <div class="arrow">›</div>
@@ -84,25 +125,27 @@
       <span class="warn">Late {{ counts().late }}</span>
       <span class="bad">Too early {{ counts().early }}</span>
       <span class="bad">Wrong {{ counts().wrong }}</span>
+      <span class="warn">Missed {{ counts().missed }}</span>
     </div>
   </div>
 
   @if (finished() && results().length) {
     <div class="panel summary">
-      <h2>Session summary – {{ accuracy() }}% perfect</h2>
+      <h2>Session summary – {{ accuracy() }}% clean</h2>
       <table>
         <thead>
-          <tr><th>#</th><th>Ability</th><th>Result</th><th>Offset</th><th>Too early</th><th>Wrong</th></tr>
+          <tr><th>#</th><th>Step</th><th>Result</th><th>Offset</th><th>Adrenaline</th><th>Too early</th><th>Wrong</th></tr>
         </thead>
         <tbody>
           @for (r of results(); track $index) {
             <tr>
-              <td>{{ $index + 1 }}</td>
-              <td>{{ abilityName(r.abilityId) }}</td>
-              <td [class]="r.outcome === 'perfect' ? 'good' : 'warn'">
-                {{ r.outcome === 'perfect' ? 'perfect' : 'late ' + r.lateTicks + (r.lateTicks === 1 ? ' tick' : ' ticks') }}
+              <td>{{ r.step + 1 }}</td>
+              <td>{{ r.name }}</td>
+              <td [class]="r.outcome === 'perfect' || r.outcome === 'done' ? 'good' : 'warn'">
+                {{ r.outcome === 'late' ? 'late ' + r.lateTicks + (r.lateTicks === 1 ? ' tick' : ' ticks') : r.outcome }}
               </td>
-              <td>{{ r.outcome === 'perfect' ? (r.offsetMs ? '-' + r.offsetMs + ' ms' : '–') : '+' + r.offsetMs + ' ms' }}</td>
+              <td>{{ r.outcome === 'perfect' ? (r.offsetMs ? '-' + r.offsetMs + ' ms' : '–') : r.outcome === 'late' ? '+' + r.offsetMs + ' ms' : '' }}</td>
+              <td>{{ r.adrenaline | number: '1.0-0' }}%</td>
               <td>{{ r.tooEarly || '' }}</td>
               <td>{{ r.wrong || '' }}</td>
             </tr>

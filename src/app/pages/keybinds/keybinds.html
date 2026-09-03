@@ -2,14 +2,14 @@
   <h2>Keybinds</h2>
   <label class="toggle">
     <input type="checkbox" [checked]="showAll()" (change)="showAll.set(!showAll())" />
-    Show all abilities
+    Show everything (abilities, prayers, curses, potions)
   </label>
 </div>
 
 <div class="panel">
   @if (!list().length) {
     <p class="muted">
-      No abilities to bind yet. <a routerLink="/rotations">Create a rotation</a> first, or tick "Show all abilities".
+      Nothing to bind yet. <a routerLink="/rotations">Create a rotation</a> first, or tick "Show everything".
     </p>
   } @else {
     <p class="muted small">
@@ -18,30 +18,30 @@
     </p>
     <table>
       <thead>
-        <tr><th></th><th>Ability</th><th>Style</th><th>Keybind</th><th></th></tr>
+        <tr><th></th><th>Name</th><th>Type</th><th>Keybind</th><th></th></tr>
       </thead>
       <tbody>
-        @for (a of list(); track a.id) {
-          <tr [class.capturing]="capturing() === a.id">
-            <td><ability-icon [ability]="a" [px]="36" /></td>
-            <td>{{ a.name }}</td>
-            <td class="muted">{{ a.style }} · {{ a.type }}</td>
+        @for (e of list(); track e.key) {
+          <tr [class.capturing]="capturing() === e.key">
+            <td><span [entityTip]="e"><ability-icon [ability]="e" [px]="36" /></span></td>
+            <td>{{ e.name }}</td>
+            <td class="muted">{{ subtitle(e) }}</td>
             <td>
-              @if (capturing() === a.id) {
+              @if (capturing() === e.key) {
                 <span class="key waiting">Press a key…</span>
-              } @else if (label(a.id)) {
-                <span class="key">{{ label(a.id) }}</span>
-                @if (conflictOf(a.id).length) {
-                  <span class="conflict" [title]="'Also bound to ' + conflictOf(a.id).join(', ')">⚠ also {{ conflictOf(a.id).join(', ') }}</span>
+              } @else if (label(e.key)) {
+                <span class="key">{{ label(e.key) }}</span>
+                @if (conflictOf(e.key).length) {
+                  <span class="conflict" [title]="'Also bound to ' + conflictOf(e.key).join(', ')">⚠ also {{ conflictOf(e.key).join(', ') }}</span>
                 }
               } @else {
                 <span class="muted">–</span>
               }
             </td>
             <td class="actions">
-              <button class="btn btn-sm" (click)="capture(a.id)">{{ capturing() === a.id ? 'Cancel' : 'Bind' }}</button>
-              @if (label(a.id)) {
-                <button class="btn btn-sm" (click)="clear(a.id)">Clear</button>
+              <button class="btn btn-sm" (click)="capture(e.key)">{{ capturing() === e.key ? 'Cancel' : 'Bind' }}</button>
+              @if (label(e.key)) {
+                <button class="btn btn-sm" (click)="clear(e.key)">Clear</button>
               }
             </td>
           </tr>

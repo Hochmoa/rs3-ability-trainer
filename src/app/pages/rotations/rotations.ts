@@ -1,41 +1,62 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { AbilitiesService } from '../../core/abilities.service';
+import { DataService, Entity } from '../../core/data.service';
 import { keybindLabel } from '../../core/keybind.util';
-import { Ability, Rotation, STYLES, Style } from '../../core/models';
+import { Rotation, RotationStep, STYLES } from '../../core/models';
 import { StorageService } from '../../core/storage.service';
 import { AbilityIcon } from '../../shared/ability-icon';
+import { EntityTip } from '../../shared/tooltip';
+
+const TABS = [...STYLES, 'Prayers', 'Curses', 'Special'] as const;
+type Tab = (typeof TABS)[number];
+const TYPE_ORDER: Record<string, number> = { Basic: 0, Enhanced: 1, Threshold: 2, Ultimate: 3, Special: 4 };
 
 @Component({
   selector: 'app-rotations',
-  imports: [AbilityIcon, FormsModule, RouterLink],
+  imports: [AbilityIcon, FormsModule, RouterLink, EntityTip],
   templateUrl: './rotations.html',
   styleUrl: './rotations.scss',
 })
 export class Rotations {
   readonly storage = inject(StorageService);
-  readonly abilities = inject(AbilitiesService);
+  readonly data = inject(DataService);
   private router = inject(Router);
 
-  readonly STYLES = STYLES;
+  readonly TABS = TABS;
   readonly editing = signal<Rotation | null>(null);
-  readonly style = signal<Style>('Melee');
+  readonly tab = signal<Tab>('Melee');
   readonly search = signal('');
 
-  readonly catalog = computed(() => {
+  readonly catalog = computed<Entity[]>(() => {
     const q = this.search().trim().toLowerCase();
-    return this.abilities
-      .all()
-      .filter((a) => (q ? a.name.toLowerCase().includes(q) : a.style === this.style()));
+    const all = this.data.entities();
+    const list = q ? all.filter((e) => e.name.toLowerCase().includes(q)) : all.filter((e) => e.group === this.tab());
+    return [...list].sort((a, b) => {
+      if (a.kind !== b.kind) return a.kind.localeCompare(b.kind);
+      if (a.ability && b.ability) {
+        const t = (TYPE_ORDER[a.ability.type] ?? 9) - (TYPE_ORDER[b.ability.type] ?? 9);
+        if (t) return t;
+        return a.ability.level - b.ability.level || a.name.localeCompare(b.name);
+      }
+      if (a.prayer && b.prayer) return a.prayer.level - b.prayer.level || a.name.localeCompare(b.name);
+      return a.name.localeCompare(b.name);
+    });
   });
 
-  keyOf(id: string): string {
-    return keybindLabel(this.storage.keybinds()[id]);
+  keyOf(e: Entity): string {
+    return keybindLabel(this.storage.keybinds()[e.key]);
   }
 
-  ability(id: string): Ability | undefined {
-    return this.abilities.get(id);
+  entity(step: RotationStep): Entity | undefined {
+    return this.data.step(step);
+  }
+
+  subtitle(e: Entity): string {
+    if (e.ability) return e.ability.type + (e.ability.triggersGcd ? '' : ' · no GCD');
+    if (e.prayer) return 'level ' + e.prayer.level;
+    if (e.special) return '+' + (e.special.adrenaline || e.special.adrenalineOverTime) + '% adrenaline';
+    return '';
   }
 
   newRotation(): void {
@@ -43,7 +64,7 @@ export class Rotations {
   }
 
   edit(r: Rotation): void {
-    this.editing.set({ ...r, steps: [...r.steps] });
+    this.editing.set({ ...r, steps: r.steps.map((s) => ({ ...s })) });
   }
 
   async remove(r: Rotation): Promise<void> {
@@ -55,34 +76,33 @@ export class Rotations {
     void this.router.navigate(['/'], { queryParams: { rotation: r.id } });
   }
 
-  add(a: Ability): void {
-    if (!a.triggersGcd) return;
-    this.editing.update((e) => (e ? { ...e, steps: [...e.steps, a.id] } : e));
+  add(e: Entity): void {
+    this.editing.update((r) => (r ? { ...r, steps: [...r.steps, { kind: e.kind, id: e.id }] } : r));
   }
 
   removeStep(i: number): void {
-    this.editing.update((e) => (e ? { ...e, steps: e.steps.filter((_, k) => k !== i) } : e));
+    this.editing.update((r) => (r ? { ...r, steps: r.steps.filter((_, k) => k !== i) } : r));
   }
 
   move(i: number, dir: -1 | 1): void {
-    this.editing.update((e) => {
-      if (!e) return e;
+    this.editing.update((r) => {
+      if (!r) return r;
       const j = i + dir;
-      if (j < 0 || j >= e.steps.length) return e;
-      const steps = [...e.steps];
+      if (j < 0 || j >= r.steps.length) return r;
+      const steps = [...r.steps];
       [steps[i], steps[j]] = [steps[j], steps[i]];
-      return { ...e, steps };
+      return { ...r, steps };
     });
   }
 
   setName(name: string): void {
-    this.editing.update((e) => (e ? { ...e, name } : e));
+    this.editing.update((r) => (r ? { ...r, name } : r));
   }
 
   async save(): Promise<void> {
-    const e = this.editing();
-    if (!e) return;
-    await this.storage.saveRotation({ ...e, name: e.name.trim() || 'Unnamed rotation' });
+    const r = this.editing();
+    if (!r) return;
+    await this.storage.saveRotation({ ...r, name: r.name.trim() || 'Unnamed rotation' });
     this.editing.set(null);
   }
 

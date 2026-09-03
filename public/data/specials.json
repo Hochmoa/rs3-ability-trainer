@@ -1,0 +1,67 @@
+[
+ {
+  "id": "adrenaline-potion",
+  "name": "Adrenaline potion",
+  "kind": "potion",
+  "adrenaline": 25,
+  "adrenalineOverTime": 0,
+  "overTimeTicks": 0,
+  "cooldownTicks": 200,
+  "sharedCooldown": "adrenaline-potion",
+  "level": 77,
+  "description": "+25% adrenaline. Shares a 120 s cooldown with all adrenaline potions.",
+  "icon": "assets/specials/adrenaline-potion.png"
+ },
+ {
+  "id": "super-adrenaline-potion",
+  "name": "Super adrenaline potion",
+  "kind": "potion",
+  "adrenaline": 30,
+  "adrenalineOverTime": 0,
+  "overTimeTicks": 0,
+  "cooldownTicks": 200,
+  "sharedCooldown": "adrenaline-potion",
+  "level": 87,
+  "description": "+30% adrenaline. Shares the 120 s adrenaline potion cooldown.",
+  "icon": "assets/specials/super-adrenaline-potion.png"
+ },
+ {
+  "id": "adrenaline-renewal-potion",
+  "name": "Adrenaline renewal potion",
+  "kind": "potion",
+  "adrenaline": 0,
+  "adrenalineOverTime": 40,
+  "overTimeTicks": 10,
+  "cooldownTicks": 200,
+  "sharedCooldown": "adrenaline-potion",
+  "level": 115,
+  "description": "+40% adrenaline over 6 seconds. Shares the 120 s adrenaline potion cooldown.",
+  "icon": "assets/specials/adrenaline-renewal-potion.png"
+ },
+ {
+  "id": "replenishment-potion",
+  "name": "Replenishment potion",
+  "kind": "potion",
+  "adrenaline": 25,
+  "adrenalineOverTime": 0,
+  "overTimeTicks": 0,
+  "cooldownTicks": 200,
+  "sharedCooldown": "adrenaline-potion",
+  "level": 87,
+  "description": "+25% adrenaline plus prayer/summoning restore. Shares the 120 s adrenaline potion cooldown.",
+  "icon": "assets/specials/replenishment-potion.png"
+ },
+ {
+  "id": "enhanced-replenishment-potion",
+  "name": "Enhanced replenishment potion",
+  "kind": "potion",
+  "adrenaline": 30,
+  "adrenalineOverTime": 0,
+  "overTimeTicks": 0,
+  "cooldownTicks": 200,
+  "sharedCooldown": "adrenaline-potion",
+  "level": 90,
+  "description": "+30% adrenaline plus prayer/summoning restore. Shares the 120 s adrenaline potion cooldown.",
+  "icon": "assets/specials/enhanced-replenishment-potion.png"
+ }
+]

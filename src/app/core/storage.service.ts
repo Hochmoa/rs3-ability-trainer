@@ -1,6 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 import { IDBPDatabase, deleteDB, openDB } from 'idb';
-import { DEFAULT_SETTINGS, Keybind, Rotation, Session, Settings } from './models';
+import { DEFAULT_LOADOUT, DEFAULT_SETTINGS, Keybind, Loadout, Rotation, RotationStep, Session, Settings } from './models';
 
 const DB_NAME = 'rs3trainer';
 const CONSENT_KEY = 'rs3trainer.consent';
@@ -14,6 +14,8 @@ export class StorageService {
   readonly consent = signal(readConsent());
   readonly ready = signal(false);
   readonly settings = signal<Settings>({ ...DEFAULT_SETTINGS });
+  readonly loadout = signal<Loadout>({ ...DEFAULT_LOADOUT });
+  /** entity key ("ability:sever", "prayer:turmoil", ...) → keybind */
   readonly keybinds = signal<Record<string, Keybind>>({});
   readonly rotations = signal<Rotation[]>([]);
 
@@ -44,10 +46,24 @@ export class StorageService {
       const db = await this.open();
       const settings = await db.get('settings', 'settings');
       if (settings) this.settings.set(migrateSettings(settings));
+      const loadout = await db.get('settings', 'loadout');
+      if (loadout) this.loadout.set({ ...DEFAULT_LOADOUT, ...loadout });
+
       const keys = (await db.getAllKeys('keybinds')) as string[];
       const values = (await db.getAll('keybinds')) as Keybind[];
-      this.keybinds.set(Object.fromEntries(keys.map((k, i) => [k, values[i]])));
-      const rotations = (await db.getAll('rotations')) as Rotation[];
+      const keybinds: Record<string, Keybind> = {};
+      for (let i = 0; i < keys.length; i++) {
+        const k = keys[i].includes(':') ? keys[i] : 'ability:' + keys[i]; // legacy: plain ability ids
+        keybinds[k] = values[i];
+        if (k !== keys[i]) {
+          await db.delete('keybinds', keys[i]);
+          await db.put('keybinds', values[i], k);
+        }
+      }
+      this.keybinds.set(keybinds);
+
+      const rotations = ((await db.getAll('rotations')) as Rotation[]).map(migrateRotation);
+      for (const r of rotations) await db.put('rotations', r);
       this.rotations.set(rotations.sort((a, b) => b.updatedAt - a.updatedAt));
     } catch (err) {
       console.error('IndexedDB load failed', err);
@@ -64,6 +80,7 @@ export class StorageService {
     this.consent.set(true);
     const db = await this.open();
     await db.put('settings', this.settings(), 'settings');
+    await db.put('settings', this.loadout(), 'loadout');
     for (const [id, kb] of Object.entries(this.keybinds())) await db.put('keybinds', kb, id);
     for (const r of this.rotations()) await db.put('rotations', r);
   }
@@ -73,20 +90,25 @@ export class StorageService {
     if (this.consent()) await (await this.open()).put('settings', this.settings(), 'settings');
   }
 
-  async setKeybind(abilityId: string, kb: Keybind | null): Promise<void> {
+  async saveLoadout(l: Loadout): Promise<void> {
+    this.loadout.set({ ...l });
+    if (this.consent()) await (await this.open()).put('settings', this.loadout(), 'loadout');
+  }
+
+  async setKeybind(key: string, kb: Keybind | null): Promise<void> {
     const next = { ...this.keybinds() };
-    if (kb) next[abilityId] = kb;
-    else delete next[abilityId];
+    if (kb) next[key] = kb;
+    else delete next[key];
     this.keybinds.set(next);
     if (this.consent()) {
       const db = await this.open();
-      if (kb) await db.put('keybinds', kb, abilityId);
-      else await db.delete('keybinds', abilityId);
+      if (kb) await db.put('keybinds', kb, key);
+      else await db.delete('keybinds', key);
     }
   }
 
   async saveRotation(r: Rotation): Promise<void> {
-    const rot = { ...r, steps: [...r.steps], updatedAt: Date.now() };
+    const rot: Rotation = { ...r, steps: r.steps.map((s) => ({ kind: s.kind, id: s.id })), updatedAt: Date.now() };
     this.rotations.set([rot, ...this.rotations().filter((x) => x.id !== rot.id)]);
     if (this.consent()) await (await this.open()).put('rotations', rot);
   }
@@ -116,6 +138,7 @@ export class StorageService {
     await deleteDB(DB_NAME);
     this.consent.set(false);
     this.settings.set({ ...DEFAULT_SETTINGS });
+    this.loadout.set({ ...DEFAULT_LOADOUT });
     this.keybinds.set({});
     this.rotations.set([]);
   }
@@ -127,6 +150,11 @@ function migrateSettings(stored: Partial<Settings> & { queueWindowTicks?: number
   const s: Settings = { ...DEFAULT_SETTINGS, ...rest };
   if (typeof queueWindowTicks === 'number' && typeof stored.abilityQueueing !== 'boolean') s.abilityQueueing = queueWindowTicks >= 3;
   return s;
+}
+
+/** Older builds stored steps as plain ability ids. */
+function migrateRotation(r: Rotation & { steps: (string | RotationStep)[] }): Rotation {
+  return { ...r, steps: r.steps.map((s) => (typeof s === 'string' ? { kind: 'ability', id: s } : s)) };
 }
 
 function readConsent(): boolean {

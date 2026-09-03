@@ -1,64 +1,71 @@
 import { Component, HostListener, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { AbilitiesService } from '../../core/abilities.service';
+import { DataService, Entity } from '../../core/data.service';
 import { keybindFromEvent, keybindKey, keybindLabel } from '../../core/keybind.util';
-import { Ability } from '../../core/models';
+import { entityKey } from '../../core/models';
 import { StorageService } from '../../core/storage.service';
 import { AbilityIcon } from '../../shared/ability-icon';
+import { EntityTip } from '../../shared/tooltip';
 
 @Component({
   selector: 'app-keybinds',
-  imports: [AbilityIcon, RouterLink],
+  imports: [AbilityIcon, RouterLink, EntityTip],
   templateUrl: './keybinds.html',
   styleUrl: './keybinds.scss',
 })
 export class Keybinds {
   readonly storage = inject(StorageService);
-  readonly abilities = inject(AbilitiesService);
+  readonly data = inject(DataService);
 
   readonly showAll = signal(false);
   readonly capturing = signal<string | null>(null);
 
-  readonly usedIds = computed(() => new Set(this.storage.rotations().flatMap((r) => r.steps)));
-  readonly list = computed<Ability[]>(() => {
-    const all = this.abilities.all();
+  readonly usedKeys = computed(() => new Set(this.storage.rotations().flatMap((r) => r.steps.map((s) => entityKey(s.kind, s.id)))));
+  readonly list = computed<Entity[]>(() => {
+    const all = this.data.entities();
     if (this.showAll()) return all;
-    const used = this.usedIds();
+    const used = this.usedKeys();
     const bound = this.storage.keybinds();
-    return all.filter((a) => used.has(a.id) || bound[a.id]);
+    return all.filter((e) => used.has(e.key) || bound[e.key]);
   });
-  /** keybind key → ability ids sharing it */
+  /** keybind key → entity keys sharing it */
   readonly conflicts = computed(() => {
     const m = new Map<string, string[]>();
-    for (const [id, kb] of Object.entries(this.storage.keybinds())) {
+    for (const [key, kb] of Object.entries(this.storage.keybinds())) {
       const k = keybindKey(kb);
-      m.set(k, [...(m.get(k) ?? []), id]);
+      m.set(k, [...(m.get(k) ?? []), key]);
     }
     return m;
   });
 
-  label(id: string): string {
-    return keybindLabel(this.storage.keybinds()[id]);
+  label(key: string): string {
+    return keybindLabel(this.storage.keybinds()[key]);
   }
 
-  conflictOf(id: string): string[] {
-    const kb = this.storage.keybinds()[id];
+  subtitle(e: Entity): string {
+    if (e.ability) return e.ability.style + ' · ' + e.ability.type;
+    if (e.prayer) return e.prayer.book === 'Curses' ? 'Curse' : 'Prayer';
+    return 'Potion';
+  }
+
+  conflictOf(key: string): string[] {
+    const kb = this.storage.keybinds()[key];
     if (!kb) return [];
-    return (this.conflicts().get(keybindKey(kb)) ?? []).filter((x) => x !== id).map((x) => this.abilities.get(x)?.name ?? x);
+    return (this.conflicts().get(keybindKey(kb)) ?? []).filter((x) => x !== key).map((x) => this.data.name(x));
   }
 
-  capture(id: string): void {
-    this.capturing.set(this.capturing() === id ? null : id);
+  capture(key: string): void {
+    this.capturing.set(this.capturing() === key ? null : key);
   }
 
-  clear(id: string): void {
-    void this.storage.setKeybind(id, null);
+  clear(key: string): void {
+    void this.storage.setKeybind(key, null);
   }
 
   @HostListener('window:keydown', ['$event'])
   onKeydown(e: KeyboardEvent): void {
-    const id = this.capturing();
-    if (!id) return;
+    const key = this.capturing();
+    if (!key) return;
     e.preventDefault();
     e.stopPropagation();
     if (e.code === 'Escape') {
@@ -66,13 +73,13 @@ export class Keybinds {
       return;
     }
     if (e.code === 'Backspace' && !e.ctrlKey && !e.shiftKey && !e.altKey) {
-      void this.storage.setKeybind(id, null);
+      void this.storage.setKeybind(key, null);
       this.capturing.set(null);
       return;
     }
     const kb = keybindFromEvent(e);
-    if (!kb) return; // modifier only – keep waiting
-    void this.storage.setKeybind(id, kb);
+    if (!kb) return;
+    void this.storage.setKeybind(key, kb);
     this.capturing.set(null);
   }
 }

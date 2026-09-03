@@ -1,7 +1,6 @@
 import { Component, computed, input } from '@angular/core';
-import { Ability } from '../core/models';
 
-export type IconState = 'idle' | 'queued' | 'too-early' | 'wrong' | 'fired';
+export type IconState = 'idle' | 'queued' | 'too-early' | 'wrong' | 'fired' | 'done';
 
 @Component({
   selector: 'ability-icon',
@@ -82,6 +81,10 @@ export type IconState = 'idle' | 'queued' | 'too-early' | 'wrong' | 'fired';
       border-color: #4caf50;
       box-shadow: 0 0 12px #4caf50;
     }
+    .state-done {
+      border-color: #4caf50;
+      opacity: 0.55;
+    }
     .state-too-early,
     .state-wrong {
       border-color: #e53935;
@@ -90,7 +93,8 @@ export type IconState = 'idle' | 'queued' | 'too-early' | 'wrong' | 'fired';
   `,
 })
 export class AbilityIcon {
-  readonly ability = input.required<Ability>();
+  /** anything with a name and an icon: Ability, Prayer, Special or Entity */
+  readonly ability = input.required<{ name: string; icon: string }>();
   readonly keyLabel = input<string>('');
   readonly px = input<number>(64);
   /** 0..1, 1 = ready */
