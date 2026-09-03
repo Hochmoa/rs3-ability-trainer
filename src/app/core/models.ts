@@ -189,6 +189,10 @@ export interface ActionBarSetup {
   weaponKeybinds: Record<Style4, Keybind | null>;
   weapons: Record<Style4, WeaponType>;
   startWeapon: Style4;
+  /** last local edit (ms); missing = never edited */
+  updatedAt?: number;
+  /** server updated_at (ms) of the last successful sync; missing = never synced */
+  syncedAt?: number;
 }
 
 const MAIN_BAR_DEFAULT_CODES = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0', 'Minus', 'Equal'];

@@ -123,6 +123,15 @@ export class Bars {
     });
   }
 
+  /** overwrite the selected preset with the slots of another one */
+  copyFrom(sourceId: string | number | null): void {
+    const src = this.setup().presets.find((p) => p.id === Number(sourceId));
+    const target = this.preset();
+    if (!src || !target || src.id === target.id) return;
+    if (target.slots.some(Boolean) && !confirm('Replace the slots of "' + target.name + '" with a copy of "' + src.name + '"?')) return;
+    this.mutatePreset((slots) => src.slots.forEach((s, i) => (slots[i] = s ? { ...s } : null)));
+  }
+
   clearAll(): void {
     if (!confirm('Empty all 14 slots of "' + this.preset().name + '"?')) return;
     this.mutatePreset((slots) => slots.fill(null));
