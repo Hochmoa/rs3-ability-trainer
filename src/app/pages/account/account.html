@@ -1,0 +1,92 @@
+@if (!supabase.ready()) {
+  <p class="muted">Loading…</p>
+} @else if (supabase.user(); as user) {
+  <div class="panel">
+    <h2>Account</h2>
+    <p>
+      Signed in as <b>{{ supabase.profile()?.display_name ?? '…' }}</b> <span class="muted">({{ user.email }})</span>
+    </p>
+    <p class="muted small">
+      Your rotations and keybinds are stored online (Supabase, Frankfurt) and synced to every browser you sign in with.
+      Loadout and settings stay local.
+      @if (sync.syncing()) { · syncing… }
+      @else if (sync.error()) { · <span class="bad">sync error: {{ sync.error() }}</span> }
+      @else if (sync.lastSync()) { · synced }
+    </p>
+    @if (message(); as m) { <p [class]="m.cls">{{ m.text }}</p> }
+    <div class="actions">
+      <button class="btn" (click)="resync()" [disabled]="busy() || sync.syncing()">Sync now</button>
+      <button class="btn" (click)="signOut()" [disabled]="busy()">Sign out</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Display name</h2>
+    <form class="row" (ngSubmit)="saveName()">
+      <input type="text" [ngModel]="newName()" (ngModelChange)="newName.set($event)" name="newName" [placeholder]="supabase.profile()?.display_name ?? 'new name'" maxlength="20" />
+      <button class="btn" type="submit" [disabled]="busy() || !newName().trim()">Change</button>
+    </form>
+    <p class="muted small">3–20 characters: letters, digits, space, _ or -. Shown next to your public rotations.</p>
+  </div>
+
+  <div class="panel">
+    <h2>Password</h2>
+    <form class="row" (ngSubmit)="savePassword()">
+      <input type="password" [ngModel]="newPassword()" (ngModelChange)="newPassword.set($event)" name="newPassword" placeholder="new password" autocomplete="new-password" />
+      <button class="btn" type="submit" [disabled]="busy() || newPassword().length < 8">Change</button>
+    </form>
+  </div>
+
+  <div class="panel">
+    <h2>Delete account</h2>
+    <p class="muted small">Removes your profile, online rotations, keybinds and session results. Local data in this browser stays.</p>
+    <button class="btn danger" (click)="deleteAccount()" [disabled]="busy()">Delete my account</button>
+  </div>
+} @else {
+  <div class="panel">
+    <div class="tabs">
+      <button class="tab" [class.active]="mode() === 'signin'" (click)="setMode('signin')">Sign in</button>
+      <button class="tab" [class.active]="mode() === 'signup'" (click)="setMode('signup')">Register</button>
+      <button class="tab" [class.active]="mode() === 'reset'" (click)="setMode('reset')">Forgot password</button>
+    </div>
+
+    <p class="muted small">
+      An account is only needed to publish rotations and keep them (plus your keybinds) synced across browsers.
+      Browsing the <a routerLink="/explore">explorer</a> and training work without one.
+      @if (ownRotations()) { Your {{ ownRotations() }} local rotation(s) will be uploaded when you sign in. }
+    </p>
+
+    <form class="form" (ngSubmit)="submit()">
+      <label>
+        <span>E-mail</span>
+        <input type="email" [ngModel]="email()" (ngModelChange)="email.set($event)" name="email" required autocomplete="email" />
+      </label>
+      @if (mode() !== 'reset') {
+        <label>
+          <span>Password</span>
+          <input type="password" [ngModel]="password()" (ngModelChange)="password.set($event)" name="password" required minlength="8" [autocomplete]="mode() === 'signup' ? 'new-password' : 'current-password'" />
+          @if (mode() === 'signup') { <small>At least 8 characters.</small> }
+        </label>
+      }
+      @if (mode() === 'signup') {
+        <label>
+          <span>Display name</span>
+          <input type="text" [ngModel]="displayName()" (ngModelChange)="onNameInput($event)" name="displayName" required maxlength="20" autocomplete="nickname" />
+          <small>
+            3–20 characters: letters, digits, space, _ or -. Shown next to your public rotations.
+            @if (displayName() && !nameValid()) { <span class="bad">Not allowed yet.</span> }
+            @else if (nameTaken() === true) { <span class="bad">Taken.</span> }
+            @else if (nameTaken() === false) { <span class="good">Available.</span> }
+          </small>
+        </label>
+      }
+      @if (message(); as m) { <p [class]="m.cls">{{ m.text }}</p> }
+      <div class="actions">
+        <button class="btn btn-primary" type="submit" [disabled]="busy() || !email() || (mode() !== 'reset' && !password()) || (mode() === 'signup' && (!nameValid() || nameTaken() === true))">
+          {{ mode() === 'signup' ? 'Create account' : mode() === 'reset' ? 'Send reset link' : 'Sign in' }}
+        </button>
+      </div>
+    </form>
+    <p class="muted small">What gets stored where: <a routerLink="/privacy">privacy</a>.</p>
+  </div>
+}

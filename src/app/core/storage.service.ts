@@ -1,5 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 import { IDBPDatabase, deleteDB, openDB } from 'idb';
+import { Subject } from 'rxjs';
 import { DEFAULT_LOADOUT, DEFAULT_SETTINGS, Keybind, Loadout, Rotation, RotationStep, Session, Settings } from './models';
 
 const DB_NAME = 'rs3trainer';
@@ -20,6 +21,12 @@ export class StorageService {
   readonly rotations = signal<Rotation[]>([]);
   /** number of training sessions saved in this page load (consent or not) – used for engagement counting */
   readonly sessionsSaved = signal(0);
+
+  /** change hooks for the online sync (fired for user edits, not for data applied from the server) */
+  readonly rotationSaved = new Subject<Rotation>();
+  readonly rotationDeleted = new Subject<string>();
+  readonly keybindChanged = new Subject<{ key: string; kb: Keybind | null }>();
+  readonly sessionAdded = new Subject<Session>();
 
   private db: Promise<IDBPDatabase> | null = null;
 
@@ -98,6 +105,12 @@ export class StorageService {
   }
 
   async setKeybind(key: string, kb: Keybind | null): Promise<void> {
+    await this.putKeybind(key, kb);
+    this.keybindChanged.next({ key, kb });
+  }
+
+  /** Stores a keybind without firing the sync hook (used for data coming from the server). */
+  async putKeybind(key: string, kb: Keybind | null): Promise<void> {
     const next = { ...this.keybinds() };
     if (kb) next[key] = kb;
     else delete next[key];
@@ -110,12 +123,25 @@ export class StorageService {
   }
 
   async saveRotation(r: Rotation): Promise<void> {
-    const rot: Rotation = { ...r, steps: r.steps.map((s) => ({ kind: s.kind, id: s.id })), updatedAt: Date.now() };
-    this.rotations.set([rot, ...this.rotations().filter((x) => x.id !== rot.id)]);
+    const rot = await this.putRotation({ ...r, updatedAt: Date.now() });
+    this.rotationSaved.next(rot);
+  }
+
+  /** Stores a rotation as-is (keeps updatedAt / syncedAt) without firing the sync hook. */
+  async putRotation(r: Rotation): Promise<Rotation> {
+    const rot: Rotation = { ...r, steps: r.steps.map((s) => ({ kind: s.kind, id: s.id })) };
+    this.rotations.set([rot, ...this.rotations().filter((x) => x.id !== rot.id)].sort((a, b) => b.updatedAt - a.updatedAt));
     if (this.consent()) await (await this.open()).put('rotations', rot);
+    return rot;
   }
 
   async deleteRotation(id: string): Promise<void> {
+    await this.removeRotation(id);
+    this.rotationDeleted.next(id);
+  }
+
+  /** Removes a rotation without firing the sync hook. */
+  async removeRotation(id: string): Promise<void> {
     this.rotations.set(this.rotations().filter((x) => x.id !== id));
     if (this.consent()) await (await this.open()).delete('rotations', id);
   }
@@ -123,6 +149,7 @@ export class StorageService {
   async addSession(s: Session): Promise<void> {
     this.sessionsSaved.update((n) => n + 1);
     if (this.consent()) await (await this.open()).add('sessions', s);
+    this.sessionAdded.next(s);
   }
 
   async listSessions(): Promise<Session[]> {

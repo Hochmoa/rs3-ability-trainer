@@ -165,3 +165,19 @@
   border-radius: 6px;
   color: var(--bad);
 }
+
+.public {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  flex: 0 0 auto !important;
+}
+
+.origin {
+  margin: -8px 0 12px 4px;
+}
+
+.status {
+  margin-left: auto;
+}

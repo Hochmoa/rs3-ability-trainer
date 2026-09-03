@@ -40,6 +40,11 @@
         color: var(--gold);
         background: rgba(201, 162, 39, 0.12);
       }
+
+      &.account {
+        margin-left: 12px;
+        border: 1px solid var(--border);
+      }
     }
   }
 }

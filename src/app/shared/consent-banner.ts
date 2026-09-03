@@ -1,14 +1,17 @@
 import { Component, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { StorageService } from '../core/storage.service';
 
 @Component({
   selector: 'consent-banner',
+  imports: [RouterLink],
   template: `
     @if (!storage.consent() && !dismissed()) {
       <div class="banner" role="dialog" aria-label="Storage consent">
         <p>
           This site stores your keybinds, rotations, settings and training results in your browser
-          (IndexedDB / local storage). Nothing is sent to a server. Until you accept, everything is lost on reload.
+          (IndexedDB / local storage). Nothing leaves your browser unless you create an account.
+          Until you accept, everything is lost on reload. <a routerLink="/privacy">Privacy</a>
         </p>
         <div class="actions">
           <button class="btn btn-primary" (click)="storage.acceptConsent()">Accept</button>

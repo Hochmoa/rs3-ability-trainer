@@ -1,5 +1,5 @@
 -- RS3 Ability Trainer – initial schema. Run in the Supabase SQL editor (or `supabase db push`).
--- Everything is protected by row level security; the frontend only holds the anon key.
+-- Everything is protected by row level security; the frontend only holds the anon/publishable key.
 
 create extension if not exists citext;
 
@@ -19,15 +19,40 @@ create policy "profiles are public" on public.profiles
 create policy "users update their own profile" on public.profiles
   for update using (auth.uid() = id) with check (auth.uid() = id);
 
--- profile row from the display name given at sign-up (raw_user_meta_data.display_name)
+-- only the display name may change through the API
+create or replace function public.protect_profile()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.id := old.id;
+  new.created_at := old.created_at;
+  return new;
+end;
+$$;
+
+create trigger profiles_protect
+  before update on public.profiles
+  for each row execute function public.protect_profile();
+
+-- profile row from the display name given at sign-up (raw_user_meta_data.display_name).
+-- A taken or invalid name must not break the registration: fall back to player-xxxxxxxx,
+-- the user can rename on the account page.
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
 security definer set search_path = public
 as $$
+declare
+  wanted text := new.raw_user_meta_data ->> 'display_name';
+  fallback text := 'player-' || left(replace(new.id::text, '-', ''), 8);
 begin
-  insert into public.profiles (id, display_name)
-  values (new.id, coalesce(new.raw_user_meta_data ->> 'display_name', 'player-' || left(new.id::text, 8)));
+  begin
+    insert into public.profiles (id, display_name) values (new.id, coalesce(wanted, fallback));
+  exception
+    when unique_violation or check_violation then
+      insert into public.profiles (id, display_name) values (new.id, fallback);
+  end;
   return new;
 end;
 $$;
@@ -44,6 +69,20 @@ security definer set search_path = public
 stable
 as $$
   select exists (select 1 from public.profiles where display_name = name::citext);
+$$;
+
+-- account deletion: removes the auth user; profiles/rotations/keybinds/sessions cascade
+create or replace function public.delete_my_account()
+returns void
+language plpgsql
+security definer set search_path = public
+as $$
+begin
+  if auth.uid() is null then
+    raise exception 'login required';
+  end if;
+  delete from auth.users where id = auth.uid();
+end;
 $$;
 
 -- ---------------------------------------------------------------- rotations
@@ -64,6 +103,7 @@ create table public.rotations (
 );
 
 create index rotations_public_updated on public.rotations (updated_at desc) where is_public;
+create index rotations_public_copies on public.rotations (copies desc) where is_public;
 create index rotations_owner on public.rotations (owner_id);
 
 -- every step must be an object with kind + id
@@ -90,7 +130,7 @@ create policy "owners update their rotations" on public.rotations
 create policy "owners delete their rotations" on public.rotations
   for delete using (auth.uid() = owner_id);
 
--- copies counter can only move through copy_rotation()
+-- copies counter can only move through copy_rotation(); updated_at is always server time
 create or replace function public.protect_rotation_counters()
 returns trigger
 language plpgsql
@@ -99,6 +139,8 @@ begin
   if new.copies <> old.copies and current_setting('rs3.copying', true) is distinct from 'on' then
     new.copies := old.copies;
   end if;
+  new.owner_id := old.owner_id;
+  new.created_at := old.created_at;
   new.updated_at := now();
   return new;
 end;

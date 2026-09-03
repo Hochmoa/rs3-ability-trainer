@@ -1,0 +1,62 @@
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 14px;
+}
+
+.tab {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font: inherit;
+
+  &.active {
+    color: var(--gold);
+    border-color: var(--gold);
+  }
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 420px;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  > span {
+    font-weight: 600;
+  }
+
+  small {
+    color: var(--muted);
+  }
+}
+
+input[type='email'],
+input[type='password'],
+input[type='text'] {
+  width: 100%;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+  max-width: 420px;
+
+  input {
+    flex: 1;
+  }
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}

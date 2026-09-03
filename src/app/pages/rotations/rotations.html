@@ -4,11 +4,19 @@
       Name
       <input type="text" [ngModel]="r.name" (ngModelChange)="setName($event)" maxlength="60" />
     </label>
+    <label class="public">
+      <input type="checkbox" [checked]="r.isPublic ?? true" (change)="setPublic(!(r.isPublic ?? true))" />
+      Public
+      <small class="muted">{{ supabase.user() ? '– listed in the explorer' : '– needs an account to be listed' }}</small>
+    </label>
     <div class="actions">
       <button class="btn btn-primary" (click)="save()" [disabled]="!r.steps.length">Save</button>
       <button class="btn" (click)="cancel()">Cancel</button>
     </div>
   </div>
+  @if (r.sourceName) {
+    <p class="muted small origin">Copied from "{{ r.sourceName }}"{{ r.sourceOwner ? ' by ' + r.sourceOwner : '' }}.</p>
+  }
 
   <div class="panel">
     <h2>Rotation <span class="muted">({{ r.steps.length }} steps)</span></h2>
@@ -64,6 +72,14 @@
   <div class="panel list-head">
     <h2>Rotations</h2>
     <button class="btn btn-primary" (click)="newRotation()">New rotation</button>
+    <span class="muted small status">
+      @if (supabase.user()) {
+        synced as {{ supabase.profile()?.display_name ?? '...' }}
+        @if (sync.syncing()) { · syncing… } @else if (sync.error()) { · <span class="bad">{{ sync.error() }}</span> }
+      } @else {
+        stored in this browser only · <a routerLink="/account">sign in</a> to sync and publish
+      }
+    </span>
   </div>
   @if (!storage.rotations().length) {
     <div class="panel empty">
@@ -74,7 +90,7 @@
     <div class="panel rotation">
       <div class="rotation-head">
         <h3>{{ r.name }}</h3>
-        <span class="muted">{{ r.steps.length }} steps</span>
+        <span class="muted">{{ r.steps.length }} steps{{ supabase.user() ? ((r.isPublic ?? true) ? ' · public' : ' · private') : '' }}{{ r.copies ? ' · copied ' + r.copies + 'x' : '' }}</span>
         <span class="actions">
           <button class="btn btn-primary btn-sm" (click)="train(r)" [disabled]="!r.steps.length">Train</button>
           <button class="btn btn-sm" (click)="edit(r)">Edit</button>

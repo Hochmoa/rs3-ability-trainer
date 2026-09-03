@@ -105,6 +105,16 @@ export interface Rotation {
   name: string;
   steps: RotationStep[];
   updatedAt: number;
+  /** visible in the online explorer (missing = true) */
+  isPublic?: boolean;
+  /** origin when copied from the explorer */
+  sourceId?: string;
+  sourceName?: string;
+  sourceOwner?: string;
+  /** server updated_at (ms) of the last successful sync; missing = never synced */
+  syncedAt?: number;
+  /** explorer copy counter, read-only mirror */
+  copies?: number;
 }
 
 export interface Settings {

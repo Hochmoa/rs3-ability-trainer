@@ -5,6 +5,8 @@ import { DataService, Entity } from '../../core/data.service';
 import { keybindLabel } from '../../core/keybind.util';
 import { Rotation, RotationStep, STYLES } from '../../core/models';
 import { StorageService } from '../../core/storage.service';
+import { SupabaseService } from '../../core/supabase.service';
+import { SyncService } from '../../core/sync.service';
 import { AbilityIcon } from '../../shared/ability-icon';
 import { EntityTip } from '../../shared/tooltip';
 
@@ -21,6 +23,8 @@ const TYPE_ORDER: Record<string, number> = { Basic: 0, Enhanced: 1, Threshold: 2
 export class Rotations {
   readonly storage = inject(StorageService);
   readonly data = inject(DataService);
+  readonly supabase = inject(SupabaseService);
+  readonly sync = inject(SyncService);
   private router = inject(Router);
 
   readonly TABS = TABS;
@@ -97,6 +101,10 @@ export class Rotations {
 
   setName(name: string): void {
     this.editing.update((r) => (r ? { ...r, name } : r));
+  }
+
+  setPublic(isPublic: boolean): void {
+    this.editing.update((r) => (r ? { ...r, isPublic } : r));
   }
 
   async save(): Promise<void> {
