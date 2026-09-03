@@ -919,6 +919,24 @@
       }
     }
 
+    .check-row {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .left {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      color: var(--muted);
+
+      input[type='number'] {
+        width: 64px;
+      }
+    }
+
     .note {
       flex-basis: 100%;
       margin: 0;

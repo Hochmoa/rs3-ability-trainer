@@ -135,7 +135,12 @@
             <span>Conjures out</span>
             <div class="checks">
               @for (sp of SPIRITS; track sp.id) {
-                <label class="check"><input type="checkbox" [checked]="prebuild().spirits.includes(sp.id)" (change)="togglePrebuildList('spirits', sp.id)" [disabled]="running()" /> {{ sp.name }}</label>
+                <span class="check-row">
+                  <label class="check"><input type="checkbox" [checked]="prebuild().spirits.includes(sp.id)" (change)="togglePrebuildList('spirits', sp.id)" [disabled]="running()" /> {{ sp.name }}</label>
+                  @if (prebuild().spirits.includes(sp.id)) {
+                    <label class="left" title="lifetime left when the session starts (full: {{ prebuildFullTicks('spirit:' + sp.id) * 0.6 }} s)"><input type="number" min="0.6" [max]="prebuildFullTicks('spirit:' + sp.id) * 0.6" step="0.6" [ngModel]="prebuildLeftS('spirit:' + sp.id)" (ngModelChange)="setPrebuildLeft('spirit:' + sp.id, $event)" [disabled]="running()" /> s left</label>
+                  }
+                </span>
               }
             </div>
           </div>
@@ -145,7 +150,12 @@
             <span>Active at the start</span>
             <div class="checks">
               @for (a of prebuildAbilities(); track a.key) {
-                <label class="check" [entityTip]="a"><input type="checkbox" [checked]="prebuild().abilities.includes(a.id)" (change)="togglePrebuildList('abilities', a.id)" [disabled]="running()" /> <img [src]="a.icon" alt="" /> {{ a.name }}</label>
+                <span class="check-row">
+                  <label class="check" [entityTip]="a"><input type="checkbox" [checked]="prebuild().abilities.includes(a.id)" (change)="togglePrebuildList('abilities', a.id)" [disabled]="running()" /> <img [src]="a.icon" alt="" /> {{ a.name }}</label>
+                  @if (prebuild().abilities.includes(a.id) && prebuildFullTicks('ability:' + a.id)) {
+                    <label class="left" title="time left when the session starts (full: {{ prebuildFullTicks('ability:' + a.id) * 0.6 }} s)"><input type="number" min="0.6" [max]="prebuildFullTicks('ability:' + a.id) * 0.6" step="0.6" [ngModel]="prebuildLeftS('ability:' + a.id)" (ngModelChange)="setPrebuildLeft('ability:' + a.id, $event)" [disabled]="running()" /> s left</label>
+                  }
+                </span>
               }
             </div>
           </div>
@@ -160,7 +170,7 @@
             </div>
           </div>
         }
-        <p class="muted small note">Saved per rotation. Conjures start commandable with most of their lifetime left; incantation buffs run their normal duration from the start.</p>
+        <p class="muted small note">Saved per rotation. "s left" is the time the conjure or buff still has when the session starts – by default the full duration (conjures: cast 3.6 s ago, so they are commandable right away).</p>
       </div>
     }
   </div>

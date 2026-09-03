@@ -650,6 +650,8 @@ export interface Prebuild {
   abilities: string[];
   /** prayer ids switched on at the start */
   prayers: string[];
+  /** time left at the start in ticks, keyed "spirit:<id>" / "ability:<id>"; missing = full duration (conjures: commandable right away) */
+  remaining?: Record<string, number>;
 }
 
 export function emptyPrebuild(): Prebuild {

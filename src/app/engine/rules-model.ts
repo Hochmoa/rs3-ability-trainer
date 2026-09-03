@@ -90,6 +90,8 @@ export type Effect =
   | { kind: 'consume-stack'; stack: StackId; amount: number | 'all'; min?: number; when?: Condition; then?: Effect[] }
   | { kind: 'buff'; id: string; durationTicks?: number; refresh?: boolean; when?: Condition; stacks?: number }
   | { kind: 'extend-buff'; buff: string; ticks: number; maxTotal?: number; when?: Condition }
+  /** Life Transfer: every active conjured spirit lives `ticks` longer */
+  | { kind: 'extend-spirits'; ticks: number }
   | { kind: 'remove-buff'; id: string; when?: Condition }
   | { kind: 'cooldown-reset'; abilities: string[]; when?: Condition }
   | { kind: 'cooldown-reduce'; ability: string; ticks: number; when?: Condition }

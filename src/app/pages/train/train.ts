@@ -11,6 +11,7 @@ import { StorageService } from '../../core/storage.service';
 import { resolveLoadout } from '../../engine/loadout-resolver';
 import { BUFF_BY_ID, ruleFor } from '../../engine/rules';
 import { STACK_NAMES, STYLE_STACKS, StackId } from '../../engine/rules-model';
+import { COMMAND_READY_AFTER, CONJURE_BASE_TICKS } from '../../engine/rules-necromancy';
 import { ActiveBuff, EngineEntity, EngineEvent, GCD_TICKS, TICK_MS, TrainerEngine, UsableReason, Wield } from '../../engine/trainer-engine';
 import { SOUL_SPLIT } from '../../engine/prayer-rules';
 import { morphSourceOf, slotAbilities } from '../../engine/morphs';
@@ -182,7 +183,43 @@ export class Train implements OnDestroy {
 
   togglePrebuildList(list: 'spirits' | 'abilities' | 'prayers', id: string): void {
     const cur = this.prebuild()[list];
-    this.setPrebuild({ [list]: cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id] } as Partial<Prebuild>);
+    const on = !cur.includes(id);
+    const patch: Partial<Prebuild> = { [list]: on ? [...cur, id] : cur.filter((x) => x !== id) };
+    if (!on && list !== 'prayers') {
+      const remaining = { ...(this.prebuild().remaining ?? {}) };
+      delete remaining[(list === 'spirits' ? 'spirit:' : 'ability:') + id];
+      patch.remaining = remaining;
+    }
+    this.setPrebuild(patch);
+  }
+
+  /** full lifetime (ticks) of a pre-built conjure or ability buff with the active loadout */
+  prebuildFullTicks(key: string): number {
+    if (key.startsWith('spirit:')) return Math.round((CONJURE_BASE_TICKS + this.resolved().conjureDurationAdd) * this.resolved().conjureDurationMult);
+    const id = key.slice('ability:'.length);
+    const rule = ruleFor(id);
+    for (const eff of rule?.onCast ?? []) {
+      if (eff.kind === 'buff') {
+        const d = eff.durationTicks ?? BUFF_BY_ID.get(eff.id)?.durationTicks;
+        if (d) return d;
+      }
+    }
+    const e = this.data.get('ability:' + id);
+    const data = e ? this.data.toEngineEntity(e) : undefined;
+    return data?.buffs.find((b) => b.durationTicks)?.durationTicks ?? data?.durationTicks ?? 0;
+  }
+
+  /** seconds left at the start, as shown in the pre-build form */
+  prebuildLeftS(key: string): number {
+    const full = this.prebuildFullTicks(key);
+    const ticks = this.prebuild().remaining?.[key] ?? (key.startsWith('spirit:') ? Math.max(1, full - COMMAND_READY_AFTER) : full);
+    return Math.round(ticks * TICK_MS) / 1000;
+  }
+
+  setPrebuildLeft(key: string, v: unknown): void {
+    const full = this.prebuildFullTicks(key);
+    const ticks = Math.max(1, Math.min(full || 1, Math.round((Number(v) || 0) * 1000 / TICK_MS)));
+    this.setPrebuild({ remaining: { ...(this.prebuild().remaining ?? {}), [key]: ticks } });
   }
 
   setPrebuildAdrenaline(v: unknown): void {
@@ -200,8 +237,9 @@ export class Train implements OnDestroy {
     const parts: string[] = [];
     if (p.adrenaline !== undefined) parts.push(p.adrenaline + '% adrenaline');
     for (const [id, n] of Object.entries(p.stacks)) if (n > 0) parts.push(n + ' ' + (STACK_NAMES[id as StackId] ?? id));
-    for (const s of p.spirits) parts.push(this.SPIRITS.find((x) => x.id === s)?.name ?? s);
-    for (const a of p.abilities) parts.push(this.data.name('ability:' + a));
+    const left = (key: string) => (p.remaining?.[key] !== undefined ? ' (' + this.prebuildLeftS(key) + ' s left)' : '');
+    for (const s of p.spirits) parts.push((this.SPIRITS.find((x) => x.id === s)?.name ?? s) + left('spirit:' + s));
+    for (const a of p.abilities) parts.push(this.data.name('ability:' + a) + left('ability:' + a));
     for (const pr of p.prayers) parts.push(this.data.name('prayer:' + pr));
     return parts.join(' · ');
   }

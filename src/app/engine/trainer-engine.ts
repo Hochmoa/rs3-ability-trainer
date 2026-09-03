@@ -1,3 +1,4 @@
+import { COMMAND_READY_AFTER, CONJURE_BASE_TICKS } from './rules-necromancy';
 import { AbilityType, EnemyConfig, EntityKind, PrayerStats, Prebuild, SPEC_KEY, StepResult, Style, Style4, isStyle4 } from '../core/models';
 import { ResolvedLoadout, defaultResolvedLoadout } from './loadout-resolved';
 import { PROTECTION, PrayerBook, SOUL_SPLIT, bookOf, togglePrayer } from './prayer-rules';
@@ -1064,19 +1065,24 @@ export class TrainerEngine {
     if (pb.adrenaline !== undefined) this.adrenaline = Math.max(0, Math.min(this.maxAdrenaline, pb.adrenaline));
     for (const [stack, n] of Object.entries(pb.stacks ?? {})) if (n > 0) this.stacks.set(stack as StackId, n);
     for (const spirit of pb.spirits ?? []) {
-      const duration = Math.round((70 + this.loadout.conjureDurationAdd) * this.loadout.conjureDurationMult);
-      // conjured a while ago: commandable right away, still most of its lifetime left
-      this.spirits.set(spirit, { spirit, sinceTick: -6, endTick: duration - 6 });
-      this.applyBuff('spirit-' + spirit, 0, 'prebuild', duration - 6);
+      const duration = Math.round((CONJURE_BASE_TICKS + this.loadout.conjureDurationAdd) * this.loadout.conjureDurationMult);
+      // remaining lifetime from the pre-build; default: conjured 6 ticks ago, so it is commandable right away
+      const left = Math.max(1, Math.min(duration, pb.remaining?.['spirit:' + spirit] ?? duration - COMMAND_READY_AFTER));
+      this.spirits.set(spirit, { spirit, sinceTick: left - duration, endTick: left });
+      this.applyBuff('spirit-' + spirit, 0, 'prebuild', left);
     }
     for (const id of pb.abilities ?? []) {
       const e = this.catalog.get('ability:' + id);
       if (!e) continue;
-      const ruleBuffs = (ruleFor(id)?.onCast ?? []).filter((eff) => eff.kind === 'buff');
-      for (const b of e.buffs) this.applyDataBuff(b, 0, e.key);
-      for (const eff of ruleBuffs) this.applyEffect(eff, 0, e, 0);
-      // incantations without a modelled buff still show as active for their wiki duration
-      if (!e.buffs.length && !ruleBuffs.length) this.applyDataBuff({ id: e.key, name: e.name, kind: 'Buff', on: 'self', icon: e.icon, durationTicks: e.durationTicks ?? null }, 0, e.key);
+      const left = pb.remaining?.['ability:' + id];
+      const ruleBuffs = (ruleFor(id)?.onCast ?? []).filter((eff): eff is Extract<Effect, { kind: 'buff' }> => eff.kind === 'buff');
+      for (const b of e.buffs) this.applyDataBuff(left !== undefined && b.durationTicks !== null ? { ...b, durationTicks: Math.min(left, b.durationTicks) } : b, 0, e.key);
+      for (const eff of ruleBuffs) {
+        const full = eff.durationTicks ?? BUFF_BY_ID.get(eff.id)?.durationTicks ?? null;
+        this.applyEffect(left !== undefined && full !== null ? { ...eff, durationTicks: Math.min(left, full) } : eff, 0, e, 0);
+      }
+      // abilities without a modelled buff still show as active for their wiki duration
+      if (!e.buffs.length && !ruleBuffs.length) this.applyDataBuff({ id: e.key, name: e.name, kind: 'Buff', on: 'self', icon: e.icon, durationTicks: left ?? e.durationTicks ?? null }, 0, e.key);
     }
     for (const id of pb.prayers ?? []) {
       if (this.activePrayers.has(id)) continue;
@@ -1187,6 +1193,14 @@ export class TrainerEngine {
       case 'buff':
         this.applyBuff(eff.id, tick, entity.key, eff.durationTicks, eff.stacks, eff.refresh ?? true);
         break;
+      case 'extend-spirits': {
+        for (const s of this.spirits.values()) {
+          s.endTick += eff.ticks;
+          const b = this.buff('spirit-' + s.spirit);
+          if (b && b.endTick !== null) b.endTick += eff.ticks;
+        }
+        break;
+      }
       case 'extend-buff': {
         const b = this.buff(eff.buff);
         if (b && b.endTick !== null) {

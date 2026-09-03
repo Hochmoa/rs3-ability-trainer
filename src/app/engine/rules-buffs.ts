@@ -84,6 +84,16 @@ export const BUFFS: BuffDef[] = [
     text: 'Basic Magic abilities +8% base damage (blast diffusion boots after Wild Magic).', source: W + 'Blast_Infused' },
 
   // ---------------------------------------------------------------- necromancy
+  { id: 'invoke-death', name: 'Invoke Death', kind: 'Buff', on: 'self', durationTicks: 20,
+    text: 'Your next necromancy attack applies Death Mark to the target (executes it below 25% life points, 12 s).', source: W + 'Invoke_Death' },
+  { id: 'invoke-lord-of-bones', name: 'Invoke Lord of Bones', kind: 'Buff', on: 'self', durationTicks: 100,
+    text: 'Skeletal spirit attacks apply Shattering Bones (armour reduction) for 1 minute.', source: W + 'Invoke_Lord_of_Bones' },
+  { id: 'split-soul', name: 'Split Soul', kind: 'Buff', on: 'self', durationTicks: 34,
+    text: '400% of the life points Soul Split would heal is dealt to the target instead. 20.4 s.', source: W + 'Split_Soul' },
+  { id: 'darkness', name: 'Darkness', kind: 'Buff', on: 'self', durationTicks: 1200,
+    text: 'Aspect of Evasion: 20% chance to avoid damage. 12 minutes; only one aspect at a time.', source: W + 'Darkness' },
+  { id: 'threads-of-fate', name: 'Threads of Fate', kind: 'Buff', on: 'self', durationTicks: 11,
+    text: 'Single-target necromancy attacks also hit up to 4 more enemies within 4 tiles. 6.6 s.', source: W + 'Threads_of_Fate' },
   { id: 'living-death', name: 'Living Death', kind: 'Buff', on: 'self', durationTicks: 50,
     text: 'Death Skulls cooldown 17 ticks, Finger of Death 1.5x damage, Touch of Death +6% adrenaline, basic attack +2 Necrosis. Touch of Death and Death Skulls cooldowns were reset on cast.', source: W + 'Living_Death' },
   { id: 'bloated', name: 'Bloated', kind: 'Debuff', on: 'target', durationTicks: 30, wikiId: 48338,

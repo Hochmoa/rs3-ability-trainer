@@ -129,6 +129,37 @@ export const NECROMANCY_RULES: AbilityRule[] = [
       'Omni guard: readies Death Spark for 30 s after Death Essence (' + W + 'Death_Spark_(status) )',
     ],
   },
+  // ---------------------------------------------------------------- incantations (durations from the wiki, Sept 2026)
+  {
+    ability: 'invoke-death',
+    notes: ['Incantation, 12 s (20 ticks): the next necromancy attack applies Death Mark – the target is executed below 25% life points (' + W + 'Invoke_Death )'],
+    onCast: [{ kind: 'buff', id: 'invoke-death' }],
+  },
+  {
+    ability: 'invoke-lord-of-bones',
+    notes: ['Incantation, 1 minute (100 ticks): skeletal spirit attacks apply Shattering Bones (' + W + 'Invoke_Lord_of_Bones )'],
+    onCast: [{ kind: 'buff', id: 'invoke-lord-of-bones' }],
+  },
+  {
+    ability: 'split-soul',
+    notes: ['Incantation, 20.4 s (34 ticks), 60 s cooldown: 400% of the Soul Split heal is dealt as damage instead (' + W + 'Split_Soul )'],
+    onCast: [{ kind: 'buff', id: 'split-soul' }],
+  },
+  {
+    ability: 'darkness',
+    notes: ['Incantation, 12 minutes (1200 ticks): Aspect of Evasion, 20% chance to avoid damage; one aspect at a time (' + W + 'Darkness )'],
+    onCast: [{ kind: 'buff', id: 'darkness' }],
+  },
+  {
+    ability: 'threads-of-fate',
+    notes: ['Incantation, 6.6 s (11 ticks), 45 s cooldown: single-target necromancy attacks also hit up to 4 more enemies (' + W + 'Threads_of_Fate )'],
+    onCast: [{ kind: 'buff', id: 'threads-of-fate' }],
+  },
+  {
+    ability: 'life-transfer',
+    notes: ['Incantation, 45 s cooldown: costs 50% of your base life points and extends every active conjured spirit by 21 s (35 ticks) (' + W + 'Life_Transfer )'],
+    onCast: [{ kind: 'extend-spirits', ticks: 35 }],
+  },
   {
     ability: 'living-death',
     notes: [
