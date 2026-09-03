@@ -74,7 +74,27 @@ export interface Special {
   icon: string;
 }
 
-export type EntityKind = 'ability' | 'prayer' | 'special';
+export type EntityKind = 'ability' | 'prayer' | 'special' | 'weapon';
+
+/** the four weapon styles that can be wielded / bound to action bars (Defence is not a weapon style) */
+export type Style4 = 'Melee' | 'Ranged' | 'Magic' | 'Necromancy';
+export const STYLES4: Style4[] = ['Melee', 'Ranged', 'Magic', 'Necromancy'];
+/** shield = one-handed weapon + shield */
+export type WeaponType = 'two-handed' | 'dual-wield' | 'shield';
+export const WEAPON_TYPES: WeaponType[] = ['two-handed', 'dual-wield', 'shield'];
+
+/** weapon-switch entity, id = style in lower case ("melee", "ranged", ...) */
+export interface Weapon {
+  id: string;
+  name: string;
+  style: Style4;
+  description: string;
+  icon: string;
+}
+
+export function isStyle4(s: string): s is Style4 {
+  return (STYLES4 as string[]).includes(s);
+}
 
 /** Stable key used for keybinds and rotation steps: "ability:sever", "prayer:turmoil", "special:adrenaline-potion" */
 export function entityKey(kind: EntityKind, id: string): string {
@@ -143,6 +163,60 @@ export interface Loadout {
   heightenedSenses: boolean;
   /** Vestments of havoc 4-piece: maximum adrenaline +20% (melee weapon) */
   vestmentsOfHavoc: boolean;
+}
+
+/** One saved action bar (in-game "Action bar preset 1..18"), 14 slots. */
+export interface ActionBarPreset {
+  id: number;
+  name: string;
+  slots: (RotationStep | null)[];
+}
+
+export const BAR_SLOTS = 14;
+export const BAR_PRESETS = 18;
+/** main bar + additional bars 1-4 */
+export const BAR_POSITIONS = 5;
+export const BAR_POSITION_NAMES = ['Main bar', 'Additional bar 1', 'Additional bar 2', 'Additional bar 3', 'Additional bar 4'];
+
+export interface ActionBarSetup {
+  presets: ActionBarPreset[];
+  /** preset id shown at each position when no style binding applies (null = empty position) */
+  positions: (number | null)[];
+  /** per weapon style, per position: preset id, or null = position keeps its default preset */
+  bindings: Record<Style4, (number | null)[]>;
+  /** keybinds belong to position + slot, like in the game */
+  slotKeybinds: (Keybind | null)[][];
+  weaponKeybinds: Record<Style4, Keybind | null>;
+  weapons: Record<Style4, WeaponType>;
+  startWeapon: Style4;
+}
+
+const MAIN_BAR_DEFAULT_CODES = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0', 'Minus', 'Equal'];
+
+export function defaultActionBars(): ActionBarSetup {
+  const presets: ActionBarPreset[] = [];
+  for (let i = 1; i <= BAR_PRESETS; i++) presets.push({ id: i, name: 'Bar ' + i, slots: Array(BAR_SLOTS).fill(null) });
+  const slotKeybinds: (Keybind | null)[][] = [];
+  for (let p = 0; p < BAR_POSITIONS; p++) {
+    slotKeybinds.push(
+      Array.from({ length: BAR_SLOTS }, (_, i) => (p === 0 && MAIN_BAR_DEFAULT_CODES[i] ? { code: MAIN_BAR_DEFAULT_CODES[i], ctrl: false, shift: false, alt: false } : null)),
+    );
+  }
+  const none = () => Array(BAR_POSITIONS).fill(null) as (number | null)[];
+  return {
+    presets,
+    positions: [1, 2, 3, 4, 5],
+    bindings: { Melee: none(), Ranged: none(), Magic: none(), Necromancy: none() },
+    slotKeybinds,
+    weaponKeybinds: { Melee: null, Ranged: null, Magic: null, Necromancy: null },
+    weapons: { Melee: 'two-handed', Ranged: 'two-handed', Magic: 'two-handed', Necromancy: 'two-handed' },
+    startWeapon: 'Melee',
+  };
+}
+
+/** Preset ids visible at the 5 positions while wielding `style`. */
+export function visiblePresets(setup: ActionBarSetup, style: Style4): (number | null)[] {
+  return setup.positions.map((p, i) => setup.bindings[style]?.[i] ?? p);
 }
 
 export const DEFAULT_LOADOUT: Loadout = {

@@ -3,7 +3,7 @@
 } @else if (!storage.rotations().length) {
   <div class="panel empty">
     <h2>No rotation yet</h2>
-    <p>Build a rotation first, then bind keys to its abilities.</p>
+    <p>Build a rotation, put its abilities on your action bars and bind keys.</p>
     <a class="btn btn-primary" routerLink="/rotations">Create a rotation</a>
   </div>
 } @else {
@@ -29,13 +29,13 @@
     </span>
   </div>
 
-  @if (missingBinds().length) {
+  @if (unreachable().length) {
     <div class="panel warning">
-      Missing keybinds for
-      @for (e of missingBinds(); track e.key) {
+      Not on any keybound bar slot:
+      @for (e of unreachable(); track e.key) {
         <b>{{ e.name }}</b>{{ $last ? '' : ', ' }}
       }
-      – <a routerLink="/keybinds">bind them</a> before training.
+      – put them on a preset on the <a routerLink="/bars">Action bars</a> page and bind the slot on <a routerLink="/keybinds">Keybinds</a>.
     </div>
   }
   @if (unknownSteps()) {
@@ -45,6 +45,29 @@
   }
 
   <div class="panel arena">
+    <div class="queue-strip">
+      @for (s of slots(); track s.stepIndex + '-' + s.kind) {
+        <div class="slot" [class]="'slot ' + s.kind + ' ' + s.entity.kind" [entityTip]="s.entity">
+          <ability-icon
+            [ability]="s.entity"
+            [keyLabel]="s.key"
+            [px]="s.kind === 'current' ? 72 : s.kind === 'next' ? 48 : 40"
+            [gcdPhase]="s.kind === 'current' && running() && s.entity.kind === 'ability' ? gcdPhase() : 1"
+            [remainingMs]="s.kind === 'current' && running() && s.entity.kind === 'ability' ? gcdRemaining() : 0"
+            [state]="s.done ? 'done' : s.kind === 'current' && running() ? iconState() : 'idle'"
+          />
+          <span class="name">{{ s.entity.name }}</span>
+        </div>
+        @if (s.kind === 'current') {
+          <div class="arrow">›</div>
+        }
+      }
+    </div>
+
+    <div class="feedback" [class]="'feedback ' + (feedback()?.cls ?? '')">
+      {{ feedback()?.text ?? (canStart() ? 'Press Start, then press the keys of the highlighted slots. Weapon switches, prayers and potions have no cooldown.' : '') }}
+    </div>
+
     <div class="bars">
       <div class="bar-row">
         <span class="bar-label">Tick <small>0.6 s</small></span>
@@ -69,55 +92,45 @@
       </div>
     </div>
 
-    <div class="status-bars">
-      <div class="status-bar">
-        <span class="label">Buffs</span>
-        @for (b of selfBuffs(); track b.id) {
-          <div class="status buff" [title]="b.name">
-            @if (b.icon) { <img [src]="b.icon" [alt]="b.name" /> } @else { <span class="fallback">{{ b.name.slice(0, 2) }}</span> }
-            @if (b.remainingS !== null) { <span class="timer">{{ b.remainingS | number: '1.0-0' }}</span> }
-          </div>
-        } @empty {
-          <span class="muted none">–</span>
-        }
-      </div>
-      <div class="status-bar">
-        <span class="label">Target</span>
-        @for (b of targetDebuffs(); track b.id) {
-          <div class="status debuff" [title]="b.name">
-            @if (b.icon) { <img [src]="b.icon" [alt]="b.name" /> } @else { <span class="fallback">{{ b.name.slice(0, 2) }}</span> }
-            @if (b.remainingS !== null) { <span class="timer">{{ b.remainingS | number: '1.0-0' }}</span> }
-          </div>
-        } @empty {
-          <span class="muted none">–</span>
-        }
-      </div>
-    </div>
-
-    <div class="ability-queue" [class.finished]="finished() && !running()">
-      @for (s of slots(); track s.stepIndex + '-' + s.kind) {
-        <div class="slot" [class]="'slot ' + s.kind + ' ' + s.entity.kind" [entityTip]="s.entity">
-          <ability-icon
-            [ability]="s.entity"
-            [keyLabel]="s.key"
-            [px]="s.kind === 'current' ? 112 : s.kind === 'next' ? 64 : 48"
-            [gcdPhase]="s.kind === 'current' && running() && s.entity.kind === 'ability' ? gcdPhase() : 1"
-            [remainingMs]="s.kind === 'current' && running() && s.entity.kind === 'ability' ? gcdRemaining() : 0"
-            [state]="s.done ? 'done' : s.kind === 'current' && running() ? iconState() : 'idle'"
-          />
-          <span class="name">{{ s.entity.name }}</span>
-          @if (s.entity.kind !== 'ability') {
-            <span class="tag">{{ s.entity.kind === 'prayer' ? 'prayer' : 'potion' }} · no GCD</span>
+    <div class="status-row">
+      <div class="status-bars">
+        <div class="status-bar">
+          <span class="label">Buffs</span>
+          @for (b of selfBuffs(); track b.id) {
+            <div class="status buff" [title]="b.name">
+              @if (b.icon) { <img [src]="b.icon" [alt]="b.name" /> } @else { <span class="fallback">{{ b.name.slice(0, 2) }}</span> }
+              @if (b.remainingS !== null) { <span class="timer">{{ b.remainingS | number: '1.0-0' }}</span> }
+            </div>
+          } @empty {
+            <span class="muted none">–</span>
           }
         </div>
-        @if (s.kind === 'current') {
-          <div class="arrow">›</div>
+        <div class="status-bar">
+          <span class="label">Target</span>
+          @for (b of targetDebuffs(); track b.id) {
+            <div class="status debuff" [title]="b.name">
+              @if (b.icon) { <img [src]="b.icon" [alt]="b.name" /> } @else { <span class="fallback">{{ b.name.slice(0, 2) }}</span> }
+              @if (b.remainingS !== null) { <span class="timer">{{ b.remainingS | number: '1.0-0' }}</span> }
+            </div>
+          } @empty {
+            <span class="muted none">–</span>
+          }
+        </div>
+      </div>
+      <div class="weapons">
+        @for (st of STYLES4; track st) {
+          <div class="weapon" [class.active]="(running() ? weapon() : storage.actionBars().startWeapon) === st" [title]="st + ' weapon'">
+            <img [src]="weaponIcon(st)" [alt]="st" />
+            <span class="key">{{ weaponKey(st) || '–' }}</span>
+          </div>
         }
-      }
+      </div>
     </div>
 
-    <div class="feedback" [class]="'feedback ' + (feedback()?.cls ?? '')">
-      {{ feedback()?.text ?? (canStart() ? (storage.settings().abilityQueueing ? 'Press Start, then hit the keybind shown on the big icon any time during the cooldown – it casts when the cooldown ends.' : 'Press Start, then hit the keybind shown on the big icon during the last tick of the cooldown.') : '') }}
+    <div class="action-bars">
+      @for (b of bars(); track b.position) {
+        <action-bar [position]="b.position" [presetName]="b.presetName" [slots]="b.slots" (slotClick)="slotClick(b.position, $event)" />
+      }
     </div>
 
     <div class="counts">

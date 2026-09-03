@@ -1,52 +1,60 @@
 <div class="panel head">
   <h2>Keybinds</h2>
-  <label class="toggle">
-    <input type="checkbox" [checked]="showAll()" (change)="showAll.set(!showAll())" />
-    Show everything (abilities, prayers, curses, potions)
-  </label>
+  <p class="muted small">
+    Keys belong to a bar position and slot, exactly like in the game: whatever preset is shown there fires on that key.
+    Click a slot, then press the key or combination (Ctrl / Shift / Alt work). Esc cancels, Backspace clears.
+    Browser-reserved combos (Ctrl+W, Ctrl+T, F5, …) won't work reliably. Fill the presets on the <a routerLink="/bars">Action bars</a> page.
+  </p>
 </div>
 
+@for (name of POSITIONS; track $index; let pos = $index) {
+  <div class="panel bar-keys">
+    <div class="bar-head">
+      <h3>{{ name }}</h3>
+      <span class="muted small">shows {{ presetName(pos) }}</span>
+    </div>
+    <div class="slots">
+      @for (slot of setup().slotKeybinds[pos]; track $index; let i = $index) {
+        <button
+          class="slot"
+          [class.capturing]="isCapturing({ pos: pos, slot: i })"
+          [class.conflict]="slotConflicts(pos, i).length > 0"
+          (click)="capture({ pos: pos, slot: i })"
+          [title]="slotConflicts(pos, i).length ? 'Also used by ' + slotConflicts(pos, i).join(', ') : 'Slot ' + (i + 1)"
+        >
+          @if (entityAt(pos, i); as e) {
+            <img [src]="e.icon" [alt]="e.name" [entityTip]="e" />
+          } @else {
+            <span class="idx">{{ i + 1 }}</span>
+          }
+          <span class="key" [class.waiting]="isCapturing({ pos: pos, slot: i })">
+            {{ isCapturing({ pos: pos, slot: i }) ? '…' : label(pos, i) || '–' }}
+          </span>
+        </button>
+      }
+    </div>
+  </div>
+}
+
 <div class="panel">
-  @if (!list().length) {
-    <p class="muted">
-      Nothing to bind yet. <a routerLink="/rotations">Create a rotation</a> first, or tick "Show everything".
-    </p>
-  } @else {
-    <p class="muted small">
-      Click <b>Bind</b>, then press the key or key combination (Ctrl / Shift / Alt work). Esc cancels, Backspace clears.
-      Combos the browser reserves (e.g. Ctrl+W, Ctrl+T, F5) won't work reliably.
-    </p>
-    <table>
-      <thead>
-        <tr><th></th><th>Name</th><th>Type</th><th>Keybind</th><th></th></tr>
-      </thead>
-      <tbody>
-        @for (e of list(); track e.key) {
-          <tr [class.capturing]="capturing() === e.key">
-            <td><span [entityTip]="e"><ability-icon [ability]="e" [px]="36" /></span></td>
-            <td>{{ e.name }}</td>
-            <td class="muted">{{ subtitle(e) }}</td>
-            <td>
-              @if (capturing() === e.key) {
-                <span class="key waiting">Press a key…</span>
-              } @else if (label(e.key)) {
-                <span class="key">{{ label(e.key) }}</span>
-                @if (conflictOf(e.key).length) {
-                  <span class="conflict" [title]="'Also bound to ' + conflictOf(e.key).join(', ')">⚠ also {{ conflictOf(e.key).join(', ') }}</span>
-                }
-              } @else {
-                <span class="muted">–</span>
-              }
-            </td>
-            <td class="actions">
-              <button class="btn btn-sm" (click)="capture(e.key)">{{ capturing() === e.key ? 'Cancel' : 'Bind' }}</button>
-              @if (label(e.key)) {
-                <button class="btn btn-sm" (click)="clear(e.key)">Clear</button>
-              }
-            </td>
-          </tr>
+  <h3>Weapon switches</h3>
+  <p class="muted small">One key per weapon style. Switching is instant and does not use the global cooldown.</p>
+  <div class="weapons">
+    @for (st of STYLES4; track st) {
+      <button
+        class="weapon"
+        [class.capturing]="isCapturing({ weapon: st })"
+        [class.conflict]="weaponConflicts(st).length > 0"
+        (click)="capture({ weapon: st })"
+        [title]="weaponConflicts(st).length ? 'Also used by ' + weaponConflicts(st).join(', ') : ''"
+      >
+        <img [src]="weaponIcon(st)" [alt]="st" />
+        <span class="name">{{ st }}</span>
+        <span class="key" [class.waiting]="isCapturing({ weapon: st })">{{ isCapturing({ weapon: st }) ? 'Press a key…' : weaponLabel(st) || '–' }}</span>
+        @if (weaponLabel(st)) {
+          <span class="clear" (click)="clear({ weapon: st }); $event.stopPropagation()" title="Clear">×</span>
         }
-      </tbody>
-    </table>
-  }
+      </button>
+    }
+  </div>
 </div>

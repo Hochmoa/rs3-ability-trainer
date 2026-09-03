@@ -107,6 +107,12 @@ function seconds(ticks: number | null | undefined): string {
           </table>
           @if (p.effect) { <p class="desc">{{ p.effect }}</p> }
           <p class="desc muted">{{ p.description }}</p>
+        } @else if (s.entity.weapon; as w) {
+          <table>
+            <tr><th>Style</th><td>{{ w.style }}</td></tr>
+            <tr><th>GCD</th><td class="warn">instant – switching gear does not use a tick</td></tr>
+          </table>
+          <p class="desc">Wield your {{ w.style }} weapon. Abilities of other styles are greyed out until you switch back; Defence and Constitution abilities work with any weapon.</p>
         } @else if (s.entity.special; as sp) {
           <table>
             <tr><th>Adrenaline</th><td class="good">{{ sp.adrenaline ? '+' + sp.adrenaline + '%' : '' }}{{ sp.adrenalineOverTime ? '+' + sp.adrenalineOverTime + '% over ' + seconds(sp.overTimeTicks) : '' }}</td></tr>
@@ -217,9 +223,10 @@ export class EntityTooltip {
   });
 
   subtitle(e: Entity): string {
-    if (e.ability) return e.ability.type + ' · ' + e.ability.style + ' · level ' + e.ability.level + (e.ability.members ? '' : ' · free to play');
+    if (e.ability) return (e.ability.basicAttack ? 'Auto-attack' : e.ability.type) + ' · ' + e.ability.style + ' · level ' + e.ability.level + (e.ability.members ? '' : ' · free to play');
     if (e.prayer) return (e.prayer.book === 'Curses' ? 'Ancient curse' : 'Prayer') + ' · level ' + e.prayer.level;
     if (e.special) return 'Adrenaline potion';
+    if (e.weapon) return 'Weapon switch · ' + e.weapon.style;
     return '';
   }
 

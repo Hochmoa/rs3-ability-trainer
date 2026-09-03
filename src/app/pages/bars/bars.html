@@ -1,0 +1,142 @@
+@if (!data.loaded()) {
+  <p class="muted">Loading…</p>
+} @else {
+  <div class="layout">
+    <div class="panel presets">
+      <h2>Presets</h2>
+      <ul>
+        @for (p of setup().presets; track p.id) {
+          <li [class.active]="p.id === selectedId()" (click)="selectedId.set(p.id)">
+            <span class="num">{{ p.id }}</span>
+            <span class="name">{{ p.name }}</span>
+            <span class="meta">{{ filled(p.id) }}/14</span>
+            @if (usage(p.id); as u) { <span class="use" [title]="u">●</span> }
+          </li>
+        }
+      </ul>
+    </div>
+
+    <div class="editor">
+      <div class="panel">
+        <div class="head">
+          <label>
+            Preset {{ preset().id }}
+            <input type="text" [ngModel]="preset().name" (ngModelChange)="rename($event)" maxlength="30" />
+          </label>
+          <span class="muted small">{{ usage(preset().id) || 'not shown anywhere yet' }}</span>
+          <button class="btn btn-sm danger" (click)="clearAll()">Empty</button>
+        </div>
+        <div class="bar-editor">
+          @for (e of slotEntities(); track $index) {
+            <div
+              class="slot"
+              [class.filled]="!!e"
+              cdkDropList
+              [id]="'slot-' + $index"
+              [cdkDropListConnectedTo]="slotIds()"
+              (cdkDropListDropped)="drop($event, $index)"
+            >
+              @if (e) {
+                <div class="drag" cdkDrag [cdkDragData]="{ slot: $index }" [entityTip]="e">
+                  <img [src]="e.icon" [alt]="e.name" draggable="false" />
+                  <button class="x" (click)="clear($index); $event.stopPropagation()" title="Remove">×</button>
+                </div>
+              }
+              <span class="idx">{{ $index + 1 }}</span>
+            </div>
+          }
+        </div>
+        <p class="muted small">Drag from the catalog into a slot, drag slots to swap, click an icon in the catalog to fill the first free slot. Keybinds are set per bar position on the <a routerLink="/keybinds">Keybinds</a> page.</p>
+      </div>
+
+      <div class="panel">
+        <h2>Catalog</h2>
+        <div class="catalog-controls">
+          <div class="tabs">
+            @for (t of TABS; track t) {
+              <button class="tab" [class.active]="tab() === t && !search()" (click)="tab.set(t); search.set('')">{{ t }}</button>
+            }
+          </div>
+          <input type="search" placeholder="Search everything…" [ngModel]="search()" (ngModelChange)="search.set($event)" />
+        </div>
+        <div class="grid" cdkDropList id="catalog" [cdkDropListConnectedTo]="slotIds()" cdkDropListSortingDisabled>
+          @for (e of catalog(); track e.key) {
+            <button class="cell" cdkDrag [cdkDragData]="e" (click)="add(e)" [entityTip]="e">
+              <ability-icon [ability]="e" [px]="48" />
+              <span class="cell-name">{{ e.name }}</span>
+              <span class="cell-type">{{ subtitle(e) }}</span>
+            </button>
+          }
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Positions</h2>
+        <p class="muted small">Which preset each of the five visible bars shows when no style binding applies.</p>
+        <div class="positions">
+          @for (name of POSITIONS; track $index) {
+            <label>
+              <span>{{ name }}</span>
+              <select [ngModel]="setup().positions[$index]" (ngModelChange)="setPosition($index, $event)">
+                <option [ngValue]="null">– empty –</option>
+                @for (p of setup().presets; track p.id) {
+                  <option [ngValue]="p.id">{{ p.id }} · {{ p.name }}</option>
+                }
+              </select>
+            </label>
+          }
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Action bar binding</h2>
+        <p class="muted small">Like the in-game setting: when you wield a weapon of a style, these positions switch to the chosen preset. "keep" leaves the position as set above.</p>
+        <table class="bindings">
+          <thead>
+            <tr><th>Style</th>@for (name of POSITIONS; track $index) { <th>{{ name }}</th> }</tr>
+          </thead>
+          <tbody>
+            @for (st of STYLES4; track st) {
+              <tr>
+                <th>{{ st }}</th>
+                @for (name of POSITIONS; track $index) {
+                  <td>
+                    <select [ngModel]="setup().bindings[st][$index]" (ngModelChange)="setBinding(st, $index, $event)">
+                      <option [ngValue]="null">keep</option>
+                      @for (p of setup().presets; track p.id) {
+                        <option [ngValue]="p.id">{{ p.id }} · {{ p.name }}</option>
+                      }
+                    </select>
+                  </td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="panel">
+        <h2>Weapons</h2>
+        <p class="muted small">One weapon per style. The type decides which abilities are usable (Two-handed / Dual wield / Shield requirements).</p>
+        <div class="weapons">
+          @for (st of STYLES4; track st) {
+            <label>
+              <span>{{ st }}</span>
+              <select [ngModel]="setup().weapons[st]" (ngModelChange)="setWeaponType(st, $event)">
+                @for (t of WEAPON_TYPES; track t) {
+                  <option [ngValue]="t">{{ t === 'two-handed' ? 'Two-handed' : t === 'dual-wield' ? 'Dual wield' : 'One-handed + shield' }}</option>
+                }
+              </select>
+            </label>
+          }
+          <label>
+            <span>Weapon at session start</span>
+            <select [ngModel]="setup().startWeapon" (ngModelChange)="setStartWeapon($event)">
+              @for (st of STYLES4; track st) { <option [ngValue]="st">{{ st }}</option> }
+            </select>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+}

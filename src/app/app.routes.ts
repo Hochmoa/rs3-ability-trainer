@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { Account } from './pages/account/account';
+import { Bars } from './pages/bars/bars';
 import { AuthCallback } from './pages/auth-callback/auth-callback';
 import { Explore } from './pages/explore/explore';
 import { Keybinds } from './pages/keybinds/keybinds';
@@ -12,6 +13,7 @@ import { Train } from './pages/train/train';
 export const routes: Routes = [
   { path: '', component: Train, title: 'RS3 Ability Trainer' },
   { path: 'rotations', component: Rotations, title: 'Rotations – RS3 Ability Trainer' },
+  { path: 'bars', component: Bars, title: 'Action bars – RS3 Ability Trainer' },
   { path: 'keybinds', component: Keybinds, title: 'Keybinds – RS3 Ability Trainer' },
   { path: 'loadout', component: Loadout, title: 'Loadout – RS3 Ability Trainer' },
   { path: 'settings', component: Settings, title: 'Settings – RS3 Ability Trainer' },
