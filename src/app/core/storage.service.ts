@@ -1,7 +1,7 @@
 import { Injectable, computed, signal } from '@angular/core';
 import { IDBPDatabase, deleteDB, openDB } from 'idb';
 import { Subject } from 'rxjs';
-import { ActionBarSetup, DEFAULT_ENEMY, DEFAULT_SETTINGS, EnemyConfig, Keybind, LegacyLoadout, Loadout, Rotation, RotationStep, Session, Settings, defaultActionBars, migrateLegacyLoadout, newLoadout } from './models';
+import { ActionBarSetup, DEFAULT_ENEMY, DEFAULT_SETTINGS, EnemyConfig, Keybind, LegacyLoadout, Loadout, Rotation, RotationStep, Session, SetupBundle, SetupMeta, Settings, defaultActionBars, migrateLegacyLoadout, newLoadout } from './models';
 
 const DB_NAME = 'rs3trainer';
 const CONSENT_KEY = 'rs3trainer.consent';
@@ -23,6 +23,8 @@ export class StorageService {
   readonly enemy = signal<EnemyConfig>({ ...DEFAULT_ENEMY });
   /** action bar presets, positions, style bindings, slot + weapon keybinds */
   readonly actionBars = signal<ActionBarSetup>(defaultActionBars());
+  /** sync bookkeeping for settings + loadouts + enemy */
+  readonly setupMeta = signal<SetupMeta>({});
   /** entity key ("ability:sever", "prayer:turmoil", ...) → keybind */
   readonly keybinds = signal<Record<string, Keybind>>({});
   readonly rotations = signal<Rotation[]>([]);
@@ -35,6 +37,10 @@ export class StorageService {
   readonly keybindChanged = new Subject<{ key: string; kb: Keybind | null }>();
   readonly sessionAdded = new Subject<Session>();
   readonly actionBarsChanged = new Subject<ActionBarSetup>();
+  /** settings, a loadout or the enemy config were edited locally */
+  readonly setupChanged = new Subject<void>();
+  /** all keybinds were replaced at once (loading another user's setup) */
+  readonly keybindsReplaced = new Subject<Record<string, Keybind>>();
 
   private db: Promise<IDBPDatabase> | null = null;
 
@@ -80,6 +86,8 @@ export class StorageService {
       if (enemy) this.enemy.set({ ...DEFAULT_ENEMY, ...enemy });
       const bars = await db.get('settings', 'actionbars');
       if (bars) this.actionBars.set(mergeActionBars(bars));
+      const meta = (await db.get('settings', 'setupmeta')) as SetupMeta | undefined;
+      if (meta) this.setupMeta.set({ ...meta });
 
       const keys = (await db.getAllKeys('keybinds')) as string[];
       const values = (await db.getAll('keybinds')) as Keybind[];
@@ -115,6 +123,7 @@ export class StorageService {
     await db.put('settings', { loadouts: this.loadouts(), active: this.activeLoadoutId() }, 'loadouts');
     await db.put('settings', this.enemy(), 'enemy');
     await db.put('settings', this.actionBars(), 'actionbars');
+    await db.put('settings', this.setupMeta(), 'setupmeta');
     for (const [id, kb] of Object.entries(this.keybinds())) await db.put('keybinds', kb, id);
     for (const r of this.rotations()) await db.put('rotations', r);
   }
@@ -122,11 +131,63 @@ export class StorageService {
   async saveSettings(s: Settings): Promise<void> {
     this.settings.set({ ...s });
     if (this.consent()) await (await this.open()).put('settings', this.settings(), 'settings');
+    await this.touchSetup();
   }
 
   async saveEnemy(e: EnemyConfig): Promise<void> {
     this.enemy.set({ ...e, styles: [...e.styles] });
     if (this.consent()) await (await this.open()).put('settings', this.enemy(), 'enemy');
+    await this.touchSetup();
+  }
+
+  /** marks settings / loadouts / enemy as edited and tells the sync */
+  private async touchSetup(): Promise<void> {
+    await this.putSetupMeta({ ...this.setupMeta(), updatedAt: Date.now() });
+    this.setupChanged.next();
+  }
+
+  async putSetupMeta(m: SetupMeta): Promise<void> {
+    this.setupMeta.set({ ...m });
+    if (this.consent()) await (await this.open()).put('settings', this.setupMeta(), 'setupmeta');
+  }
+
+  /** Applies the server copy of settings + loadouts + enemy without firing the sync hook. */
+  async putSetup(s: { settings: Settings; loadouts: Loadout[]; activeLoadoutId: string; enemy: EnemyConfig | null }, meta: SetupMeta): Promise<void> {
+    this.settings.set(migrateSettings(s.settings ?? {}));
+    const list = (s.loadouts ?? []).map(normaliseLoadout);
+    this.loadouts.set(list.length ? list : [newLoadout()]);
+    this.activeLoadoutId.set(this.loadouts().some((l) => l.id === s.activeLoadoutId) ? s.activeLoadoutId : this.loadouts()[0].id);
+    if (s.enemy) this.enemy.set({ ...DEFAULT_ENEMY, ...s.enemy, styles: [...(s.enemy.styles ?? DEFAULT_ENEMY.styles)] });
+    if (this.consent()) {
+      const db = await this.open();
+      await db.put('settings', this.settings(), 'settings');
+      await db.put('settings', { loadouts: this.loadouts(), active: this.activeLoadoutId() }, 'loadouts');
+      await db.put('settings', this.enemy(), 'enemy');
+    }
+    await this.putSetupMeta(meta);
+  }
+
+  /**
+   * Replaces everything except the rotations with another user's setup (Setups page). Fires the
+   * change hooks, so while signed in the own online copy is replaced as well.
+   */
+  async replaceSetup(b: SetupBundle): Promise<void> {
+    await this.putSetup({ settings: b.settings, loadouts: b.loadouts, activeLoadoutId: b.activeLoadoutId, enemy: b.enemy ?? { ...DEFAULT_ENEMY } }, { updatedAt: Date.now() });
+    this.setupChanged.next();
+
+    const keybinds: Record<string, Keybind> = {};
+    for (const [key, kb] of Object.entries(b.keybinds ?? {})) if (kb && typeof kb.code === 'string') keybinds[key] = { code: kb.code, ctrl: !!kb.ctrl, shift: !!kb.shift, alt: !!kb.alt };
+    this.keybinds.set(keybinds);
+    if (this.consent()) {
+      const db = await this.open();
+      await db.clear('keybinds');
+      for (const [key, kb] of Object.entries(keybinds)) await db.put('keybinds', kb, key);
+    }
+    this.keybindsReplaced.next(keybinds);
+
+    const bars = b.actionBars ? mergeActionBars(b.actionBars) : defaultActionBars();
+    delete bars.syncedAt;
+    await this.saveActionBars(bars);
   }
 
   async saveLoadout(l: Loadout): Promise<void> {
@@ -134,6 +195,7 @@ export class StorageService {
     const list = this.loadouts().some((x) => x.id === copy.id) ? this.loadouts().map((x) => (x.id === copy.id ? copy : x)) : [...this.loadouts(), copy];
     this.loadouts.set(list);
     await this.persistLoadouts();
+    await this.touchSetup();
   }
 
   async deleteLoadout(id: string): Promise<void> {
@@ -141,11 +203,13 @@ export class StorageService {
     this.loadouts.set(list.length ? list : [newLoadout()]);
     if (!this.loadouts().some((x) => x.id === this.activeLoadoutId())) this.activeLoadoutId.set(this.loadouts()[0].id);
     await this.persistLoadouts();
+    await this.touchSetup();
   }
 
   async setActiveLoadout(id: string): Promise<void> {
     if (this.loadouts().some((x) => x.id === id)) this.activeLoadoutId.set(id);
     await this.persistLoadouts();
+    await this.touchSetup();
   }
 
   private async persistLoadouts(): Promise<void> {
@@ -231,6 +295,7 @@ export class StorageService {
     this.activeLoadoutId.set(this.loadouts()[0].id);
     this.enemy.set({ ...DEFAULT_ENEMY });
     this.actionBars.set(defaultActionBars());
+    this.setupMeta.set({});
     this.keybinds.set({});
     this.rotations.set([]);
   }

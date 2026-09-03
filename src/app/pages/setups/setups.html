@@ -1,0 +1,123 @@
+<div class="panel controls">
+  <h2>Setups</h2>
+  <p class="muted small">
+    Settings, loadouts, keybinds and action bars other players share. "Load" replaces everything of yours except the rotations –
+    handy to start from a working setup.
+    @if (!supabase.user()) { <a routerLink="/account">Sign in</a> to share your own. }
+    @else if (setups.isPublic() === false) { Your own setup is hidden – change that on the <a routerLink="/account">account page</a>. }
+  </p>
+</div>
+
+@if (error(); as e) {
+  <div class="panel warning">Could not load the setups: {{ e }}</div>
+} @else if (loading() && !rows().length) {
+  <p class="muted">Loading…</p>
+} @else if (!rows().length) {
+  <div class="panel empty">
+    <p>Nobody shares a setup yet.</p>
+    <p class="muted small">Sign in – your settings, loadouts, keybinds and action bars are listed here automatically.</p>
+  </div>
+}
+
+@for (row of rows(); track row.user_id) {
+  <div class="panel setup" [class.open]="open() === row.user_id">
+    <div class="setup-head">
+      <h3>{{ row.display_name }}</h3>
+      <span class="muted">{{ ago(row.updated_at) }}</span>
+      @if (row.user_id === myId()) { <span class="muted small">yours</span> }
+      <span class="tags">
+        @for (n of row.loadout_names; track $index) { <span class="tag">{{ n }}</span> }
+        <span class="tag">{{ row.keybinds }} keybinds</span>
+        <span class="tag">{{ row.has_action_bars ? 'action bars' : 'no action bars' }}</span>
+      </span>
+      <span class="actions">
+        <button class="btn btn-sm" (click)="toggle(row)">{{ open() === row.user_id ? 'Hide' : 'Details' }}</button>
+        @if (row.user_id !== myId()) {
+          <button class="btn btn-sm btn-primary" (click)="loadSetup(row)" [disabled]="busy() === row.user_id">Load this setup</button>
+        }
+      </span>
+      <span class="muted small summary">{{ settingsSummary(row.settings) }}</span>
+    </div>
+
+    @if (open() === row.user_id) {
+      @if (details()[row.user_id]; as s) {
+        <div class="details">
+          <section>
+            <h4>Settings</h4>
+            <table>
+              <tr><td>Ping</td><td>{{ s.settings.pingMs }} ms ± {{ s.settings.jitterMs }}</td></tr>
+              <tr><td>Ability queueing</td><td>{{ s.settings.abilityQueueing ? 'on' : 'off' }}</td></tr>
+              <tr><td>Loop rotation</td><td>{{ s.settings.loop ? 'yes' : 'no' }}</td></tr>
+              <tr><td>100% adrenaline at start</td><td>{{ s.settings.fullAdrenaline ? 'yes' : 'no' }}</td></tr>
+              <tr><td>Recharge adrenaline</td><td>{{ s.settings.rechargeAdrenaline ? 'yes' : 'no' }}</td></tr>
+              @if (s.enemy?.enabled) {
+                <tr><td>Enemy</td><td>{{ s.enemy?.name }} · {{ s.enemy?.styles?.join(' / ') }} · every {{ s.enemy?.intervalTicks }} ticks</td></tr>
+              }
+            </table>
+          </section>
+
+          <section>
+            <h4>Loadouts</h4>
+            @for (l of s.loadouts.loadouts; track l.id) {
+              <div class="loadout">
+                <b>{{ l.name }}</b>
+                @if (l.id === s.loadouts.active) { <span class="muted small">active</span> }
+                <div class="muted small">
+                  {{ weapons(l) }}
+                  @if (switches(l).length) { · switches: {{ switches(l).join(', ') }} }
+                  · {{ l.prayerBook === 'Prayers' ? 'standard prayers' : 'curses' }}
+                  @if (armour(l); as a) { · {{ a }} }
+                  @if (l.eofSpec) { · EoF: {{ l.eofSpec }} }
+                  @if (relics(l).length) { · relics: {{ relics(l).join(', ') }} }
+                  @if (perks(l).length) { · perks: {{ perks(l).join(', ') }} }
+                  @if (l.spiritPact) { · Spirit Pact {{ l.spiritPact }} }
+                </div>
+              </div>
+            } @empty {
+              <span class="muted small">none</span>
+            }
+          </section>
+
+          <section>
+            <h4>Keybinds</h4>
+            @if (keybindRows(s.keybinds).length) {
+              <div class="keys">
+                @for (k of keybindRows(s.keybinds); track k.key) {
+                  <span class="key">
+                    @if (k.entity; as e) { <span [entityTip]="e"><ability-icon [ability]="e" [px]="22" /></span> }
+                    <span class="key-name">{{ k.name }}</span>
+                    <kbd>{{ k.label }}</kbd>
+                  </span>
+                }
+              </div>
+            } @else {
+              <span class="muted small">none</span>
+            }
+          </section>
+
+          <section>
+            <h4>Action bars <span class="muted small">{{ slotKeys(s) }} slot keys</span></h4>
+            @for (p of usedPresets(s); track p.id) {
+              <div class="preset">
+                <span class="preset-name">{{ p.name }}</span>
+                <span class="slots">
+                  @for (slot of p.slots; track $index) {
+                    @if (slotEntity(slot); as e) {
+                      <span [entityTip]="e"><ability-icon [ability]="e" [px]="28" /></span>
+                    } @else {
+                      <span class="slot-empty"></span>
+                    }
+                  }
+                </span>
+              </div>
+            } @empty {
+              <span class="muted small">none</span>
+            }
+          </section>
+        </div>
+      } @else {
+        <p class="muted small">Loading…</p>
+      }
+    }
+  </div>
+}

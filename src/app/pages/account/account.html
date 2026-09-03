@@ -7,8 +7,7 @@
       Signed in as <b>{{ supabase.profile()?.display_name ?? '…' }}</b> <span class="muted">({{ user.email }})</span>
     </p>
     <p class="muted small">
-      Your rotations and keybinds are stored online (Supabase, EU) and synced to every browser you sign in with.
-      Loadout and settings stay local.
+      Your rotations, keybinds, action bars, loadouts and settings are stored online (Supabase, EU) and synced to every browser you sign in with.
       @if (sync.syncing()) { · syncing… }
       @else if (sync.error()) { · <span class="bad">sync error: {{ sync.error() }}</span> }
       @else if (sync.lastSync()) { · synced }
@@ -18,6 +17,15 @@
       <button class="btn" (click)="resync()" [disabled]="busy() || sync.syncing()">Sync now</button>
       <button class="btn" (click)="signOut()" [disabled]="busy()">Sign out</button>
     </div>
+  </div>
+
+  <div class="panel">
+    <h2>Share my setup</h2>
+    <label class="check">
+      <input type="checkbox" [checked]="setups.isPublic() !== false" (change)="setShare(setups.isPublic() === false)" [disabled]="busy() || setups.isPublic() === null" />
+      List my settings, loadouts, keybinds and action bars on the <a routerLink="/setups">Setups</a> page
+    </label>
+    <p class="muted small">Other players can look at them and load them as their own. Your rotations are shared separately ("public" flag per rotation).</p>
   </div>
 
   <div class="panel">
@@ -39,7 +47,7 @@
 
   <div class="panel">
     <h2>Delete account</h2>
-    <p class="muted small">Removes your profile, online rotations, keybinds and session results. Local data in this browser stays.</p>
+    <p class="muted small">Removes your profile, online rotations, keybinds, action bars, setup and session results. Local data in this browser stays.</p>
     <button class="btn danger" (click)="deleteAccount()" [disabled]="busy()">Delete my account</button>
   </div>
 } @else {
@@ -51,8 +59,8 @@
     </div>
 
     <p class="muted small">
-      An account is only needed to publish rotations and keep them (plus your keybinds) synced across browsers.
-      Browsing the <a routerLink="/explore">explorer</a> and training work without one.
+      An account is only needed to publish rotations and keep them (plus your keybinds, action bars, loadouts and settings) synced across browsers.
+      Browsing the <a routerLink="/explore">explorer</a>, loading a shared <a routerLink="/setups">setup</a> and training work without one.
       @if (ownRotations()) { Your {{ ownRotations() }} local rotation(s) will be uploaded when you sign in. }
     </p>
 

@@ -18,9 +18,11 @@ import { environment } from '../../../environments/environment';
       <p>
         If you register, your e-mail address, a hashed password and your display name are stored by
         <a href="https://supabase.com" target="_blank" rel="noopener">Supabase</a> in {{ region }}. Your rotations
-        (with the "public" flag), your keybinds and summaries of your training sessions are stored there too, so they follow
-        you across browsers. Public rotations and your display name are visible to everyone in the explorer; private ones
-        only to you. Supabase sends the confirmation and password-reset e-mails.
+        (with the "public" flag), your keybinds, action bars, loadouts, settings and summaries of your training sessions are
+        stored there too, so they follow you across browsers. Public rotations and your display name are visible to everyone
+        in the explorer; private ones only to you. Your settings, loadouts, keybinds and action bars are listed on the Setups
+        page for everyone (also without an account) unless you switch "Share my setup" off on the account page. Supabase
+        sends the confirmation and password-reset e-mails.
       </p>
       <p>"Delete my account" on the <a routerLink="/account">account page</a> removes everything stored online.</p>
       <h3>Feedback</h3>

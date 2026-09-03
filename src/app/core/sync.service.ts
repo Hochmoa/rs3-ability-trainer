@@ -53,6 +53,7 @@ export class SyncService {
     this.storage.rotationSaved.subscribe((r) => void this.guard(() => this.upsertRotation(r)));
     this.storage.rotationDeleted.subscribe((id) => void this.guard(() => this.deleteRotation(id)));
     this.storage.keybindChanged.subscribe(({ key, kb }) => void this.guard(() => this.upsertKeybind(key, kb)));
+    this.storage.keybindsReplaced.subscribe((kb) => void this.guard(() => this.replaceKeybinds(kb)));
     this.storage.sessionAdded.subscribe((s) => void this.guard(() => this.uploadSession(s)));
   }
 
@@ -163,6 +164,19 @@ export class SyncService {
       : this.supabase.client.from('keybinds').delete().eq('user_id', uid).eq('entity_key', key);
     const { error } = await q;
     if (error) throw error;
+  }
+
+  /** Replaces all keybinds of the account (after loading another user's setup). */
+  async replaceKeybinds(keybinds: Record<string, Keybind>): Promise<void> {
+    const uid = this.uid;
+    if (!uid) return;
+    const del = await this.supabase.client.from('keybinds').delete().eq('user_id', uid);
+    if (del.error) throw del.error;
+    const rows = Object.entries(keybinds).map(([entity_key, keybind]) => ({ user_id: uid, entity_key, keybind }));
+    if (rows.length) {
+      const { error } = await this.supabase.client.from('keybinds').upsert(rows);
+      if (error) throw error;
+    }
   }
 
   async uploadSession(s: Session): Promise<void> {

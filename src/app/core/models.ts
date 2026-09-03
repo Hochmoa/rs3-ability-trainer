@@ -188,6 +188,24 @@ export interface Settings {
   hideObscureAbilities: boolean;
 }
 
+/** Everything the Setups page shares and "Load this setup" replaces: all local data except the rotations. */
+export interface SetupBundle {
+  settings: Settings;
+  loadouts: Loadout[];
+  activeLoadoutId: string;
+  enemy: EnemyConfig | null;
+  keybinds: Record<string, Keybind>;
+  actionBars: ActionBarSetup | null;
+}
+
+/** sync bookkeeping for settings + loadouts + enemy (one document on the server) */
+export interface SetupMeta {
+  /** last local edit (ms); missing = never edited */
+  updatedAt?: number;
+  /** server updated_at (ms) of the last successful sync; missing = never synced */
+  syncedAt?: number;
+}
+
 export const DEFAULT_SETTINGS: Settings = {
   pingMs: 60,
   jitterMs: 20,
