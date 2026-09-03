@@ -1,6 +1,6 @@
 export type Style = 'Melee' | 'Ranged' | 'Magic' | 'Necromancy' | 'Defence' | 'Constitution';
 /** "Enhanced" replaced most Melee/Ranged/Magic thresholds in the Combat Style Modernisation (2 March 2026) */
-export type AbilityType = 'Basic' | 'Enhanced' | 'Threshold' | 'Ultimate' | 'Special';
+export type AbilityType = 'Basic' | 'Enhanced' | 'Threshold' | 'Ultimate' | 'Special' | 'Incantation';
 
 export const STYLES: Style[] = ['Melee', 'Ranged', 'Magic', 'Necromancy', 'Defence', 'Constitution'];
 
@@ -63,7 +63,9 @@ export interface Prayer {
 export interface Special {
   id: string;
   name: string;
-  kind: 'potion';
+  kind: 'potion' | 'bomb';
+  /** bombs: debuff put on the target */
+  debuff?: { name: string; durationTicks: number; icon: string | null };
   adrenaline: number;
   adrenalineOverTime: number;
   overTimeTicks: number;
@@ -74,7 +76,39 @@ export interface Special {
   icon: string;
 }
 
-export type EntityKind = 'ability' | 'prayer' | 'special' | 'weapon';
+export type EntityKind = 'ability' | 'prayer' | 'special' | 'weapon' | 'spec' | 'action';
+
+/** Weapon special attack (runescape.wiki `infobox_weapon_special_attack`), e.g. Death Essence of the Omni guard. */
+export interface Spec {
+  id: string;
+  name: string;
+  /** combat style of the weapons it belongs to ("Necromancy", ...) */
+  style: string;
+  /** gear ids of the weapons that have this special */
+  weapons: string[];
+  adrenaline: number | null;
+  cooldownTicks: number | null;
+  damageMin: number | null;
+  damageMax: number | null;
+  damageText: string;
+  target: string;
+  description: string;
+  icon: string;
+}
+
+/** Client actions that are keybinds but not abilities (target cycle). Defined in code, see ACTIONS. */
+export interface Action {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+}
+
+export const ACTIONS: Action[] = [
+  { id: 'target-cycle', name: 'Target cycle', description: 'Switches to the next target (client keybind). Instant, no cooldown, no tick.', icon: 'assets/actions/target-cycle.png' },
+];
+/** pressing the "Weapon Special Attack" slot counts for whichever spec the rotation expects with the wielded weapon */
+export const SPEC_KEY = 'ability:weapon-special-attack';
 
 /** the four weapon styles that can be wielded / bound to action bars (Defence is not a weapon style) */
 export type Style4 = 'Melee' | 'Ranged' | 'Magic' | 'Necromancy';
@@ -116,8 +150,18 @@ export interface Keybind {
 }
 
 export interface RotationStep {
-  kind: EntityKind;
+  /** "note" = free text from an imported PvME rotation, not an input (id is empty) */
+  kind: EntityKind | 'note';
   id: string;
+  note?: string;
+  /** notes: section heading ("Phase 2") */
+  phase?: boolean;
+  /** PvME "+": belongs to the same tick as the previous input */
+  sameTick?: boolean;
+  /** PvME "2t x": x is expected this many ticks after the previous input */
+  offsetTicks?: number;
+  /** annotation such as "(DW)" or trailing prose */
+  hint?: string;
 }
 
 export interface Rotation {
@@ -189,6 +233,8 @@ export interface ActionBarSetup {
   weaponKeybinds: Record<Style4, Keybind | null>;
   weapons: Record<Style4, WeaponType>;
   startWeapon: Style4;
+  /** client keybinds that are not bar slots: "target-cycle", ... */
+  actionKeybinds?: Record<string, Keybind | null>;
 }
 
 const MAIN_BAR_DEFAULT_CODES = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0', 'Minus', 'Equal'];
@@ -211,6 +257,7 @@ export function defaultActionBars(): ActionBarSetup {
     weaponKeybinds: { Melee: null, Ranged: null, Magic: null, Necromancy: null },
     weapons: { Melee: 'two-handed', Ranged: 'two-handed', Magic: 'two-handed', Necromancy: 'two-handed' },
     startWeapon: 'Melee',
+    actionKeybinds: { 'target-cycle': null },
   };
 }
 
@@ -229,7 +276,7 @@ export const DEFAULT_LOADOUT: Loadout = {
   vestmentsOfHavoc: false,
 };
 
-export type StepOutcome = 'perfect' | 'late' | 'done' | 'missed';
+export type StepOutcome = 'perfect' | 'late' | 'early' | 'done' | 'missed';
 
 export interface StepResult {
   step: number;

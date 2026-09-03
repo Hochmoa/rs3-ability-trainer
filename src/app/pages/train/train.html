@@ -47,17 +47,32 @@
   <div class="panel arena">
     <div class="queue-strip">
       @for (s of slots(); track s.stepIndex + '-' + s.kind) {
-        <div class="slot" [class]="'slot ' + s.kind + ' ' + s.entity.kind" [entityTip]="s.entity">
-          <ability-icon
-            [ability]="s.entity"
-            [keyLabel]="s.key"
-            [px]="s.kind === 'current' ? 72 : s.kind === 'next' ? 48 : 40"
-            [gcdPhase]="s.kind === 'current' && running() && s.entity.kind === 'ability' ? gcdPhase() : 1"
-            [remainingMs]="s.kind === 'current' && running() && s.entity.kind === 'ability' ? gcdRemaining() : 0"
-            [state]="s.done ? 'done' : s.kind === 'current' && running() ? iconState() : 'idle'"
-          />
-          <span class="name">{{ s.entity.name }}</span>
-        </div>
+        @if (s.note !== undefined) {
+          <div class="slot note" [class]="'slot note ' + s.kind" [class.phase]="s.phase" [title]="s.note">
+            <div class="note-card" [class.big]="s.kind === 'current'">{{ s.note }}</div>
+            <span class="name muted">{{ s.phase ? 'phase' : 'note' }}</span>
+          </div>
+        } @else {
+          <div class="slot" [class]="'slot ' + s.kind + ' ' + s.entity.kind" [entityTip]="s.entity">
+            <ability-icon
+              [ability]="s.entity"
+              [keyLabel]="s.key"
+              [px]="s.kind === 'current' ? 72 : s.kind === 'next' ? 48 : 40"
+              [gcdPhase]="s.kind === 'current' && running() && (s.entity.kind === 'ability' || s.entity.kind === 'spec') ? gcdPhase() : 1"
+              [remainingMs]="s.kind === 'current' && running() && (s.entity.kind === 'ability' || s.entity.kind === 'spec') ? gcdRemaining() : 0"
+              [state]="s.done ? 'done' : s.kind === 'current' && running() ? iconState() : 'idle'"
+            />
+            <span class="name">{{ s.entity.name }}</span>
+            @if (s.offsetTicks !== undefined && s.offsetTicks > 0) {
+              <span class="tag">+{{ s.offsetTicks }}t</span>
+            } @else if (s.sameTick && !(s.entity.ability?.triggersGcd || s.entity.spec)) {
+              <span class="tag">same tick</span>
+            }
+            @if (s.hint) {
+              <span class="tag hint">{{ s.hint }}</span>
+            }
+          </div>
+        }
         @if (s.kind === 'current') {
           <div class="arrow">›</div>
         }

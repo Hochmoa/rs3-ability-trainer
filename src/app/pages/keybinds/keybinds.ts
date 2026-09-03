@@ -2,11 +2,11 @@ import { Component, HostListener, computed, inject, signal } from '@angular/core
 import { RouterLink } from '@angular/router';
 import { DataService, Entity } from '../../core/data.service';
 import { keybindFromEvent, keybindKey, keybindLabel } from '../../core/keybind.util';
-import { BAR_POSITION_NAMES, Keybind, STYLES4, Style4 } from '../../core/models';
+import { ACTIONS, BAR_POSITION_NAMES, Keybind, STYLES4, Style4 } from '../../core/models';
 import { StorageService } from '../../core/storage.service';
 import { EntityTip } from '../../shared/tooltip';
 
-type Target = { pos: number; slot: number } | { weapon: Style4 };
+type Target = { pos: number; slot: number } | { weapon: Style4 } | { action: string };
 
 /** Keybinds belong to bar position + slot (like in the game) plus one key per weapon switch. */
 @Component({
@@ -21,6 +21,7 @@ export class Keybinds {
 
   readonly POSITIONS = BAR_POSITION_NAMES;
   readonly STYLES4 = STYLES4;
+  readonly ACTIONS = ACTIONS;
   readonly setup = this.storage.actionBars;
   readonly capturing = signal<Target | null>(null);
 
@@ -36,6 +37,10 @@ export class Keybinds {
     for (const st of STYLES4) {
       const kb = s.weaponKeybinds[st];
       if (kb) m.set(keybindKey(kb), [...(m.get(keybindKey(kb)) ?? []), st + ' weapon']);
+    }
+    for (const a of ACTIONS) {
+      const kb = s.actionKeybinds?.[a.id];
+      if (kb) m.set(keybindKey(kb), [...(m.get(keybindKey(kb)) ?? []), a.name]);
     }
     return m;
   });
@@ -77,10 +82,19 @@ export class Keybinds {
     return this.conflictOf(this.setup().weaponKeybinds[style], style + ' weapon');
   }
 
+  actionLabel(id: string): string {
+    return keybindLabel(this.setup().actionKeybinds?.[id]);
+  }
+
+  actionConflicts(id: string, name: string): string[] {
+    return this.conflictOf(this.setup().actionKeybinds?.[id] ?? null, name);
+  }
+
   isCapturing(t: Target): boolean {
     const c = this.capturing();
     if (!c) return false;
     if ('weapon' in t) return 'weapon' in c && c.weapon === t.weapon;
+    if ('action' in t) return 'action' in c && c.action === t.action;
     return 'pos' in c && c.pos === t.pos && c.slot === t.slot;
   }
 
@@ -91,6 +105,7 @@ export class Keybinds {
   private assign(t: Target, kb: Keybind | null): void {
     const s = structuredClone(this.setup());
     if ('weapon' in t) s.weaponKeybinds[t.weapon] = kb;
+    else if ('action' in t) s.actionKeybinds = { ...(s.actionKeybinds ?? {}), [t.action]: kb };
     else s.slotKeybinds[t.pos][t.slot] = kb;
     void this.storage.saveActionBars(s);
   }

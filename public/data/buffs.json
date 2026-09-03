@@ -1,5 +1,18 @@
 [
  {
+  "id": 52778,
+  "name": "Anima Charged",
+  "kind": "Buff",
+  "category": "Offensive abilities",
+  "desc": "Anima Charged\n-Your next Magic ability is empowered:\n- Sonic Wave: Your next Magic ability costs 35% less Adrenaline.\n- Dragon Breath: Deals 260%-310% Magic damage.\n- Concentrated Blast: Each attack grants an additional 10% Critical Strike Chance.",
+  "iconSelf": "assets/status/anima-charged.png",
+  "iconTarget": null,
+  "duration": "15 seconds or until casting one of the affected abilities",
+  "durationTicks": 25,
+  "trigger": "Activating Runic Charge",
+  "effects": "* Causes Sonic Wave to reduce the adrenaline cost of the next Magic ability by 35% rather than 10%\n* Causes Greater Sonic Wave to reduce the adrenaline cost of the next Magic ability by 45% rather than 20%\n* Causes Dragon Breath to deal 260%-310% damage rather than 110%-130%\n* Causes Concentrated Blast and Greater Concentrated Blast to grant an additional 10% Critical Strike Chance"
+ },
+ {
   "id": 14710,
   "name": "Anticipation",
   "kind": "Buff",
@@ -182,6 +195,19 @@
   "effects": "*Deals 20%-100% ability damage\n*Reduce the damage taken from the target by 50%\n*Duration increases with the level of the equipped shield/defender (if used)\n**Defenders are treated as having half their level"
  },
  {
+  "id": 37218,
+  "name": "Demon slayer",
+  "kind": "Unspecified",
+  "category": "Item effects",
+  "desc": "Demon slayer - Boosts your damage against demons by 15%.",
+  "iconSelf": "assets/status/demon-slayer-ability-status.png",
+  "iconTarget": null,
+  "duration": "10.2 seconds",
+  "durationTicks": 17,
+  "trigger": "Activating the Demon Slayer ability",
+  "effects": "Increases damage dealt to susceptible demons by 15%"
+ },
+ {
   "id": 25028,
   "name": "Devotion",
   "kind": "Buff",
@@ -234,6 +260,19 @@
   "effects": "* Reduces the damage from the next attack that deals more than 1 damage to 1\n* Grants adrenaline based on the damage blocked and tier of the equipped shield or defender\n** Defenders are treated as a shield of half their level\n* Soft typeless damage is blocked but does not grant adrenaline"
  },
  {
+  "id": 37219,
+  "name": "Dragon slayer",
+  "kind": "Unspecified",
+  "category": "Item effects",
+  "desc": "Dragon slayer - Boosts your damage against dragons by 15%.",
+  "iconSelf": "assets/status/dragon-slayer-ability-status.png",
+  "iconTarget": null,
+  "duration": "10.2 seconds",
+  "durationTicks": 17,
+  "trigger": "Activating the Dragon Slayer ability",
+  "effects": "Increases damage dealt to susceptible dragons by 15%"
+ },
+ {
   "id": 46308,
   "name": "Flow",
   "kind": "Buff",
@@ -258,6 +297,19 @@
   "durationTicks": 10,
   "trigger": "Activating the Freedom ability",
   "effects": "*Initially, clears most stun, bind and bleed effects\n*Grants immunity to stuns and binds"
+ },
+ {
+  "id": 37208,
+  "name": "Golden Touch",
+  "kind": "Buff",
+  "category": "Item effects",
+  "desc": "Golden Touch - All alchable items (under your loot beam value) that drop for the next 60 seconds will be automatically high-alched",
+  "iconSelf": "assets/status/golden-touch-self-status.png",
+  "iconTarget": null,
+  "duration": "60 seconds",
+  "durationTicks": 100,
+  "trigger": "Activating the Golden Touch ability",
+  "effects": "All alchable items that drop with a value under your loot beam value will automatically be high-alched"
  },
  {
   "id": 40938,
@@ -375,6 +427,32 @@
   "durationTicks": 50,
   "trigger": "Activating the Immortality ability",
   "effects": "*Reduces damage taken by 25%\n*If the user dies, return to life with 40% of their maximum life points"
+ },
+ {
+  "id": 37216,
+  "name": "Ingenuity of the Humans",
+  "kind": "Buff",
+  "category": "Item effects",
+  "desc": "Ingenuity of the Humans - The next strike from an ability you use is guaranteed to hit.",
+  "iconSelf": "assets/status/ingenuity-of-the-humans-self-status.png",
+  "iconTarget": null,
+  "duration": "*6 seconds\n*Removed upon using another ability or spell",
+  "durationTicks": 10,
+  "trigger": "Activating the Ingenuity of the Humans ability",
+  "effects": "Your next ability or spell is guaranteed to hit"
+ },
+ {
+  "id": 37133,
+  "name": "Kuradal's Favour",
+  "kind": "Buff",
+  "category": "Item effects",
+  "desc": "Kuradal's Favour\nMonsters in Kuradal's dungeon will instantly respawn while slaying.",
+  "iconSelf": "assets/status/kuradal-s-favour-self-status.png",
+  "iconTarget": null,
+  "duration": "30 seconds",
+  "durationTicks": 50,
+  "trigger": "Activating the Kuradal's Favour ability",
+  "effects": "Monsters slain within Kuradal's Dungeon respawn instantly"
  },
  {
   "id": 37214,
@@ -650,6 +728,19 @@
   "effects": "*Deals 80%-100% of the user's ability damage every 1.2 seconds (maximum of 6 hits)\n*Heals for 6% of damage dealt"
  },
  {
+  "id": 37132,
+  "name": "Slayer's Insight",
+  "kind": "Buff",
+  "category": "Uncategorised",
+  "desc": "Slayer's Insight\nSlayer experience gained is increased by 10%",
+  "iconSelf": "assets/status/slayer-s-insight-self-status.png",
+  "iconTarget": null,
+  "duration": "30 seconds",
+  "durationTicks": 50,
+  "trigger": "Activating the Slayer's Insight ability",
+  "effects": "+10% Slayer experience gained"
+ },
+ {
   "id": 52064,
   "name": "Soul Reave",
   "kind": "Buff",
@@ -713,6 +804,19 @@
   "durationTicks": 10,
   "trigger": "*Activating the Transfigure ability\n*Cannot be activated when immune to stuns:",
   "effects": "*Binds\n*Prevents attacking\n*Puts abilities on cooldown\n*Prevents activating Freedom:\n*After the effect expires:\n**Heals for 250% of damage taken during the effect, capping at 75% of maximum life points\n**Grants Transfigure stun immunity for 15 seconds (grants immunity to stuns and binds)"
+ },
+ {
+  "id": 37217,
+  "name": "Undead slayer",
+  "kind": "Buff",
+  "category": "Item effects",
+  "desc": "Undead slayer - Boosts your damage against the undead by 15%.",
+  "iconSelf": "assets/status/undead-slayer-ability-status.png",
+  "iconTarget": null,
+  "duration": "10.2 seconds",
+  "durationTicks": 17,
+  "trigger": "Activating the Undead Slayer ability",
+  "effects": "Increases damage dealt to susceptible undead by 15%"
  },
  {
   "id": 48337,

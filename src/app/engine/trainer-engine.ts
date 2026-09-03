@@ -1,4 +1,4 @@
-import { AbilityType, DEFAULT_LOADOUT, EntityKind, Loadout, StepResult, Style4, WeaponType, isStyle4 } from '../core/models';
+import { AbilityType, DEFAULT_LOADOUT, EntityKind, Loadout, SPEC_KEY, StepResult, Style4, WeaponType, isStyle4 } from '../core/models';
 
 /** One RS3 game tick / server cycle. */
 export const TICK_MS = 600;
@@ -52,6 +52,10 @@ export interface EngineEntity {
   equipment?: string;
   /** weapon-switch entities: the style wielded after the switch */
   weapon?: { style: Style4 };
+  /** rotation steps only: PvME "+" (0) / "2t" (2) – expected this many ticks after the previous input's tick */
+  offsetTicks?: number;
+  /** rotation steps only: free text from an imported rotation, skipped automatically */
+  isNote?: boolean;
 }
 
 export interface ActiveBuff extends EngineBuff {
@@ -140,6 +144,8 @@ export class TrainerEngine {
   private readyTick = new Map<string, number>();
   private overTime: { key: string; perTick: number; untilTick: number }[] = [];
   private lastTick = 0;
+  /** tick of the last input that counted (cast or off-GCD activation) – reference for "+" / "2t" companions */
+  private lastInputTick: number | null = null;
 
   constructor(
     readonly steps: EngineEntity[],
@@ -168,6 +174,7 @@ export class TrainerEngine {
     this.readyTick.clear();
     this.overTime = [];
     this.lastTick = 0;
+    this.lastInputTick = null;
     this.events.length = 0;
     this.state = 'running';
   }
@@ -246,7 +253,7 @@ export class TrainerEngine {
   usable(key: string, tick: number): UsableReason {
     const e = this.catalog.get(key);
     if (!e) return 'ok';
-    if (e.kind === 'ability') {
+    if (e.kind === 'ability' || e.kind === 'spec') {
       // utility abilities off the GCD (Surge, Escape, Dive) work with any weapon; only real casts need the style
       if (e.gcd && e.style && isStyle4(e.style) && e.style !== this.weapon) return 'weapon';
       const eq = (e.equipment ?? 'Any').toLowerCase();
@@ -300,6 +307,11 @@ export class TrainerEngine {
   // ---------------------------------------------------------------- input handling
 
   private handle(input: PendingInput): void {
+    if (input.key === SPEC_KEY) {
+      // the generic special-attack slot fires whatever spec the wielded weapon has; the rotation says which one
+      const spec = this.steps.find((s, i) => i >= this.index && !this.done.has(i) && s.kind === 'spec' && s.style === this.weapon);
+      if (spec) input = { ...input, key: spec.key };
+    }
     const entity = this.catalog.get(input.key);
     if (!entity) return;
     const tickP = this.tickOf(input.arrival);
@@ -380,13 +392,14 @@ export class TrainerEngine {
       return;
     }
     // does it satisfy an open off-GCD step in the current group?
-    let stepIndex = -1;
-    for (let i = this.index; i < this.steps.length; i++) {
-      const s = this.steps[i];
-      if (s.gcd) break;
-      if (!this.done.has(i) && s.key === entity.key) {
-        stepIndex = i;
-        break;
+    let stepIndex = this.openOffGcdStep(this.index, entity.key);
+    let ref = this.lastInputTick;
+    // "bloat + vulnbomb": the companion may arrive on the same tick, before the ability itself casts
+    if (stepIndex < 0 && this.pending && tick >= this.pending.tick) {
+      const j = this.steps.findIndex((s, i) => i >= this.index && s.gcd && s.key === this.pending!.key);
+      if (j >= 0) {
+        stepIndex = this.openOffGcdStep(j + 1, entity.key);
+        ref = this.pending.tick;
       }
     }
     this.activate(entity, tick);
@@ -396,13 +409,21 @@ export class TrainerEngine {
       return;
     }
     this.done.add(stepIndex);
+    const step = this.steps[stepIndex];
+    let outcome: StepResult['outcome'] = 'done';
+    let deviation = 0;
+    if (step.offsetTicks !== undefined && ref !== null) {
+      deviation = tick - (ref + step.offsetTicks);
+      outcome = deviation === 0 ? 'perfect' : deviation > 0 ? 'late' : 'early';
+    }
+    this.lastInputTick = Math.max(tick, this.lastInputTick ?? 0);
     const result: StepResult = {
       step: stepIndex,
       key: entity.key,
       name: entity.name,
       kind: entity.kind,
-      outcome: 'done',
-      lateTicks: 0,
+      outcome,
+      lateTicks: deviation,
       offsetMs: 0,
       tooEarly: 0,
       wrong: 0,
@@ -412,6 +433,16 @@ export class TrainerEngine {
     this.results.push(result);
     this.events.push({ kind: 'fired', result });
     this.advanceIndex();
+  }
+
+  /** First open off-GCD step with `key` in the group starting at `from` (stops at the next GCD ability). */
+  private openOffGcdStep(from: number, key: string): number {
+    for (let i = from; i < this.steps.length; i++) {
+      const s = this.steps[i];
+      if (s.gcd) break;
+      if (!this.done.has(i) && !s.isNote && s.key === key) return i;
+    }
+    return -1;
   }
 
   // ---------------------------------------------------------------- casting
@@ -443,6 +474,7 @@ export class TrainerEngine {
     const expected = this.expectedAbility;
     const gcdEnd = this.gcdEndTick;
     this.castTick = p.tick;
+    this.lastInputTick = p.tick;
     this.activate(entity, p.tick);
 
     if (!expected || entity.key !== expected.key) {
@@ -454,6 +486,10 @@ export class TrainerEngine {
     const expectedIndex = this.steps.indexOf(expected, this.index);
     const missed: string[] = [];
     for (let i = this.index; i < expectedIndex; i++) {
+      if (this.steps[i].isNote) {
+        this.done.add(i);
+        continue;
+      }
       if (!this.done.has(i)) {
         missed.push(this.steps[i].key);
         this.done.add(i);
@@ -530,7 +566,14 @@ export class TrainerEngine {
   }
 
   private advanceIndex(): void {
-    while (this.index < this.steps.length && this.done.has(this.index)) this.index++;
+    for (;;) {
+      while (this.index < this.steps.length && this.done.has(this.index)) this.index++;
+      if (this.index < this.steps.length && this.steps[this.index].isNote) {
+        this.done.add(this.index);
+        continue;
+      }
+      break;
+    }
     if (this.index >= this.steps.length) {
       if (this.config.loop) {
         this.index = 0;

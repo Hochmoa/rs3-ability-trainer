@@ -139,7 +139,7 @@ export class StorageService {
 
   /** Stores a rotation as-is (keeps updatedAt / syncedAt) without firing the sync hook. */
   async putRotation(r: Rotation): Promise<Rotation> {
-    const rot: Rotation = { ...r, steps: r.steps.map((s) => ({ kind: s.kind, id: s.id })) };
+    const rot: Rotation = { ...r, steps: r.steps.map(cleanStep) };
     this.rotations.set([rot, ...this.rotations().filter((x) => x.id !== rot.id)].sort((a, b) => b.updatedAt - a.updatedAt));
     if (this.consent()) await (await this.open()).put('rotations', rot);
     return rot;
@@ -209,6 +209,17 @@ function migrateSettings(stored: Partial<Settings> & { queueWindowTicks?: number
   const s: Settings = { ...DEFAULT_SETTINGS, ...rest };
   if (typeof queueWindowTicks === 'number' && typeof stored.abilityQueueing !== 'boolean') s.abilityQueueing = queueWindowTicks >= 3;
   return s;
+}
+
+/** Keeps only the step fields we know (kind, id and the PvME extras), dropping undefined values. */
+function cleanStep(s: RotationStep): RotationStep {
+  const out: RotationStep = { kind: s.kind, id: s.id };
+  if (s.note !== undefined) out.note = s.note;
+  if (s.phase) out.phase = true;
+  if (s.sameTick) out.sameTick = true;
+  if (s.offsetTicks !== undefined) out.offsetTicks = s.offsetTicks;
+  if (s.hint) out.hint = s.hint;
+  return out;
 }
 
 /** Older builds stored steps as plain ability ids. */

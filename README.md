@@ -25,6 +25,15 @@ Live at **https://rs3trainer.hochware.com** (GitHub Pages).
   Potions share the 120 s adrenaline potion cooldown.
 - The **buff bar** (self) and **target bar** (debuffs) show the status effects the abilities apply, with the wiki's
   durations; prayers stay until the session ends.
+- **Import from PvME notation**: paste a rotation as written on pvme.io / Discord into the editor
+  (`(tc) bloat + vulnbomb → deathskulls → necrobasic`). `→` = next tick, `+` = same tick, `2t x` = x two ticks after the
+  previous input, `omniguard spec` = weapon switch + that weapon's special attack, `(tc)` = target cycle (a client
+  keybind, bound on the Keybinds page). Aliases come from the PvME emoji list (`public/data/pvme-aliases.json`); unknown
+  words and phase headings become note steps that show up in the queue but are not inputs. Same-tick companions are
+  scored against the tick of the previous input (perfect / early / late).
+- Weapon special attacks (`public/data/specs.json`, wiki table of 75 specs) are steps of their own; pressing the generic
+  "Weapon Special Attack" slot fires whichever spec the rotation expects for the wielded weapon style.
+
 - Hover any icon for the full wiki data: adrenaline, cooldown, damage range and hits, target, duration, description,
   buffs applied.
 - **Action bars like in the game**: five visible bars (main + additional 1–4, 14 slots each), 18 presets you fill by
@@ -56,7 +65,9 @@ Push to `main` deploys via `.github/workflows/deploy.yml`.
 ```bash
 python tools/fetch-abilities.py   # public/data/abilities.json + buffs.json, icons in public/assets/abilities + status
 python tools/fetch-prayers.py     # public/data/prayers.json, icons in public/assets/prayers
-python tools/fetch-specials.py    # public/data/specials.json (adrenaline potions), icons in public/assets/specials
+python tools/fetch-specials.py    # public/data/specials.json (adrenaline potions, vulnerability bomb), icons in public/assets/specials
+python tools/fetch-specs.py       # public/data/specs.json + gear.json (weapon special attacks), icons in public/assets/gear
+python tools/fetch-pvme-aliases.py # public/data/pvme-aliases.json (PvME emoji alias -> entity key), run last
 ```
 
 The scripts read the RuneScape Wiki Bucket API (`infobox_ability`, `infobox_buff`, `infobox_prayer`, `infobox_item`)
