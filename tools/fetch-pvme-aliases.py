@@ -46,11 +46,17 @@ MANUAL = {
     "deathguard90": "gear:death-guard-tier-90",
     "deathguard80": "gear:death-guard-tier-80",
     "deathguard70": "gear:death-guard-tier-70",
+    "occulistring": "item:occultist-s-ring",
+    "vampaura": "item:vampyrism-aura",
+    "renewal4": "special:adrenaline-renewal-potion",
+    "adrenalinepotion": "special:adrenaline-potion",
+    "vulnbombs": "special:vulnerability-bomb",
 }
 CATEGORIES = {
     "Melee abilities", "Ranged Abilities", "Magic Abilities", "Necromancy abilities", "Defence and Constitution Abilities",
     "Unlockable Abilities", "Ability targetting", "Prayers", "Melee Gear", "Ranged Gear", "Magic Gear", "Necromancy Gear",
-    "Other Gear", "Consumables, Currencies, and Combat Support Items", "Jewellery",
+    "Other Gear", "Consumables, Currencies, and Combat Support Items", "Jewellery", "Auras and Pocket slot",
+    "uncategorised", "uncategorized", "Uncategorised",
 }
 
 
@@ -81,9 +87,14 @@ def main():
             alias = em["id"]
             if alias.lower().startswith("old"):
                 continue
-            key = MANUAL.get(alias) or by_name.get(em["name"].lower()) or by_norm.get(norm(em["name"])) or by_norm.get(norm(alias))
+            base = re.sub(r"\s*\([^)]*\)", "", em["name"])  # "(red)", "(or)", "(black)" variants -> the base item
+            key = MANUAL.get(alias) or by_name.get(em["name"].lower()) or by_norm.get(norm(em["name"])) or by_norm.get(norm(alias)) or by_norm.get(norm(base))
+            if not key and em["name"].lower().startswith("eof"):
+                key = "item:essence-of-finality-amulet"  # "EoF (red)", "EoF (or)(pink)" ... are all the same amulet
             if key and (key in known or key.startswith("action:")):
                 aliases[alias.lower()] = key
+                for extra in em.get("id_aliases") or []:  # preset-maker ids ("edracolichcoif") point at the same item
+                    aliases.setdefault(str(extra).lower(), key)
     for alias, key in MANUAL.items():
         if key in known or key.startswith("action:"):
             aliases[alias] = key

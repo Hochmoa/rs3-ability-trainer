@@ -2,7 +2,10 @@
   "siteName": "RS3 Ability Trainer",
   "origin": "https://rs3trainer.hochware.com",
   "image": "/assets/og-image.png",
-  "author": { "name": "Martin Hochmair", "url": "https://hochware.com" },
+  "author": {
+    "name": "Martin Hochmair",
+    "url": "https://hochware.com"
+  },
   "description": "Free RuneScape 3 rotation trainer: real 0.6 s ticks, 1.8 s global cooldown, adrenaline, ability queueing and ping simulation. Import PvME rotations and practise them.",
   "routes": [
     {
@@ -54,6 +57,14 @@
       "changefreq": "monthly"
     },
     {
+      "path": "presets",
+      "title": "Boss presets – RS3 Ability Trainer",
+      "h1": "Boss presets",
+      "description": "PvME boss setups for RuneScape 3: gear, backpack, rotations and action bars for Rasial, Zamorak, Nakatra, Kerapac, Nex, Telos and more – added to the trainer in one click.",
+      "priority": 0.7,
+      "changefreq": "monthly"
+    },
+    {
       "path": "settings",
       "title": "Trainer Settings – RS3 Ability Trainer",
       "h1": "Settings",
@@ -69,8 +80,26 @@
       "priority": 0.3,
       "changefreq": "yearly"
     },
-    { "path": "account", "title": "Account – RS3 Ability Trainer", "h1": "Account", "description": "Sign in to sync your rotations and keybinds.", "noindex": true },
-    { "path": "admin", "title": "Admin – RS3 Ability Trainer", "h1": "Admin", "description": "Staff area.", "noindex": true },
-    { "path": "auth/callback", "title": "Signing in – RS3 Ability Trainer", "h1": "Signing in", "description": "Finishing sign-in.", "noindex": true }
+    {
+      "path": "account",
+      "title": "Account – RS3 Ability Trainer",
+      "h1": "Account",
+      "description": "Sign in to sync your rotations and keybinds.",
+      "noindex": true
+    },
+    {
+      "path": "admin",
+      "title": "Admin – RS3 Ability Trainer",
+      "h1": "Admin",
+      "description": "Staff area.",
+      "noindex": true
+    },
+    {
+      "path": "auth/callback",
+      "title": "Signing in – RS3 Ability Trainer",
+      "h1": "Signing in",
+      "description": "Finishing sign-in.",
+      "noindex": true
+    }
   ]
 }

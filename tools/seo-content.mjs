@@ -6,7 +6,7 @@
 const nav = `
 <nav aria-label="Pages">
   <a href="/">Train</a> · <a href="/rotations">Rotations</a> · <a href="/bars">Action bars</a> · <a href="/keybinds">Keybinds</a> ·
-  <a href="/loadout">Loadout</a> · <a href="/settings">Settings</a> · <a href="/explore">Explore</a> · <a href="/privacy">Privacy</a>
+  <a href="/loadout">Loadout</a> · <a href="/presets">Boss presets</a> · <a href="/settings">Settings</a> · <a href="/explore">Explore</a> · <a href="/privacy">Privacy</a>
 </nav>`;
 
 const footer = `
@@ -61,6 +61,12 @@ Bind single keys or combinations with Ctrl, Shift and Alt, plus keys for weapon 
 <p>Set up your loadout: main hand, off hand and two-handed weapons, carried switches, armour set, perks, relics and prayer book.
 The trainer applies their effects – for example to ability cooldowns and adrenaline – so the rotation behaves like it does in the game.</p>`,
 
+  presets: `
+<h1>Boss presets from PvME</h1>
+<p>Ready-made setups for RuneScape 3 bosses taken from the PvM Encyclopedia guides: the worn gear and backpack of the
+PvME preset, the guide's rotations in PvME notation, and action bars holding the abilities they use. One click adds
+them to your loadouts, rotations and bars so you can train a Rasial, Zamorak, Nakatra, Kerapac, Nex, Telos or Vorkath
+rotation with the right gear.</p>` + nav + footer,
   settings: `
 <p>Adjust how the trainer simulates the game: ping and jitter, the in-game “Allow ability queueing” option
 (off: only a press in the last tick of the global cooldown queues; on: any press during the cooldown queues), looping and enemy behaviour.</p>`,

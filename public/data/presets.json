@@ -1,0 +1,3381 @@
+[
+ {
+  "id": "rasial-the-first-necromancer-necromancy",
+  "boss": "Rasial, the First Necromancer",
+  "style": "Necromancy",
+  "title": "Rasial t90 Equilibrium",
+  "guide": "https://github.com/pvme/pvme-guides/blob/master/rs3-full-boss-guides/rasial.txt",
+  "presetUrl": "https://pvme.io/preset-maker/#/63366c75-7dcb-4514-a8a4-723577a98b92",
+  "notes": "Using will result in more damage mitigation, but a lower hit chance if below 106 If below 106 can use",
+  "equipment": {
+   "head": {
+    "kind": "gear",
+    "id": "deathdealer-hood-tier-80"
+   },
+   "cape": {
+    "kind": "gear",
+    "id": "igneous-kal-mor"
+   },
+   "neck": {
+    "kind": "gear",
+    "id": "salve-amulet-e"
+   },
+   "mainHand": {
+    "kind": "weapon",
+    "id": "death-guard-tier-90"
+   },
+   "body": {
+    "kind": "gear",
+    "id": "deathdealer-robe-top-tier-80"
+   },
+   "offHand": {
+    "kind": "weapon",
+    "id": "skull-lantern-tier-90"
+   },
+   "legs": {
+    "kind": "gear",
+    "id": "deathdealer-robe-bottom-tier-80"
+   },
+   "hands": {
+    "kind": "gear",
+    "id": "deathdealer-gloves-tier-80"
+   },
+   "feet": {
+    "kind": "gear",
+    "id": "deathdealer-boots-tier-80"
+   },
+   "ring": {
+    "kind": "gear",
+    "id": "occultist-s-ring"
+   },
+   "ammo": {
+    "kind": "gear",
+    "id": "grasping-rune-pouch"
+   },
+   "pocket": {
+    "kind": "gear",
+    "id": "scripture-of-jas"
+   }
+  },
+  "inventory": [
+   {
+    "kind": "weapon",
+    "id": "spectral-spirit-shield"
+   },
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   {
+    "kind": "special",
+    "id": "vulnerability-bomb"
+   },
+   null,
+   {
+    "kind": "weapon",
+    "id": "enhanced-excalibur"
+   },
+   {
+    "kind": "gear",
+    "id": "grasping-rune-pouch"
+   },
+   {
+    "kind": "gear",
+    "id": "grasping-rune-pouch"
+   },
+   {
+    "kind": "gear",
+    "id": "deathwarden-nexus"
+   },
+   null,
+   {
+    "kind": "special",
+    "id": "adrenaline-renewal-potion"
+   },
+   null
+  ],
+  "unknown": [
+   "vampaura",
+   "blueblubber",
+   "grest",
+   "vitality4",
+   "superrestore",
+   "spices",
+   "elderovlsalve"
+  ],
+  "rotations": [
+   {
+    "name": "Pre-build",
+    "text": "conjurearmy → lifetransfer → invokedeath + enter instance → commandghost + surge + enhancedexcalibur → commandskeleton → reflect + nip"
+   },
+   {
+    "name": "Phase 1-3",
+    "text": "(tc) + vulnbomb + bloat → soulsap → deathskulls → touchofdeath\nsoulsap → necrobasic → necrobasic → soulsap → commandskeleton\nlivingdeath + adrenrenewal → touchofdeath → deathskulls → divert → splitsoul → volleyofsouls → soulsap → fingerofdeath → commandskeleton\ndeathskulls + 2t undeadslayer → soulsap → touchofdeath → fingerofdeath → soulsap → volleyofsouls → necrobasic / fingerofdeath (if stacks) → deathskulls\nNote: livingdeath and adrenrenewal are used on the same tick.\nsoulsap → bloat → commandskeleton → touchofdeath → soulsap → soulstrike → necrobasic / fingerofdeath → soulsap → soulstrike → necrobasic / fingerofdeath → improv"
+   },
+   {
+    "name": "Phase 4",
+    "text": "lifetransfer + vulnbomb → deathskulls → limitless + powerburstofvitality + reflect → commandskeleton → fingerofdeath → deathguard90 spec → soulsap → volleyofsouls → touchofdeath → commandzombie → fingerofdeath → improv\nNote: lifetransfer is optional, but may be used during immunity or phase 3."
+   }
+  ]
+ },
+ {
+  "id": "zamorak-lord-of-chaos-500-necromancy",
+  "boss": "Zamorak, Lord of Chaos (500%)",
+  "style": "Necromancy",
+  "title": "Zamorak 500% necro",
+  "guide": "https://github.com/pvme/pvme-guides/blob/master/rs3-full-boss-guides/zamorak/zamorak-necro-500.txt",
+  "presetUrl": "https://pvme.io/preset-maker/#/ZmjzW3mXYxIeR9KSPnyp",
+  "notes": "ring of vigour and infernal puzzlebox passives highly recommended",
+  "equipment": {
+   "head": {
+    "kind": "gear",
+    "id": "crown-of-the-first-necromancer"
+   },
+   "cape": {
+    "kind": "gear",
+    "id": "igneous-kal-mor"
+   },
+   "neck": {
+    "kind": "gear",
+    "id": "essence-of-finality-amulet"
+   },
+   "mainHand": {
+    "kind": "weapon",
+    "id": "omni-guard"
+   },
+   "body": {
+    "kind": "gear",
+    "id": "robe-top-of-the-first-necromancer"
+   },
+   "offHand": {
+    "kind": "weapon",
+    "id": "soulbound-lantern"
+   },
+   "legs": {
+    "kind": "gear",
+    "id": "robe-bottom-of-the-first-necromancer"
+   },
+   "hands": {
+    "kind": "gear",
+    "id": "hand-wrap-of-the-first-necromancer"
+   },
+   "feet": {
+    "kind": "gear",
+    "id": "foot-wraps-of-the-first-necromancer"
+   },
+   "ring": {
+    "kind": "gear",
+    "id": "reaver-s-ring"
+   },
+   "ammo": {
+    "kind": "gear",
+    "id": "zemouregal-s-nexus"
+   },
+   "pocket": {
+    "kind": "gear",
+    "id": "scripture-of-ful"
+   }
+  },
+  "inventory": [
+   null,
+   {
+    "kind": "special",
+    "id": "adrenaline-renewal-potion"
+   },
+   {
+    "kind": "special",
+    "id": "vulnerability-bomb"
+   },
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   {
+    "kind": "gear",
+    "id": "ring-of-death"
+   },
+   {
+    "kind": "weapon",
+    "id": "enhanced-excalibur"
+   },
+   null,
+   null,
+   null,
+   null,
+   null,
+   {
+    "kind": "gear",
+    "id": "grasping-rune-pouch"
+   },
+   {
+    "kind": "gear",
+    "id": "grasping-rune-pouch"
+   },
+   {
+    "kind": "gear",
+    "id": "grasping-rune-pouch"
+   },
+   {
+    "kind": "gear",
+    "id": "expensive-spices"
+   },
+   null,
+   null,
+   null
+  ],
+  "unknown": [
+   "Mahjarrat aura",
+   "Elder overload salve (6)",
+   "Guthix rest",
+   "Super restore flask (6)",
+   "Powerburst of vitality (4)",
+   "Blue blubber jellyfish",
+   "Sailfish soup"
+  ],
+  "rotations": [
+   {
+    "name": "Prefight:",
+    "text": "Kill mages and build 12 necrosis and 5 residualsoul. Use conjurearmy → lifetransfer → commandghost before killing last mage.\ninvokedeath → attack zamorak"
+   },
+   {
+    "name": "Phases 1, 3, 5, and 6:",
+    "text": "(smokecloud +) vulnbomb (run to pad ) → bloat → splitsoul → omniguard spec → commandskeleton → necrobasic → deathskulls (at 50% pad charge) → fingerofdeath → fingerofdeath → deathguard70 eofspec → volleyofsouls → necrobasic → soulsap → commandskeleton → touchofdeath → soulsap → bloat → necrobasic / stormshards + realmmovement"
+   },
+   {
+    "name": "Phases 2 and 4:",
+    "text": "get 5 residualsoul and 4+ necrosis stacks.\nbloat + vulnbomb (move to next pad) → soulsap → touchofdeath → livingdeath + adrenrenewal + step on pad → touchofdeath → commandskeleton → deathskulls → fingerofdeath (as pad is almost charged) → fingerofdeath → deathguard70 eofspec (move towards next pad) → soulsap → volleyofsouls (volleyofsouls → soulsap if not close to phasing) → deathskulls → commandskeleton → soulsap → touchofdeath → bloat → necrobasic / stormshards + realmmovement"
+   },
+   {
+    "name": "Witches:",
+    "text": "anti + surge → invokedeath, then build residualsoul & necrosis and set-up conjurearmy as needed. realmmovement as witch dies (bleeds do not tick!)."
+   },
+   {
+    "name": "Phase 6 notes:",
+    "text": "reflect + freedom / anti to pop bomb from pad 3.\nFlames of Zamorak (devo + deflectmelee), or\nInfernal Tomb (get out ASAP and phase zamorak. Don't soulstrike or deathguard70 eofspec if zamorak is low LP), or\nresidualsoul, necrosis stacks, and conjurearmy will not carry over to phase 7. Try to be high adren when going into p7.\nSave omniguard spec for phase 7."
+   },
+   {
+    "name": "Notes:",
+    "text": "Before first rune is shown you should target and kill demon. Once it's dead throw vulnbomb on zamorak and apply invokedeath.\nTry to build to 12 necrosis stacks and 5 residualsoul as you kill demon + runes.\nIf you stacked stormshards, at 6+ shards it hits harder than a livingdeath fingerofdeath\nUse surge / dive if runes are far apart, or far from zamorak\nIf you do not have disrupt, use reflect after devo.\nOptionally: pre-equip RoD to tank red bombs.\nUse splitsoul as second rune dies.\nTry to keep your hp low (<60% of your max) after first red bomb hit. Having low hp will not only increase the damage from 6th edict but also make it safer to survive since bleed from RoD will be lower."
+   },
+   {
+    "name": "Phase 7 Rotation:",
+    "text": "Spam anti (if needing adrenaline) → invokedeath during cutscene ( optional: demonslayer) → target demon + vulnbomb + soulsap → conjurearmy → touchofdeath → soulsap → commandghost → kill demon.\nTarget zammy invokedeath + vulnbomb → stormshards / soulsap until first rune is shown.\nKill first rune with soulsap / touchofdeath / necrobasic and livingdeath at 100% adren. use splitsoul\nSecond rune: touchofdeath → soulsap → commandskeleton + move to zam\nZamorak zamorak\ndevo + deflectmelee → (tc) + omniguard spec → fingerofdeath (+ soulsplit after melee hit) → fingerofdeath / shatter (+ powerburstofvitality + disrupt for red bomb) → volleyofsouls → deathguard70 eofspec → deathsparkorsoulreave if not dead"
+   },
+   {
+    "name": "Phase 7 Rotation - B-rune:",
+    "text": "There is an alternative p7 rotation that requires killing the B-rune. If the B-rune has died once you can use deathskulls on zamorak without it targeting the B-rune.\nThis rotation assumes the B-rune is called, not that you kill it just to use deathskulls.\nIf B-rune isn't killed, deathskulls will bounce to and kill B-rune, which deals heavy damage!\nUp to zamorak it is the same rotation as described above.\nPhase 7 positioning for deathskulls. Positioning on the green tiles is recommended to prevent deathskulls from the player bouncing to any runes.\nZamorak zamorak B-rune:\ndevo + deflectmelee → (tc) + deathskulls (+ soulsplit after melee hit) → shatter (+ powerburstofvitality + disrupt for red bomb) → (fingerofdeath → volleyofsouls → deathguard70 eofspec → deathsparkorsoulreave"
+   }
+  ]
+ },
+ {
+  "id": "zamorak-lord-of-chaos-500-ranged",
+  "boss": "Zamorak, Lord of Chaos (500%)",
+  "style": "Ranged",
+  "title": "Zamorak 500% Ranged",
+  "guide": "https://github.com/pvme/pvme-guides/blob/master/rs3-full-boss-guides/zamorak/zamorak-ranged-500.txt",
+  "presetUrl": "https://pvme.io/preset-maker/#/2f37e9db-203f-4430-95c9-37fdf177b784",
+  "notes": "",
+  "equipment": {
+   "head": {
+    "kind": "gear",
+    "id": "elite-dracolich-coif"
+   },
+   "cape": {
+    "kind": "gear",
+    "id": "igneous-kal-zuk"
+   },
+   "neck": {
+    "kind": "gear",
+    "id": "essence-of-finality-amulet"
+   },
+   "mainHand": {
+    "kind": "weapon",
+    "id": "bow-of-the-last-guardian"
+   },
+   "body": {
+    "kind": "gear",
+    "id": "elite-dracolich-hauberk"
+   },
+   "legs": {
+    "kind": "gear",
+    "id": "elite-dracolich-chaps"
+   },
+   "hands": {
+    "kind": "gear",
+    "id": "elite-dracolich-vambraces"
+   },
+   "feet": {
+    "kind": "gear",
+    "id": "elite-dracolich-boots"
+   },
+   "ring": {
+    "kind": "gear",
+    "id": "stalker-s-ring"
+   },
+   "ammo": {
+    "kind": "gear",
+    "id": "pernix-s-quiver"
+   },
+   "aura": {
+    "kind": "gear",
+    "id": "scripture-of-ful"
+   }
+  },
+  "inventory": [
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   {
+    "kind": "gear",
+    "id": "zemouregal-s-nexus"
+   },
+   {
+    "kind": "gear",
+    "id": "essence-of-finality-amulet"
+   },
+   null,
+   null,
+   null,
+   null,
+   null,
+   {
+    "kind": "gear",
+    "id": "grasping-rune-pouch"
+   },
+   {
+    "kind": "gear",
+    "id": "essence-of-finality-amulet"
+   },
+   null,
+   null,
+   null,
+   null,
+   null,
+   {
+    "kind": "gear",
+    "id": "grasping-rune-pouch"
+   },
+   {
+    "kind": "weapon",
+    "id": "enhanced-excalibur"
+   },
+   null,
+   {
+    "kind": "special",
+    "id": "adrenaline-renewal-potion"
+   },
+   {
+    "kind": "special",
+    "id": "vulnerability-bomb"
+   },
+   null,
+   {
+    "kind": "gear",
+    "id": "ring-of-death"
+   },
+   {
+    "kind": "gear",
+    "id": "grasping-rune-pouch"
+   }
+  ],
+  "unknown": [
+   "spices",
+   "gbrew",
+   "blueblubber",
+   "elderovlsalve",
+   "vitality4"
+  ],
+  "rotations": [
+   {
+    "name": "Phase 1",
+    "text": "Build 10 deathsporearrows before the 2nd last witch and use deathsswiftness → imbueshadows, kill last witch when imbue shadows has ~20s on it's timer\n1t after timer appears → ecb eofspec + vulnbomb → tc + fularrow bolg spec → galeshot + step on pad → rapid → deadshot → gloomfirebow eofspec → sgb eofspec + realmmovement → snapshot\nNote: Keep your hp low to maximise berserker's fury damage, can use disrupt after rapid if needed\nWitch: anti + surge → tc + shadowtend + vulnbomb → deathsporearrows grico + realmmovement → piercingshot / snapshot"
+   },
+   {
+    "name": "Phase 2:",
+    "text": "ecb eofspec → tc + fularrow bolg spec → piercingshot + surge to pad → galeshot → rapid → grico → bolg spec → snapshot → snapshot → deadshot → deathsporearrows piercingshot → imbueshadows + realmmovement\nWitch: anti + surge → tc + fularrow piercingshot + vulnbomb → deathsswiftness → grico + realmmovement → bolg spec"
+   },
+   {
+    "name": "Phase 3",
+    "text": "tc + galeshot + dive to pad → vulnbomb + rapid → gloomfirebow eofspec → sgb eofspec → gloomfirebow eofspec → deadshot → grico → bolg spec + realmmovement\nWitch: anti + surge → tc + vulnbomb + snapshot → snapshot + realmmovement → grico (if needed)"
+   },
+   {
+    "name": "Phase 4",
+    "text": "ecb eofspec → tc + grico (if not used on witch) → shadowtend + dive on pad → galeshot → rapid → grico → sgb eofspec → imbueshadows → piercingshot + realmmovement\nWitch: anti + surge → tc + vulnbomb + piercingshot → deathsswiftness → grico + realmmovement → bolg spec"
+   },
+   {
+    "name": "Phase 5",
+    "text": "tc + vulnbomb + galeshot → rapid → deadshot → gloomfirebow eofspec → shadowtend → gloomfirebow eofspec → grico → devo + dive to next pad → bolg spec + realmmovement → piercingshot\nWitch: anti + surge → tc + vulnbomb + snapshot → grico + realmmovement → snapshot"
+   },
+   {
+    "name": "Phase 6",
+    "text": "tc + galeshot → rapid → deadshot → sgb eofspec → snapshot → snapshot → improv if not dead"
+   },
+   {
+    "name": "Phase 7",
+    "text": "Demon: anti during cutscene → imbueshadows + demonslayer → deathsporearrows grico → vulnbomb + rapid → target Zamorak + vulnbomb + deathsswiftness → bolg spec → piercingshot\nRunes: rangedbasic → piercingshot first rune → ecb eofspec → snapshot second rune → surge + dive to Zamorak\nZamorak: deadshot → sgb eofspec → snapshot → filler if not dead, equip rod for bomb"
+   }
+  ]
+ },
+ {
+  "id": "sanctum-of-rebirth-hm-solo-necromancy",
+  "boss": "Sanctum of Rebirth (HM solo)",
+  "style": "Necromancy",
+  "title": "SoR t95 / t100 Equilibrium Aura",
+  "guide": "https://github.com/pvme/pvme-guides/blob/master/rs3-full-boss-guides/sanctum/sanctum-hm-solo-necromancy.txt",
+  "presetUrl": "https://pvme.io/preset-maker/#/dheRHSwmrOZ6roOnYldI",
+  "notes": "This preset assumes / / are not needed for the t95 rotations.T95 can use instead of",
+  "equipment": {
+   "head": {
+    "kind": "gear",
+    "id": "crown-of-the-first-necromancer"
+   },
+   "cape": {
+    "kind": "gear",
+    "id": "igneous-kal-mor"
+   },
+   "neck": {
+    "kind": "gear",
+    "id": "essence-of-finality-amulet"
+   },
+   "mainHand": {
+    "kind": "weapon",
+    "id": "omni-guard"
+   },
+   "body": {
+    "kind": "gear",
+    "id": "robe-top-of-the-first-necromancer"
+   },
+   "offHand": {
+    "kind": "weapon",
+    "id": "soulbound-lantern"
+   },
+   "legs": {
+    "kind": "gear",
+    "id": "robe-bottom-of-the-first-necromancer"
+   },
+   "hands": {
+    "kind": "gear",
+    "id": "hand-wrap-of-the-first-necromancer"
+   },
+   "feet": {
+    "kind": "gear",
+    "id": "foot-wraps-of-the-first-necromancer"
+   },
+   "ring": {
+    "kind": "gear",
+    "id": "occultist-s-ring"
+   },
+   "ammo": {
+    "kind": "gear",
+    "id": "zemouregal-s-nexus"
+   },
+   "pocket": {
+    "kind": "gear",
+    "id": "scripture-of-ful"
+   }
+  },
+  "inventory": [
+   {
+    "kind": "weapon",
+    "id": "roar-of-awakening"
+   },
+   {
+    "kind": "weapon",
+    "id": "ode-to-deceit"
+   },
+   null,
+   null,
+   null,
+   null,
+   null,
+   {
+    "kind": "weapon",
+    "id": "skull-lantern-tier-90"
+   },
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   {
+    "kind": "gear",
+    "id": "expensive-spices"
+   },
+   {
+    "kind": "special",
+    "id": "vulnerability-bomb"
+   },
+   null,
+   null,
+   {
+    "kind": "weapon",
+    "id": "enhanced-excalibur"
+   },
+   null,
+   {
+    "kind": "gear",
+    "id": "grasping-rune-pouch"
+   },
+   {
+    "kind": "gear",
+    "id": "grasping-rune-pouch"
+   },
+   {
+    "kind": "gear",
+    "id": "grasping-rune-pouch"
+   },
+   {
+    "kind": "special",
+    "id": "adrenaline-renewal-potion"
+   },
+   null
+  ],
+  "unknown": [
+   "Equilibrium aura",
+   "Blue blubber jellyfish",
+   "Guthix rest",
+   "Dreadnip",
+   "Attuned portent of restoration X",
+   "Blessed flask",
+   "Saradomin brew flask (6)",
+   "Powerburst of vitality (4)",
+   "Elder overload salve (6)"
+  ],
+  "rotations": [
+   {
+    "name": "Vermyx's Attack Rotation",
+    "text": "Vermyx uses both Melee melee and Ranged range auto-attacks, while Coilspawns only attack with Ranged range"
+   },
+   {
+    "name": "Phase 1",
+    "text": "3 autos → Moonstone Shards → 2 autos → Wyrmfire + 2 autos → repeat"
+   },
+   {
+    "name": "Phase 2",
+    "text": "3 autos → Moonstone shards → 2 autos → Soul Bomb → 1 auto + bomb hit (in that order) → 1 auto → Wyrmfire → 8 autos + Scarab Healer → Moonstone Shards"
+   },
+   {
+    "name": "Phase 3",
+    "text": "3 autos → Scarab Healer (+ autos continue) → 3 autos → Moonstone shards → 2 autos → Soul Bomb → 1 auto + bomb hit (in that order) → 1 auto → Wyrmfire → 7 autos + Scarab Healer → Wyrmfire"
+   },
+   {
+    "name": "T95/100 Rotation",
+    "text": "Sometimes you may not be able to build off of Coilspawns due to the limited range of Necromancy necromancy\nYou can flank flank4 by standing right next to Vermyx's head.\nStay in the center after surge to not get attacked by Coilspawns from multiple sides, may stand on the green lines during phases 2 and 3 for a similar result."
+   },
+   {
+    "name": "Pre-build",
+    "text": "invokedeath → conjurearmy → lifetransfer → commandghost → splitsoul → commandskeleton\nNote: with T100, use splitsoul before commandghost"
+   },
+   {
+    "name": "Vermyx, Brood Mother – Phase 1",
+    "text": "surge + deathskulls → bloat → soulsap → touchofdeath → deathguard90 eofspec → soulsap → omniguard spec → necrobasic → go to Coilspawn\nsoulsap → divert → necrobasic → soulsap → touchofdeath → livingdeath + adrenrenewal → touchofdeath → soulsap → necrobasic → commandskeleton → go to Vermyx\nNote: after divert position yourself so that both western Coilspawns have a chance to hit you."
+   },
+   {
+    "name": "Vermyx, Brood Mother – Phase 2",
+    "text": "deathskulls → touchofdeath → fingerofdeath → necrobasic → volleyofsouls → fingerofdeath → deathguard90 eofspec → soulsap → go to Coilspawn\ntouchofdeath → necrobasic → soulsap → necrobasic → necrobasic → soulsap → splitsoul → commandskeleton → go to Vermyx\nNote: abilities after deathskulls depend on necrosis and Vermyx's LP, depending on damage and necrosis you can skip necrobasic / fingerofdeath / deathguard90 eofspec"
+   },
+   {
+    "name": "Vermyx, Brood Mother – Phase 3",
+    "text": "deathskulls → bloat → soulsap → fingerofdeath → touchofdeath → soulsap → volleyofsouls → deathguard90 eofspec → omniguard spec → commandzombie → necrobasic → soulsap → improv"
+   },
+   {
+    "name": "Kezalam's Attack Rotation",
+    "text": "Kezalam uses both Magic magic and Melee melee auto-attacks."
+   },
+   {
+    "name": "Kezalam, the Wanderer – Phase 1",
+    "text": "SB-Scattered → Moonstone Prison + Soul Bomb → SB-Targeted → SB-Scattered → Unstable Scarabs → SB-Targeted → repeat"
+   },
+   {
+    "name": "Kezalam, the Wanderer – Phase 2",
+    "text": "Kill Moonstone Obelisk → SB-Line → SB-Targeted → Unstable Scarabs → SB-Line → SB-Targeted → Moonstone Prison + Soul Bomb → repeat"
+   },
+   {
+    "name": "Kezalam, the Wanderer – Phase 3",
+    "text": "Kill Moonstone Obelisk → Moonstone Prison + Soul Bomb → SB-Line → SB-Scattered → Moonstone Prison + Soul Bomb → SB-Line → SB-Targeted → repeat"
+   },
+   {
+    "name": "T95 Rotation",
+    "text": "Be MD+1 when prisoned → break free → surge + volleyofsouls (remaining souls) → threadsoffate + surge (back in prison) → soulsap → volleyofsouls\nDo not powerburstofvitality scarabs if you want it to be off CD for Nakatra."
+   },
+   {
+    "name": "Kezalam, the Wanderer – Pre-build",
+    "text": "invokedeath → conjurearmy → lifetransfer → commandghost → commandskeleton"
+   },
+   {
+    "name": "Kezalam, the Wanderer – Phase 1",
+    "text": "surge + deathskulls → soulsap → bloat → touchofdeath → soulsap → deathguard90 eofspec → omniguard spec → soulsap → commandskeleton → necrobasic → soulsap → touchofdeath\nanti / freedom → necrobasic → soulsap → surge (evade bomb) → splitsoul → bloat → volleyofsouls → threadsoffate → soulsap → commandskeleton → touchofdeath\ninvokedeath → deathguard90 eofspec → volleyofsouls → soulsap → necrobasic → lifetransfer"
+   },
+   {
+    "name": "Kezalam, the Wanderer – Phase 2",
+    "text": "bloat → soulsap → commandskeleton → touchofdeath → soulsap → necrobasic → deathskulls → soulsap → volleyofsouls → necrobasic → soulsap → commandskeleton\ntouchofdeath → livingdeath + adrenrenewal → touchofdeath → deathskulls → fingerofdeath → fingerofdeath → necrobasic → necrobasic → necrobasic → fingerofdeath → deathskulls\ninvokedeath → soulsap → touchofdeath → necrobasic → fingerofdeath → deathskulls → soulsap → deathguard90 eofspec"
+   },
+   {
+    "name": "Kezalam, the Wanderer – Phase 3",
+    "text": "soulsap → commandskeleton → splitsoul → soulsap → volleyofsouls → touchofdeath → omniguard spec → soulsap → necrobasic\nbloat → soulsap → commandskeleton → commandzombie → soulsap → touchofdeath → deathguard90 eofspec → improv"
+   },
+   {
+    "name": "T100 Rotation",
+    "text": "Be MD+1 when prisoned → break free → surge + volleyofsouls (remaining souls) → threadsoffate + surge (back in prison) → soulsap → volleyofsouls\nDo not powerburstofvitality scarabs if you want it to be off CD for Nakatra."
+   },
+   {
+    "name": "Kezalam, the Wanderer – Pre-build",
+    "text": "invokedeath → conjurearmy → lifetransfer → commandghost → commandskeleton"
+   },
+   {
+    "name": "Kezalam, the Wanderer – Phase 1",
+    "text": "surge + deathskulls → soulsap → bloat → touchofdeath → soulsap → deathguard90 eofspec → omniguard spec → soulsap → commandskeleton → necrobasic → soulsap → touchofdeath → bloat\nanti / freedom → necrobasic → soulsap + surge (evade bomb) → splitsoul → volleyofsouls + surge (into prison) → threadsoffate → soulsap → touchofdeath → commandskeleton\nDepending on LP may add more abilities before commandskeleton such as bloat\nAllow bloat to phase Kezalam, and use invokedeath while running to the Obelisk."
+   },
+   {
+    "name": "Moonstone Obelisk 1",
+    "text": "invokedeath → deathguard90 eofspec → volleyofsouls → soulsap → improv\nNote: use lifetransfer as soon as pillar is dead."
+   },
+   {
+    "name": "Kezalam, the Wanderer – Phase 2",
+    "text": "bloat → soulsap → necrobasic → commandskeleton → soulsap → touchofdeath → deathskulls → soulsap → necrobasic → necrobasic → soulsap\nlivingdeath + adrenrenewal → touchofdeath → deathskulls → fingerofdeath → necrobasic → necrobasic → fingerofdeath → necrobasic → necrobasic → deathskulls"
+   },
+   {
+    "name": "Moonstone Obelisk 2",
+    "text": "invokedeath → splitsoul → volleyofsouls → touchofdeath → fingerofdeath → necrobasic → improvise\nAllow deathskulls and conjures to phase Kezalam, and position yourself as shown here.\nOnly possible if all moonstones are dead (e.g., bloat damage during threadsoffate)"
+   },
+   {
+    "name": "Kezalam, the Wanderer – Phase 3",
+    "text": "deathskulls → soulsap → lifetransfer → commandskeleton → soulsap → touchofdeath → necrobasic → deathskulls → soulsap\nfingerofdeath → omniguard spec → soulsap → commandskeleton → deathguard90 eofspec → volleyofsouls → improv"
+   },
+   {
+    "name": "Nakatra Rotation",
+    "text": "Nakatra switches between Magic magic and Ranged range auto-attacks after each set."
+   },
+   {
+    "name": "Nakatra, Devourer Eternal – Phase 1",
+    "text": "2 magic autos → Soulfire Wave → 3 range autos → Obliterate → 3 magic autos → Soulfire Wave → 3 range autos → Soulfire Wave + Summon Scarabs → 1 magic auto → Soulfire Wave → 3 range autos → repeat"
+   },
+   {
+    "name": "Nakatra, Devourer Eternal – Phase 2",
+    "text": "2 Tiles → 3 autos → Obliterate → Soulfire Wave → 3 autos → 2 Sanctum Hieroglyphs → 3 autos → Soulfire Wave + Summon Scarabs → 3 autos → 2 Sanctum Hieroglyphs → repeat"
+   },
+   {
+    "name": "Nakatra, Devourer Eternal – Phase 3",
+    "text": "Summon Nefthys + Soulfire Crosswave → Soulfire Wave → Soulfire Crosswave → Soulfire Wave → Heal Nefthys → repeat"
+   },
+   {
+    "name": "Phase 4",
+    "text": "Shadowsands → 3 autos + Sanctum Shockwave → Obliterate → 3 Sanctum Hieroglyphs → Soulfire Wave → 3 Sanctum Hieroglyphs → repeat"
+   },
+   {
+    "name": "Nakatra, Devourer Eternal – T95 Rotation",
+    "text": "In order to survive Obliterate without deflectmage you must be 12k LP before powerburstofvitality and have attunedportentofrestorationx / portentofrestorationx\nThis may be achieved via brew or pantheonaura\nFor Obliterate only deflectmage for hit 3.\nMake sure reflect is active."
+   },
+   {
+    "name": "Nakatra, Devourer Eternal – Pre-build",
+    "text": "veng (while banking) → conjurearmy → lifetransfer → commandghost → invokedeath → splitsoul → invokelordofbones → commandskeleton + ingen"
+   },
+   {
+    "name": "Nakatra, Devourer Eternal – Phase 1",
+    "text": "surge + bloat → soulsap → deathskulls → omniguard spec → soulsap → necrobasic → necrobasic\nreflect → deathguard90 eofspec → soulsap → divert → prep → commandskeleton → touchofdeath → improv"
+   },
+   {
+    "name": "Nakatra, Devourer Eternal – Phase 2",
+    "text": "livingdeath + adrenrenewal → touchofdeath → deathskulls → volleyofsouls → soulsap → necrobasic → fingerofdeath → necrobasic → soulsap → deathskulls → touchofdeath\ndivert + disrupt → soulsap → fingerofdeath → fingerofdeath → necrobasic → deathskulls → splitsoul → bloat → soulsap → commandskeleton → touchofdeath\nsoulsap → volleyofsouls → omniguard spec → deathguard90 eofspec → soulsap → improv\nNote: if scarabs spawn you may soulstrikeflank or threadsoffate → deathguard90 eofspec"
+   },
+   {
+    "name": "Nakatra, Devourer Eternal – Phase 3",
+    "text": "invokedeath → necrobasic → commandskeleton → commandzombie → soulsap → touchofdeath → necrobasic → soulsap → necrobasic → necrobasic → conjurearmy\ninvokedeath → commandghost → deathskulls → commandskeleton → soulsap → touchofdeath → necrobasic → soulsap"
+   },
+   {
+    "name": "Nakatra, Devourer Eternal – Phase 4",
+    "text": "volleyofsouls → deathguard90 eofspec → soulsap → improv\nMay fit in 4 abilities if using volleyofsouls 1 tick before phase 4 begins.\nlifetransfer → invokedeath → threadsoffate → (tc) feline akh + soulsap → touchofdeath → necrobasic → soulsap → improv\nTry to group felines and gorillas so that threadsoffate → soulsap gives 3 residualsoul\nlivingdeath → touchofdeath → soulsap → necrobasic → necrobasic → deathskulls + adrenrenewal → splitsoul → bloat → volleyofsouls → fingerofdeath → touchofdeath → fingerofdeath\ndeathskulls → necrobasic → fingerofdeath → limitless + reflect + powerburstofvitality + veng → divert → omniguard spec → touchofdeath → deathguard90 eofspec → improv\nNote: use adrenrenewal when it becomes available."
+   },
+   {
+    "name": "Nakatra, Devourer Eternal – T100 Rotation",
+    "text": "In order to survive Obliterate without deflectmage you must be 12k LP before powerburstofvitality and have attunedportentofrestorationx / portentofrestorationx\nThis may be achieved via brew or pantheonaura\nMake sure reflect is active."
+   },
+   {
+    "name": "Nakatra, Devourer Eternal – Pre-build",
+    "text": "veng + invokelordofbones → invokedeath → conjurearmy → lifetransfer → commandghost → splitsoul → commandskeleton"
+   },
+   {
+    "name": "Nakatra, Devourer Eternal – Phase 1",
+    "text": "surge + bloat → soulsap → deathskulls → omniguard spec → soulsap → touchofdeath → necrobasic → soulsap\nreflect → commandskeleton → divert + veng → prep → reprisal + powerburstofvitality → touchofdeath → improv"
+   },
+   {
+    "name": "Nakatra, Devourer Eternal – Phase 2",
+    "text": "livingdeath + adrenrenewal → touchofdeath → deathskulls → fingerofdeath → necrobasic → fingerofdeath → necrobasic → necrobasic → necrobasic → deathskulls\ndivert → limitless → reflect → touchofdeath → fingerofdeath → fingerofdeath → necrobasic → deathskulls → ingen + roarofawakening spec → soulsap\ncommandskeleton → touchofdeath → splitsoul → fingerofdeath → soulsap → necrobasic → necrobasic\nFor Obliterate pray deflectmage for hits 2 and 3.\ningen → (equip) roarofawakening odetodeceit + spec + (equip) skulllantern90 → (equip) omniguard soulboundlantern\nAfter reflect stand in both Soulfire Waves for extra damage, ~4k damage taken with reflect"
+   },
+   {
+    "name": "Nakatra, Devourer Eternal – Phase 3",
+    "text": "invokedeath → omniguard spec → volleyofsouls → soulsap → dive + surge (to Nefthys 2)\ntouchofdeath → deathskulls → soulsap → commandzombie → invokedeath → necrobasic\ninvokedeath is done later due to the timing for deathskulls\nStand MD and tank Wave with deflectmage"
+   },
+   {
+    "name": "Nakatra, Devourer Eternal – Phase 4",
+    "text": "soulsap → volleyofsouls → deathguard90 eofspec → soulsap → conjurearmy\ncommandghost → invokedeath → threadsoffate → (tc) feline akh 1 → soulsap → touchofdeath → (tc) feline akh 2 → necrobasic → soulsap\nlivingdeath → touchofdeath → soulsap → necrobasic → necrobasic → deathskulls → splitsoul → volleyofsouls → fingerofdeath → touchofdeath → fingerofdeath → necrobasic → necrobasic\ndeathskulls → fingerofdeath → limitless → reflect + powerburstofvitality + veng → divert → omniguard spec → necrobasic → fingerofdeath → deathguard90 eofspec → improv\nNote: for Obliterate pray deflectmage for hit 3."
+   }
+  ]
+ },
+ {
+  "id": "sanctum-of-rebirth-hm-solo-melee",
+  "boss": "Sanctum of Rebirth (HM solo)",
+  "style": "Melee",
+  "title": "Melee HM Sanctum",
+  "guide": "https://github.com/pvme/pvme-guides/blob/master/rs3-full-boss-guides/sanctum/sanctum-hm-solo-melee.txt",
+  "presetUrl": "https://pvme.io/preset-maker/#/e083987e-ab15-4c38-89f0-1ceeba5ede64",
+  "notes": "",
+  "equipment": {
+   "head": {
+    "kind": "gear",
+    "id": "vestments-of-havoc-hood"
+   },
+   "cape": {
+    "kind": "gear",
+    "id": "igneous-kal-zuk"
+   },
+   "neck": {
+    "kind": "gear",
+    "id": "am-hej"
+   },
+   "mainHand": {
+    "kind": "weapon",
+    "id": "consecrated-keris"
+   },
+   "body": {
+    "kind": "gear",
+    "id": "vestments-of-havoc-robe-top"
+   },
+   "offHand": {
+    "kind": "weapon",
+    "id": "dark-sliver-of-leng"
+   },
+   "legs": {
+    "kind": "gear",
+    "id": "vestments-of-havoc-robe-bottom"
+   },
+   "hands": {
+    "kind": "gear",
+    "id": "gloves-of-passage"
+   },
+   "feet": {
+    "kind": "gear",
+    "id": "vestments-of-havoc-boots"
+   },
+   "ring": {
+    "kind": "gear",
+    "id": "ring-of-retribution"
+   },
+   "ammo": {
+    "kind": "gear",
+    "id": "nodon-spike-harness"
+   },
+   "aura": {
+    "kind": "gear",
+    "id": "scripture-of-ful"
+   }
+  },
+  "inventory": [
+   {
+    "kind": "gear",
+    "id": "essence-of-finality-amulet"
+   },
+   {
+    "kind": "gear",
+    "id": "essence-of-finality-amulet"
+   },
+   {
+    "kind": "weapon",
+    "id": "ek-zekkil"
+   },
+   null,
+   {
+    "kind": "special",
+    "id": "adrenaline-renewal-potion"
+   },
+   null,
+   null,
+   {
+    "kind": "gear",
+    "id": "essence-of-finality-amulet"
+   },
+   {
+    "kind": "gear",
+    "id": "essence-of-finality-amulet"
+   },
+   null,
+   null,
+   null,
+   null,
+   null,
+   {
+    "kind": "weapon",
+    "id": "dragon-battleaxe"
+   },
+   {
+    "kind": "weapon",
+    "id": "dark-sliver-of-leng"
+   },
+   null,
+   null,
+   null,
+   null,
+   {
+    "kind": "special",
+    "id": "vulnerability-bomb"
+   },
+   {
+    "kind": "weapon",
+    "id": "roar-of-awakening"
+   },
+   {
+    "kind": "weapon",
+    "id": "ode-to-deceit"
+   },
+   {
+    "kind": "weapon",
+    "id": "enhanced-excalibur"
+   },
+   {
+    "kind": "gear",
+    "id": "zemouregal-s-nexus"
+   },
+   {
+    "kind": "gear",
+    "id": "grasping-rune-pouch"
+   },
+   {
+    "kind": "gear",
+    "id": "grasping-rune-pouch"
+   },
+   {
+    "kind": "gear",
+    "id": "grasping-rune-pouch"
+   }
+  ],
+  "unknown": [
+   "elderovlsalve",
+   "spiritual",
+   "blueblubber",
+   "grest",
+   "vitality4"
+  ],
+  "rotations": [
+   {
+    "name": "Pre-fight",
+    "text": "berserk + adrenrenewal"
+   },
+   {
+    "name": "Phase 1",
+    "text": "gbarge → meteorstrike → gflurry → overpower → rend → (adaptivestrike)"
+   },
+   {
+    "name": "Coilspawn",
+    "text": "divert → (tc) + naturalinstinct → adaptivestrike → dba spec → smeleebasic → gbarge → soverpower"
+   },
+   {
+    "name": "Phase 2",
+    "text": "roverpower + gflurry → scane → rcane → rend"
+   },
+   {
+    "name": "Vermyx, Brood Mother – Coilspawn",
+    "text": "annihilation eofspec → dismember → sadaptivestrike → smeleebasic → smeleebasic → sadaptivestrike → divert → smeleebasic → sadaptivestrike"
+   },
+   {
+    "name": "Phase 3",
+    "text": "gbarge → zgs eofspec → punish → gflurry → adaptivestrike → overpower → gfury → chaosroar → dragonclaw eofspec → (adaptivestrike → assault)"
+   },
+   {
+    "name": "War's Retreat",
+    "text": "sezk spec"
+   },
+   {
+    "name": "Pre-fight (Moonstone Obelisk 1)",
+    "text": "rezk spec + naturalinstinct → adaptivestrike → meleebasic → meteorstrike → adaptivestrike → berserk → smeleebasic"
+   },
+   {
+    "name": "Kezalam, the Wanderer – Phase 1",
+    "text": "gbarge → gflurry → overpower → dragonclaw eofspec + adrenrenewal → dragonclaw eofspec → scane → rcane → adaptivestrike → overpower"
+   },
+   {
+    "name": "Moonstone Obelisk 2 (obelisk you didn't use ezk spec on)",
+    "text": "rend → dragonclaw eofspec → punish → pulverise"
+   },
+   {
+    "name": "Kezalam, the Wanderer – Phase 2",
+    "text": "overpower → dive + prismofsalvation + (8t) gflurry → rend → scane → rcane + overpower → freedom + click prismofsalvation → backhand → (7t) assault → rend → punish → (meleebasic → meleebasic → meleebasic etc)"
+   },
+   {
+    "name": "Moonstone Obelisk 1",
+    "text": "adaptivestrike → chaosroar → ezk spec"
+   },
+   {
+    "name": "Kezalam, the Wanderer – Phase 3",
+    "text": "adaptivestrike → divert → meteorstrike → rend → sadaptivestrike → berserk → gbarge → overpower → gflurry → dragonclaw eofspec → punish → scane → rcane → (assault)"
+   },
+   {
+    "name": "Nakatra, Devourer Eternal – War's Retreat",
+    "text": "sezk spec"
+   },
+   {
+    "name": "Nakatra, Devourer Eternal – Phase 1",
+    "text": "rezk spec + meteorstrike → divert → berserk → gbarge → overpower → gflurry → dragonclaw eofspec → chaosroar → scane → (2t) rcane + overpower"
+   },
+   {
+    "name": "Nakatra, Devourer Eternal – Phase 2",
+    "text": "dragonclaw eofspec + adrenrenewal → backhandflank → dragonclaw eofspec → backhandflank → overpower → rend → scane → rcane + (7t) gflurry → overpower + powerburstofvitality → adaptivestrike + disrupt → divert"
+   },
+   {
+    "name": "Nefthys 1",
+    "text": "gbarge → rend → assault → overpower → (meleebasic)"
+   },
+   {
+    "name": "Nefthys 2",
+    "text": "ingen + roarofawakening spec → adaptivestrike → gfury → rend → punish → pulverise"
+   },
+   {
+    "name": "Prephase",
+    "text": "backhandflank → swh eofspec → meteorstrike → adaptivestrike"
+   },
+   {
+    "name": "Shadowsands",
+    "text": "berserk + surge + dive → (tc) adaptivestrike → (tc) cane → rend (leave)"
+   },
+   {
+    "name": "Nakatra",
+    "text": "(2t tc) + dba spec → gbarge → chaosroar + dive → sezk spec → rezk spec + gflurry → rend → scane → rcane + overpower → dragonclaw eofspec → punish → assault"
+   }
+  ]
+ },
+ {
+  "id": "sanctum-of-rebirth-hm-solo-ranged",
+  "boss": "Sanctum of Rebirth (HM solo)",
+  "style": "Ranged",
+  "title": "Ranged HM Sanctum",
+  "guide": "https://github.com/pvme/pvme-guides/blob/master/rs3-full-boss-guides/sanctum/sanctum-hm-solo-ranged.txt",
+  "presetUrl": "https://pvme.io/preset-maker/#/743d5462-197f-48df-b8ce-480125474786",
+  "notes": "",
+  "equipment": {
+   "head": {
+    "kind": "gear",
+    "id": "elite-dracolich-coif"
+   },
+   "cape": {
+    "kind": "gear",
+    "id": "igneous-kal-zuk"
+   },
+   "neck": {
+    "kind": "gear",
+    "id": "essence-of-finality-amulet"
+   },
+   "mainHand": {
+    "kind": "weapon",
+    "id": "bow-of-the-last-guardian"
+   },
+   "body": {
+    "kind": "gear",
+    "id": "elite-dracolich-hauberk"
+   },
+   "legs": {
+    "kind": "gear",
+    "id": "elite-dracolich-chaps"
+   },
+   "hands": {
+    "kind": "gear",
+    "id": "elite-dracolich-vambraces"
+   },
+   "feet": {
+    "kind": "gear",
+    "id": "elite-dracolich-boots"
+   },
+   "ring": {
+    "kind": "gear",
+    "id": "stalker-s-ring"
+   },
+   "ammo": {
+    "kind": "gear",
+    "id": "pernix-s-quiver"
+   },
+   "pocket": {
+    "kind": "gear",
+    "id": "scripture-of-ful"
+   }
+  },
+  "inventory": [
+   null,
+   null,
+   {
+    "kind": "weapon",
+    "id": "enhanced-excalibur"
+   },
+   {
+    "kind": "gear",
+    "id": "grasping-rune-pouch"
+   },
+   {
+    "kind": "gear",
+    "id": "grasping-rune-pouch"
+   },
+   {
+    "kind": "special",
+    "id": "vulnerability-bomb"
+   },
+   null,
+   null,
+   null,
+   {
+    "kind": "gear",
+    "id": "nightmare-gauntlets"
+   },
+   {
+    "kind": "gear",
+    "id": "grasping-rune-pouch"
+   },
+   {
+    "kind": "gear",
+    "id": "zemouregal-s-nexus"
+   },
+   null,
+   null,
+   null,
+   {
+    "kind": "gear",
+    "id": "essence-of-finality-amulet"
+   },
+   {
+    "kind": "gear",
+    "id": "essence-of-finality-amulet"
+   },
+   {
+    "kind": "weapon",
+    "id": "roar-of-awakening"
+   },
+   null,
+   null,
+   null,
+   {
+    "kind": "gear",
+    "id": "pernix-s-quiver"
+   },
+   {
+    "kind": "gear",
+    "id": "essence-of-finality-amulet"
+   },
+   {
+    "kind": "gear",
+    "id": "essence-of-finality-amulet"
+   },
+   {
+    "kind": "weapon",
+    "id": "ode-to-deceit"
+   },
+   null,
+   null,
+   null
+  ],
+  "unknown": [
+   "elderovlsalve",
+   "blessedflask",
+   "renewal6",
+   "vitality4",
+   "sailfishsoup",
+   "supersara",
+   "blueblubber"
+  ],
+  "rotations": [
+   {
+    "name": "War's Retreat",
+    "text": "wenarrows sgrico"
+   },
+   {
+    "name": "Phase 1",
+    "text": "rgrico + grico → ecb eofspec + adrenrenewal → bolg spec → galeshot → deadshot → sgb eofspec → grico\nBuild 10 wenarrows → ecb eofspec → galeshot → dive to Vermyx"
+   },
+   {
+    "name": "Phase 2",
+    "text": "rapid → improvise with bolg spec / dbow eofspec / snapshot / grico / gloomfirebow eofspec based on stacks\nBuild 12 deathsporearrows + 3-7 perfectequilibrium → gdeathsswift → dive to Vermyx"
+   },
+   {
+    "name": "Phase 3",
+    "text": "fularrow imbueshadows → ecb eofspec → bolg spec → galeshot → rapid → deadshot → gloomfirebow eofspec → sgb eofspec → improvise"
+   },
+   {
+    "name": "Kezalam, the Wanderer – War's Retreat",
+    "text": "deathsporearrows sgrico\nrgrico + grico → gdeathsswift → imbueshadows → fularrow ecb eofspec"
+   },
+   {
+    "name": "Kezalam, the Wanderer – Phase 1",
+    "text": "sbolg spec → rbolg spec + galeshot → rapid → deadshot → sgb eofspec → dbow eofspec\ngrico → shadowtend → snapshot / piercingshot → ecb eofspec → snipe"
+   },
+   {
+    "name": "Kezalam, the Wanderer – Phase 2",
+    "text": "galeshot → rapid → snapshot → dbow eofspec → grico → freedom → target moonstone + bolg spec → target kezalam + ingen + roarofawakening spec + adrenrenewal → build 12 deathsporearrows + 3 perfectequilibrium → gdeathsswift → fularrow imbueshadows → ecb eofspec → bolg spec → grico → snapshot / dbow eofspec if not phased\nshadowtend → snapshot → ecb eofspec → snipe → grico"
+   },
+   {
+    "name": "Kezalam, the Wanderer – Phase 3",
+    "text": "galeshot → rapid → deadshot → sgb eofspec / gloomfirebow eofspec → improvise based on stacks"
+   },
+   {
+    "name": "Nakatra, Devourer Eternal – War's Retreat",
+    "text": "deathsporearrows sdeadshot"
+   },
+   {
+    "name": "Nakatra, Devourer Eternal – Phase 1",
+    "text": "rdeadshot + grico → gdeathsswift → fularrow imbueshadows → ecb eofspec → bolg spec → galeshot → rapid → deadshot + nightmaregauntlets → gloomfirebow eofspec → grico → dbow eofspec + powerburstofvitality + disrupt → snapshot"
+   },
+   {
+    "name": "Nakatra, Devourer Eternal – Phase 2",
+    "text": "ecb eofspec → snipe → shadowtend → galeshot → rapid → dbow eofspec → grico → devo → bolg spec → divert → improvise until phased → ecb spec + adrenrenewal"
+   },
+   {
+    "name": "Nakatra, Devourer Eternal – Phase 3",
+    "text": "deadshot → grico → snapshot (may have to improvise based on stacks)\ngaleshot → rapid → grico → snapshot → build adrenaline on Nakatra"
+   },
+   {
+    "name": "Phase 4",
+    "text": "decimation eofspec → grico → snipe → piercingshot → build wenarrows + deathsporearrows while doing this, ideally end on 3-7 perfectequilibrium or may have to improvise later\nNote: decimation multiplies stack generation, be careful not to consume wenarrows on snipe\ndeathsporearrows gdeathsswift → imbueshadows → ecb eofspec → fularrow bolg spec → galeshot → wenarrows rapid → deadshot → gloomfirebow eofspec → fularrow grico → snapshot → gloomfirebow eofspec → shadowtend → devo / reflect / divert + disrupt Magic hits → improvise"
+   }
+  ]
+ },
+ {
+  "id": "kerapac-the-bound-hm-solo-necromancy",
+  "boss": "Kerapac, the bound (HM solo)",
+  "style": "Necromancy",
+  "title": "Kerapac Necromancy",
+  "guide": "https://github.com/pvme/pvme-guides/blob/master/rs3-full-boss-guides/kerapac/solo-hard-mode-necromancy.txt",
+  "presetUrl": "https://pvme.io/preset-maker/#/QpaFNZ40x5eE0dExdBPR",
+  "notes": "Death Ward can be swapped for another if wanted",
+  "equipment": {
+   "head": {
+    "kind": "gear",
+    "id": "crown-of-the-first-necromancer"
+   },
+   "cape": {
+    "kind": "gear",
+    "id": "igneous-kal-zuk"
+   },
+   "neck": {
+    "kind": "gear",
+    "id": "essence-of-finality-amulet"
+   },
+   "mainHand": {
+    "kind": "weapon",
+    "id": "omni-guard"
+   },
+   "body": {
+    "kind": "gear",
+    "id": "robe-top-of-the-first-necromancer"
+   },
+   "offHand": {
+    "kind": "weapon",
+    "id": "soulbound-lantern"
+   },
+   "legs": {
+    "kind": "gear",
+    "id": "robe-bottom-of-the-first-necromancer"
+   },
+   "hands": {
+    "kind": "gear",
+    "id": "hand-wrap-of-the-first-necromancer"
+   },
+   "feet": {
+    "kind": "gear",
+    "id": "foot-wraps-of-the-first-necromancer"
+   },
+   "ring": {
+    "kind": "gear",
+    "id": "occultist-s-ring"
+   },
+   "ammo": {
+    "kind": "gear",
+    "id": "zemouregal-s-nexus"
+   },
+   "pocket": {
+    "kind": "gear",
+    "id": "scripture-of-ful"
+   }
+  },
+  "inventory": [
+   null,
+   {
+    "kind": "special",
+    "id": "adrenaline-renewal-potion"
+   },
+   null,
+   null,
+   null,
+   {
+    "kind": "gear",
+    "id": "grasping-rune-pouch"
+   },
+   {
+    "kind": "gear",
+    "id": "grasping-rune-pouch"
+   },
+   {
+    "kind": "weapon",
+    "id": "roar-of-awakening"
+   },
+   {
+    "kind": "weapon",
+    "id": "ode-to-deceit"
+   },
+   null,
+   null,
+   null,
+   {
+    "kind": "gear",
+    "id": "grasping-rune-pouch"
+   },
+   null,
+   {
+    "kind": "gear",
+    "id": "cinderbane-gloves"
+   },
+   {
+    "kind": "gear",
+    "id": "ring-of-death"
+   },
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   {
+    "kind": "weapon",
+    "id": "enhanced-excalibur"
+   },
+   null,
+   {
+    "kind": "special",
+    "id": "vulnerability-bomb"
+   },
+   null,
+   null,
+   null
+  ],
+  "unknown": [
+   "Equilibrium aura",
+   "Elder overload salve (6)",
+   "Weapon poison+++ (1)",
+   "Lantadyme incense sticks",
+   "Spiritual prayer (6)",
+   "Kwuarm incense sticks",
+   "Saradomin brew flask (6)",
+   "Spirit weed incense sticks",
+   "Blue blubber jellyfish",
+   "Powerburst of acceleration (4)"
+  ],
+  "rotations": [
+   {
+    "name": "Additional Info",
+    "text": "3%+ genocidal, Nodon dragonkin task required, flank4 switch\nDrinking spiritualprayer through the kill is required for this method to work, ideally 4-5\nThere will be some RNG involved in this strategy due to low scriptureofful proc rates on necromancy and divert adrenaline gain during timewarp"
+   },
+   {
+    "name": "Phase 1",
+    "text": "If you relentless5 on deathskulls you can skip adrenrenewal\nsee !0tick on how to roarofawakening without losing conjurearmy\nIf lifetransfer is available, use it while kerapac immune and get 100 adren for instant timewarp.\nOn kills with 0 jumps, lifetransfer will not be up. if you have adren from relentless5 procs you can bloat while kerapac is immune for extra damage"
+   },
+   {
+    "name": "Phase 2",
+    "text": "You can opt to flank4; soulstrike after step under for some consistent damage, but it is not required.\nIf no divert adren, end timewarp with commandskeleton and deathskulls → bloat when timewarp ends"
+   },
+   {
+    "name": "Phase 3",
+    "text": "Try not to skip jump p3 as you cant conjurearmy if Kerapac is not in attack range"
+   }
+  ]
+ },
+ {
+  "id": "kerapac-the-bound-hm-solo-melee",
+  "boss": "Kerapac, the bound (HM solo)",
+  "style": "Melee",
+  "title": "Eq melee kera",
+  "guide": "https://github.com/pvme/pvme-guides/blob/master/rs3-full-boss-guides/kerapac/solo-hard-mode-melee.txt",
+  "presetUrl": "https://pvme.io/preset-maker/#/041d38d5-1566-4f4e-9fa1-35db24ba99ac",
+  "notes": "use weapon poison",
+  "equipment": {
+   "head": {
+    "kind": "gear",
+    "id": "vestments-of-havoc-hood"
+   },
+   "cape": {
+    "kind": "gear",
+    "id": "igneous-kal-ket"
+   },
+   "neck": {
+    "kind": "gear",
+    "id": "am-hej"
+   },
+   "mainHand": {
+    "kind": "weapon",
+    "id": "dragon-battleaxe"
+   },
+   "body": {
+    "kind": "gear",
+    "id": "vestments-of-havoc-robe-top"
+   },
+   "legs": {
+    "kind": "gear",
+    "id": "vestments-of-havoc-robe-bottom"
+   },
+   "hands": {
+    "kind": "gear",
+    "id": "cinderbane-gloves"
+   },
+   "feet": {
+    "kind": "gear",
+    "id": "vestments-of-havoc-boots"
+   },
+   "ring": {
+    "kind": "gear",
+    "id": "ring-of-death"
+   },
+   "ammo": {
+    "kind": "gear",
+    "id": "nodon-spike-harness"
+   },
+   "pocket": {
+    "kind": "gear",
+    "id": "scripture-of-ful"
+   }
+  },
+  "inventory": [
+   {
+    "kind": "gear",
+    "id": "jaws-of-the-abyss"
+   },
+   {
+    "kind": "gear",
+    "id": "essence-of-finality-amulet"
+   },
+   {
+    "kind": "gear",
+    "id": "gloves-of-passage"
+   },
+   {
+    "kind": "weapon",
+    "id": "ek-zekkil"
+   },
+   null,
+   {
+    "kind": "special",
+    "id": "adrenaline-renewal-potion"
+   },
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   {
+    "kind": "gear",
+    "id": "zemouregal-s-nexus"
+   },
+   {
+    "kind": "gear",
+    "id": "grasping-rune-pouch"
+   },
+   null,
+   null,
+   {
+    "kind": "weapon",
+    "id": "masterwork-spear-of-annihilation"
+   },
+   {
+    "kind": "weapon",
+    "id": "dark-shard-of-leng"
+   },
+   {
+    "kind": "weapon",
+    "id": "dark-sliver-of-leng"
+   },
+   {
+    "kind": "weapon",
+    "id": "enhanced-excalibur"
+   },
+   {
+    "kind": "special",
+    "id": "vulnerability-bomb"
+   },
+   null,
+   null,
+   null,
+   null,
+   null,
+   null
+  ],
+  "unknown": [
+   "powerburstofacceleration",
+   "grest",
+   "blueblubber",
+   "spices",
+   "elderovlsalve",
+   "spiritual"
+  ],
+  "rotations": [
+   {
+    "name": "War's Retreat",
+    "text": "dba spec"
+   },
+   {
+    "name": "Phase 1",
+    "text": "Start fight with lengmh berserk → divert → (tc) gbarge + vulnbomb → meteorstrike → gflurry → overpower → ezk spec → chaosroar → walk under cane → punish → 2 or 3 hit assault to hit 110k → overpower"
+   },
+   {
+    "name": "Prephase",
+    "text": "Defensive → naturalinstinct → lengmh gbarge → gflurry (if 2 hit assault you wait for gflurry)\nNote: can swap divert and berserk around, minimal difference, on-task you want to berserk first."
+   },
+   {
+    "name": "Phase 2",
+    "text": "overpower → rendgop → cinderbanes dragonclaw eofspec → ezk cane → mwspear dismember → slaughter → walk under massacre → jawsoftheabyss ezk rendgop → cinderbanes overpower → adaptivestrike → dba spec → punish → adaptivestrike → rend → gfury → improvise\nNote: if on-task, the second overpower isn't needed."
+   },
+   {
+    "name": "Phase 3",
+    "text": "Rotation not as set in stone here because relentless5 / imp4 / adrenaline before timewarp can all change which abilities you use\nvulnbomb timewarp (1t) → zerk → gbarge → adaptivestrike → meteorstrike → assault → dragonclaw eofspec / amhej cane / amhej overpower (last tick of timewarp) → amhej overpower → dragonclaw eofspec → amhej assault → rend → overpower → cane\nNote: if off-task leave vestmentsofhavochood on ideally until ~115+ adrenaline and take off one ability before timewarp"
+   },
+   {
+    "name": "Clone 1",
+    "text": "lengmh berserk click clone → vulnbomb + gbarge → meteorstrike → gflurry → dive to 2nd clone"
+   },
+   {
+    "name": "Clone 2",
+    "text": "vulnbomb + overpower → assault (3t) → punish → surge click 3rd clone and surge again"
+   },
+   {
+    "name": "Clone 3",
+    "text": "vulnbomb + chaosroar → dragonclaw eofspec → amhej lengmh spec → dive to Kerapac\nNote: if dba spec runs out here you might need one extra ability, but it shouldn't run out here."
+   },
+   {
+    "name": "Kerapac",
+    "text": "overpower → ezk spec → cane if not dead use one more ability (will happen if dba spec runs out)\nTo save 1 GCD on clone 2 you need 3 primordialice + scriptureofful proc or 5+ primordialice and replace the assault → punish with lengmh spec\nOn clone 3 you instead use pulverise / punish as the 3rd ability.\nThis means you need to powerburstofacceleration on clone 3 as dive won't be off CD to dive to Kerapac, or soverpower then dive and release with ezk spec"
+   }
+  ]
+ },
+ {
+  "id": "kerapac-the-bound-hm-solo-ranged",
+  "boss": "Kerapac, the bound (HM solo)",
+  "style": "Ranged",
+  "title": "Solo HM Kera Ranged",
+  "guide": "https://github.com/pvme/pvme-guides/blob/master/rs3-full-boss-guides/kerapac/solo-hard-mode-ranged.txt",
+  "presetUrl": "https://pvme.io/preset-maker/#/a7fe1641-aa2c-46ee-879b-c248b550cc5d",
+  "notes": ":ripperpouch: autocast :ripperscroll: on 1",
+  "equipment": {
+   "head": {
+    "kind": "gear",
+    "id": "elite-dracolich-coif"
+   },
+   "cape": {
+    "kind": "gear",
+    "id": "igneous-kal-zuk"
+   },
+   "neck": {
+    "kind": "gear",
+    "id": "essence-of-finality-amulet"
+   },
+   "mainHand": {
+    "kind": "weapon",
+    "id": "bow-of-the-last-guardian"
+   },
+   "body": {
+    "kind": "gear",
+    "id": "elite-dracolich-hauberk"
+   },
+   "legs": {
+    "kind": "gear",
+    "id": "elite-dracolich-chaps"
+   },
+   "hands": {
+    "kind": "gear",
+    "id": "elite-dracolich-vambraces"
+   },
+   "feet": {
+    "kind": "gear",
+    "id": "elite-dracolich-boots"
+   },
+   "ring": {
+    "kind": "gear",
+    "id": "stalker-s-ring"
+   },
+   "ammo": {
+    "kind": "gear",
+    "id": "pernix-s-quiver"
+   },
+   "pocket": {
+    "kind": "gear",
+    "id": "scripture-of-ful"
+   }
+  },
+  "inventory": [
+   {
+    "kind": "gear",
+    "id": "essence-of-finality-amulet"
+   },
+   null,
+   null,
+   null,
+   null,
+   null,
+   {
+    "kind": "gear",
+    "id": "grasping-rune-pouch"
+   },
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   {
+    "kind": "gear",
+    "id": "grasping-rune-pouch"
+   },
+   null,
+   null,
+   {
+    "kind": "gear",
+    "id": "pernix-s-quiver"
+   },
+   null,
+   null,
+   null,
+   {
+    "kind": "gear",
+    "id": "grasping-rune-pouch"
+   },
+   {
+    "kind": "weapon",
+    "id": "enhanced-excalibur"
+   },
+   null,
+   {
+    "kind": "special",
+    "id": "adrenaline-renewal-potion"
+   },
+   null,
+   {
+    "kind": "special",
+    "id": "vulnerability-bomb"
+   },
+   null,
+   {
+    "kind": "gear",
+    "id": "zemouregal-s-nexus"
+   }
+  ],
+  "unknown": [
+   "vampaura",
+   "blueblubber",
+   "gbrew",
+   "supergrest",
+   "elderovlsalve",
+   "poison1",
+   "spices"
+  ],
+  "rotations": [
+   {
+    "name": "Requirements",
+    "text": "kwuarmsticks and spiritsticks\nslayerhelm on anachronia stand."
+   },
+   {
+    "name": "Overview",
+    "text": "Do not timewarp and deathsswiftness on the same tick.\nHave darkness active for a smoother P4."
+   },
+   {
+    "name": "War's Retreat",
+    "text": "sdeadshot"
+   },
+   {
+    "name": "Phase 1",
+    "text": "(tc) + deathsporearrows r deadshot + grico → deathsswiftness → imbueshadows → ecb eofspec → fularrow bolg spec → galeshot → rapid → deadshot → gloomfirebow eofspec → snapshot → snapshot → piercingshot + adrenrenewal → ecb eofspec → sgrico"
+   },
+   {
+    "name": "Phase 2",
+    "text": "rgrico + gloomfirebow eofspec → shadowtend → galeshot → rapid → bolg spec → snipe → grico → snapshot → piercingshot → bolg spec → deathsporearrows rangedbasic → piercingshot → grico"
+   },
+   {
+    "name": "Clone 1",
+    "text": "snapshot → piercingshot → bolg spec → snapshot"
+   },
+   {
+    "name": "Clone 2",
+    "text": "deathsporearrows piercingshot → grico → piercingshot + 2t timewarp → deathsswiftness → imbueshadows → fularrow deadshot → snapshot"
+   },
+   {
+    "name": "Clone 3",
+    "text": "grico → bolg spec → snapshot → devo → snapshot"
+   },
+   {
+    "name": "Kerapac",
+    "text": "rapid → deadshot → gloomfirebow eofspec → gloomfirebow eofspec"
+   }
+  ]
+ },
+ {
+  "id": "nex-solo-necromancy",
+  "boss": "Nex (solo)",
+  "style": "Necromancy",
+  "title": "Necro Nex",
+  "guide": "https://github.com/pvme/pvme-guides/blob/master/rs3-full-boss-guides/nex/nex-solo-necromancy.txt",
+  "presetUrl": "https://pvme.io/preset-maker/#/CCLGb0GsoU7oEaTO7VvJ",
+  "notes": "",
+  "equipment": {
+   "head": {
+    "kind": "gear",
+    "id": "crown-of-the-first-necromancer"
+   },
+   "cape": {
+    "kind": "gear",
+    "id": "igneous-kal-zuk"
+   },
+   "neck": {
+    "kind": "gear",
+    "id": "essence-of-finality-amulet"
+   },
+   "mainHand": {
+    "kind": "weapon",
+    "id": "omni-guard"
+   },
+   "body": {
+    "kind": "gear",
+    "id": "robe-top-of-the-first-necromancer"
+   },
+   "offHand": {
+    "kind": "weapon",
+    "id": "soulbound-lantern"
+   },
+   "legs": {
+    "kind": "gear",
+    "id": "robe-bottom-of-the-first-necromancer"
+   },
+   "hands": {
+    "kind": "gear",
+    "id": "hand-wrap-of-the-first-necromancer"
+   },
+   "feet": {
+    "kind": "gear",
+    "id": "foot-wraps-of-the-first-necromancer"
+   },
+   "ring": {
+    "kind": "gear",
+    "id": "occultist-s-ring"
+   },
+   "ammo": {
+    "kind": "gear",
+    "id": "pernix-s-quiver"
+   },
+   "pocket": {
+    "kind": "gear",
+    "id": "scripture-of-ful"
+   }
+  },
+  "inventory": [
+   null,
+   null,
+   {
+    "kind": "gear",
+    "id": "deathdealer-robe-bottom-tier-90"
+   },
+   {
+    "kind": "gear",
+    "id": "grasping-rune-pouch"
+   },
+   null,
+   null,
+   null,
+   null,
+   null,
+   {
+    "kind": "gear",
+    "id": "grasping-rune-pouch"
+   },
+   {
+    "kind": "gear",
+    "id": "grasping-rune-pouch"
+   },
+   null,
+   null,
+   null,
+   null,
+   null,
+   {
+    "kind": "weapon",
+    "id": "blightbound-crossbow"
+   },
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   {
+    "kind": "special",
+    "id": "adrenaline-renewal-potion"
+   },
+   null,
+   {
+    "kind": "special",
+    "id": "vulnerability-bomb"
+   },
+   {
+    "kind": "weapon",
+    "id": "enhanced-excalibur"
+   },
+   {
+    "kind": "gear",
+    "id": "zemouregal-s-nexus"
+   }
+  ],
+  "unknown": [
+   "Equilibrium aura",
+   "Guthix rest",
+   "Blue blubber jellyfish",
+   "Powerburst of vitality (4)",
+   "Sailfish soup",
+   "Elder overload salve (6)"
+  ],
+  "rotations": [
+   {
+    "name": "Pre-fight",
+    "text": "conjurearmy + veng + walk to middle-south → lifetransfer → commandghost → invokedeath → (at around 6s) dealerlegs80 + anti → firstnecrorobebottom + splitsoul → commandskeleton"
+   },
+   {
+    "name": "Smoke Phase",
+    "text": "(tc) + vulnbomb + deathskulls + walk 1 tile north-east of Nex → soulsap → touchofdeath + dive to Fumus\n(tc) + vulnbomb + bloat → bbc + grico → omniguard + soulsap → walk towards nex for skull bounce"
+   },
+   {
+    "name": "Shadow Phase",
+    "text": "omniguard spec → deathguard90 eofspec → deathsparkorsoulreave necrobasic if not 120k + surge + dive to Umbra\nNote: The (tc) timing is when bloat kills Fumus as this will then tag Nex with a hit of splitsoul . This allows the omniguard spec to not be nulled.\n(tc) Umbra + vulnbomb + bloat → bbc + grico → omniguard + soulsap"
+   },
+   {
+    "name": "Blood Phase",
+    "text": "vulnbomb + necrobasic → divert → prep → commandskeleton → bloat → fingerofdeath + adrenrenewal → soulsap → touchofdeath\n(tc) Cruor + bloat → bbc + grico → omniguard + soulsap → necrobasic if not dead\nPosition Nex near Cruor if possible so that bloat spreads to her when Cruor dies."
+   },
+   {
+    "name": "Ice Phase",
+    "text": "anti → volleyofsouls → bloat + surge + dive to Glacies\n(tc) Glacies + vulnbomb + bloat → ingen + bbc + grico → omniguard + soulsap → necrobasic if not dead"
+   },
+   {
+    "name": "Zaros Phase",
+    "text": "touchofdeath → commandskeleton → deathguard90 eofspec → soulsap → deathskulls → volleyofsouls → improv"
+   }
+  ]
+ },
+ {
+  "id": "nex-solo-melee",
+  "boss": "Nex (solo)",
+  "style": "Melee",
+  "title": "Melee Nex",
+  "guide": "https://github.com/pvme/pvme-guides/blob/master/rs3-full-boss-guides/nex/nex-solo-melee.txt",
+  "presetUrl": "https://pvme.io/preset-maker/#/57ad5549-0627-4b0d-98d6-331313a6a09a",
+  "notes": "runes for mage if bringing it for zaroszgs and claws eofaspect can use vamp, penance or none at all",
+  "equipment": {
+   "head": {
+    "kind": "gear",
+    "id": "vestments-of-havoc-hood"
+   },
+   "cape": {
+    "kind": "gear",
+    "id": "igneous-kal-ket"
+   },
+   "neck": {
+    "kind": "gear",
+    "id": "am-hej"
+   },
+   "mainHand": {
+    "kind": "weapon",
+    "id": "dragon-battleaxe"
+   },
+   "body": {
+    "kind": "gear",
+    "id": "vestments-of-havoc-robe-top"
+   },
+   "legs": {
+    "kind": "gear",
+    "id": "vestments-of-havoc-robe-bottom"
+   },
+   "hands": {
+    "kind": "gear",
+    "id": "gloves-of-passage"
+   },
+   "feet": {
+    "kind": "gear",
+    "id": "vestments-of-havoc-boots"
+   },
+   "ring": {
+    "kind": "gear",
+    "id": "ring-of-death"
+   },
+   "ammo": {
+    "kind": "gear",
+    "id": "nodon-spike-harness"
+   },
+   "aura": {
+    "kind": "gear",
+    "id": "scripture-of-amascut"
+   }
+  },
+  "inventory": [
+   {
+    "kind": "gear",
+    "id": "jaws-of-the-abyss"
+   },
+   {
+    "kind": "gear",
+    "id": "essence-of-finality-amulet"
+   },
+   {
+    "kind": "gear",
+    "id": "grasping-rune-pouch"
+   },
+   {
+    "kind": "weapon",
+    "id": "ek-zekkil"
+   },
+   {
+    "kind": "gear",
+    "id": "essence-of-finality-amulet"
+   },
+   {
+    "kind": "special",
+    "id": "adrenaline-renewal-potion"
+   },
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   {
+    "kind": "weapon",
+    "id": "enhanced-excalibur"
+   },
+   {
+    "kind": "gear",
+    "id": "zemouregal-s-nexus"
+   },
+   {
+    "kind": "gear",
+    "id": "grasping-rune-pouch"
+   },
+   null,
+   null,
+   {
+    "kind": "weapon",
+    "id": "masterwork-spear-of-annihilation"
+   },
+   {
+    "kind": "weapon",
+    "id": "dark-shard-of-leng"
+   },
+   {
+    "kind": "weapon",
+    "id": "dark-sliver-of-leng"
+   },
+   {
+    "kind": "special",
+    "id": "vulnerability-bomb"
+   },
+   {
+    "kind": "gear",
+    "id": "kerapac-s-wrist-wraps"
+   },
+   {
+    "kind": "weapon",
+    "id": "roar-of-awakening"
+   },
+   {
+    "kind": "weapon",
+    "id": "ode-to-deceit"
+   },
+   null,
+   null,
+   null,
+   null
+  ],
+  "unknown": [
+   "powerburstofvitality",
+   "grest",
+   "blueblubber",
+   "elderovlsalve"
+  ],
+  "rotations": [
+   {
+    "name": "War's Retreat",
+    "text": "dba spec"
+   },
+   {
+    "name": "Start + Smoke Phase",
+    "text": "zerk + adrenrenewal when Nex calls Cruor → anti after the green projectile from Glacies enters Nex → (tc) + gbarge + vulnbomb → overpowerigneous + dive + surge + (tc) Fumus"
+   },
+   {
+    "name": "Fumus",
+    "text": "meteorstrike → gflurry → adaptivestrike"
+   },
+   {
+    "name": "Shadow Phase",
+    "text": "ezk cane → lengmh dragonclaw eofspec + surge click Umbra"
+   },
+   {
+    "name": "Umbra",
+    "text": "dismember → dragonclaw eofspec → chaosroar"
+   },
+   {
+    "name": "Blood Phase",
+    "text": "soverpowerigneous → roverpowerigneous + lengmh spec + dive + surge + (tc) Cruor"
+   },
+   {
+    "name": "Cruor",
+    "text": "slaughter → massacre → adaptivestrike → run a couple tiles towards Glacies then surge → anti"
+   },
+   {
+    "name": "Ice Phase",
+    "text": "barge → gflurry → lengmh spec + dive to Glacies"
+   },
+   {
+    "name": "Glacies",
+    "text": "dismember → dragonclaw eofspec → jawsoftheabyss adaptivestrike"
+   },
+   {
+    "name": "Zaros Phase",
+    "text": "If Nex uses deflectmelee, can swap to roarofawakening spec, dbreath and combust, or just wait it out\nmwspear slaughter → rendgop → massacre → adaptivestrike → improvise with zgs spec / gflurry and basics\nNote: can throw another vulnbomb but not really needed."
+   },
+   {
+    "name": "Blood Phase Notes",
+    "text": "Make sure you don't have crack4 or 100% as4 that accidentally phases Nex."
+   },
+   {
+    "name": "Ice Phase Notes",
+    "text": "If you get caught in an Ice Prison use Freedom freedom then divert, optionally also use powerburstofvitality"
+   },
+   {
+    "name": "Zaros Phase Notes",
+    "text": "Nex cycles her overhead curses every 3 auto attacks during Zaros Phase, following this rotation: soulsplit → DeflectMelee → no overhead curse\ndisrupt may be used if you are low on food.\nIf Nex ends her Ice Phase with DeflectMage, there is a chance it will carry over to Zaros Phase. She may also switch to DeflectMage during Zaros phase, improvise accordingly.\nWhen Nex uses DeflectMelee, there is a chance your attacks will be reflected back at you if you hit her."
+   }
+  ]
+ },
+ {
+  "id": "nex-solo-ranged",
+  "boss": "Nex (solo)",
+  "style": "Ranged",
+  "title": "Bolg Ranged Nex",
+  "guide": "https://github.com/pvme/pvme-guides/blob/master/rs3-full-boss-guides/nex/nex-solo-bolg.txt",
+  "presetUrl": "https://pvme.io/preset-maker/#/271ab9d3-3a6f-4c5f-bc03-e3fadd435b2e",
+  "notes": "Mobile perk should be combo'd with either Biting 4 or Ultimatums 4Aftershock is not good with Precise here as it can proc on the Umbra phase transition and proc bolg passive",
+  "equipment": {
+   "head": {
+    "kind": "gear",
+    "id": "elite-dracolich-coif"
+   },
+   "cape": {
+    "kind": "gear",
+    "id": "igneous-kal-zuk"
+   },
+   "neck": {
+    "kind": "gear",
+    "id": "essence-of-finality-amulet"
+   },
+   "mainHand": {
+    "kind": "weapon",
+    "id": "bow-of-the-last-guardian"
+   },
+   "body": {
+    "kind": "gear",
+    "id": "elite-dracolich-hauberk"
+   },
+   "legs": {
+    "kind": "gear",
+    "id": "elite-dracolich-chaps"
+   },
+   "hands": {
+    "kind": "gear",
+    "id": "elite-dracolich-vambraces"
+   },
+   "feet": {
+    "kind": "gear",
+    "id": "elite-dracolich-boots"
+   },
+   "ring": {
+    "kind": "gear",
+    "id": "stalker-s-ring"
+   },
+   "ammo": {
+    "kind": "gear",
+    "id": "pernix-s-quiver"
+   },
+   "aura": {
+    "kind": "gear",
+    "id": "scripture-of-ful"
+   }
+  },
+  "inventory": [
+   null,
+   {
+    "kind": "special",
+    "id": "adrenaline-renewal-potion"
+   },
+   null,
+   {
+    "kind": "gear",
+    "id": "essence-of-finality-amulet"
+   },
+   {
+    "kind": "special",
+    "id": "vulnerability-bomb"
+   },
+   {
+    "kind": "weapon",
+    "id": "enhanced-excalibur"
+   },
+   null,
+   null,
+   null,
+   null,
+   null,
+   {
+    "kind": "gear",
+    "id": "elite-dracolich-chaps"
+   },
+   null,
+   null,
+   null,
+   null,
+   null,
+   {
+    "kind": "gear",
+    "id": "luck-of-the-dwarves"
+   },
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null
+  ],
+  "unknown": [
+   "elderovlsalve",
+   "vitality4",
+   "blueblubber",
+   "grimgem",
+   "grest"
+  ],
+  "rotations": [
+   {
+    "name": "Pre-Fight",
+    "text": "Use vampyrismaspect\n(6.0s) ecb eofspec → imbueshadows → anticlearheaded"
+   },
+   {
+    "name": "Smoke Phase",
+    "text": "(tc) + vulnbomb + 7 hit rapid → bolg spec\nvulnbomb + grico → gdeathsswift + adrenrenewal → ecb eofspec"
+   },
+   {
+    "name": "Shadow Phase",
+    "text": "shadowtend → snapshot → piercingshot if not phased\nvulnbomb + grico"
+   },
+   {
+    "name": "Blood Phase",
+    "text": "deadshot\nvulnbomb + piercingshot → ecb eofspec → piercingshot"
+   },
+   {
+    "name": "Ice Phase",
+    "text": "gloomfirebow eofspec → piercingshot\nvulnbomb + grico"
+   },
+   {
+    "name": "Zaros Phase",
+    "text": "piercingshot → bolg spec → ecb eofspec → galeshot → rapid → grico"
+   }
+  ]
+ },
+ {
+  "id": "arch-glacor-high-enrage-necromancy",
+  "boss": "Arch-Glacor (high enrage)",
+  "style": "Necromancy",
+  "title": "4000% necro eq ag",
+  "guide": "https://github.com/pvme/pvme-guides/blob/master/rs3-full-boss-guides/arch-glacor/high-enrage-arch-glacor-necromancy.txt",
+  "presetUrl": "https://pvme.io/preset-maker/#/ecA3h6GIy9XZPdeXBjwt",
+  "notes": "Any defensive perks on the deathwarden top are fine. Absorbative is superior over lucky.",
+  "equipment": {
+   "head": {
+    "kind": "gear",
+    "id": "crown-of-the-first-necromancer"
+   },
+   "cape": {
+    "kind": "gear",
+    "id": "igneous-kal-zuk"
+   },
+   "neck": {
+    "kind": "gear",
+    "id": "essence-of-finality-amulet"
+   },
+   "mainHand": {
+    "kind": "weapon",
+    "id": "omni-guard"
+   },
+   "body": {
+    "kind": "gear",
+    "id": "robe-top-of-the-first-necromancer"
+   },
+   "offHand": {
+    "kind": "weapon",
+    "id": "soulbound-lantern"
+   },
+   "legs": {
+    "kind": "gear",
+    "id": "robe-bottom-of-the-first-necromancer"
+   },
+   "hands": {
+    "kind": "gear",
+    "id": "cinderbane-gloves"
+   },
+   "feet": {
+    "kind": "gear",
+    "id": "foot-wraps-of-the-first-necromancer"
+   },
+   "ring": {
+    "kind": "gear",
+    "id": "zorgoth-s-soul-ring"
+   },
+   "ammo": {
+    "kind": "gear",
+    "id": "zemouregal-s-nexus"
+   },
+   "aura": {
+    "kind": "gear",
+    "id": "scripture-of-jas"
+   }
+  },
+  "inventory": [
+   {
+    "kind": "weapon",
+    "id": "enhanced-excalibur"
+   },
+   {
+    "kind": "weapon",
+    "id": "soulbound-lantern"
+   },
+   {
+    "kind": "special",
+    "id": "vulnerability-bomb"
+   },
+   null,
+   {
+    "kind": "special",
+    "id": "adrenaline-renewal-potion"
+   },
+   {
+    "kind": "weapon",
+    "id": "roar-of-awakening"
+   },
+   {
+    "kind": "weapon",
+    "id": "ode-to-deceit"
+   },
+   null,
+   {
+    "kind": "gear",
+    "id": "cryptbloom-helm"
+   },
+   {
+    "kind": "gear",
+    "id": "deathwarden-robe-top-tier-90"
+   },
+   null,
+   {
+    "kind": "gear",
+    "id": "cryptbloom-boots"
+   },
+   null,
+   {
+    "kind": "gear",
+    "id": "grasping-rune-pouch"
+   },
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   {
+    "kind": "gear",
+    "id": "grasping-rune-pouch"
+   },
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   {
+    "kind": "gear",
+    "id": "grasping-rune-pouch"
+   }
+  ],
+  "unknown": [
+   "hellhoundpouch",
+   "vitality4",
+   "cryptbloomlegs",
+   "extremeprayer",
+   "blessedflask",
+   "elderovlsalve",
+   "blueblubber",
+   "poison4",
+   "sara"
+  ],
+  "rotations": [
+   {
+    "name": "General Rotations & tips",
+    "text": "darkness (outside) → invokedeath → conjurearmy → lifetransfer → commandghost → commandskeleton → bloat\nRotations for Arch-Glacor are not strict, as per the random nature of the boss's mechanics. Aim to upkeep bloat & conjurearmy as much as possible.\nAt 3500%+ enrage, always reserve splitsoul splitsoul for the exposed core.\ndeathguard90 eofspec , touchofdeath and divert , are all high value abilities with medium-length cooldowns. Put these abilities on cooldown before the pillars of ice mechanic blocks your line of sight.\nLiving Death livingdeath is best used during the flurry mechanic. This mechanic gives you a long, uninterrupted window in which you can deal damage to Arch-Glacor. It can situationally be used to reset deathskulls cooldown in anticipation of an upcoming exposed core mechanic. livingdeath shouldn't be strategically reserved for arms, as the time it takes to clear the mechanic doesn't largely change with or without the ult active.\nEnsure that some Necrosis Stacks necrosis (4+) and Residual Souls residualsoul (2+) are held for the Exposed Core.\nIt is best to start the fight with bloat , as it is a low adren investment that has no cooldown, and has high use priority during the fight. There is a 2/5 chance you get a mechanic (minions/exposed core) that will nullify your first attacks.\ndisrupt / devo / cade is active.\nEquipped before casting conjurearmy ."
+   },
+   {
+    "name": "Exposed Core (Arms)",
+    "text": "Have your conjures conjurearmy active and Ghost commanded commandghost.\nIn some cases, it may be best to equip excal excalibur to dismiss conjures, and re-conjure conjurearmy to refresh their timer before the next mechanic, if you are anticipating arms coming soon in the spec order. It is essential that conjures have a long enough timer to be active throughout the entire mechanic.\nUse limitless / adrenrenewal where required depending on adrenaline in order to use devo .\nIf you need to cade , use divert and flick to soulsplit for 1 tick to get to 100% adrenaline.\nIf starting with low residualsoul soul stacks (1-2), use soulstrikeflank over volleyofsouls.\nUse soulsap & touchofdeath where appropriate to build adren and stacks before dumping.\nbloat , deathskulls , and commandskeleton should always be used first, as their damage is dealt over time.\nOffstyle soulfire roarofawakening + odetodeceit spec may optionally be used after commandskeleton .\ninvokedeath → soulstrikeflank → soulstrikeflank\ninvokedeath → splitsoul → (tc) vulnbomb + bloat → deathskulls → commandskeleton → soulstrikeflank (until 0 stacks) → deathguard90 eofspec (6/8 necrosis , use fingerofdeath → deathguard90 eofspec if at 12/12) → commandzombie → commandphantom → devo → omniguard spec\nNote: Use devo when required."
+   },
+   {
+    "name": "Clearing Glacyte Minions",
+    "text": "Use invokedeath → threadsoffate → volleyofsouls once at 5 residualsoul stacks. continue casting spectralscythe & soulsap until at 5/5.\nAlways cast spectralscythe before invokedeath → threadsoffate , as this starts its 15s cooldown which lets it be available for a second use before volleyofsouls \\#3\nCast vulnbomb on the magic minion closest to the bolstering glacyte. This will cause vulnerability to apply to all five glacytes.\ninvokedeath → threadsoffate → soulsap → volleyofsouls\nsoulsap → spectralscythe → invokedeath → threadsoffate → volleyofsouls → soulsap → volleyofsouls → spectralscythe2 → spectralscythe3 → soulsap → spectralscythe / volleyofsouls"
+   },
+   {
+    "name": "Defensive & utility usage",
+    "text": "Frost Cannon: anti → veng + soulsplit + reflect → reprisal + powerburstofvitality (In TANK GEAR & max HP)\nAlternatively; anti → powerburstofvitality / shielddome / disrupt / debil / reflect / res (hit 3, don't need to combo with defensives) / spam food + be overhealed with brew on first hit. Use of any one of these will ensure you survive the mechanic.\nExposed Core (arms): devo → divert → cade as needed\nGlacyte Minions: debil on arch-glacor (2500%+) and, rarely, anti / freedom to block or clear stun the freezing blood stun.\nFlurry: disrupt / reflect → divert (deals ~27k at 4000%) → debil if needed.\nPillars of Ice: lifetransfer → anti → prep → commandskeleton\ncommandskeleton can deal damage even if the player doesn't have LOS, depending on the skeleton's position."
+   }
+  ]
+ },
+ {
+  "id": "telos-the-warden-necromancy",
+  "boss": "Telos, the Warden",
+  "style": "Necromancy",
+  "title": "Telos - Necromancy Equilibrium",
+  "guide": "https://github.com/pvme/pvme-guides/blob/master/rs3-full-boss-guides/telos/necromancy.txt",
+  "presetUrl": "https://pvme.io/preset-maker/#/FNRVoyCSDDRe5kLTrbNz",
+  "notes": "",
+  "equipment": {
+   "head": {
+    "kind": "gear",
+    "id": "crown-of-the-first-necromancer"
+   },
+   "cape": {
+    "kind": "gear",
+    "id": "igneous-kal-zuk"
+   },
+   "neck": {
+    "kind": "gear",
+    "id": "essence-of-finality-amulet"
+   },
+   "mainHand": {
+    "kind": "weapon",
+    "id": "omni-guard"
+   },
+   "body": {
+    "kind": "gear",
+    "id": "robe-top-of-the-first-necromancer"
+   },
+   "offHand": {
+    "kind": "weapon",
+    "id": "soulbound-lantern"
+   },
+   "legs": {
+    "kind": "gear",
+    "id": "robe-bottom-of-the-first-necromancer"
+   },
+   "hands": {
+    "kind": "gear",
+    "id": "hand-wrap-of-the-first-necromancer"
+   },
+   "feet": {
+    "kind": "gear",
+    "id": "foot-wraps-of-the-first-necromancer"
+   },
+   "ring": {
+    "kind": "gear",
+    "id": "zorgoth-s-soul-ring"
+   },
+   "ammo": {
+    "kind": "gear",
+    "id": "zemouregal-s-nexus"
+   },
+   "pocket": {
+    "kind": "gear",
+    "id": "underworld-grimoire-4"
+   }
+  },
+  "inventory": [
+   {
+    "kind": "gear",
+    "id": "cinderbane-gloves"
+   },
+   null,
+   {
+    "kind": "special",
+    "id": "adrenaline-renewal-potion"
+   },
+   null,
+   null,
+   null,
+   {
+    "kind": "gear",
+    "id": "expensive-spices"
+   },
+   {
+    "kind": "gear",
+    "id": "deathdealer-robe-bottom-tier-90"
+   },
+   null,
+   null,
+   null,
+   null,
+   null,
+   {
+    "kind": "gear",
+    "id": "grasping-rune-pouch"
+   },
+   {
+    "kind": "weapon",
+    "id": "enhanced-excalibur"
+   },
+   {
+    "kind": "gear",
+    "id": "ring-of-death"
+   },
+   {
+    "kind": "special",
+    "id": "vulnerability-bomb"
+   },
+   null,
+   null,
+   null,
+   {
+    "kind": "gear",
+    "id": "grasping-rune-pouch"
+   },
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   {
+    "kind": "gear",
+    "id": "grasping-rune-pouch"
+   }
+  ],
+  "unknown": [
+   "Equilibrium aura",
+   "Elder overload salve (6)",
+   "Blessed flask",
+   "Guthix rest",
+   "Powerburst of vitality (4)",
+   "Sailfish soup",
+   "Blue blubber jellyfish",
+   "Weapon poison+++ (1)",
+   "Sticky bombs"
+  ],
+  "rotations": [
+   {
+    "name": "Prefight",
+    "text": "Optional: to reduce P1-2 RNG pushing up from 3000% → 4000%, you can staffoflight eofspec at adrenaline crystal.\nDummy at War's Retreat: threadsoffate → soulsap → touchofdeath (should end on 4 necrosis 3 residualsoul) → enter instance.\nconjurearmy cinderbanes → lifetransfer → commandghost → splitsoul → invokedeath → (wait 2t) surge → commandskeleton"
+   },
+   {
+    "name": "Phase 1",
+    "text": "(tc) + bloat + vulnbomb → deathskulls + adrenrenewal → omniguard spec → soulsap → deathsparkorsoulreave → touchofdeath → soulsap → deathsparkorsoulreave + surge"
+   },
+   {
+    "name": "Phase 2",
+    "text": "livingdeath → touchofdeath → commandskeleton → fingerofdeath → necrobasic → (tendrils) volleyofsouls → divert → soulsap → deathskulls → touchofdeath → soulsap → commandskeleton → fingerofdeath → soulsap → necrobasic"
+   },
+   {
+    "name": "Phase 3",
+    "text": "bloat → splitsoul → soulsap → deathskulls → commandzombie + dive to redbeam → commandskeleton → fingerofdeath → soulsap → touchofdeath"
+   },
+   {
+    "name": "Phase 4",
+    "text": "For information on how to use sticky bombs stickybomb in phase 4 for minions effectively, please see <#1252206370657271878>.\nEquip your clearheaded 4 clearheaded and turtling turtling4 switch.\nanticlearheaded used here requires taking the fonts slow, or it won't be off cooldown for font 2.\nAlternatively, use freedom before volleyofsouls in font 1.\n( soulsap ) in font 1 is optional, and should only be needed if you're at 4/5 stacks due to phasing p2/3 faster.\ntouchofdeath in font 1 is also optional, and may be skipped if needed. fingerofdeath will cost 20% adrenaline which can be improvised around.\nUse adrenrenewal + sailfishsoup at the end of font 3 if needed, to overheal, and reach 100% adrenaline for p4 start."
+   },
+   {
+    "name": "Drop Down",
+    "text": ">50% adren: omniguard spec → deathguard90 eofspec → touchofdeath → necrobasic + dive to font\n<50% adren: soulstrike → soulstrike → deathguard90 eofspec → soulsap → touchofdeath → necrobasic + dive to font"
+   },
+   {
+    "name": "Font 1",
+    "text": "divert → prep → anticlearheaded → firstnecrohandwrap conjurearmy cinderbanes → ( soulsap / necrobasic ) → commandghost → commandskeleton → volleyofsouls → fingerofdeath + surge + dive"
+   },
+   {
+    "name": "Font 2",
+    "text": "divert → reflect → prep → anticlearheaded → threadsoffate → soulsap → volleyofsouls → deathguard90 eofspec → soulsap + surge + dive"
+   },
+   {
+    "name": "Font 3",
+    "text": "prep → devo → divert → soulsap → freedom → bloodsiphon → volleyofsouls"
+   },
+   {
+    "name": "Phase 5",
+    "text": "invokedeath + surge → reflect → (tc) + nat + powerburstofvitality + rod + vulnbomb → (anti if redgolem ) deathskulls → livingdeath → deathskulls → turtling4 cade → splitsoul → fingerofdeath → fingerofdeath until dead"
+   }
+  ]
+ },
+ {
+  "id": "telos-the-warden-melee",
+  "boss": "Telos, the Warden",
+  "style": "Melee",
+  "title": "melee telos",
+  "guide": "https://github.com/pvme/pvme-guides/blob/master/rs3-full-boss-guides/telos/melee.txt",
+  "presetUrl": "https://pvme.io/preset-maker/#/b99608b2-8131-4629-b155-256445e36415",
+  "notes": "-any legs that can be augmented can be used for the clear headed switch-dragon scimitar can be put inside an eof",
+  "equipment": {
+   "head": {
+    "kind": "gear",
+    "id": "vestments-of-havoc-hood"
+   },
+   "cape": {
+    "kind": "gear",
+    "id": "igneous-kal-zuk"
+   },
+   "neck": {
+    "kind": "gear",
+    "id": "am-hej"
+   },
+   "mainHand": {
+    "kind": "weapon",
+    "id": "dragon-battleaxe"
+   },
+   "body": {
+    "kind": "gear",
+    "id": "vestments-of-havoc-robe-top"
+   },
+   "offHand": {
+    "kind": "weapon",
+    "id": "dark-sliver-of-leng"
+   },
+   "legs": {
+    "kind": "gear",
+    "id": "vestments-of-havoc-robe-bottom"
+   },
+   "hands": {
+    "kind": "gear",
+    "id": "cinderbane-gloves"
+   },
+   "feet": {
+    "kind": "gear",
+    "id": "vestments-of-havoc-boots"
+   },
+   "ring": {
+    "kind": "gear",
+    "id": "reaver-s-ring"
+   },
+   "ammo": {
+    "kind": "gear",
+    "id": "nodon-spike-harness"
+   },
+   "aura": {
+    "kind": "gear",
+    "id": "erethdor-s-grimoire"
+   }
+  },
+  "inventory": [
+   {
+    "kind": "weapon",
+    "id": "dark-shard-of-leng"
+   },
+   null,
+   {
+    "kind": "weapon",
+    "id": "zaros-godsword"
+   },
+   null,
+   {
+    "kind": "weapon",
+    "id": "divine-spirit-shield"
+   },
+   {
+    "kind": "special",
+    "id": "vulnerability-bomb"
+   },
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   {
+    "kind": "special",
+    "id": "adrenaline-renewal-potion"
+   },
+   {
+    "kind": "gear",
+    "id": "essence-of-finality-amulet"
+   },
+   null,
+   null,
+   null,
+   null,
+   {
+    "kind": "weapon",
+    "id": "ek-zekkil"
+   },
+   null,
+   {
+    "kind": "gear",
+    "id": "ring-of-death"
+   },
+   {
+    "kind": "gear",
+    "id": "deathwarden-robe-bottom-tier-90"
+   },
+   {
+    "kind": "weapon",
+    "id": "enhanced-excalibur"
+   },
+   {
+    "kind": "gear",
+    "id": "grasping-rune-pouch"
+   },
+   {
+    "kind": "gear",
+    "id": "grasping-rune-pouch"
+   },
+   {
+    "kind": "weapon",
+    "id": "dragon-scimitar"
+   },
+   {
+    "kind": "gear",
+    "id": "zemouregal-s-nexus"
+   }
+  ],
+  "unknown": [
+   "sailfishsoup",
+   "elderovlsalve",
+   "vitality4",
+   "sbrew",
+   "sticky",
+   "supergrest",
+   "spiritual"
+  ],
+  "rotations": [
+   {
+    "name": "Wars",
+    "text": "Make sure you have at least 2 bloodlust stacks.\nnaturalinstinct → dba spec"
+   },
+   {
+    "name": "Phase 1",
+    "text": "devo + surge → berserk + adrenrenewal → gbarge → meteorstrike → assault → overpower → ezk spec → dragonscimitar spec"
+   },
+   {
+    "name": "Phase 2",
+    "text": "wait 1 tick → gbarge → assault → overpower → cane → gfury"
+   },
+   {
+    "name": "Phase 3",
+    "text": "zgs spec → gbarge → gflurry → chaosroar → overpower → rend"
+   },
+   {
+    "name": "Phase 4",
+    "text": "gbarge → assault → cane → adaptivestrike\nprep → reflect → tc golem + anticlearheaded → divert → adaptivestrike + stickybomb → gfury → target telos + overpower → punish\nadaptivestrike → meleebasic → meteorstrike → res → freedom + stickybomb last tick of gcd → target telos + gbarge 2t later → gflurry → varanussmercy eofspec + dive\nmeleebasic → anticlearheaded → adaptivestrike → devo → dismember → chaosroar → target telos + sezk spec → rezk spec → gfury"
+   },
+   {
+    "name": "Phase 5",
+    "text": "berserk + adrenrenewal + disrupt → gbarge → assault + dive → overpower + powerburstofvitality → varanussmercy eofspec → cane / punish\nberserk + adrenrenewal + disrupt → barge → assault + dive → gfury / anticlearheaded → cade → overpower → varanussmercy eofspec → varanussmercy eofspec → punish / cane"
+   }
+  ]
+ },
+ {
+  "id": "telos-the-warden-magic",
+  "boss": "Telos, the Warden",
+  "style": "Magic",
+  "title": "Telos Magic",
+  "guide": "https://github.com/pvme/pvme-guides/blob/master/rs3-full-boss-guides/telos/magic-fsoa.txt",
+  "presetUrl": "https://pvme.io/preset-maker/#/3bf33b25-2dd9-4bd4-81b1-902e8a8d87c9",
+  "notes": "",
+  "equipment": {
+   "head": {
+    "kind": "gear",
+    "id": "mask-of-tumeken-s-resplendence"
+   },
+   "cape": {
+    "kind": "gear",
+    "id": "igneous-kal-zuk"
+   },
+   "neck": {
+    "kind": "gear",
+    "id": "essence-of-finality-amulet"
+   },
+   "mainHand": {
+    "kind": "weapon",
+    "id": "roar-of-awakening"
+   },
+   "body": {
+    "kind": "gear",
+    "id": "robe-top-of-tumeken-s-resplendence"
+   },
+   "offHand": {
+    "kind": "weapon",
+    "id": "ode-to-deceit"
+   },
+   "legs": {
+    "kind": "gear",
+    "id": "robe-bottom-of-tumeken-s-resplendence"
+   },
+   "hands": {
+    "kind": "gear",
+    "id": "gloves-of-tumeken-s-resplendence"
+   },
+   "feet": {
+    "kind": "gear",
+    "id": "boots-of-tumeken-s-resplendence"
+   },
+   "ring": {
+    "kind": "gear",
+    "id": "channeller-s-ring"
+   },
+   "ammo": {
+    "kind": "gear",
+    "id": "zemouregal-s-nexus"
+   },
+   "pocket": {
+    "kind": "gear",
+    "id": "erethdor-s-grimoire"
+   }
+  },
+  "inventory": [
+   null,
+   null,
+   {
+    "kind": "weapon",
+    "id": "fractured-staff-of-armadyl"
+   },
+   {
+    "kind": "special",
+    "id": "vulnerability-bomb"
+   },
+   null,
+   {
+    "kind": "gear",
+    "id": "grasping-rune-pouch"
+   },
+   {
+    "kind": "gear",
+    "id": "grasping-rune-pouch"
+   },
+   {
+    "kind": "gear",
+    "id": "kerapac-s-wrist-wraps"
+   },
+   {
+    "kind": "gear",
+    "id": "ring-of-death"
+   },
+   {
+    "kind": "weapon",
+    "id": "enhanced-excalibur"
+   },
+   null,
+   {
+    "kind": "special",
+    "id": "adrenaline-renewal-potion"
+   },
+   null,
+   {
+    "kind": "gear",
+    "id": "grasping-rune-pouch"
+   },
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null
+  ],
+  "unknown": [
+   "mani",
+   "dummy",
+   "poison1",
+   "prayrenewal",
+   "elderovlsalve",
+   "vitality4",
+   "blueblubber",
+   "attunedportentofrestorationx",
+   "supersara",
+   "sbrew"
+  ],
+  "rotations": [
+   {
+    "name": "Phase 1",
+    "text": "dummy + runiccharge + gsonic → surge + gsunshine + adrenrenewal\n(incitefear) (tc) + vulnbomb + roarofawakening spec → icebarrage → asphyx → tsunamiincite → gconc → wm"
+   },
+   {
+    "name": "Phase 2",
+    "text": "(exsanguinate) gsonic → fsoa spec + dive → asphyx → escape + runiccharge + gconc → omnipowerigneous → wm / smoketendrils"
+   },
+   {
+    "name": "Phase 3",
+    "text": "(exsanguinate) asphyx → roarofawakening spec → equip (kerapacswristwraps) + dbreath + dive + redbeam → combust → equip (tumekengloves) + gconc → wm → dbreath"
+   },
+   {
+    "name": "Drop",
+    "text": "(incitefear) icebarrage → asphyx (4t) → legatusemberstaff spec → dbreath"
+   },
+   {
+    "name": "Font 1",
+    "text": "divert → anti → prep → icebarrage redgolem → runiccharge + gconc telos → omnipowerigneous → legatusemberstaff spec"
+   },
+   {
+    "name": "Font 2",
+    "text": "gsonic → tsunamiincite → dbreath → freedom → icebarrage redgolem → icebarrage telos → wm → asphyx (4t) → legatusemberstaff spec → dbreath"
+   },
+   {
+    "name": "Font 3",
+    "text": "anti → devo → icebarrage redgolem → gsonic → gconc telos → omnipowerigneous → legatusemberstaff spec + adrenrenewal"
+   },
+   {
+    "name": "Phase 5",
+    "text": "(tc) + vulnbomb + fsoa spec → divert + dive + greenbeam → reflect → gsunshine → roarofawakening spec → asphyx + powerburstofvitality → cade → runiccharge + gconc → omnipowerigneous → legatusemberstaff spec\nIf redgolem then anti after gsunshine"
+   }
+  ]
+ },
+ {
+  "id": "telos-the-warden-ranged",
+  "boss": "Telos, the Warden",
+  "style": "Ranged",
+  "title": "BoLG Ranged Telos",
+  "guide": "https://github.com/pvme/pvme-guides/blob/master/rs3-full-boss-guides/telos/ranged-bolg.txt",
+  "presetUrl": "https://pvme.io/preset-maker/#/ef88e813-2c25-48f2-a52d-ccc5ab246ad6",
+  "notes": "Replace Weapon poison +++ and with food if using at the bank.",
+  "equipment": {
+   "head": {
+    "kind": "gear",
+    "id": "elite-dracolich-coif"
+   },
+   "cape": {
+    "kind": "gear",
+    "id": "igneous-kal-zuk"
+   },
+   "neck": {
+    "kind": "gear",
+    "id": "essence-of-finality-amulet"
+   },
+   "mainHand": {
+    "kind": "weapon",
+    "id": "bow-of-the-last-guardian"
+   },
+   "body": {
+    "kind": "gear",
+    "id": "elite-dracolich-hauberk"
+   },
+   "legs": {
+    "kind": "gear",
+    "id": "elite-dracolich-chaps"
+   },
+   "hands": {
+    "kind": "gear",
+    "id": "cinderbane-gloves"
+   },
+   "feet": {
+    "kind": "gear",
+    "id": "elite-dracolich-boots"
+   },
+   "ring": {
+    "kind": "gear",
+    "id": "stalker-s-ring"
+   },
+   "ammo": {
+    "kind": "gear",
+    "id": "pernix-s-quiver"
+   },
+   "pocket": {
+    "kind": "gear",
+    "id": "erethdor-s-grimoire"
+   }
+  },
+  "inventory": [
+   {
+    "kind": "special",
+    "id": "vulnerability-bomb"
+   },
+   null,
+   null,
+   null,
+   {
+    "kind": "special",
+    "id": "adrenaline-renewal-potion"
+   },
+   {
+    "kind": "weapon",
+    "id": "omni-guard"
+   },
+   {
+    "kind": "weapon",
+    "id": "soulbound-lantern"
+   },
+   {
+    "kind": "gear",
+    "id": "ring-of-death"
+   },
+   {
+    "kind": "gear",
+    "id": "pernix-s-quiver"
+   },
+   {
+    "kind": "gear",
+    "id": "pernix-s-quiver"
+   },
+   {
+    "kind": "gear",
+    "id": "essence-of-finality-amulet"
+   },
+   {
+    "kind": "gear",
+    "id": "essence-of-finality-amulet"
+   },
+   {
+    "kind": "gear",
+    "id": "essence-of-finality-amulet"
+   },
+   null,
+   {
+    "kind": "weapon",
+    "id": "enhanced-excalibur"
+   },
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   {
+    "kind": "gear",
+    "id": "zemouregal-s-nexus"
+   },
+   {
+    "kind": "gear",
+    "id": "grasping-rune-pouch"
+   },
+   null,
+   null,
+   null,
+   null,
+   null
+  ],
+  "unknown": [
+   "sticky",
+   "poison1",
+   "elderovlsalve",
+   "supergrest",
+   "attunedportentofrestorationx",
+   "blueblubber",
+   "vitality4",
+   "spiritual"
+  ],
+  "rotations": [
+   {
+    "name": "Notable Enrage Checkpoints and Changes (999+)",
+    "text": "1000% P4 one rock will fall, P5 multiple rocks will fall, immort no longer works P5, and Telos will freedom stuns and binds with a 16 tick cooldown."
+   },
+   {
+    "name": "Preset Notes",
+    "text": "darkness should be active the entire time.\nkwuarmsticks should be used.\nweppoison and elderovlsalve should be used.\nT2 malletops and high necromancy level is required for cade with turtling4 and greaterboneshield during p5.\nedracochaps switch with ch4 is used during p4/p5. (optional)"
+   },
+   {
+    "name": "Phase 1",
+    "text": "warsretreatteleport dummy → wenarrows + gricocaroming → rangedbasic\nwenarrows deathsswiftness → surge at 36% → imbueshadows → (tc) + gricocaroming → bolg spec → galeshot → deadshotigneous → gloomfirebow spec → shadowtend → piercingshot + divemobile to jump spot\nIf using equilibrium and scriptureofful procs on gricocaroming replace gloomfirebow with zammybow and anti after while divemobile to jump spot"
+   },
+   {
+    "name": "Phase 2",
+    "text": "fularrow sgb spec → divemobile + gricocaroming → snipe → snapshot + escapemobile → snapshot → wenarrows piercingshot"
+   },
+   {
+    "name": "Phase 3",
+    "text": "wenarrows bolg spec → gricocaroming → galeshot + vulnbomb → rapid → run to middle, then in redbeam → (1t) → sgb spec → gricocaroming → piercingshot"
+   },
+   {
+    "name": "Drop",
+    "text": "fularrow deadshotigneous → snapshot"
+   },
+   {
+    "name": "Font 1",
+    "text": "divert → anti → piercingshot → imbueshadows → gricocaroming → piercingshot → stickybomb + redgolem → rangedbasic → target telos + sgb spec → snapshot"
+   },
+   {
+    "name": "Font 2",
+    "text": "piercingshot → gricocaroming → reflect → piercingshot → freedom → stickybomb + redgolem → galeshot → target telos + deadshotigneous → snapshot"
+   },
+   {
+    "name": "Font 3",
+    "text": "deathsporearrows grico + powerburstofvitality → anti → devo → omniguard + soulboundlantern + threadsoffate → target telos → invokedeath → soulsap → ingen + volleyofsouls → equip bolg"
+   },
+   {
+    "name": "Phase 5",
+    "text": "(tc) + vulnbomb + deathsporearrows + gricocaroming → deathsswiftness → cadeturtling + adrenrenewal → go to greenbeam + ecb splitsoul spec → fularrow + galeshot → gricocaroming + divemobile to redbeam → deadshot → sgb spec → snapshot / shadowtend\nNote: if redgolem use anti after cadeturtling"
+   }
+  ]
+ },
+ {
+  "id": "hermod-the-spirit-of-war-necromancy",
+  "boss": "Hermod, the Spirit of War",
+  "style": "Necromancy",
+  "title": "Hermod",
+  "guide": "https://github.com/pvme/pvme-guides/blob/master/rs3-full-boss-guides/hermod.txt",
+  "presetUrl": "https://pvme.io/preset-maker/#/BsEi4iGWqO8sBAge4j3j",
+  "notes": "Subject to change with meta changes, nerfs / buffs and such.",
+  "equipment": {
+   "head": {
+    "kind": "gear",
+    "id": "deathdealer-hood-tier-90"
+   },
+   "cape": {
+    "kind": "gear",
+    "id": "igneous-kal-zuk"
+   },
+   "neck": {
+    "kind": "gear",
+    "id": "salve-amulet-e"
+   },
+   "mainHand": {
+    "kind": "weapon",
+    "id": "death-guard-tier-90"
+   },
+   "body": {
+    "kind": "gear",
+    "id": "deathdealer-robe-top-tier-90"
+   },
+   "offHand": {
+    "kind": "weapon",
+    "id": "skull-lantern-tier-90"
+   },
+   "legs": {
+    "kind": "gear",
+    "id": "deathdealer-robe-bottom-tier-90"
+   },
+   "hands": {
+    "kind": "gear",
+    "id": "cinderbane-gloves"
+   },
+   "feet": {
+    "kind": "gear",
+    "id": "deathdealer-boots-tier-90"
+   },
+   "ring": {
+    "kind": "gear",
+    "id": "occultist-s-ring"
+   },
+   "ammo": {
+    "kind": "gear",
+    "id": "deathwarden-nexus"
+   },
+   "pocket": {
+    "kind": "gear",
+    "id": "scripture-of-ful"
+   }
+  },
+  "inventory": [
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   {
+    "kind": "special",
+    "id": "vulnerability-bomb"
+   },
+   {
+    "kind": "weapon",
+    "id": "enhanced-excalibur"
+   },
+   null
+  ],
+  "unknown": [
+   "Equilibrium aura",
+   "Elder overload salve (6)",
+   "Adrenaline renewal flask (6)",
+   "Super restore flask (6)",
+   "Weapon poison+++ (1)",
+   "Guthix rest",
+   "Blue blubber jellyfish",
+   "Lantadyme incense sticks",
+   "Kwuarm incense sticks",
+   "Kal'gerion Demon scroll (Crit-i-Kal)",
+   "Binding contract (kal'gerion demon)",
+   "Ancient elven ritual shard"
+  ],
+  "rotations": []
+ },
+ {
+  "id": "vorkath-necromancy",
+  "boss": "Vorkath",
+  "style": "Necromancy",
+  "title": "Solo NM Vorkath",
+  "guide": "https://github.com/pvme/pvme-guides/blob/master/rs3-full-boss-guides/vorkath/necro-vorkath.txt",
+  "presetUrl": "https://pvme.io/preset-maker/#/8boQLxDki0lwAHlarYDh",
+  "notes": "",
+  "equipment": {
+   "head": {
+    "kind": "gear",
+    "id": "crown-of-the-first-necromancer"
+   },
+   "cape": {
+    "kind": "gear",
+    "id": "igneous-kal-zuk"
+   },
+   "neck": {
+    "kind": "gear",
+    "id": "salve-amulet-e"
+   },
+   "mainHand": {
+    "kind": "weapon",
+    "id": "omni-guard"
+   },
+   "body": {
+    "kind": "gear",
+    "id": "robe-top-of-the-first-necromancer"
+   },
+   "offHand": {
+    "kind": "weapon",
+    "id": "soulbound-lantern"
+   },
+   "legs": {
+    "kind": "gear",
+    "id": "robe-bottom-of-the-first-necromancer"
+   },
+   "hands": {
+    "kind": "gear",
+    "id": "hand-wrap-of-the-first-necromancer"
+   },
+   "feet": {
+    "kind": "gear",
+    "id": "foot-wraps-of-the-first-necromancer"
+   },
+   "ring": {
+    "kind": "gear",
+    "id": "ring-of-death"
+   },
+   "ammo": {
+    "kind": "gear",
+    "id": "zemouregal-s-nexus"
+   },
+   "pocket": {
+    "kind": "gear",
+    "id": "scripture-of-ful"
+   }
+  },
+  "inventory": [
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   {
+    "kind": "gear",
+    "id": "essence-of-finality-amulet"
+   },
+   {
+    "kind": "special",
+    "id": "adrenaline-renewal-potion"
+   },
+   null,
+   {
+    "kind": "weapon",
+    "id": "enhanced-excalibur"
+   },
+   {
+    "kind": "gear",
+    "id": "grasping-rune-pouch"
+   },
+   {
+    "kind": "gear",
+    "id": "grasping-rune-pouch"
+   },
+   {
+    "kind": "gear",
+    "id": "grasping-rune-pouch"
+   }
+  ],
+  "unknown": [
+   "Mahjarrat aura",
+   "Elder overload salve (6)",
+   "Spiritual prayer (6)",
+   "Binding contract (ripper demon)",
+   "Saradomin brew flask (6)",
+   "Blue blubber jellyfish",
+   "Powerburst of vitality (4)"
+  ],
+  "rotations": [
+   {
+    "name": "Applicable Damage boosts for Vorkath",
+    "text": "undeadslayer and undeadslayerperk work (dragonslayer and dragonslayerperk do not at time of writing)\nslayerhelm Slayer helm boost and genocidal work while on a dragons cluster, blue dragons or undead cluster slayer task.\nundeadslayerperk + genocidal can be combo'd on the same gizmo\nsalveamulet Salve amulet works\njasdragonbanearrow Jas dragonbane arrows work\nVorkath: 750k constitution per player (1500k in Hardmode)\nZemouregal: 250k constitution per player (500k in Hardmode)"
+   },
+   {
+    "name": "NM Solo (Vorkath Skip)",
+    "text": "Enter gate conjurearmy → splitsoul → invokedeath dive surge → commandghost → (tc) giant commandskeleton vulnbomb → bloat → threadsoffate → soulsap → volleyofsouls → necrobasic → lifetransfer as you dispel the power\ncommandskeleton dive → (tc) Vorkath + deathskulls + vulnbomb → soulsap → touchofdeath → necrobasic → soulsap → livingdeath + adrenrenewal → touchofdeath → deathskulls → commandskeleton undeadslayer → fingerofdeath → necrobasic + balista → necrobasic → fingerofdeath → necrobasic → deathskulls → touchofdeath → necrobasic → soulsap → Vorkath should be reaching 50% HP here.\nTarget Zemouregal → necrobasic vulnbomb → necrobasic → soulsap → splitsoul → bloat → invokedeath → touchofdeath → soulsap → commandskeleton → deathskulls + balista → volleyofsouls → fingerofdeath → omniguard spec → deathguard90 eofspec\nNote: the deathskulls on Zemouregal should line up with Vorkath's flight. Adjust as needed for your phase timing."
+   },
+   {
+    "name": "Pre-fight",
+    "text": "Start with 5 residualsoul stacks and 4 necrosis stacks"
+   },
+   {
+    "name": "Pre-kill",
+    "text": "invokedeath → conjurearmy → lifetransfer → commandghost → commandskeleton (enter instance) → splitsoul + surge"
+   },
+   {
+    "name": "Phase 1",
+    "text": "(tc) + smokecloud + vulnbomb + undeadslayer + bloat → deathskulls → volleyofsouls → prismofrestoration + soulsap → touchofdeath → necrobasic → soulsap → necrobasic → necrobasic → livingdeath + adrenrenewal → touchofdeath + balista → deathskulls → fingerofdeath → fingerofdeath"
+   },
+   {
+    "name": "Phase 2",
+    "text": "Replace 2nd soulsap with anti if no Zonal ice skip\nIf Vorkath is below 800k hp, do not use balista\nsoulsap → necrobasic → necrobasic → soulsap → deathskulls → touchofdeath → necrobasic → necrobasic → fingerofdeath → fingerofdeath → prismofrestoration + soulsap → deathskulls → volleyofsouls → bloat + balista → soulsap → touchofdeath → commandskeleton"
+   },
+   {
+    "name": "Phase 3",
+    "text": "vulnbomb + soulsap → necrobasic → deathskulls + undeadslayer → omniguard spec → soulsap → necrobasic → touchofdeath → soulsap → necrobasic → commandskeleton"
+   },
+   {
+    "name": "Zemouregal",
+    "text": "(tc) + vulnbomb + bloat → splitsoul + balista → soulsap → fingerofdeath → touchofdeath → fingerofdeath → necrobasic → threadsoffate → volleyofsouls → soulsap → deathguard90 eofspec → conjurearmy"
+   },
+   {
+    "name": "Vorkath",
+    "text": "The 1st volleyofsouls assumes that 3 residualsoul stacks were obtained from the threadsoffate against Zemo. If more or less were obtained then adjust accordingly\n(tc) + vulnbomb + soulsap → bloat → commandghost → soulsap → touchofdeath → volleyofsouls → soulsap → necrobasic → commandskeleton → livingdeath + balista → divert → touchofdeath → soulsap → deathskulls → necrobasic → necrobasic → undeadslayer + fingerofdeath → fingerofdeath → prismofrestoration + soulsap → touchofdeath → deathskulls → soulsap → necrobasic → necrobasic → soulsap → omniguard spec → necrobasic"
+   },
+   {
+    "name": "Rotations – Zemouregal",
+    "text": "(tc) + vulnbomb + commandskeleton → deathskulls → bloat → splitsoul → reflect + balista → invokedeath → volleyofsouls → fingerofdeath → touchofdeath → fingerofdeath → deathguard90 eofspec"
+   }
+  ]
+ },
+ {
+  "id": "vorkath-melee",
+  "boss": "Vorkath",
+  "style": "Melee",
+  "title": "HM Vorkath Flightskip Melee only",
+  "guide": "https://github.com/pvme/pvme-guides/blob/master/rs3-full-boss-guides/vorkath/melee-vorkath.txt",
+  "presetUrl": "https://pvme.io/preset-maker/#/3d8cabf4-4985-47c2-93ce-27465be6aca5",
+  "notes": "- Red EOF with Varanus Mercy/Dragon Claws- Omni guard for emergency KO on Zemouregal- Can drop Dscim and Super Brews and bring Super Guthix Rests instead",
+  "equipment": {
+   "head": {
+    "kind": "gear",
+    "id": "vestments-of-havoc-hood"
+   },
+   "cape": {
+    "kind": "gear",
+    "id": "igneous-kal-zuk"
+   },
+   "neck": {
+    "kind": "gear",
+    "id": "salve-amulet-e"
+   },
+   "mainHand": {
+    "kind": "weapon",
+    "id": "dragon-battleaxe"
+   },
+   "body": {
+    "kind": "gear",
+    "id": "vestments-of-havoc-robe-top"
+   },
+   "legs": {
+    "kind": "gear",
+    "id": "vestments-of-havoc-robe-bottom"
+   },
+   "hands": {
+    "kind": "gear",
+    "id": "gloves-of-passage"
+   },
+   "feet": {
+    "kind": "gear",
+    "id": "vestments-of-havoc-boots"
+   },
+   "ring": {
+    "kind": "gear",
+    "id": "reaver-s-ring"
+   },
+   "ammo": {
+    "kind": "gear",
+    "id": "zemouregal-s-nexus"
+   },
+   "pocket": {
+    "kind": "gear",
+    "id": "scrimshaw-of-vampyrism"
+   }
+  },
+  "inventory": [
+   null,
+   {
+    "kind": "special",
+    "id": "adrenaline-renewal-potion"
+   },
+   null,
+   null,
+   null,
+   null,
+   null,
+   {
+    "kind": "weapon",
+    "id": "enhanced-excalibur"
+   },
+   {
+    "kind": "gear",
+    "id": "essence-of-finality-amulet"
+   },
+   {
+    "kind": "gear",
+    "id": "am-hej"
+   },
+   {
+    "kind": "weapon",
+    "id": "ek-zekkil"
+   },
+   {
+    "kind": "weapon",
+    "id": "dark-shard-of-leng"
+   },
+   {
+    "kind": "weapon",
+    "id": "dark-sliver-of-leng"
+   },
+   {
+    "kind": "weapon",
+    "id": "dragon-scimitar"
+   },
+   {
+    "kind": "weapon",
+    "id": "omni-guard"
+   },
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   null,
+   {
+    "kind": "special",
+    "id": "vulnerability-bomb"
+   },
+   {
+    "kind": "gear",
+    "id": "grasping-rune-pouch"
+   },
+   {
+    "kind": "gear",
+    "id": "grasping-rune-pouch"
+   },
+   {
+    "kind": "gear",
+    "id": "grasping-rune-pouch"
+   }
+  ],
+  "unknown": [
+   "vampaura",
+   "elderovlsalve",
+   "spiritual",
+   "sbrew",
+   "vitality4",
+   "sailfish"
+  ],
+  "rotations": [
+   {
+    "name": "War's Retreat",
+    "text": "dba spec → sezk spec → enter portal"
+   },
+   {
+    "name": "Fort Forinthry",
+    "text": "escape while Fort textures loading → claim loot and rejoin instance → surge + click door → surge again when 0:00 visible on boss timer"
+   },
+   {
+    "name": "Vorkath",
+    "text": "dive to Zemouregal → (tc) + meteorstrike → target vorkath + sadaptivestrike → berserk + vulnbomb + equip lengmh lengoh\ngbarge → overpower → gflurry + 1t undeadslayer → assault → rend → overpower → gfury → assault → anti → overpower + dive away from spikes → rend → gflurry → adaptivestrike → overpower / assault → adaptivestrike"
+   },
+   {
+    "name": "Zemouregal",
+    "text": "Two rotation options are provided using either dba + dragonscimitar or annihilation eof\nUsing dba + dragonscimitar\ndba spec → divert + adrenrenewal → adaptivestrike → dragonscimitar spec → smokecloud on Zemouregal → stall w/basics until less than 10 sec left on meteorstrike cooldown → lengmh spec on vorkath to phase below 765k + equip amhej\nmeteorstrike once available → target Zemouregal + sadaptivestrike → berserk + vulnbomb + equip ezk → gbarge → soverpower → roverpower + assault → chaosroar → ezk + ballista → rend → overpower → cane → assault → gfury / punish → overpower / varanussmercy spec\nUsing annihilation eof\nsmokecloud on Zemouregal → stall w/basics until less than 10 sec left on meteorstrike cooldown → lengmh spec on vorkath to phase below 765k\ntarget Zemouregal + annihilation eofspec → adaptivestrike → meteorstrike + 2t → berserk → gbarge → assault → overpower → chaosroar → ezk spec → varanussmercy eofspec → varanussmercy eofspec + adrenrenewal → rend → overpower → varanussmercy eofspec → cane → punish\nanti is required since this rotation does not skip Zemouregal's soulstrike\nHit chance on Zemouregal is very tight under dba. If brewed down at all or without maximum accuracy, dragonscimitar is necessary to maintain 100% hitchance.\nIt is extremely important to control damage to not overphase Vorkath below 765k into flight phase while there is significant >13 sec meteorstrike cooldown remaining. If this happens, the chance of a successful kill is low.\nActivate ballista 2-3 ticks into the first assault. Do not activate a 2nd ballista until after Vorkath departs for flight."
+   },
+   {
+    "name": "Method 2 – War's Retreat",
+    "text": "dba spec → (equip lengmh) + enhancedexcalibur"
+   },
+   {
+    "name": "Method 2 – Fort Forinthry",
+    "text": "berserk + adrenrenewal + claim + instance → dive + enter door + surge"
+   },
+   {
+    "name": "Method 2 – Vorkath",
+    "text": "(tc) + gbarge + vulnbomb → meteorstrike + 1t undeadslayer → gflurry → click Zemouregal + ezk spec → click vorkath + (equip lengmh) adaptivestrike → overpower → assault 3t → chaosroar → cane → rend → overpower\nassault + ballista → gflurry → overpower → mwspear dismember → slaughter → massacre → jawsoftheabyss overpower → adaptivestrike → dba spec → basics until 764k phased"
+   },
+   {
+    "name": "Method 2 – Zemouregal",
+    "text": "(equip ezk + amhej) build to 120 adren → vulnbomb\nberserk → any defensive → divert → gbarge → meteorstrike → overpower → assault + ballista → cane → lengmh spec → punish → overpower → chaosroar → ezk spec → improv"
+   }
+  ]
+ }
+]

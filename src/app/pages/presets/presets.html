@@ -1,0 +1,68 @@
+<div class="panel controls">
+  <h1>Boss presets</h1>
+  <p class="muted small">
+    Gear and rotations from the <a href="https://github.com/pvme/pvme-guides" target="_blank" rel="noopener">PvME boss guides</a> (PvM Encyclopedia Discord).
+    "Add" creates a loadout with the preset's worn gear and backpack, imports the guide's rotations and puts the abilities they use on free action bars bound to the style – nothing of yours is replaced.
+    Food, brews, familiars and other things the trainer does not simulate are left out.
+  </p>
+  <div class="chips">
+    <button class="chip" [class.active]="styleFilter() === 'all'" (click)="styleFilter.set('all')">All styles</button>
+    @for (s of styles(); track s) {
+      <button class="chip" [class.active]="styleFilter() === s" (click)="styleFilter.set(s)">{{ s }}</button>
+    }
+  </div>
+</div>
+
+@if (error(); as e) {
+  <div class="panel warning">{{ e }}</div>
+} @else if (loading() || !data.loaded()) {
+  <p class="muted">Loading…</p>
+}
+
+@for (v of views(); track v.preset.id) {
+  <div class="panel preset" [class.open]="open() === v.preset.id">
+    <div class="preset-head">
+      <div>
+        <h3>{{ v.preset.boss }} <span class="style">{{ v.preset.style }}</span></h3>
+        <div class="muted small">{{ v.preset.title }} · {{ v.preset.rotations.length }} rotations · {{ v.worn.length }} worn items · {{ v.carried.length }} in the backpack</div>
+      </div>
+      <span class="actions">
+        <button class="btn btn-sm" (click)="toggle(v.preset.id)">{{ open() === v.preset.id ? 'Hide' : 'Details' }}</button>
+        <button class="btn btn-sm btn-primary" (click)="load(v.preset)" [disabled]="busy() === v.preset.id">Add</button>
+      </span>
+    </div>
+    <div class="gear-row">
+      @for (g of v.worn; track g.ref.kind + g.ref.id) {
+        <span class="gear" [gearTip]="g">@if (g.icon) { <img [src]="g.icon" [alt]="g.name" /> } @else { <span class="noicon">{{ g.name.slice(0, 3) }}</span> }</span>
+      }
+      @if (v.carried.length) { <span class="sep">backpack</span> }
+      @for (g of v.carried; track $index) {
+        <span class="gear" [gearTip]="g">@if (g.icon) { <img [src]="g.icon" [alt]="g.name" /> } @else { <span class="noicon">{{ g.name.slice(0, 3) }}</span> }</span>
+      }
+    </div>
+    @if (open() === v.preset.id) {
+      <div class="details">
+        <div>
+          <h4>Rotations</h4>
+          <ul>
+            @for (r of parse(v.preset); track r.name) {
+              <li>
+                <b>{{ r.name }}</b> <span class="muted small">{{ r.steps.length }} steps{{ r.unknown.length ? ' · unknown: ' + r.unknown.join(', ') : '' }}</span>
+              </li>
+            }
+          </ul>
+        </div>
+        <div>
+          <h4>Source</h4>
+          <p class="small"><a [href]="v.preset.guide" target="_blank" rel="noopener">PvME guide</a>@if (v.preset.presetUrl) { · <a [href]="v.preset.presetUrl" target="_blank" rel="noopener">PvME preset</a> }</p>
+          @if (v.preset.notes) { <p class="muted small">{{ v.preset.notes }}</p> }
+          @if (v.preset.unknown.length) {
+            <p class="muted small">Not in the trainer: {{ v.preset.unknown.join(', ') }}</p>
+          }
+        </div>
+      </div>
+    }
+  </div>
+} @empty {
+  @if (!loading() && data.loaded()) { <p class="muted">No presets for this style.</p> }
+}
