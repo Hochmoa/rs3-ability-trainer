@@ -1,0 +1,172 @@
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 18px;
+
+  label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .hint {
+    font-size: 13px;
+  }
+}
+
+.empty {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.bars {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 22px;
+}
+
+.bar-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.bar-label {
+  width: 90px;
+  font-weight: 600;
+  text-align: right;
+
+  small {
+    color: var(--muted);
+    font-weight: 400;
+    margin-left: 4px;
+  }
+}
+
+.bar {
+  position: relative;
+  flex: 1;
+  height: 18px;
+  background: #0a0a0c;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+
+  .fill {
+    height: 100%;
+    background: linear-gradient(90deg, #6d5a1a, #e0b834);
+  }
+
+  &.tick .fill {
+    background: linear-gradient(90deg, #1a4a6d, #34a8e0);
+  }
+
+  .window {
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 100%;
+    border-left: 1px dashed rgba(255, 255, 255, 0.5);
+    background: rgba(255, 255, 255, 0.07);
+    pointer-events: none;
+  }
+}
+
+.ability-queue {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 14px;
+  min-height: 150px;
+  padding: 10px 0;
+  overflow-x: auto;
+
+  &.finished {
+    opacity: 0.5;
+  }
+}
+
+.slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+
+  .name {
+    font-size: 12px;
+    color: var(--muted);
+    max-width: 110px;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &.prev {
+    opacity: 0.35;
+  }
+
+  &.current .name {
+    color: var(--text);
+    font-weight: 600;
+    font-size: 14px;
+  }
+}
+
+.arrow {
+  align-self: center;
+  font-size: 36px;
+  color: var(--muted);
+  padding-bottom: 20px;
+}
+
+.feedback {
+  min-height: 26px;
+  margin-top: 6px;
+  text-align: center;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--muted);
+
+  &.good {
+    color: var(--good);
+  }
+  &.warn {
+    color: var(--warn);
+  }
+  &.bad {
+    color: var(--bad);
+  }
+  &.info {
+    color: var(--text);
+    font-weight: 400;
+  }
+}
+
+.counts {
+  display: flex;
+  justify-content: center;
+  gap: 22px;
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+.summary table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+
+  th,
+  td {
+    text-align: left;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  th {
+    color: var(--muted);
+    font-weight: 600;
+  }
+}

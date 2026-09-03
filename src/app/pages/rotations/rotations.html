@@ -1,0 +1,93 @@
+@if (editing(); as e) {
+  <div class="panel editor-head">
+    <label>
+      Name
+      <input type="text" [ngModel]="e.name" (ngModelChange)="setName($event)" maxlength="60" />
+    </label>
+    <div class="actions">
+      <button class="btn btn-primary" (click)="save()" [disabled]="!e.steps.length">Save</button>
+      <button class="btn" (click)="cancel()">Cancel</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Rotation <span class="muted">({{ e.steps.length }} steps)</span></h2>
+    @if (!e.steps.length) {
+      <p class="muted">Click abilities in the catalog below to append them.</p>
+    }
+    <div class="steps">
+      @for (id of e.steps; track $index) {
+        @if (ability(id); as a) {
+          <div class="step">
+            <span class="num">{{ $index + 1 }}</span>
+            <ability-icon [ability]="a" [px]="44" [keyLabel]="keyOf(id)" />
+            <span class="name">{{ a.name }}</span>
+            <span class="step-actions">
+              <button class="btn btn-sm" (click)="move($index, -1)" [disabled]="$first" title="Move up">↑</button>
+              <button class="btn btn-sm" (click)="move($index, 1)" [disabled]="$last" title="Move down">↓</button>
+              <button class="btn btn-sm danger" (click)="removeStep($index)" title="Remove">×</button>
+            </span>
+          </div>
+        }
+      }
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Ability catalog</h2>
+    <div class="catalog-controls">
+      <div class="tabs">
+        @for (s of STYLES; track s) {
+          <button class="tab" [class.active]="style() === s && !search()" (click)="style.set(s); search.set('')">{{ s }}</button>
+        }
+      </div>
+      <input type="search" placeholder="Search all styles…" [ngModel]="search()" (ngModelChange)="search.set($event)" />
+    </div>
+    <div class="grid">
+      @for (a of catalog(); track a.id) {
+        <button
+          class="cell"
+          [class.off-gcd]="!a.triggersGcd"
+          (click)="add(a)"
+          [disabled]="!a.triggersGcd"
+          [title]="a.triggersGcd ? 'Add ' + a.name : a.name + ' ignores the global cooldown – queueing off-GCD abilities is coming later'"
+        >
+          <ability-icon [ability]="a" [px]="52" [keyLabel]="keyOf(a.id)" />
+          <span class="cell-name">{{ a.name }}</span>
+          <span class="cell-type">{{ a.type }} · {{ a.level }}</span>
+        </button>
+      }
+    </div>
+    <p class="muted small">Greyed-out abilities (Surge, Escape, …) don't trigger the global cooldown and can't be queued yet.</p>
+  </div>
+} @else {
+  <div class="panel list-head">
+    <h2>Rotations</h2>
+    <button class="btn btn-primary" (click)="newRotation()">New rotation</button>
+  </div>
+  @if (!storage.rotations().length) {
+    <div class="panel empty">
+      <p>No rotations yet. Create one, then <a routerLink="/keybinds">bind keys</a> to its abilities.</p>
+    </div>
+  }
+  @for (r of storage.rotations(); track r.id) {
+    <div class="panel rotation">
+      <div class="rotation-head">
+        <h3>{{ r.name }}</h3>
+        <span class="muted">{{ r.steps.length }} steps</span>
+        <span class="actions">
+          <button class="btn btn-primary btn-sm" (click)="train(r)" [disabled]="!r.steps.length">Train</button>
+          <button class="btn btn-sm" (click)="edit(r)">Edit</button>
+          <button class="btn btn-sm danger" (click)="remove(r)">Delete</button>
+        </span>
+      </div>
+      <div class="preview">
+        @for (id of r.steps; track $index) {
+          @if (ability(id); as a) {
+            <ability-icon [ability]="a" [px]="40" [keyLabel]="keyOf(id)" />
+          }
+        }
+      </div>
+    </div>
+  }
+}

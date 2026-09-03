@@ -1,0 +1,114 @@
+@if (!storage.ready() || !abilities.loaded()) {
+  <p class="muted">Loading…</p>
+} @else if (!storage.rotations().length) {
+  <div class="panel empty">
+    <h2>No rotation yet</h2>
+    <p>Build a rotation first, then bind keys to its abilities.</p>
+    <a class="btn btn-primary" routerLink="/rotations">Create a rotation</a>
+  </div>
+} @else {
+  <div class="panel controls">
+    <label>
+      Rotation
+      <select [ngModel]="selectedId()" (ngModelChange)="selectedId.set($event)" [disabled]="running()">
+        @for (r of storage.rotations(); track r.id) {
+          <option [value]="r.id">{{ r.name }} ({{ r.steps.length }})</option>
+        }
+      </select>
+    </label>
+    @if (!running()) {
+      <button class="btn btn-primary" (click)="start()" [disabled]="!canStart()">Start</button>
+    } @else {
+      <button class="btn" (click)="stop()">Stop (Esc)</button>
+    }
+    <span class="muted hint">
+      Ping {{ storage.settings().pingMs }} ms ± {{ storage.settings().jitterMs }} · queue window
+      {{ storage.settings().queueWindowTicks }} tick{{ storage.settings().queueWindowTicks === 1 ? '' : 's' }}
+      @if (storage.settings().loop) { · loop }
+    </span>
+  </div>
+
+  @if (missingBinds().length) {
+    <div class="panel warning">
+      Missing keybinds for
+      @for (a of missingBinds(); track a.id) {
+        <b>{{ a.name }}</b>{{ $last ? '' : ', ' }}
+      }
+      – <a routerLink="/keybinds">bind them</a> before training.
+    </div>
+  }
+  @if (unknownSteps().length) {
+    <div class="panel warning">This rotation contains abilities that no longer exist in the catalog. Edit it to fix.</div>
+  }
+
+  <div class="panel arena">
+    <div class="bars">
+      <div class="bar-row">
+        <span class="bar-label">Tick <small>0.6 s</small></span>
+        <div class="bar tick"><div class="fill" [style.width.%]="tickPhase() * 100"></div></div>
+      </div>
+      <div class="bar-row">
+        <span class="bar-label">GCD <small>1.8 s</small></span>
+        <div class="bar gcd">
+          <div class="fill" [style.width.%]="(running() ? gcdPhase() : 0) * 100"></div>
+          <div class="window" [style.width.%]="(storage.settings().queueWindowTicks / 3) * 100"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ability-queue" [class.finished]="finished() && !running()">
+      @for (s of slots(); track $index) {
+        <div class="slot" [class]="'slot ' + s.kind">
+          <ability-icon
+            [ability]="s.ability"
+            [keyLabel]="s.key"
+            [px]="s.kind === 'current' ? 112 : s.kind === 'next' ? 64 : 48"
+            [gcdPhase]="s.kind === 'current' && running() ? gcdPhase() : 1"
+            [remainingMs]="s.kind === 'current' && running() ? gcdRemaining() : 0"
+            [state]="s.kind === 'current' && running() ? iconState() : 'idle'"
+          />
+          <span class="name">{{ s.ability.name }}</span>
+        </div>
+        @if (s.kind === 'current') {
+          <div class="arrow">›</div>
+        }
+      }
+    </div>
+
+    <div class="feedback" [class]="'feedback ' + (feedback()?.cls ?? '')">
+      {{ feedback()?.text ?? (canStart() ? 'Press Start, then hit the keybind shown on the big icon during the last tick of the cooldown.' : '') }}
+    </div>
+
+    <div class="counts">
+      <span class="good">Perfect {{ counts().perfect }}</span>
+      <span class="warn">Late {{ counts().late }}</span>
+      <span class="bad">Too early {{ counts().early }}</span>
+      <span class="bad">Wrong {{ counts().wrong }}</span>
+    </div>
+  </div>
+
+  @if (finished() && results().length) {
+    <div class="panel summary">
+      <h2>Session summary – {{ accuracy() }}% perfect</h2>
+      <table>
+        <thead>
+          <tr><th>#</th><th>Ability</th><th>Result</th><th>Offset</th><th>Too early</th><th>Wrong</th></tr>
+        </thead>
+        <tbody>
+          @for (r of results(); track $index) {
+            <tr>
+              <td>{{ $index + 1 }}</td>
+              <td>{{ abilityName(r.abilityId) }}</td>
+              <td [class]="r.outcome === 'perfect' ? 'good' : 'warn'">
+                {{ r.outcome === 'perfect' ? 'perfect' : 'late ' + r.lateTicks + (r.lateTicks === 1 ? ' tick' : ' ticks') }}
+              </td>
+              <td>{{ r.outcome === 'perfect' ? (r.offsetMs ? '-' + r.offsetMs + ' ms' : '–') : '+' + r.offsetMs + ' ms' }}</td>
+              <td>{{ r.tooEarly || '' }}</td>
+              <td>{{ r.wrong || '' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+}

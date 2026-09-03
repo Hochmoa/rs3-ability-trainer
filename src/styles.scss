@@ -1,1 +1,136 @@
-/* You can add global styles to this file, and also import other style files */
+:root {
+  --bg: #0f0f12;
+  --panel: #1b1a1f;
+  --border: #35333c;
+  --gold: #c9a227;
+  --text: #e8e4d8;
+  --muted: #9a968c;
+  --good: #4caf50;
+  --bad: #e53935;
+  --warn: #ffb300;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+a {
+  color: var(--gold);
+}
+
+h2 {
+  font-size: 18px;
+  margin: 0 0 12px;
+}
+
+h3 {
+  font-size: 16px;
+  margin: 0;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px 18px;
+  margin-bottom: 16px;
+
+  &.warning {
+    border-color: var(--warn);
+    color: var(--warn);
+  }
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.small {
+  font-size: 13px;
+}
+
+.good {
+  color: var(--good);
+}
+
+.warn {
+  color: var(--warn);
+}
+
+.bad {
+  color: var(--bad);
+}
+
+.btn {
+  display: inline-block;
+  padding: 8px 16px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: #26252c;
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  line-height: 1.2;
+
+  &:hover:not(:disabled) {
+    border-color: var(--gold);
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  &.btn-primary {
+    background: var(--gold);
+    border-color: var(--gold);
+    color: #1a1608;
+  }
+
+  &.btn-sm {
+    padding: 4px 10px;
+    font-size: 13px;
+  }
+
+  &.danger {
+    color: #ff8a80;
+
+    &:hover:not(:disabled) {
+      border-color: var(--bad);
+    }
+  }
+}
+
+input[type='text'],
+input[type='number'],
+input[type='search'],
+select {
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: #0f0f12;
+  color: var(--text);
+  font: inherit;
+
+  &:focus {
+    outline: none;
+    border-color: var(--gold);
+  }
+}
+
+input[type='number'] {
+  width: 120px;
+}

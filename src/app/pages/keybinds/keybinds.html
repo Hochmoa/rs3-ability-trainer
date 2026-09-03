@@ -1,0 +1,52 @@
+<div class="panel head">
+  <h2>Keybinds</h2>
+  <label class="toggle">
+    <input type="checkbox" [checked]="showAll()" (change)="showAll.set(!showAll())" />
+    Show all abilities
+  </label>
+</div>
+
+<div class="panel">
+  @if (!list().length) {
+    <p class="muted">
+      No abilities to bind yet. <a routerLink="/rotations">Create a rotation</a> first, or tick "Show all abilities".
+    </p>
+  } @else {
+    <p class="muted small">
+      Click <b>Bind</b>, then press the key or key combination (Ctrl / Shift / Alt work). Esc cancels, Backspace clears.
+      Combos the browser reserves (e.g. Ctrl+W, Ctrl+T, F5) won't work reliably.
+    </p>
+    <table>
+      <thead>
+        <tr><th></th><th>Ability</th><th>Style</th><th>Keybind</th><th></th></tr>
+      </thead>
+      <tbody>
+        @for (a of list(); track a.id) {
+          <tr [class.capturing]="capturing() === a.id">
+            <td><ability-icon [ability]="a" [px]="36" /></td>
+            <td>{{ a.name }}</td>
+            <td class="muted">{{ a.style }} · {{ a.type }}</td>
+            <td>
+              @if (capturing() === a.id) {
+                <span class="key waiting">Press a key…</span>
+              } @else if (label(a.id)) {
+                <span class="key">{{ label(a.id) }}</span>
+                @if (conflictOf(a.id).length) {
+                  <span class="conflict" [title]="'Also bound to ' + conflictOf(a.id).join(', ')">⚠ also {{ conflictOf(a.id).join(', ') }}</span>
+                }
+              } @else {
+                <span class="muted">–</span>
+              }
+            </td>
+            <td class="actions">
+              <button class="btn btn-sm" (click)="capture(a.id)">{{ capturing() === a.id ? 'Cancel' : 'Bind' }}</button>
+              @if (label(a.id)) {
+                <button class="btn btn-sm" (click)="clear(a.id)">Clear</button>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</div>

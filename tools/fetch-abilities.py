@@ -26,7 +26,7 @@ UTILITY_KEEP = {"Surge", "Escape", "Dive", "Limitless"}
 SKIP = {"Magma Tempest (Targeted)", "Single-Way Wilderness", "Revolution"}
 STYLE = {"Attack": "Melee", "Strength": "Melee", "Melee": "Melee", "Ranged": "Ranged", "Magic": "Magic",
          "Necromancy": "Necromancy", "Defence": "Defence", "Constitution": "Constitution"}
-TYPE_ORDER = {"Basic": 0, "Threshold": 1, "Ultimate": 2, "Special": 3}
+TYPE_ORDER = {"Basic": 0, "Enhanced": 1, "Threshold": 2, "Ultimate": 3, "Special": 4}
 STYLE_ORDER = {"Melee": 0, "Ranged": 1, "Magic": 2, "Necromancy": 3, "Defence": 4, "Constitution": 5}
 
 
@@ -45,20 +45,23 @@ def main():
     ICON_DIR.mkdir(parents=True, exist_ok=True)
     rows = get({"action": "bucket", "format": "json", "formatversion": "2",
                 "query": "bucket('infobox_ability').select('name','type','skill','level').limit(500).run()"})["bucket"]
-    seen, abilities = set(), []
+    # a few names appear more than once (variants); keep the first row per name
+    best = {}
     for r in rows:
         name, typ, skill = r.get("name", ""), r.get("type", ""), r.get("skill", "")
-        if name in seen or name in SKIP or skill not in STYLE:
+        if not name or name in SKIP or name.startswith("Lesser ") or skill not in STYLE:
             continue
         if typ == "Utility" and name not in UTILITY_KEEP:
             continue
-        if typ == "Enhanced":
-            typ = "Basic"  # upgraded versions share the base ability's name; treat as basic
+        if name not in best:
+            best[name] = {"name": name, "type": typ, "skill": skill, "level": int(r.get("level") or 0)}
+    abilities = []
+    for r in best.values():
+        name, typ = r["name"], r["type"]
         if typ == "Utility":
-            typ = "Basic"
-        seen.add(name)
-        abilities.append({"id": slug(name), "name": name, "style": STYLE[skill], "type": typ,
-                          "level": int(r.get("level") or 0), "icon": "assets/abilities/" + slug(name) + ".png",
+            typ = "Basic"  # Surge/Escape/Dive/Limitless
+        abilities.append({"id": slug(name), "name": name, "style": STYLE[r["skill"]], "type": typ,
+                          "level": r["level"], "icon": "assets/abilities/" + slug(name) + ".png",
                           "triggersGcd": name not in OFF_GCD})
 
     # icon URLs, 50 titles per request

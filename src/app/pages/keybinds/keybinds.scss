@@ -1,0 +1,77 @@
+.head {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+
+  h2 {
+    margin: 0;
+    flex: 1;
+  }
+
+  .toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+  }
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+
+  th,
+  td {
+    text-align: left;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+
+  th {
+    color: var(--muted);
+    font-weight: 600;
+    font-size: 13px;
+  }
+
+  tr.capturing td {
+    background: rgba(201, 162, 39, 0.1);
+  }
+
+  .actions {
+    text-align: right;
+    white-space: nowrap;
+
+    .btn + .btn {
+      margin-left: 4px;
+    }
+  }
+}
+
+.key {
+  display: inline-block;
+  padding: 2px 8px;
+  border: 1px solid var(--gold);
+  border-radius: 4px;
+  color: #ffe27a;
+  font-weight: 600;
+  font-family: ui-monospace, Consolas, monospace;
+
+  &.waiting {
+    border-style: dashed;
+    color: var(--muted);
+    animation: blink 1s infinite;
+  }
+}
+
+.conflict {
+  margin-left: 8px;
+  color: var(--warn);
+  font-size: 12px;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0.4;
+  }
+}
