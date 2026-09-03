@@ -31,14 +31,71 @@ def get(params: dict) -> dict:
     raise RuntimeError("unreachable")
 
 
-def bucket(name: str, fields: list[str], limit: int = 5000, where: tuple[str, str] | None = None) -> list[dict]:
+def bucket(name: str, fields: list[str], limit: int = 5000, where: tuple[str, str] | None = None,
+           offset: int = 0) -> list[dict]:
     w = f".where({where[0]!r},{where[1]!r})" if where else ""
-    q = f"bucket('{name}').select({','.join(repr(f) for f in fields)}){w}.limit({limit}).run()"
-    rows = get({"action": "bucket", "format": "json", "formatversion": "2", "query": q})["bucket"]
+    o = f".offset({offset})" if offset else ""
+    q = f"bucket('{name}').select({','.join(repr(f) for f in fields)}){w}.limit({limit}){o}.run()"
+    data = get({"action": "bucket", "format": "json", "formatversion": "2", "query": q})
+    if "error" in data:
+        raise RuntimeError(data["error"])
+    rows = data["bucket"]
     for r in rows:
         if isinstance(r.get("json"), str):
-            r["json"] = json.loads(r["json"])
+            try:
+                r["json"] = json.loads(r["json"])
+            except json.JSONDecodeError:
+                r["json"] = {}
     return rows
+
+
+def bucket_all(name: str, fields: list[str]) -> list[dict]:
+    """Whole bucket, 5000 rows per request."""
+    out: list[dict] = []
+    offset = 0
+    while True:
+        rows = bucket(name, fields, limit=5000, offset=offset)
+        out.extend(rows)
+        if len(rows) < 5000:
+            return out
+        offset += 5000
+        time.sleep(0.5)
+
+
+def category_members(category: str, namespace: int = 0) -> list[str]:
+    """All page titles in a category (follows continuation)."""
+    titles: list[str] = []
+    params = {"action": "query", "format": "json", "formatversion": "2", "list": "categorymembers",
+              "cmtitle": "Category:" + category, "cmlimit": "500", "cmnamespace": str(namespace)}
+    while True:
+        data = get(params)
+        titles += [m["title"] for m in data["query"]["categorymembers"]]
+        cont = data.get("continue", {}).get("cmcontinue")
+        if not cont:
+            return titles
+        params["cmcontinue"] = cont
+        time.sleep(0.3)
+
+
+def embedded_in(template: str) -> list[str]:
+    """Pages transcluding a template."""
+    titles: list[str] = []
+    params = {"action": "query", "format": "json", "formatversion": "2", "list": "embeddedin",
+              "eititle": "Template:" + template, "eilimit": "500", "einamespace": "0"}
+    while True:
+        data = get(params)
+        titles += [m["title"] for m in data["query"]["embeddedin"]]
+        cont = data.get("continue", {}).get("eicontinue")
+        if not cont:
+            return titles
+        params["eicontinue"] = cont
+        time.sleep(0.3)
+
+
+def parse_duration_ticks(desc: str) -> int | None:
+    """'* 30s (50 ticks) duration.' -> 50"""
+    m = re.search(r"(\d+(?:\.\d+)?)s \((\d+) (?:game )?ticks?\) duration", desc)
+    return int(m.group(2)) if m else None
 
 
 def wikitext(titles: list[str]) -> dict[str, str]:

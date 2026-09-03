@@ -1,5 +1,18 @@
 [
  {
+  "id": 52778,
+  "name": "Anima Charged",
+  "kind": "Buff",
+  "category": "Offensive abilities",
+  "desc": "Anima Charged\n-Your next Magic ability is empowered:\n- Sonic Wave: Your next Magic ability costs 35% less Adrenaline.\n- Dragon Breath: Deals 260%-310% Magic damage.\n- Concentrated Blast: Each attack grants an additional 10% Critical Strike Chance.",
+  "iconSelf": "assets/status/anima-charged.png",
+  "iconTarget": null,
+  "duration": "15 seconds or until casting one of the affected abilities",
+  "durationTicks": 25,
+  "trigger": "Activating Runic Charge",
+  "effects": "* Causes Sonic Wave to reduce the adrenaline cost of the next Magic ability by 35% rather than 10%\n* Causes Greater Sonic Wave to reduce the adrenaline cost of the next Magic ability by 45% rather than 20%\n* Causes Dragon Breath to deal 260%-310% damage rather than 110%-130%\n* Causes Concentrated Blast and Greater Concentrated Blast to grant an additional 10% Critical Strike Chance"
+ },
+ {
   "id": 14710,
   "name": "Anticipation",
   "kind": "Buff",
@@ -11,6 +24,19 @@
   "durationTicks": 17,
   "trigger": "Activating the Anticipation ability",
   "effects": "*Reduces all damage taken by 10%\n*Grants immunity to stuns"
+ },
+ {
+  "id": 49551,
+  "name": "Balance by Force",
+  "kind": "Buff",
+  "category": "Offensive abilities",
+  "desc": "Balance by Force\nStrike your target with an arrow of pure anima.",
+  "iconSelf": "assets/status/balance-by-force-status.png",
+  "iconTarget": null,
+  "duration": "30 seconds",
+  "durationTicks": 50,
+  "trigger": "Activating Balance by Force, the Bow of the Last Guardian's special attack (or used with Essence of Finality)",
+  "effects": "Reduces the number of stacks of Perfect Equilibrium needed to trigger its effect from 8 down to 4"
  },
  {
   "id": 14719,
@@ -117,6 +143,19 @@
   "effects": "Combust:\n*Deals 27%-33% ability damage every 1.8 seconds (maximum of 5 hits)\n*Causes Dragon Breath to deal 1.25 damage\nBlazer:\n*Deals 500 damage every 1.2 seconds (maximum of 5 hits)\n*If a target is affected by the Combust ability and Blazer effect, only Combust damage is taken\nDragon Breath:\n*Deals 18.8% ability damage every 1.2 seconds (maximum of 3 hits)\n*Stacks with the Combust ability"
  },
  {
+  "id": 50070,
+  "name": "Conflagrate",
+  "kind": "Buff",
+  "category": "Offensive abilities",
+  "desc": "Conflagrate\n- Your next Combust within 15s deals 40% increased damage.",
+  "iconSelf": "assets/status/conflagrate.png",
+  "iconTarget": null,
+  "duration": "15 seconds",
+  "durationTicks": 25,
+  "trigger": "Activating Soulfire, the Roar of Awakening's special attack (or used with Essence of Finality)",
+  "effects": "Your next Combust within 15 seconds deals 40% increased damage."
+ },
+ {
   "id": 31985,
   "name": "Corruption Blast",
   "kind": "Debuff",
@@ -141,6 +180,19 @@
   "durationTicks": 10,
   "trigger": "Applied to targets hit by the Corruption Shot ability",
   "effects": "*Deals damage every 1.2 seconds (maximum of 5 hits)\n*First hit deals 33-100% of the user's ability damage\n*Subsequent hits deal 80%, 60%, 40% and 20% respectively"
+ },
+ {
+  "id": 48351,
+  "name": "Death Essence",
+  "kind": "Buff",
+  "category": "Offensive abilities",
+  "desc": "Death Essence\n\n- Touch of Death, Finger of Death, Death Skulls: Immediately readies Death Spark",
+  "iconSelf": "assets/status/death-essence-status.png",
+  "iconTarget": null,
+  "duration": "30 seconds",
+  "durationTicks": 50,
+  "trigger": "Activating Death Essence, the Weapon Special Attack of the Omni guard",
+  "effects": "Activating Touch of Death, Finger of Death, or Death Skulls causes Death Spark to be readied"
  },
  {
   "id": 48350,
@@ -195,6 +247,19 @@
   "effects": "*The effectiveness of protection prayers and deflect curses is increased to 100% (damage reduced to 1)\n*In PvP, effectiveness is increased to 75%"
  },
  {
+  "id": 34986,
+  "name": "Devour Active",
+  "kind": "Debuff",
+  "category": "Offensive abilities",
+  "desc": "Devour Active - All healing is half as effective.",
+  "iconSelf": "assets/status/devour-active-self-status.png",
+  "iconTarget": "assets/status/devour-active-target-status.png",
+  "duration": "10 seconds",
+  "durationTicks": 17,
+  "trigger": "Applied to targets hit by Devour, Obliteration's special attack (or used with Essence of Finality)",
+  "effects": "Halves the amount of life points restored by most form of healing"
+ },
+ {
   "id": 44244,
   "name": "Dismember",
   "kind": "Debuff",
@@ -234,6 +299,19 @@
   "effects": "* Reduces the damage from the next attack that deals more than 1 damage to 1\n* Grants adrenaline based on the damage blocked and tier of the equipped shield or defender\n** Defenders are treated as a shield of half their level\n* Soft typeless damage is blocked but does not grant adrenaline"
  },
  {
+  "id": 51672,
+  "name": "Flamebound Rival",
+  "kind": "Buff",
+  "category": "Offensive abilities",
+  "desc": "Flamebound Rival",
+  "iconSelf": "assets/status/flamebound-rival.png",
+  "iconTarget": null,
+  "duration": "Indefinite",
+  "durationTicks": null,
+  "trigger": "Applied to targets hit by the Igneous Showdown special attack of the Ek-ZekKil.",
+  "effects": "* Damage dealt by player who applied the debuff to the subject of the debuff, while wielding an Ek-ZekKil, will be increased by 12%.\n* Damage taken by the player who applied the debuff from the subject of the debuff, while wielding an Ek-ZekKil, will be decreased by 12%."
+ },
+ {
   "id": 46308,
   "name": "Flow",
   "kind": "Buff",
@@ -258,6 +336,19 @@
   "durationTicks": 10,
   "trigger": "Activating the Freedom ability",
   "effects": "*Initially, clears most stun, bind and bleed effects\n*Grants immunity to stuns and binds"
+ },
+ {
+  "id": 34984,
+  "name": "Gravitate Active",
+  "kind": "Buff",
+  "category": "Offensive abilities",
+  "desc": "Gravitate Active - Provides +1% extra damage per stack until you miss, capping at 20%.",
+  "iconSelf": "assets/status/gravitate-active-self-status.png",
+  "iconTarget": null,
+  "duration": "*30 seconds\n*Removed upon missing\n*Removed upon switching weapons",
+  "durationTicks": 50,
+  "trigger": "Activating Gravitate, Annihilation's special attack (or used with Essence of Finality)",
+  "effects": "*All successful ability hits grant 1 stack\n*Auto-attacks in Legacy Mode grant 2 stacks\n*Grants 1% increased damage per stack (maximum of 20 stacks)"
  },
  {
   "id": 40938,
@@ -377,6 +468,19 @@
   "effects": "*Reduces damage taken by 25%\n*If the user dies, return to life with 40% of their maximum life points"
  },
  {
+  "id": 52061,
+  "name": "Lesser Purifying Light",
+  "kind": "Buff",
+  "category": "Offensive abilities",
+  "desc": "Lesser Purifying Light\n- 45%-55% Melee damage to up to 2 additional enemies within 4 tiles of the target.",
+  "iconSelf": "assets/status/lesser-purifying-light.png",
+  "iconTarget": null,
+  "duration": "30 seconds",
+  "durationTicks": 50,
+  "trigger": "Using the Sunfall Slam special attack of the Tumeken's Light",
+  "effects": "Every melee ability causes up to 2 projectiles to travel from the primary target of the ability to other enemies within 4 tiles of the primary target.\n\nAbilities which hit secondary targets will not cause additional projectiles to spawn.\n\nChannelled abilities such as Assault will spawn projectiles on each hit, unless they are affected by Greater Barge.\n\nMulti-hit abilities such as Hurricane and Slice & Dice will not spawn additional projectiles."
+ },
+ {
   "id": 37214,
   "name": "Limitless",
   "kind": "Buff",
@@ -388,6 +492,19 @@
   "durationTicks": 10,
   "trigger": "Activating the Limitless ability",
   "effects": "Allows the use of abilities with 15% instead of 50% adrenaline"
+ },
+ {
+  "id": 34985,
+  "name": "Locate Active",
+  "kind": "Buff",
+  "category": "Offensive abilities",
+  "desc": "Locate Active - All ranged and neutral attacks affect a 3x3 area.",
+  "iconSelf": "assets/status/locate-active-self-status.png",
+  "iconTarget": "assets/status/locate-active-target-status.png",
+  "duration": "*10 seconds\n*Removed upon switching weapons",
+  "durationTicks": 17,
+  "trigger": "Activating Locate, Decimation's special attack (or used with Essence of Finality)",
+  "effects": "Most abilities hit up to 9 additional targets within 1 tile of the main target"
  },
  {
   "id": 48283,
@@ -468,6 +585,32 @@
   "effects": "* Reduces incoming damage from core types by up to 5%, capped at 10% of the player's ability damage\n** This reduced damage is depicted as a blocked damage hitsplat on the Phantom Guardian with a cyan background and a shield icon\n* Tracks stacks of valour whilst the Phantom Guardian is conjured.\n* Activation of Command Phantom Guardian consumes all stacks of valour and deals an additional 20% damage to the player's opponent for each stack."
  },
  {
+  "id": 44854,
+  "name": "Power of Darkness",
+  "kind": "Buff",
+  "category": "Status effects",
+  "desc": "Reduces all incoming damage by 25% and 25% of incoming damage is reflected back to the attacker.",
+  "iconSelf": "assets/status/power-of-darkness-self-status.png",
+  "iconTarget": null,
+  "duration": "20 seconds",
+  "durationTicks": 33,
+  "trigger": "Activating Power of Darkness, the staff of darkness's special attack (or used with Essence of Finality)",
+  "effects": "*Reduces damage taken by 25%\n*Reflects 25% of incoming damage back to the attacker"
+ },
+ {
+  "id": 44853,
+  "name": "Power of Light",
+  "kind": "Buff",
+  "category": "Status effects",
+  "desc": "Reduce all incoming melee damage by 50%",
+  "iconSelf": "assets/status/power-of-light-self-status.png",
+  "iconTarget": null,
+  "duration": "*1 minute\n*Ends upon switching weapons",
+  "durationTicks": null,
+  "trigger": "Activating Power of Light, the staff of light's special attack (or used with Essence of Finality)",
+  "effects": "Reduces melee damage taken by 50%"
+ },
+ {
   "id": 14714,
   "name": "Preparation",
   "kind": "Buff",
@@ -479,6 +622,19 @@
   "durationTicks": 16,
   "trigger": "Activating the Preparation ability",
   "effects": "Every hit received reduces the cooldown of Resonance and Divert by 3 seconds"
+ },
+ {
+  "id": 49562,
+  "name": "Primordial Ice",
+  "kind": "Buff",
+  "category": "Offensive abilities",
+  "desc": "Primordial Ice\n\nMaximum stacks: 10.",
+  "iconSelf": "assets/status/primordial-ice.png",
+  "iconTarget": null,
+  "duration": "2 minutes from gaining a stack or until consumed by activating Icy Tempest. This includes reaching the maximum of 10 Primordial Ice stacks, due to the inability to gain more stacks.",
+  "durationTicks": null,
+  "trigger": "Chance to gain a stack with each attack cast with a dark ice shard (5% chance), dark ice sliver (1% chance), Dark Shard of Leng (10% chance), or Dark Sliver of Leng (2% chance), or their augmented or dyed variants, up to 10 stacks. Melee bleeds cannot generate stacks.",
+  "effects": "* Increases the damage of Icy Tempest by 18%–22% ability damage per stack.\n* Reduces the adrenaline cost of Icy Tempest by 12% per stack.\n** Removes adrenaline cost completely with at least 3 stacks.\n** Adrenaline requirement is unchanged.\n* If a dark ice sliver or Dark Sliver of Leng is equipped, gain Frostblades when gaining a stack of Primordial Ice."
  },
  {
   "id": 14712,
@@ -518,6 +674,19 @@
   "durationTicks": 75,
   "trigger": "Activating Conjure Putrid Zombie",
   "effects": "* Causes a Putrid Zombie to attack the monsters the player is attacking.\n* Deals poison damage every 1.8 seconds to enemies within one tile of the zombie."
+ },
+ {
+  "id": 47053,
+  "name": "Rampage",
+  "kind": "Buff",
+  "category": "Status effects",
+  "desc": "Rampage\nIncreases melee damage dealt by +20% and reduces hit chance by 10%.",
+  "iconSelf": "assets/status/rampage-self-status.png",
+  "iconTarget": null,
+  "duration": "60 seconds",
+  "durationTicks": 100,
+  "trigger": "Activating Rampage, the dragon battleaxe's special attack (or used with Essence of Finality)",
+  "effects": "*+20% melee damage dealt\n*-10% hit chance"
  },
  {
   "id": 14716,
@@ -650,6 +819,19 @@
   "effects": "*Deals 80%-100% of the user's ability damage every 1.2 seconds (maximum of 6 hits)\n*Heals for 6% of damage dealt"
  },
  {
+  "id": 52065,
+  "name": "Soul Crush",
+  "kind": "Buff",
+  "category": "Offensive abilities",
+  "desc": "Soul Crush\n\n- Soul Sap, Soul Strike, Volley of Souls, Spectral Scythe: Immediately readies Soul Reave.",
+  "iconSelf": "assets/status/soul-crush-status.png",
+  "iconTarget": null,
+  "duration": "30 seconds",
+  "durationTicks": 50,
+  "trigger": "Activating Soul Crush, the Weapon Special Attack of the Devourer's Guard",
+  "effects": "Activating Soul Sap, Soul Strike, Volley of Souls, or Spectral Scythe causes Soul Reave to be readied"
+ },
+ {
   "id": 52064,
   "name": "Soul Reave",
   "kind": "Buff",
@@ -674,6 +856,19 @@
   "durationTicks": 25,
   "trigger": "Activating Spectral Scythe cast 1 or cast 2 with the 1st or 2nd upgrade unlocked respectively",
   "effects": "Allows the activation of the next cast of Spectral Scythe"
+ },
+ {
+  "id": 4549,
+  "name": "Split Soul",
+  "kind": "Buff",
+  "category": "Offensive abilities",
+  "desc": "Split Soul\n- 400% of the life points you would have gained from the Soul Split curse is instead dealt to your target.\n- 15s duration.",
+  "iconSelf": "assets/status/split-soul-status.png",
+  "iconTarget": null,
+  "duration": "15 seconds",
+  "durationTicks": 25,
+  "trigger": "*Activating Split Soul, the Eldritch crossbow's special attack (or used with Essence of Finality)\n*Cannot be used in PvP",
+  "effects": "Instead of healing the player, Soul Split damages the player's target for 4 times the amount of life points it would have healed"
  },
  {
   "id": 14675,

@@ -1175,6 +1175,33 @@
   "triggersGcd": true
  },
  {
+  "id": "runic-charge",
+  "structId": 14725,
+  "name": "Runic Charge",
+  "style": "Magic",
+  "type": "Basic",
+  "level": 26,
+  "target": "Self",
+  "equipment": "Any",
+  "members": false,
+  "basicAttack": false,
+  "adrenaline": 0.0,
+  "cooldownTicks": 50,
+  "damageAvg": null,
+  "damageText": "None",
+  "damageMin": 260.0,
+  "damageMax": 310.0,
+  "hits": 1,
+  "channelled": false,
+  "durationTicks": 25,
+  "description": "Charge yourself with Anima\n* Applies Anima Charged to self.\n* 15s (25 ticks) duration.\n\n\nCan be cast during the global cooldown.\nMust be manually triggered during revolution combat.\n\n\nAnima Charged:\n* Your next Magic ability is empowered:\n* Sonic Wave: Your next Magic ability costs 35% less Adrenaline.\n* Greater Sonic Wave: Your next Magic ability costs 45% less Adrenaline.\n* Dragon Breath: Deals 260%-310% Magic damage\n* Concentrated Blast: Each attack grants an additional 10% Critical Strike Chance.\n* Greater Concentrated Blast: Each attack grants an additional 10% Critical Strike Chance.",
+  "buffs": [
+   52778
+  ],
+  "icon": "assets/abilities/runic-charge.png",
+  "triggersGcd": false
+ },
+ {
   "id": "impact",
   "structId": 14727,
   "name": "Impact",
@@ -2115,7 +2142,7 @@
    14710
   ],
   "icon": "assets/abilities/anticipation.png",
-  "triggersGcd": false
+  "triggersGcd": true
  },
  {
   "id": "bash",
@@ -2622,31 +2649,6 @@
    14675
   ],
   "icon": "assets/abilities/storm-shards.png",
-  "triggersGcd": true
- },
- {
-  "id": "demoralise",
-  "structId": null,
-  "name": "Demoralise",
-  "style": "Constitution",
-  "type": "Threshold",
-  "level": 37,
-  "target": "Single",
-  "equipment": "None",
-  "members": false,
-  "basicAttack": false,
-  "adrenaline": -15.0,
-  "cooldownTicks": 25,
-  "damageAvg": 75.0,
-  "damageText": "75%",
-  "damageMin": null,
-  "damageMax": null,
-  "hits": null,
-  "channelled": false,
-  "durationTicks": null,
-  "description": "Disable your opponents&#91;sic&#93; protection prayers for 5 seconds and dealing up to 150% weapon damage.",
-  "buffs": [],
-  "icon": "assets/abilities/demoralise.png",
   "triggersGcd": true
  },
  {

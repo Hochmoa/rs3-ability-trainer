@@ -1,18 +1,30 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_LOADOUT, Loadout } from '../core/models';
+import { ResolvedLoadout, defaultResolvedLoadout } from './loadout-resolved';
 import { EngineConfig, EngineEntity, TrainerEngine } from './trainer-engine';
 
-const off: EngineConfig = { pingMs: 0, jitterMs: 0, abilityQueueing: false, loop: false, loadout: { ...DEFAULT_LOADOUT } };
+/** old-style loadout knobs used by these tests */
+interface Loadout { startAdrenaline?: number; ringOfVigour?: boolean; conservationOfEnergy?: boolean; furyOfTheSmall?: boolean; heightenedSenses?: boolean; vestmentsOfHavoc?: boolean; impatientRank?: number }
+function resolved(l: Loadout): ResolvedLoadout {
+  const r = defaultResolvedLoadout();
+  r.startAdrenaline = l.startAdrenaline ?? 0;
+  r.ultimateRefund = (l.ringOfVigour ? 10 : 0) + (l.conservationOfEnergy ? 10 : 0);
+  r.basicGainAdd = l.furyOfTheSmall ? 1 : 0;
+  r.maxAdrenaline = 100 + (l.heightenedSenses ? 10 : 0) + (l.vestmentsOfHavoc ? 20 : 0);
+  r.impatientRank = l.impatientRank ?? 0;
+  return r;
+}
+
+const off: EngineConfig = { pingMs: 0, jitterMs: 0, abilityQueueing: false, loop: false, loadout: defaultResolvedLoadout() };
 const on: EngineConfig = { ...off, abilityQueueing: true };
 
 function ability(key: string, extra: Partial<EngineEntity> = {}): EngineEntity {
-  return { key, kind: 'ability', name: key, icon: '', gcd: true, abilityType: 'Basic', adrenaline: 9, cooldownTicks: 0, buffs: [], ...extra };
+  return { key, id: key, kind: 'ability', name: key, icon: '', gcd: true, abilityType: 'Basic', adrenaline: 9, cooldownTicks: 0, buffs: [], ...extra };
 }
 function prayer(key: string): EngineEntity {
-  return { key, kind: 'prayer', name: key, icon: '', gcd: false, adrenaline: 0, cooldownTicks: 0, buffs: [{ id: key, name: key, kind: 'Buff', on: 'self', icon: null, durationTicks: null }] };
+  return { key, id: key, kind: 'prayer', name: key, icon: '', gcd: false, adrenaline: 0, cooldownTicks: 0, buffs: [{ id: key, name: key, kind: 'Buff', on: 'self', icon: null, durationTicks: null }] };
 }
 function potion(key: string): EngineEntity {
-  return { key, kind: 'special', name: key, icon: '', gcd: false, adrenaline: 25, cooldownTicks: 200, sharedCooldown: 'pot', buffs: [] };
+  return { key, id: key, kind: 'special', name: key, icon: '', gcd: false, adrenaline: 25, cooldownTicks: 200, sharedCooldown: 'pot', buffs: [] };
 }
 
 const A = ability('a');
@@ -25,7 +37,9 @@ const POT = potion('pot');
 const CATALOG = new Map([A, B, C, ULT, ENH, PRAY, POT].map((e) => [e.key, e]));
 
 function make(steps: EngineEntity[], cfg: Partial<EngineConfig> = {}, loadout: Partial<Loadout> = {}): TrainerEngine {
-  return new TrainerEngine(steps, CATALOG, { ...off, ...cfg, loadout: { ...DEFAULT_LOADOUT, ...loadout } });
+  const e = new TrainerEngine(steps, CATALOG, { ...off, ...cfg, loadout: resolved(loadout) });
+  e.random = () => 0.99;
+  return e;
 }
 
 /** a,b,c started at t=0; 'a' cast at tick 1 (t=600) → GCD ends at tick 4 (t=2400). */

@@ -1,0 +1,192 @@
+[
+ {
+  "id": "vestments-of-havoc", "kind": "set", "name": "Vestments of havoc", "style": "Melee", "maxPieces": 4,
+  "source": "https://runescape.wiki/w/Vestments_of_havoc_armour",
+  "thresholds": [
+   {"pieces": 2, "class": "adrenaline", "text": "After casting a melee ultimate ability, regenerate 15% adrenaline over 18 seconds. If this effect is already active, instead regenerate 20% adrenaline instantly, ending the regeneration effect.",
+    "effect": {"kind": "adrenaline-after-ultimate", "style": "Melee", "amount": 15, "overTicks": 30, "instantIfActive": 20}},
+   {"pieces": 3, "class": "cooldown", "text": "The duration of Berserk is extended by 6 seconds (33 → 43 ticks).",
+    "effect": {"kind": "buff-duration", "buff": "berserk", "addTicks": 10}},
+   {"pieces": 4, "class": "adrenaline", "text": "Maximum adrenaline is increased by 20% whilst wielding a melee weapon.",
+    "effect": {"kind": "max-adrenaline", "add": 20, "requiresStyle": "Melee"}}
+  ]
+ },
+ {
+  "id": "robes-of-the-first-necromancer", "kind": "set", "name": "Robes of the First Necromancer", "style": "Necromancy", "maxPieces": 5,
+  "source": "https://runescape.wiki/w/Template:Robes_of_the_First_Necromancer",
+  "thresholds": [
+   {"pieces": 2, "class": "damage", "text": "Per piece worn (up to 5), conjured spirits' basic attack damage +7%.",
+    "effect": {"kind": "conjure-damage", "perPiece": 0.07}},
+   {"pieces": 4, "class": "cooldown", "text": "Per piece worn (up to 5), conjured spirits last 5% longer (4 pieces +20%, 5 pieces +25%), applied when the spirit is summoned.",
+    "effect": {"kind": "conjure-duration", "perPiece": 0.05}}
+  ]
+ },
+ {
+  "id": "dracolich", "kind": "set", "name": "Dracolich armour", "style": "Ranged", "maxPieces": 5,
+  "source": "https://runescape.wiki/w/Template:Dracolich_Remnant",
+  "thresholds": [
+   {"pieces": 1, "class": "adrenaline", "text": "Channelling Rapid Fire generates an additional 0.2 adrenaline per piece worn every tick.",
+    "effect": {"kind": "channel-adrenaline-per-tick", "ability": "rapid-fire", "perPiece": 0.2}},
+   {"pieces": 3, "class": "cooldown", "text": "Whilst wielding a bow, a full Rapid Fire channel grants Dracolich infusion for 3 seconds (+20% ranged crit chance).",
+    "effect": {"kind": "buff-on-full-channel", "ability": "rapid-fire", "buff": "dracolich-infusion", "durationTicks": 5, "critChance": 0.20, "requiresWeapon": "bow"}},
+   {"pieces": 4, "class": "cooldown", "text": "Dracolich infusion lasts 1.8 seconds longer.", "effect": {"kind": "buff-duration", "buff": "dracolich-infusion", "addTicks": 3}},
+   {"pieces": 5, "class": "cooldown", "text": "Dracolich infusion lasts a further 1.8 seconds.", "effect": {"kind": "buff-duration", "buff": "dracolich-infusion", "addTicks": 3}}
+  ]
+ },
+ {
+  "id": "elite-dracolich", "kind": "set", "name": "Elite Dracolich armour", "style": "Ranged", "maxPieces": 5,
+  "source": "https://runescape.wiki/w/Template:Elite_Dracolich_Remnant",
+  "thresholds": [
+   {"pieces": 1, "class": "adrenaline", "text": "Channelling Rapid Fire generates an additional 0.5 adrenaline per piece worn every tick.",
+    "effect": {"kind": "channel-adrenaline-per-tick", "ability": "rapid-fire", "perPiece": 0.5}},
+   {"pieces": 3, "class": "cooldown", "text": "Whilst wielding a bow, a full Rapid Fire channel grants Dracolich infusion for 3 seconds (+40% ranged crit chance).",
+    "effect": {"kind": "buff-on-full-channel", "ability": "rapid-fire", "buff": "dracolich-infusion", "durationTicks": 5, "critChance": 0.40, "requiresWeapon": "bow"}},
+   {"pieces": 4, "class": "cooldown", "text": "Dracolich infusion lasts 1.8 seconds longer.", "effect": {"kind": "buff-duration", "buff": "dracolich-infusion", "addTicks": 3}},
+   {"pieces": 5, "class": "cooldown", "text": "Dracolich infusion lasts a further 1.8 seconds.", "effect": {"kind": "buff-duration", "buff": "dracolich-infusion", "addTicks": 3}}
+  ]
+ },
+ {
+  "id": "tumeken-s-resplendence", "kind": "set", "name": "Tumeken's resplendence", "style": "Magic", "maxPieces": 5,
+  "source": "https://runescape.wiki/w/Template:Tumeken's_Resplendence",
+  "thresholds": [
+   {"pieces": 3, "class": "damage", "text": "+1.5% critical strike chance per piece worn while inside Sunshine.", "effect": {"kind": "crit-in-sunshine", "perPiece": 0.015}},
+   {"pieces": 4, "class": "cooldown", "text": "Asphyxiate deals 40% less damage but strikes once every tick for a total of eight hits.",
+    "effect": {"kind": "channel-override", "ability": "asphyxiate", "hits": [1, 2, 3, 4, 5, 6, 7, 8], "damageMult": 0.6}},
+   {"pieces": 5, "class": "cooldown", "text": "A full Asphyxiate channel extends Channelled Might to 9 seconds and +35% critical strike damage.",
+    "effect": {"kind": "buff-override", "buff": "channelled-might", "durationTicks": 15, "critDamage": 0.35}}
+  ]
+ },
+ {
+  "id": "elite-tectonic", "kind": "set", "name": "Elite tectonic armour", "style": "Magic", "maxPieces": 3, "source": "https://runescape.wiki/w/Template:Elite_Fracture_Point",
+  "thresholds": [{"pieces": 1, "class": "damage", "text": "+2% critical strike chance per piece worn.", "effect": {"kind": "crit-chance", "perPiece": 0.02}}]
+ },
+ {
+  "id": "tectonic", "kind": "set", "name": "Tectonic armour", "style": "Magic", "maxPieces": 3, "source": "https://runescape.wiki/w/Template:Fracture_Point",
+  "thresholds": [{"pieces": 1, "class": "damage", "text": "+1% critical strike chance per piece worn.", "effect": {"kind": "crit-chance", "perPiece": 0.01}}]
+ },
+ {
+  "id": "elite-sirenic", "kind": "set", "name": "Elite sirenic armour", "style": "Ranged", "maxPieces": 3, "source": "https://runescape.wiki/w/Template:Elite_Chromatic_Choir",
+  "thresholds": [
+   {"pieces": 2, "class": "damage", "text": "Whilst wielding a crossbow, attacks have a 12% chance to trigger enchanted Dragonstone bolts.", "effect": {"kind": "bolt-proc", "chance": 0.12}},
+   {"pieces": 3, "class": "damage", "text": "…either enchanted Dragonstone, Onyx or Hydrix bolts.", "effect": {"kind": "bolt-proc", "chance": 0.12, "bolts": ["dragonstone", "onyx", "hydrix"]}}
+  ]
+ },
+ {
+  "id": "sirenic", "kind": "set", "name": "Sirenic armour", "style": "Ranged", "maxPieces": 3, "source": "https://runescape.wiki/w/Template:Chromatic_Choir",
+  "thresholds": [{"pieces": 2, "class": "damage", "text": "Whilst wielding a crossbow, 6% chance to trigger enchanted Dragonstone bolts (3 pieces: also Onyx or Hydrix).", "effect": {"kind": "bolt-proc", "chance": 0.06}}]
+ },
+ {
+  "id": "trimmed-masterwork", "kind": "set", "name": "Trimmed masterwork / masterwork ranged & magic", "style": null, "maxPieces": 5, "source": "https://runescape.wiki/w/Template:Trimmed_masterwork_set_bonus",
+  "thresholds": [{"pieces": 3, "class": "defensive", "text": "Per piece worn, 10% of incoming damage is delayed and dealt over the next 6 seconds.", "effect": {"kind": "damage-delay", "perPiece": 0.10}}]
+ },
+ {
+  "id": "achto", "kind": "set", "name": "Achto Primeval / Tempest / Teralith", "style": null, "maxPieces": 5, "source": "https://runescape.wiki/w/Template:Achto_Set_Bonus",
+  "thresholds": [
+   {"pieces": 1, "class": "damage", "text": "Strength bonus increase per piece (shield/defender required).", "effect": {"kind": "strength-bonus", "perPiece": 0.05}},
+   {"pieces": 3, "class": "cooldown", "text": "When damaged, 3% (4 pieces 4%, 5 pieces 8%) chance to reset the cooldowns of all defensive abilities, 1 minute internal cooldown.", "effect": {"kind": "defensive-cooldown-reset-on-hit", "chance": {"3": 0.03, "4": 0.04, "5": 0.08}, "internalCooldownTicks": 100}}
+  ]
+ },
+ {
+  "id": "cryptbloom", "kind": "set", "name": "Cryptbloom armour", "style": "Magic", "maxPieces": 5, "source": "https://runescape.wiki/w/Template:Nature's_Envoy",
+  "thresholds": [
+   {"pieces": 2, "class": "defensive", "text": "-12% magic / -8% melee damage taken (3 pieces 18% / 12%).", "effect": {"kind": "damage-taken"}},
+   {"pieces": 4, "class": "damage", "text": "6% chance to apply Croesus Deathspores: +10% damage from behind for 15 seconds.", "effect": {"kind": "proc"}},
+   {"pieces": 5, "class": "defensive", "text": "Fungal Shield below 20% life points, 120 s cooldown.", "effect": {"kind": "proc"}}
+  ]
+ },
+ {
+  "id": "song-of-destruction", "kind": "set", "name": "Roar of Awakening + Ode to Deceit (Song of Destruction)", "style": "Magic", "maxPieces": 2, "source": "https://runescape.wiki/w/Template:Song_of_Destruction",
+  "thresholds": [
+   {"pieces": 1, "class": "cooldown", "text": "DoT abilities build Essence Corruption (max 100, 30 s). 1+: DoT abilities 30% chance to deal all hitsplats immediately and remove their cooldown. 10+: magic damage +(stacks × 3 + Magic level). 25+: basic abilities give +1% adrenaline per tick over 3.6 s (+6%).",
+    "effect": {"kind": "essence-corruption", "instantDotChance": 0.30, "adrenalineAt25": {"perTick": 1, "ticks": 6}}},
+   {"pieces": 2, "class": "damage", "text": "Damage over time abilities deal 30% increased damage.", "effect": {"kind": "dot-damage", "mult": 1.30}}
+  ]
+ },
+ {
+  "id": "deathdealer-t90", "kind": "set", "name": "Deathdealer robes (tier 90)", "style": "Necromancy", "maxPieces": 5, "source": "https://runescape.wiki/w/Deathdealer_robe_armour",
+  "thresholds": [{"pieces": 1, "class": "damage", "text": "Per piece worn, 2% chance to apply Death Mark with all Necromancy attacks (tier 70: 1%, tier 80: 1.5%).", "effect": {"kind": "death-mark", "perPiece": 0.02}}]
+ },
+ {
+  "id": "void-knight", "kind": "set", "name": "Void knight equipment", "style": null, "maxPieces": 4, "source": "https://runescape.wiki/w/Set_bonus",
+  "thresholds": [{"pieces": 4, "class": "damage", "text": "+3% accuracy and +5% damage (+7% with only superior pieces).", "effect": {"kind": "damage", "mult": 1.05, "superiorMult": 1.07, "accuracy": 0.03}}]
+ },
+ {
+  "id": "warpriest-armadyl-bandos", "kind": "set", "name": "Warpriest of Armadyl / Bandos", "style": null, "maxPieces": 6, "source": "https://runescape.wiki/w/Set_bonus",
+  "thresholds": [{"pieces": 3, "class": "cooldown", "text": "Chance to reduce cooldown duration on abilities (numbers not documented on the wiki).", "effect": {"kind": "cooldown-chance", "documented": false}}]
+ },
+ {
+  "id": "warpriest-tuska", "kind": "set", "name": "Warpriest of Tuska", "style": null, "maxPieces": 6, "source": "https://runescape.wiki/w/Set_bonus",
+  "thresholds": [{"pieces": 3, "class": "damage", "text": "Chance to deal critical damage to the target.", "effect": {"kind": "crit-proc"}}]
+ },
+
+ {"id": "igneous-kal-ket", "kind": "item", "name": "Igneous Kal-Ket", "style": "Melee", "slot": "back", "class": "cooldown", "source": "https://runescape.wiki/w/Igneous_Kal-Zuk",
+  "text": "Overpower hits twice for 310–370% each instead of once for 550–600%.", "effect": {"kind": "ability-override", "ability": "overpower", "hits": 2, "damageMin": 310, "damageMax": 370}},
+ {"id": "igneous-kal-mej", "kind": "item", "name": "Igneous Kal-Mej", "style": "Magic", "slot": "back", "class": "cooldown", "source": "https://runescape.wiki/w/Igneous_Kal-Mej",
+  "text": "Omnipower hits four times for 120–150% each instead of once for 420–500%.", "effect": {"kind": "ability-override", "ability": "omnipower", "hits": 4, "damageMin": 120, "damageMax": 150}},
+ {"id": "igneous-kal-xil", "kind": "item", "name": "Igneous Kal-Xil", "style": "Ranged", "slot": "back", "class": "cooldown", "source": "https://runescape.wiki/w/Igneous_Kal-Xil",
+  "text": "Deadshot hits eight times for 55–75% each instead of four times for 105–125%.", "effect": {"kind": "ability-override", "ability": "deadshot", "hits": 8, "damageMin": 55, "damageMax": 75}},
+ {"id": "igneous-kal-mor", "kind": "item", "name": "Igneous Kal-Mor", "style": "Necromancy", "slot": "back", "class": "cooldown", "source": "https://runescape.wiki/w/Igneous_Kal-Mor",
+  "text": "Death Skulls bounces two additional times against monsters (6 instead of 4).", "effect": {"kind": "ability-override", "ability": "death-skulls", "bounces": 6}},
+ {"id": "igneous-kal-zuk", "kind": "item", "name": "Igneous Kal-Zuk", "style": null, "slot": "back", "class": "cooldown", "source": "https://runescape.wiki/w/Igneous_Kal-Zuk",
+  "text": "All four Igneous cape effects (Overpower, Omnipower, Deadshot, Death Skulls).", "effect": {"kind": "includes", "items": ["igneous-kal-ket", "igneous-kal-mej", "igneous-kal-xil", "igneous-kal-mor"]}},
+ {"id": "greater-sunshine-codex", "kind": "item", "name": "Greater Sunshine (codex)", "style": "Magic", "slot": "unlock", "class": "cooldown", "source": "https://runescape.wiki/w/Greater_Sunshine",
+  "text": "Replaces Sunshine with Greater Sunshine (63 ticks); Planted Feet only removes the DoT.", "effect": {"kind": "replaces-ability", "base": "sunshine", "greater": "greater-sunshine"}},
+ {"id": "greater-death-s-swiftness-codex", "kind": "item", "name": "Greater Death's Swiftness (codex)", "style": "Ranged", "slot": "unlock", "class": "cooldown", "source": "https://runescape.wiki/w/Greater_Death's_Swiftness",
+  "text": "Replaces Death's Swiftness with Greater Death's Swiftness (63 ticks); not affected by Planted Feet.", "effect": {"kind": "replaces-ability", "base": "death-s-swiftness", "greater": "greater-death-s-swiftness"}},
+ {"id": "fleeting-boots", "kind": "item", "name": "Fleeting boots / Enhanced fleeting boots", "style": "Ranged", "slot": "feet", "class": "cooldown", "source": "https://runescape.wiki/w/Fleeting_boots",
+  "text": "Piercing Shot reduces Snipe's cooldown by 6 ticks per hit instead of 4; the basic attack also reduces it by 6 ticks per hit.", "effect": {"kind": "snipe-cdr", "piercingShotTicks": 6, "basicAttackTicks": 6}},
+ {"id": "nightmare-gauntlets", "kind": "item", "name": "Nightmare gauntlets / Enhanced", "style": "Ranged", "slot": "hands", "class": "damage", "source": "https://runescape.wiki/w/Enhanced_nightmare_gauntlets",
+  "text": "+25% hit chance with Snipe and movement allowed while sniping; enchantment of dread: extra 50%-damage shot against targets not facing you.", "effect": {"kind": "snipe-mobile", "hitChance": 0.25}},
+ {"id": "blast-diffusion-boots", "kind": "item", "name": "Blast diffusion boots / Enhanced", "style": "Magic", "slot": "feet", "class": "cooldown", "source": "https://runescape.wiki/w/Blast_diffusion_boots",
+  "text": "Wild Magic applies Blast Infused for 10 ticks: basic Magic abilities +8% base damage.", "effect": {"kind": "buff-on-cast", "ability": "wild-magic", "buff": "blast-infused", "durationTicks": 10, "basicDamage": 0.08}},
+ {"id": "kerapac-s-wrist-wraps", "kind": "item", "name": "Kerapac's wrist wraps / Enhanced", "style": "Magic", "slot": "hands", "class": "cooldown", "source": "https://runescape.wiki/w/Enhanced_Kerapac's_wrist_wraps",
+  "text": "For 6 seconds after Dragon Breath, Combust deals all its damage instantly and +25% (enhanced with enchantment of flames: +40%). Not in PvP.", "effect": {"kind": "instant-dot-window", "trigger": "dragon-breath", "windowTicks": 10, "ability": "combust", "damageMult": 1.25, "enhancedMult": 1.40}},
+ {"id": "gloves-of-passage", "kind": "item", "name": "Gloves of passage / Enhanced", "style": "Melee", "slot": "hands", "class": "cooldown", "source": "https://runescape.wiki/w/Enhanced_gloves_of_passage",
+  "text": "After Rend hits: next melee attack within 6 s +10% (enhanced 16%); target takes +20% (25%) bleed damage for 10 s.", "effect": {"kind": "buff-on-hit", "ability": "rend", "buff": "enduring-ruin", "durationTicks": 10, "nextHit": 0.10, "debuff": "corrupted-wounds", "debuffTicks": 17, "bleedTaken": 0.20}},
+ {"id": "cinderbane-gloves", "kind": "item", "name": "Cinderbane gloves", "style": null, "slot": "hands", "class": "damage", "source": "https://runescape.wiki/w/Cinderbane_gloves",
+  "text": "12.5% chance per hit to apply tier 2 poison; re-applying deals an extra poison hit and refreshes.", "effect": {"kind": "poison", "chance": 0.125}},
+ {"id": "malletops-totem", "kind": "item", "name": "Malletops totem (Armoured Hide)", "style": null, "slot": "totem", "class": "cooldown", "source": "https://runescape.wiki/w/Barricade",
+  "text": "Barricade lasts 3 ticks longer (tier 2: 6 ticks). Stacks with Turtling.", "effect": {"kind": "buff-duration", "buff": "barricade", "addTicks": 3, "tier2AddTicks": 6}},
+ {"id": "ring-of-vigour", "kind": "item", "name": "Ring of vigour (or unlocked passive)", "style": null, "slot": "ring", "class": "adrenaline", "source": "https://runescape.wiki/w/Ring_of_vigour",
+  "text": "10% adrenaline is retained after an ultimate ability; weapon special attacks (incl. EoF) need and cost only 90% of the normal adrenaline.", "effect": {"kind": "vigour", "ultimateRefund": 10, "specCostMult": 0.9}},
+ {"id": "asylum-surgeon-s-ring", "kind": "item", "name": "Asylum surgeon's ring", "style": null, "slot": "ring", "class": "adrenaline", "source": "https://runescape.wiki/w/Passive_effect/Other_equipment/Ring",
+  "text": "10% chance to negate the adrenaline cost of threshold abilities; 40% chance to save 25% of a special attack's cost.", "effect": {"kind": "asylum", "thresholdFreeChance": 0.10, "specSaveChance": 0.40, "specSave": 0.25}},
+ {"id": "ring-of-death", "kind": "item", "name": "Ring of death", "style": null, "slot": "ring", "class": "adrenaline", "source": "https://runescape.wiki/w/Ring_of_death",
+  "text": "On kill, 50% chance to restore up to 5% adrenaline (1% per 1,500 max life points of the target).", "effect": {"kind": "adrenaline-on-kill", "chance": 0.5, "max": 5}},
+ {"id": "jaws-of-the-abyss", "kind": "item", "name": "Jaws of the Abyss", "style": "Melee", "slot": "head", "class": "adrenaline", "source": "https://runescape.wiki/w/Passive_effect/Clothing_and_armour/Head",
+  "text": "Basic melee abilities generate an additional 2% adrenaline for each bleed affecting the target.", "effect": {"kind": "adrenaline-per-bleed", "perBleed": 2}},
+ {"id": "reaver-s-ring", "kind": "item", "name": "Reaver's ring", "style": null, "slot": "ring", "class": "damage", "source": "https://runescape.wiki/w/Reaver's_ring",
+  "text": "+5% critical strike chance, -5% hit chance.", "effect": {"kind": "crit-chance", "add": 0.05, "hitChance": -0.05}},
+ {"id": "champion-s-ring", "kind": "item", "name": "Champion's ring", "style": "Melee", "slot": "ring", "class": "damage", "source": "https://runescape.wiki/w/Champion's_ring",
+  "text": "+3% crit chance against bleeding targets (enchantment of heroism: 4% and +1.5% crit damage per bleed).", "effect": {"kind": "crit-vs-bleeding", "add": 0.03}},
+ {"id": "channeller-s-ring", "kind": "item", "name": "Channeller's ring", "style": "Magic", "slot": "ring", "class": "damage", "source": "https://runescape.wiki/w/Channeller's_ring",
+  "text": "+4% stacking crit chance per hit of Magic channelled abilities (enchantment of metaphysics: +2.5% crit damage per hit).", "effect": {"kind": "channel-crit", "perHit": 0.04}},
+ {"id": "stalker-s-ring", "kind": "item", "name": "Stalker's ring", "style": "Ranged", "slot": "ring", "class": "damage", "source": "https://runescape.wiki/w/Stalker's_ring",
+  "text": "+3% crit chance with a bow (enchantment of shadows: 4% and +3% crit damage).", "effect": {"kind": "crit-chance", "add": 0.03, "requiresWeapon": "bow"}},
+ {"id": "scripture-of-ful", "kind": "item", "name": "Scripture of Ful", "style": null, "slot": "pocket", "class": "cooldown", "source": "https://runescape.wiki/w/Scripture_of_Ful",
+  "text": "6.6% chance on a damaging attack: for 15 s +20% damage dealt and +10% damage taken; 15 s cooldown.", "effect": {"kind": "proc-buff", "chance": 0.066, "buff": "gladiator-s-rage", "durationTicks": 25, "damage": 0.20, "cooldownTicks": 25}},
+ {"id": "scripture-of-jas", "kind": "item", "name": "Scripture of Jas", "style": null, "slot": "pocket", "class": "damage", "source": "https://runescape.wiki/w/Scripture_of_Jas",
+  "text": "6.6% chance: releases 20% of tracked damage after 17 ticks (cap 30,000); 15 s cooldown.", "effect": {"kind": "proc-damage", "chance": 0.066}},
+ {"id": "scripture-of-wen", "kind": "item", "name": "Scripture of Wen", "style": null, "slot": "pocket", "class": "damage", "source": "https://runescape.wiki/w/Scripture_of_Wen",
+  "text": "6.6% chance: 5 beam hits then a 240–400% shatter (3×3); 19-tick lockout.", "effect": {"kind": "proc-damage", "chance": 0.066}},
+ {"id": "erethdor-s-grimoire", "kind": "item", "name": "Erethdor's grimoire", "style": null, "slot": "pocket", "class": "damage", "source": "https://runescape.wiki/w/Erethdor's_grimoire",
+  "text": "+12% critical strike chance (chaotic grimoire +7%).", "effect": {"kind": "crit-chance", "add": 0.12}},
+ {"id": "dark-sliver-of-leng", "kind": "item", "name": "Dark Sliver of Leng (Boundless Chill)", "style": "Melee", "slot": "weapon-passive", "class": "cooldown", "source": "https://runescape.wiki/w/Dark_Shard_of_Leng",
+  "text": "2% chance on hit: Frostblades for 9 s, flat damage on all melee ability hits equal to 24% of ability damage.", "effect": {"kind": "proc-buff", "chance": 0.02, "buff": "frostblades", "durationTicks": 15}},
+ {"id": "fractured-staff-of-armadyl", "kind": "item", "name": "Fractured Staff of Armadyl (Surging Storm)", "style": "Magic", "slot": "weapon-passive", "class": "damage", "source": "https://runescape.wiki/w/Surging_Storm",
+  "text": "+15–25% critical strike damage; spec Instability (50%, 60 s): crits fire Lightning Surge for 30 s.", "effect": {"kind": "crit-damage", "add": 0.20}},
+ {"id": "ek-zekkil", "kind": "item", "name": "Ek-ZekKil (Ashen Vow)", "style": "Melee", "slot": "weapon-passive", "class": "adrenaline", "source": "https://runescape.wiki/w/Ashen_Vow",
+  "text": "+12% damage against the Flamebound Rival; spec Igneous Showdown generates 15% adrenaline.", "effect": {"kind": "spec-adrenaline", "spec": "igneous-showdown", "adrenaline": 15}},
+ {"id": "omni-guard", "kind": "item", "name": "Omni guard (Death Spark)", "style": "Necromancy", "slot": "weapon-passive", "class": "cooldown", "source": "https://runescape.wiki/w/Template:Death_Spark_details",
+  "text": "Every basic attack gives 1 Death Spark; at 5 the next basic attack deals double damage. For 30 s after Death Essence, Touch of Death / Finger of Death / Death Skulls immediately ready Death Spark.", "effect": {"kind": "death-spark", "stacksToReady": 5, "windowTicks": 50}},
+ {"id": "devourer-s-guard", "kind": "item", "name": "Devourer's Guard (Soul Reave)", "style": "Necromancy", "slot": "weapon-passive", "class": "cooldown", "source": "https://runescape.wiki/w/Soul_Reave",
+  "text": "Every basic attack gives 1 Soul Reave; at 4 the next basic attack generates 1 Residual Soul. For 30 s after Soul Crush, Soul Sap / Soul Strike / Volley / Spectral Scythe immediately ready Soul Reave.", "effect": {"kind": "soul-reave", "stacksToReady": 4, "windowTicks": 50}},
+ {"id": "soulbound-lantern", "kind": "item", "name": "Soulbound lantern (Soul Siphon)", "style": "Necromancy", "slot": "weapon-passive", "class": "cooldown", "source": "https://runescape.wiki/w/Residual_Soul",
+  "text": "Residual Souls cap 5 instead of 3.", "effect": {"kind": "stack-cap", "stack": "residual-souls", "cap": 5}},
+ {"id": "amulet-of-souls", "kind": "item", "name": "Amulet of souls / EoF (soul part)", "style": null, "slot": "neck", "class": "defensive", "source": "https://runescape.wiki/w/Amulet_of_souls",
+  "text": "Soul Split 50% chance to heal 25–50% more; protection prayers 60% base reduction.", "effect": {"kind": "prayer"}},
+ {"id": "essence-of-finality", "kind": "item", "name": "Essence of Finality amulet", "style": null, "slot": "neck", "class": "cooldown", "source": "https://runescape.wiki/w/Essence_of_Finality_amulet",
+  "text": "Stores one weapon special attack, usable via the Essence of Finality ability with a weapon of the same style.", "effect": {"kind": "eof"}},
+ {"id": "spirit-pact", "kind": "item", "name": "Spirit Pact I / II / III (Necromancy talent)", "style": "Necromancy", "slot": "talent", "class": "cooldown", "source": "https://runescape.wiki/w/Spirit_Pact_III",
+  "text": "Conjures last +6 / +12 / +18 seconds (42 → 48 / 54 / 60 s); tiers do not stack.", "effect": {"kind": "conjure-duration-add", "ticksPerTier": [0, 10, 20, 30]}}
+]

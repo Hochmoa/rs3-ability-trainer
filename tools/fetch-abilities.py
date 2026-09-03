@@ -10,10 +10,12 @@ from fetch_wiki import (ASSETS, DATA, bucket, download, file_of, image_urls, par
                         parse_ticks, slug, strip_markup, wikitext, write_json)
 
 # abilities that do not trigger / are not blocked by the global cooldown (runescape.wiki)
-OFF_GCD = {"Surge", "Escape", "Dive", "Bladed Dive", "Anticipation", "Provoke", "Limitless"}
+# verified list, docs/research/mechanics.md §8.2 – Anticipation and Freedom are normal GCD abilities
+OFF_GCD = {"Surge", "Escape", "Dive", "Bladed Dive", "Provoke", "Limitless", "Runic Charge"}
 # utility-type abilities worth having; the rest are shouts, stances, slayer buffs, food, ammo slots
-UTILITY_KEEP = {"Surge", "Escape", "Dive", "Limitless"}
-SKIP_NAMES = {"Revolution", "Single-Way Wilderness", "Magma Tempest (Targeted)"}
+UTILITY_KEEP = {"Surge", "Escape", "Dive", "Limitless", "Runic Charge"}
+# Demoralise: the Ranged version was removed 2 March 2026, the Constitution version never went live
+SKIP_NAMES = {"Revolution", "Single-Way Wilderness", "Magma Tempest (Targeted)", "Demoralise"}
 STYLE = {"Attack": "Melee", "Strength": "Melee", "Melee": "Melee", "Ranged": "Ranged", "Magic": "Magic",
          "Necromancy": "Necromancy", "Defence": "Defence", "Constitution": "Constitution"}
 TYPE_ORDER = {"Basic": 0, "Enhanced": 1, "Threshold": 2, "Ultimate": 3, "Special": 4}
@@ -83,6 +85,11 @@ def main():
     buff_rows = bucket("infobox_buff", ["id", "json"])
     print(len(buff_rows), "buff rows")
     wanted = {bid for a in abilities.values() for bid in a["buffs"]}
+    specs_file = DATA / "specs.json"
+    if specs_file.exists():  # status effects of weapon special attacks share buffs.json
+        import json as _json
+        for sp in _json.loads(specs_file.read_text(encoding="utf-8")):
+            wanted.update(b["id"] for b in sp.get("buffs", []) if b.get("id", -1) >= 0)
     buffs: dict[int, dict] = {}
     for r in buff_rows:
         j = r["json"]
@@ -109,6 +116,11 @@ def main():
         for b in r["json"].get("buffs", []):
             if isinstance(b, dict) and b.get("id") in buffs:
                 pagenames[b["id"]] = b["pagename"]
+    if specs_file.exists():
+        for sp in _json.loads(specs_file.read_text(encoding="utf-8")):
+            for b in sp.get("buffs", []):
+                if b.get("id") in buffs:
+                    pagenames.setdefault(b["id"], b["pagename"])
     texts = wikitext(sorted(set(pagenames.values())))
     for bid, page in pagenames.items():
         t = texts.get(page, "")
