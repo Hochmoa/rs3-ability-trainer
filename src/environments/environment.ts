@@ -4,5 +4,5 @@ export const environment = {
   supabaseUrl: 'https://lqimsvrbpfabkyaupcgx.supabase.co',
   supabaseKey: 'sb_publishable_3wAvSm8Yzo4xyz2WVQSkrw_4H_tMti8',
   /** shown in the privacy page */
-  supabaseRegion: 'Frankfurt (eu-central-1)',
+  supabaseRegion: 'the EU (Ireland, eu-west-1)',
 };

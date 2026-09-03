@@ -7,7 +7,7 @@
       Signed in as <b>{{ supabase.profile()?.display_name ?? '…' }}</b> <span class="muted">({{ user.email }})</span>
     </p>
     <p class="muted small">
-      Your rotations and keybinds are stored online (Supabase, Frankfurt) and synced to every browser you sign in with.
+      Your rotations and keybinds are stored online (Supabase, EU) and synced to every browser you sign in with.
       Loadout and settings stay local.
       @if (sync.syncing()) { · syncing… }
       @else if (sync.error()) { · <span class="bad">sync error: {{ sync.error() }}</span> }
