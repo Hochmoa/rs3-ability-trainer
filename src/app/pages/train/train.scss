@@ -787,3 +787,76 @@
     max-width: 320px;
   }
 }
+
+// damage numbers
+.arena-main {
+  position: relative;
+}
+
+.hitsplats {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.hitsplat {
+  font-weight: 700;
+  font-size: 15px;
+  color: #ff5d5d;
+  text-shadow: 0 0 4px #000, 0 0 8px #000;
+  animation: hitsplat 1.8s ease-out forwards;
+
+  &.crit {
+    color: #ffe27a;
+    font-size: 18px;
+  }
+
+  &.dot {
+    color: #ff9a6a;
+    font-size: 13px;
+    font-weight: 600;
+  }
+}
+
+@keyframes hitsplat {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  10% {
+    opacity: 1;
+    transform: none;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+
+.bar.target .fill {
+  background: linear-gradient(#e53935, #8e1b18);
+}
+
+.enemy-head .lp {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+
+  input {
+    width: 110px;
+  }
+}
+
+.damage-summary {
+  margin: 0 0 10px;
+}

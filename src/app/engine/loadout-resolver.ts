@@ -3,6 +3,7 @@
  * Effect kinds are the ones written in public/data/set-effects.json and perks.json.
  */
 import { EquipSlot, GearItem, Gizmo, ItemRef, Loadout, Perk, SetEffect, Style, WEAPON_SETS, Weapon, WeaponSpec, loadoutWield } from '../core/models';
+import { abilityDamageOf } from './damage';
 import { ResolvedLoadout, defaultResolvedLoadout } from './loadout-resolved';
 import type { EngineEntity } from './trainer-engine';
 
@@ -125,6 +126,7 @@ export function resolveLoadout(l: Loadout, data: LoadoutData): ResolvedLoadout {
   r.hasDefender = off?.role === 'defender';
   r.hasConduit = main?.role === 'siphon' && off?.role === 'conduit';
   r.weaponType = main ? weaponType(main) : null;
+  r.abilityDamage = abilityDamageOf(two ? null : main, off, two);
   const specId = main?.spec ?? (off?.spec ?? null);
   if (specId) {
     const spec = data.specById.get(specId);
@@ -229,8 +231,11 @@ function applyPerk(r: ResolvedLoadout, perk: Perk, rank: number): void {
       r.cooldownMult['anticipation'] = 0.5;
       break;
     case 'bulwark': r.buffDurationMult['debilitate'] = 1 + 0.06 * rank; break;
+    case 'biting': r.critChanceAdd += 0.02 * rank; break;
+    case 'precise': r.preciseRank = rank; break;
+    case 'equilibrium': r.equilibriumRank = rank; break;
     default:
-      break; // damage / defensive perks: stored for later
+      break; // other damage / defensive perks: stored for later
   }
 }
 

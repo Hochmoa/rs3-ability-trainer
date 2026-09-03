@@ -41,6 +41,7 @@ export const NECROMANCY_RULES: AbilityRule[] = [
   {
     ability: 'finger-of-death',
     cost: { perStack: { stack: 'necrosis', per: 10, maxStacks: 6, base: 60 } },
+    damageRules: [{ when: { buff: 'living-death' }, mult: 1.5 }],
     notes: ['Costs 60% adrenaline minus 10% per Necrosis stack, consuming up to 6 stacks (free at 6) (' + W + 'Finger_of_Death )', 'Under Living Death 1.5x damage (' + W + 'Living_Death )'],
   },
   conjure('skeleton-warrior', 'Skeleton Warrior'),
@@ -85,6 +86,7 @@ export const NECROMANCY_RULES: AbilityRule[] = [
   },
   {
     ability: 'bloat',
+    bleed: { hits: 10, everyTicks: 3, splitTotal: true },
     notes: ['20% adrenaline; DoT of 10 hits every 3 ticks; recasting resets it; spreads on death; removed by Freedom (' + W + 'Bloat )'],
     onHit: [{ kind: 'buff', id: 'bloated', refresh: true }],
   },
@@ -107,6 +109,7 @@ export const NECROMANCY_RULES: AbilityRule[] = [
   },
   {
     ability: 'volley-of-souls',
+    hitsPerStack: 'residual-souls',
     requires: [{ text: 'needs 2 Residual Souls', stackMin: { stack: 'residual-souls', min: 2 } }],
     notes: ['Needs at least 2 Residual Souls and consumes all of them: one hit of 135–165% per soul (' + W + 'Volley_of_Souls )'],
     onCast: [{ kind: 'consume-stack', stack: 'residual-souls', amount: 'all' }],

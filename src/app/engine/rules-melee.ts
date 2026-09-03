@@ -133,6 +133,7 @@ export const MELEE_RULES: AbilityRule[] = [
   {
     ability: 'dismember',
     sequence: { group: 'dismember', step: 1, windowTicks: 40 },
+    bleed: { hits: 8, everyTicks: 2 },
     notes: [
       'Bleed: 8 hits every 2 ticks; 0% adrenaline; 40-tick cooldown from the first cast (' + W + 'Dismember )',
       'Opens Slaughter in the same slot for 40 ticks; Slaughter opens Massacre; Massacre or 40 idle ticks reset the slot to Dismember (' + W + 'Dismember_(status,_buff) )',
@@ -142,6 +143,7 @@ export const MELEE_RULES: AbilityRule[] = [
   {
     ability: 'slaughter',
     sequence: { group: 'dismember', step: 2, windowTicks: 40 },
+    bleed: { hits: 6, everyTicks: 3 },
     cooldownTicks: 0,
     requires: [{ text: 'only within 40 ticks after Dismember', sequence: { group: 'dismember', step: 2 } }],
     notes: ['Second cast of the Dismember slot: 25% adrenaline, bleed of 6 hits every 3 ticks; all three bleeds can be active together (' + W + 'Slaughter )'],
@@ -150,6 +152,7 @@ export const MELEE_RULES: AbilityRule[] = [
   {
     ability: 'massacre',
     sequence: { group: 'dismember', step: 3, windowTicks: 40, last: true },
+    bleed: { hits: 6, everyTicks: 4, direct: true },
     cooldownTicks: 0,
     requires: [{ text: 'only within 40 ticks after Slaughter', sequence: { group: 'dismember', step: 3 } }],
     notes: ['Third cast of the Dismember slot: 25% adrenaline, direct hit then a bleed of 6 hits every 4 ticks; resets the slot to Dismember (' + W + 'Massacre )'],

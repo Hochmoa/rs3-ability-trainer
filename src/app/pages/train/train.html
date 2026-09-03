@@ -66,6 +66,10 @@
       } @else {
         <span class="muted small">The enemy attacks in a fixed rhythm. Have the matching Protect / Deflect prayer on when the hit lands, Soul Split the rest of the time.</span>
       }
+      <label class="lp" title="Life points of the target: damage is tracked and the session ends at 0. Leave 0 for a training dummy (unlimited).">
+        Life points
+        <input type="number" min="0" step="10000" [ngModel]="enemy().lifePoints" (ngModelChange)="setEnemy('lifePoints', numberOf($event, 0, 100000000))" [disabled]="running()" />
+      </label>
     </div>
     @if (enemy().enabled && enemyOpen()) {
       <div class="enemy-form">
@@ -139,6 +143,11 @@
 
   <div class="panel arena">
    <div class="arena-main">
+    <div class="hitsplats" aria-live="off">
+      @for (h of hitsplats(); track h.id) {
+        <div class="hitsplat" [class.crit]="h.crit" [class.dot]="h.dot" [title]="h.name">{{ h.amount | number: '1.0-0' }}</div>
+      }
+    </div>
     <div class="queue-strip">
       @for (s of slots(); track s.stepIndex + '-' + s.kind) {
         @if (s.note !== undefined) {
@@ -202,6 +211,15 @@
           <span class="value">{{ adrenaline() | number: '1.0-0' }}%</span>
         </div>
       </div>
+      @if (enemy().lifePoints > 0) {
+        <div class="bar-row">
+          <span class="bar-label">Target <small>{{ enemy().preset ? enemy().name : 'life points' }}</small></span>
+          <div class="bar target">
+            <div class="fill" [style.width.%]="((running() || finished() ? targetHp() : enemy().lifePoints) / enemy().lifePoints) * 100"></div>
+            <span class="value">{{ (running() || finished() ? targetHp() : enemy().lifePoints) | number: '1.0-0' }} / {{ enemy().lifePoints | number: '1.0-0' }}</span>
+          </div>
+        </div>
+      }
     </div>
 
     <div class="status-row">
@@ -328,6 +346,9 @@
       <span class="bad">Too early {{ counts().early }}</span>
       <span class="bad">Wrong {{ counts().wrong }}</span>
       <span class="warn">Missed {{ counts().missed }}</span>
+      <span class="muted">Damage {{ damage() | number: '1.0-0' }}</span>
+      <span class="muted">DPS {{ dps() | number: '1.0-0' }}</span>
+      @if (killedAtMs(); as ms) { <span class="good">Kill {{ (ms / 1000) | number: '1.1-1' }} s</span> }
       @if (enemy().enabled) {
         <span class="good">Prayed {{ prayerStats().prayed }}/{{ prayerStats().attacks }}</span>
         <span class="bad">Hits taken {{ prayerStats().hits }}</span>
@@ -356,6 +377,13 @@
   @if (finished() && (results().length || (enemy().enabled && prayerStats().attacks))) {
     <div class="panel summary">
       <h2>Session summary{{ results().length ? ' – ' + accuracy() + '% clean' : '' }}</h2>
+      @if (damage() > 0) {
+        <p class="damage-summary">
+          <b>{{ damage() | number: '1.0-0' }} damage</b> in {{ hits() }} hits · {{ dps() | number: '1.0-0' }} DPS
+          @if (killedAtMs(); as ms) { · target killed after {{ (ms / 1000) | number: '1.1-1' }} s }
+          <small class="muted">(level 99, no armour bonus – see the wiki's ability damage formula)</small>
+        </p>
+      }
       @if (enemy().enabled) {
         <p class="prayer-summary">
           <b>Prayer score {{ prayerScore().score }} / {{ prayerScore().max }} ({{ prayerScore().pct }}%)</b> ·

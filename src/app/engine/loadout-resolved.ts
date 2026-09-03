@@ -52,6 +52,14 @@ export interface ResolvedLoadout {
   weaponSpec: EngineEntity | null;
   /** special attack stored in the Essence of Finality, as an entity */
   eofSpec: EngineEntity | null;
+  /** player ability damage for the wielded weapons (engine/damage.ts; level 99, no armour bonus) */
+  abilityDamage: number;
+  /** extra critical strike chance (Biting 2% per rank) */
+  critChanceAdd: number;
+  /** Precise: minimum hit +1.5% of the max per rank */
+  preciseRank: number;
+  /** Equilibrium: minimum hit +3% per rank, maximum −1% per rank */
+  equilibriumRank: number;
 }
 
 export function defaultResolvedLoadout(): ResolvedLoadout {
@@ -84,5 +92,9 @@ export function defaultResolvedLoadout(): ResolvedLoadout {
     weaponType: null,
     weaponSpec: null,
     eofSpec: null,
+    abilityDamage: 0,
+    critChanceAdd: 0,
+    preciseRank: 0,
+    equilibriumRank: 0,
   };
 }

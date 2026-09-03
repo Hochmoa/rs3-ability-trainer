@@ -237,6 +237,8 @@ export class DataService {
         adrenaline: a.adrenaline ?? 0,
         cooldownTicks: a.cooldownTicks ?? 0,
         buffs: this.dataBuffs(a.buffs, a.durationTicks),
+        damageMin: a.damageMin ?? undefined,
+        damageMax: a.damageMax ?? undefined,
       };
     }
     if (e.prayer) {
@@ -293,6 +295,8 @@ export class DataService {
       adrenaline: -(spec.adrenaline ?? 0),
       cooldownTicks: spec.cooldownTicks,
       buffs: this.dataBuffs(spec.buffs.map((b) => b.id).filter((id) => id >= 0), spec.durationTicks),
+      damageMin: spec.damageMin ?? undefined,
+      damageMax: spec.damageMax ?? undefined,
       hits,
       channel: spec.channelled ? { ticks: 3, hits: [1, 2, 3] } : undefined,
     };

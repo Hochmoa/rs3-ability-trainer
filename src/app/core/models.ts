@@ -609,6 +609,8 @@ export interface EnemyConfig {
   warningTicks: number;
   /** first attack lands this many ticks after the session start */
   firstAttackTicks: number;
+  /** life points of the target; 0 = unlimited (training dummy). Damage is tracked whether or not attacks are enabled. */
+  lifePoints: number;
 }
 
 export const DEFAULT_ENEMY: EnemyConfig = {
@@ -621,13 +623,16 @@ export const DEFAULT_ENEMY: EnemyConfig = {
   intervalTicks: 5,
   warningTicks: 3,
   firstAttackTicks: 8,
+  lifePoints: 0,
 };
 
 /** Boss presets from runescape.wiki (auto-attack styles and rate; specials are not simulated). */
 export const ENEMY_PRESETS: EnemyConfig[] = [
-  { ...DEFAULT_ENEMY, enabled: true, preset: 'nakatra', name: 'Nakatra, Devourer Eternal', styles: ['Magic', 'Ranged'], pattern: 'streak', streak: 3, intervalTicks: 5, warningTicks: 3 },
-  { ...DEFAULT_ENEMY, enabled: true, preset: 'zamorak', name: 'Zamorak, Lord of Chaos', styles: ['Magic', 'Ranged'], pattern: 'random', intervalTicks: 5, warningTicks: 3 },
-  { ...DEFAULT_ENEMY, enabled: true, preset: 'raksha', name: 'Raksha, the Shadow Colossus', styles: ['Melee', 'Ranged', 'Magic'], pattern: 'no-repeat', intervalTicks: 5, warningTicks: 3 },
+  { ...DEFAULT_ENEMY, enabled: true, preset: 'nakatra', name: 'Nakatra, Devourer Eternal', styles: ['Magic', 'Ranged'], pattern: 'streak', streak: 3, intervalTicks: 5, warningTicks: 3, lifePoints: 800000 },
+  { ...DEFAULT_ENEMY, enabled: true, preset: 'zamorak', name: 'Zamorak, Lord of Chaos', styles: ['Magic', 'Ranged'], pattern: 'random', intervalTicks: 5, warningTicks: 3, lifePoints: 300000 },
+  { ...DEFAULT_ENEMY, enabled: true, preset: 'raksha', name: 'Raksha, the Shadow Colossus', styles: ['Melee', 'Ranged', 'Magic'], pattern: 'no-repeat', intervalTicks: 5, warningTicks: 3, lifePoints: 800000 },
+  { ...DEFAULT_ENEMY, enabled: true, preset: 'rasial', name: 'Rasial, the First Necromancer', styles: ['Necromancy'], pattern: 'cycle', intervalTicks: 5, warningTicks: 3, lifePoints: 900000 },
+  { ...DEFAULT_ENEMY, enabled: false, preset: 'dummy', name: 'Training dummy', styles: ['Melee'], pattern: 'cycle', intervalTicks: 5, warningTicks: 3, lifePoints: 0 },
 ];
 
 export interface PrayerStats {
@@ -671,4 +676,6 @@ export interface Session {
   results: StepResult[];
   enemy?: EnemyConfig;
   prayerStats?: PrayerStats;
+  /** damage dealt in the session (engine/damage.ts numbers) */
+  damage?: { total: number; hits: number; dps: number; killedAtMs: number | null };
 }

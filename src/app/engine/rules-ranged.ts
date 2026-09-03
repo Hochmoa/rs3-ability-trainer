@@ -79,7 +79,7 @@ export const RANGED_RULES: AbilityRule[] = [
   {
     ability: 'corruption-shot',
     sharedCooldown: 'corruption',
-    hits: [0],
+    bleed: { hits: 5, everyTicks: 2, startTicks: 0, factors: [1, 0.8, 0.6, 0.4, 0.2] },
     notes: ['20% adrenaline; DoT of 5 hits every 2 ticks on up to 6 targets; shares its cooldown with Corruption Blast; removed by Freedom (' + W + 'Corruption_Shot )'],
     onHit: [{ kind: 'buff', id: 'corruption-shot', refresh: true }],
   },

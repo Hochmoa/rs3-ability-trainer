@@ -245,6 +245,15 @@ export class Train implements OnDestroy {
   readonly activePrayers = signal<Entity[]>([]);
   readonly prayerStats = signal<PrayerStats>({ ...EMPTY_PRAYER_STATS });
   readonly incoming = signal<IncomingView | null>(null);
+  /** damage of the session */
+  readonly damage = signal(0);
+  readonly hits = signal(0);
+  readonly dps = signal(0);
+  readonly targetHp = signal(0);
+  readonly killedAtMs = signal<number | null>(null);
+  /** floating hit numbers, newest last */
+  readonly hitsplats = signal<{ id: number; amount: number; crit: boolean; dot: boolean; name: string }[]>([]);
+  private hitId = 0;
   readonly attackLog = signal<{ style: Style4; prayed: boolean; tick: number }[]>([]);
   /** Soul Split ticks + prayed attacks, out of all ticks */
   readonly prayerScore = computed(() => {
@@ -494,7 +503,14 @@ export class Train implements OnDestroy {
       },
       prayerBook: this.prayerBook(),
       enemy: enemy.enabled ? { ...enemy, styles: [...enemy.styles] } : undefined,
+      targetLifePoints: enemy.lifePoints > 0 ? enemy.lifePoints : undefined,
     });
+    this.damage.set(0);
+    this.hits.set(0);
+    this.dps.set(0);
+    this.targetHp.set(enemy.lifePoints);
+    this.killedAtMs.set(null);
+    this.hitsplats.set([]);
     // every prayer of the book is pressable even when it is on no bar (touch / click users get it via the bars only)
     for (const p of this.data.prayers()) add('prayer:' + p.id);
     this.activePrayers.set([]);
@@ -600,6 +616,13 @@ export class Train implements OnDestroy {
     this.index.set(e.index);
     this.adrenaline.set(e.adrenaline);
     if (e.maxAdrenaline !== this.maxAdrenaline()) this.maxAdrenaline.set(e.maxAdrenaline);
+    if (e.damageDealt !== this.damage()) {
+      this.damage.set(e.damageDealt);
+      this.hits.set(e.hitCount);
+      this.targetHp.set(e.targetHp);
+    }
+    const elapsedS = (now - e.t0) / 1000;
+    if (elapsedS >= 1) this.dps.set(e.damageDealt / elapsedS);
     this.syncWield(e);
     this.expectedKey.set(e.currentStep?.key ?? null);
     this.queuedKey.set(e.queuedKey);
@@ -811,6 +834,19 @@ export class Train implements OnDestroy {
       case 'channel-cancelled':
         this.feedback.set({ text: this.name(ev.key) + ' channel cancelled – ' + ev.hitsLost + (ev.hitsLost === 1 ? ' hit' : ' hits') + ' lost', cls: 'warn' });
         break;
+      case 'hit': {
+        const id = ++this.hitId;
+        const name = ev.key.startsWith('spirit:') ? ev.key.slice(7).replace(/-/g, ' ') : this.name(ev.key);
+        this.hitsplats.update((l) => [...l.slice(-7), { id, amount: ev.amount, crit: ev.crit, dot: ev.dot, name }]);
+        window.setTimeout(() => this.hitsplats.update((l) => l.filter((h) => h.id !== id)), 1800);
+        break;
+      }
+      case 'killed': {
+        const ms = Math.round(e.tickTime(ev.tick) - e.t0);
+        this.killedAtMs.set(ms);
+        this.feedback.set({ text: 'Target killed after ' + (ms / 1000).toFixed(1) + ' s – ' + Math.round(e.damageDealt).toLocaleString() + ' damage', cls: 'good' });
+        break;
+      }
       case 'missed':
         this.counts.update((c) => ({ ...c, missed: c.missed + ev.keys.length }));
         this.feedback.set({ text: 'Missed before the cast: ' + ev.keys.map((k) => this.name(k)).join(', '), cls: 'warn' });
@@ -843,6 +879,7 @@ export class Train implements OnDestroy {
       results,
       enemy: this.enemy().enabled ? { ...this.enemy() } : undefined,
       prayerStats: this.enemy().enabled ? { ...this.prayerStats() } : undefined,
+      damage: { total: this.damage(), hits: this.hits(), dps: Math.round(this.dps()), killedAtMs: this.killedAtMs() },
     });
   }
 

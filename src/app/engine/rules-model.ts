@@ -137,6 +137,18 @@ export interface CooldownRule {
   when: Condition;
 }
 
+export interface BleedSpec {
+  hits: number;
+  everyTicks: number;
+  startTicks?: number;
+  /** the ability also lands a direct hit on the cast tick (Massacre) */
+  direct?: boolean;
+  /** abilities.json gives the total: divide it by `hits` (Bloat) */
+  splitTotal?: boolean;
+  /** per-hit factor of the base roll (Corruption Shot 1.0 / 0.8 / 0.6 / 0.4 / 0.2) */
+  factors?: number[];
+}
+
 export interface ChannelSpec {
   /** total ticks the channel occupies */
   ticks: number;
@@ -182,6 +194,12 @@ export interface AbilityRule {
    * with cast 1, later casts within the sequence window ignore it; the last cast resets the slot.
    */
   stages?: { cost: number }[];
+  /** bleed / burn: `hits` damage-over-time hits every `everyTicks` (first after `startTicks`, default everyTicks); no crits, no style buffs */
+  bleed?: BleedSpec;
+  /** one hit per stack held (Volley of Souls) */
+  hitsPerStack?: StackId;
+  /** situational damage multipliers (Finger of Death 1.5x under Living Death) */
+  damageRules?: { when: Condition; mult: number }[];
   sharedCooldown?: string;
   /** buffs applied on cast (overrides the wiki buff link) */
   buffs?: string[];
