@@ -51,6 +51,10 @@ export interface SlotView {
           >
             @if (s.entity) {
               <img [src]="s.entity.icon" [alt]="s.entity.name" draggable="false" />
+              @if (s.queued) {
+                <!-- queued: black loading ring, like the game's queue indicator -->
+                <div class="queue-spin"></div>
+              }
               @if (s.cooldownS > 0) {
                 <!-- the ability's own cooldown wins: its remaining seconds, no GCD sweep -->
                 <div class="cd" [style.background]="overlay(s.cooldownPhase)"></div>
@@ -170,6 +174,22 @@ export interface SlotView {
     .slot.expected {
       border-color: var(--gold);
       box-shadow: 0 0 6px var(--gold), inset 0 0 4px rgba(201, 162, 39, 0.6);
+    }
+    .queue-spin {
+      position: absolute;
+      inset: 18%;
+      border-radius: 50%;
+      border: 3px solid rgba(0, 0, 0, 0.85);
+      border-top-color: transparent;
+      animation: queue-spin 0.9s linear infinite;
+      pointer-events: none;
+      z-index: 2;
+      filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.5));
+    }
+    @keyframes queue-spin {
+      to {
+        transform: rotate(360deg);
+      }
     }
     .slot.queued {
       border-color: #ffe27a;

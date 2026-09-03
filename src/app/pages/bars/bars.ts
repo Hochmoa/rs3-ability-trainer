@@ -7,6 +7,7 @@ import { ActionBarSetup, BAR_POSITION_NAMES, RotationStep, STYLES, STYLES4, Styl
 import { StorageService } from '../../core/storage.service';
 import { AbilityIcon } from '../../shared/ability-icon';
 import { EntityTip } from '../../shared/tooltip';
+import { DialogService } from '../../shared/dialog';
 
 const TABS = [...STYLES, 'Prayers', 'Curses', 'Special', 'Weapons'] as const;
 type Tab = (typeof TABS)[number];
@@ -20,6 +21,7 @@ const TYPE_ORDER: Record<string, number> = { Basic: 0, Enhanced: 1, Threshold: 2
   styleUrl: './bars.scss',
 })
 export class Bars {
+  private dialogs = inject(DialogService);
   readonly storage = inject(StorageService);
   readonly data = inject(DataService);
 
@@ -200,16 +202,16 @@ export class Bars {
   }
 
   /** overwrite the selected preset with the slots of another one */
-  copyFrom(sourceId: string | number | null): void {
+  async copyFrom(sourceId: string | number | null): Promise<void> {
     const src = this.setup().presets.find((p) => p.id === Number(sourceId));
     const target = this.preset();
     if (!src || !target || src.id === target.id) return;
-    if (target.slots.some(Boolean) && !confirm('Replace the slots of "' + target.name + '" with a copy of "' + src.name + '"?')) return;
+    if (target.slots.some(Boolean) && !(await this.dialogs.confirm('Replace the slots of "' + target.name + '" with a copy of "' + src.name + '"?', { title: 'Copy preset', ok: 'Replace' }))) return;
     this.mutatePreset((slots) => src.slots.forEach((s, i) => (slots[i] = s ? { ...s } : null)));
   }
 
-  clearAll(): void {
-    if (!confirm('Empty all 14 slots of "' + this.preset().name + '"?')) return;
+  async clearAll(): Promise<void> {
+    if (!(await this.dialogs.confirm('Empty all 14 slots of "' + this.preset().name + '"?', { title: 'Empty preset', ok: 'Empty', danger: true }))) return;
     this.mutatePreset((slots) => slots.fill(null));
   }
 

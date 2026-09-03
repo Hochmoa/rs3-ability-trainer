@@ -2,6 +2,7 @@ import { Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Settings as SettingsModel } from '../../core/models';
 import { StorageService } from '../../core/storage.service';
+import { DialogService } from '../../shared/dialog';
 
 @Component({
   selector: 'app-settings',
@@ -74,6 +75,7 @@ import { StorageService } from '../../core/storage.service';
   `,
 })
 export class Settings {
+  private dialogs = inject(DialogService);
   readonly storage = inject(StorageService);
   readonly s = this.storage.settings;
 
@@ -87,7 +89,7 @@ export class Settings {
   }
 
   async clearAll(): Promise<void> {
-    if (!confirm('Delete all keybinds, rotations, settings and sessions stored in this browser?')) return;
+    if (!(await this.dialogs.confirm('Delete all keybinds, rotations, settings and sessions stored in this browser?', { title: 'Delete all data', ok: 'Delete everything', danger: true }))) return;
     await this.storage.clearAll();
   }
 }

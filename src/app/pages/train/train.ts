@@ -507,6 +507,9 @@ export class Train implements OnDestroy {
   private applyEvent(ev: EngineEvent, now: number): void {
     const e = this.engine!;
     switch (ev.kind) {
+      case 'unqueued':
+        this.feedback.set({ text: this.name(ev.key) + ' taken out of the queue', cls: 'info' });
+        break;
       case 'queued': {
         const inMs = Math.max(0, Math.round(e.tickTime(ev.fireTick) - now));
         if (ev.key === ev.expected) {

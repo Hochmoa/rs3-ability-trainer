@@ -10,6 +10,7 @@ import { SupabaseService } from '../../core/supabase.service';
 import { SyncService } from '../../core/sync.service';
 import { AbilityIcon } from '../../shared/ability-icon';
 import { EntityTip } from '../../shared/tooltip';
+import { DialogService } from '../../shared/dialog';
 
 const TABS = [...STYLES, 'Prayers', 'Curses', 'Special', 'Weapons', 'Specs', 'Actions'] as const;
 type Tab = (typeof TABS)[number];
@@ -22,6 +23,7 @@ const TYPE_ORDER: Record<string, number> = { Basic: 0, Enhanced: 1, Threshold: 2
   styleUrl: './rotations.scss',
 })
 export class Rotations {
+  private dialogs = inject(DialogService);
   readonly storage = inject(StorageService);
   readonly data = inject(DataService);
   readonly supabase = inject(SupabaseService);
@@ -93,8 +95,8 @@ export class Rotations {
     this.importText.set('');
   }
 
-  addNote(): void {
-    const text = prompt('Note text (shown in the queue, not an input):');
+  async addNote(): Promise<void> {
+    const text = await this.dialogs.prompt('Note text (shown in the queue, not an input):', { title: 'Add note', placeholder: 'e.g. wait for the boss to move' });
     if (text?.trim()) this.editing.update((r) => (r ? { ...r, steps: [...r.steps, { kind: 'note', id: '', note: text.trim() }] } : r));
   }
 
@@ -115,7 +117,7 @@ export class Rotations {
   }
 
   async remove(r: Rotation): Promise<void> {
-    if (!confirm('Delete rotation "' + r.name + '"?')) return;
+    if (!(await this.dialogs.confirm('Delete rotation "' + r.name + '"?', { title: 'Delete rotation', ok: 'Delete', danger: true }))) return;
     await this.storage.deleteRotation(r.id);
   }
 

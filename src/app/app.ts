@@ -7,12 +7,13 @@ import { SyncService } from './core/sync.service';
 import { ConsentBanner } from './shared/consent-banner';
 import { FeedbackDialog } from './shared/feedback-dialog';
 import { SupportNudge, SUPPORT_LABEL, SUPPORT_URL } from './shared/support-nudge';
+import { Dialog } from './shared/dialog';
 import { Toast } from './shared/toast';
 import { EntityTooltip } from './shared/tooltip';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, ConsentBanner, EntityTooltip, SupportNudge, FeedbackDialog, Toast],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, ConsentBanner, EntityTooltip, SupportNudge, FeedbackDialog, Toast, Dialog],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })

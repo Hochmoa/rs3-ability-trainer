@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import { StorageService } from '../../core/storage.service';
 import { DISPLAY_NAME_RE, SupabaseService, errorText } from '../../core/supabase.service';
 import { SyncService } from '../../core/sync.service';
+import { DialogService } from '../../shared/dialog';
 
 type Mode = 'signin' | 'signup' | 'reset';
 
@@ -14,6 +15,7 @@ type Mode = 'signin' | 'signup' | 'reset';
   styleUrl: './account.scss',
 })
 export class Account {
+  private dialogs = inject(DialogService);
   readonly supabase = inject(SupabaseService);
   readonly sync = inject(SyncService);
   readonly storage = inject(StorageService);
@@ -135,7 +137,7 @@ export class Account {
   }
 
   async deleteAccount(): Promise<void> {
-    if (!confirm('Delete your account and everything stored online (profile, rotations, keybinds, sessions)? Local data in this browser stays.')) return;
+    if (!(await this.dialogs.confirm('Delete your account and everything stored online (profile, rotations, keybinds, sessions)? Local data in this browser stays.', { title: 'Delete account', ok: 'Delete account', danger: true }))) return;
     this.busy.set(true);
     try {
       await this.supabase.deleteAccount();

@@ -79,6 +79,8 @@ export interface ActiveBuff extends EngineBuff {
 export type EngineEvent =
   /** entity accepted; casts at fireTick (queued during the GCD, or on the tick it was processed) */
   | { kind: 'queued'; key: string; expected: string; fireTick: number; marginMs: number }
+  /** the queued ability was pressed again and taken out of the queue */
+  | { kind: 'unqueued'; key: string }
   /** the expected step finished – GCD ability cast or off-GCD thing activated */
   | { kind: 'fired'; result: StepResult }
   /** something other than the expected step was cast / activated */
@@ -429,7 +431,15 @@ export class TrainerEngine {
       }
       return;
     }
-    if (this.pending?.key === input.key) return; // already queued – repeated presses change nothing
+    if (this.pending?.key === input.key) {
+      // pressing the queued ability again cancels the queue – in game only if the icon disappears at least one
+      // tick before the cast, so on the cast tick itself the press changes nothing
+      if (tickP < this.pending.tick) {
+        this.pending = null;
+        this.events.push({ kind: 'unqueued', key: input.key });
+      }
+      return;
+    }
     this.accept(input, gcdEnd, expected);
   }
 

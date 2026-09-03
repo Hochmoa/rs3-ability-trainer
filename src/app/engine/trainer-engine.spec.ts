@@ -168,6 +168,21 @@ describe('ability queueing ON', () => {
     expect(e.results[1]).toMatchObject({ outcome: 'perfect', offsetMs: 1700, firedAtTick: 4 });
   });
 
+  it('pressing the queued ability again cancels the queue (not on the cast tick itself)', () => {
+    const e = afterFirstFire(on);
+    e.press('b', 700); // queued on tick 2 for tick 4
+    e.press('b', 1300); // tick 3: toggles it off
+    e.update(1800);
+    expect(e.events.at(-1)).toMatchObject({ kind: 'unqueued', key: 'b' });
+    expect(e.isQueued).toBe(false);
+    e.update(2400);
+    expect(e.results.length).toBe(1); // nothing cast
+    e.press('b', 2000); // tick 4 = gcd end: casts
+    e.press('b', 2100); // same tick again: no cancel
+    e.update(2400);
+    expect(e.results[1]).toMatchObject({ key: 'b', outcome: 'perfect', firedAtTick: 4 });
+  });
+
   it('a different ability pressed earlier in the GCD replaces the queued one', () => {
     const e = afterFirstFire(on);
     e.press('b', 700);
