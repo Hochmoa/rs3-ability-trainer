@@ -51,7 +51,9 @@
     </div>
     <div class="preview">
       @for (s of row.steps; track $index) {
-        @if (entity(s); as e) {
+        @if (s.kind === 'note') {
+          <span class="note-chip" [title]="s.note">{{ s.note }}</span>
+        } @else if (entity(s); as e) {
           <span [entityTip]="e"><ability-icon [ability]="e" [px]="40" /></span>
         } @else {
           <span class="removed" title="removed from the game">?</span>

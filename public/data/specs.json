@@ -1,0 +1,1227 @@
+[
+ {
+  "id": "aimed-shot",
+  "name": "Aimed Shot",
+  "style": "Ranged",
+  "weapons": [
+   "hand-cannon"
+  ],
+  "adrenaline": -35.0,
+  "cooldownTicks": 0,
+  "damageMin": 300.0,
+  "damageMax": 360.0,
+  "damageText": "330%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Fire a well aimed shot.\n* 300-360% Ranged damage after 3s (5 ticks).\n* Channelled.\n* Hit Chance is increased by 75%.",
+  "icon": "assets/gear/hand-cannon.png"
+ },
+ {
+  "id": "aimed-strike",
+  "name": "Aimed Strike",
+  "style": "Melee",
+  "weapons": [
+   "keenblade"
+  ],
+  "adrenaline": -35.0,
+  "cooldownTicks": 0,
+  "damageMin": 150.0,
+  "damageMax": 170.0,
+  "damageText": "160%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Carefully strike your target.\n* 150-170% Melee damage.\n* Hit chance is increased by 20%.",
+  "icon": "assets/gear/keenblade.png"
+ },
+ {
+  "id": "armadyl-s-judgement",
+  "name": "Armadyl's Judgement",
+  "style": "Melee",
+  "weapons": [
+   "armadyl-godsword"
+  ],
+  "adrenaline": -50.0,
+  "cooldownTicks": 0,
+  "damageMin": 400.0,
+  "damageMax": 480.0,
+  "damageText": "440%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Unleash the power of Armadyl.\n* 400-480% Melee damage.",
+  "icon": "assets/gear/armadyl-godsword.png"
+ },
+ {
+  "id": "backstab",
+  "name": "Backstab",
+  "style": "Melee",
+  "weapons": [
+   "bone-dagger"
+  ],
+  "adrenaline": -75.0,
+  "cooldownTicks": 0,
+  "damageMin": 150.0,
+  "damageMax": 170.0,
+  "damageText": "160%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Stab at the target with increased effectiveness against the unsuspecting.\n* 150-170% Melee damage.\n* Hit chance is increased by 100% if the target is not attacking you.\n* Reduces the target's Defence stat by 8%.\n* Increases the base hit chance against the target by 2.\n* 1m duration.",
+  "icon": "assets/gear/bone-dagger.png"
+ },
+ {
+  "id": "balance-by-force",
+  "name": "Balance by Force",
+  "style": "Ranged",
+  "weapons": [
+   "bow-of-the-last-guardian"
+  ],
+  "adrenaline": -30.0,
+  "cooldownTicks": 0,
+  "damageMin": 235.0,
+  "damageMax": 255.0,
+  "damageText": "245%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Strike your target with an arrow of pure anima.\n* 235-255% Ranged damage.\n* Reduces the number of stacks required to activate Perfect Equilibrium to 4.\n* 30s (50 ticks) duration.\nDamage is 70% effective in PvP.",
+  "icon": "assets/gear/bow-of-the-last-guardian.png"
+ },
+ {
+  "id": "balanced-shot",
+  "name": "Balanced Shot",
+  "style": "Ranged",
+  "weapons": [
+   "guthix-bow"
+  ],
+  "adrenaline": -35.0,
+  "cooldownTicks": 0,
+  "damageMin": 170.0,
+  "damageMax": 190.0,
+  "damageText": "180% (240% with Guthix arrows)",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Fire a precise and enchanted arrow.\n* 170-190% Ranged damage.\n* Heals you for 60% of the damage dealt over 15s (25 ticks).\n* Deals an additional 55-65% Magic damage if you are using Guthix arrows.",
+  "icon": "assets/gear/guthix-bow.png"
+ },
+ {
+  "id": "blackhole",
+  "name": "Blackhole",
+  "style": "Melee",
+  "weapons": [
+   "zaros-godsword"
+  ],
+  "adrenaline": -50.0,
+  "cooldownTicks": 100,
+  "damageMin": 35.0,
+  "damageMax": 45.0,
+  "damageText": "440%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Open a blackhole at your location.\n* Creates a 7x7 area at your location.\n* Melee attacks deal 1.25x damage while inside the area.\n* 35-45% Melee damage per hit every 1.8s (3 ticks) to the target while it is inside the area.\n* 19.8s (33 ticks) duration.",
+  "icon": "assets/gear/zaros-godsword.png"
+ },
+ {
+  "id": "chain-hit",
+  "name": "Chain Hit",
+  "style": "Ranged",
+  "weapons": [
+   "rune-throwing-axe"
+  ],
+  "adrenaline": -10.0,
+  "cooldownTicks": 0,
+  "damageMin": 55.0,
+  "damageMax": 65.0,
+  "damageText": "60%",
+  "target": "[[File:Ability multi-target.png|20px|Multi-target ability]] Multi-target",
+  "description": "Throw an axe which bounces off the target.\n* 55-65% Ranged damage per hit.\n* Bounces between enemies within 3 tiles of each other up to 3 times.",
+  "icon": "assets/gear/rune-throwing-axe.png"
+ },
+ {
+  "id": "claws-of-guthix",
+  "name": "Claws of Guthix",
+  "style": "Magic",
+  "weapons": [
+   "guthix-staff"
+  ],
+  "adrenaline": -25.0,
+  "cooldownTicks": 0,
+  "damageMin": 200.0,
+  "damageMax": 240.0,
+  "damageText": "220%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Call upon the divine energy of Guthix to perform a powerful magical attack.\n* 200-240% Magic damage.\n* Reduces the target's Defence stat by 5%\n* Increase the base hit chance against the target by 5 for 1m.",
+  "icon": "assets/gear/guthix-staff.png"
+ },
+ {
+  "id": "clobber",
+  "name": "Clobber",
+  "style": "Melee",
+  "weapons": [
+   "dragon-hatchet",
+   "crystal-hatchet"
+  ],
+  "adrenaline": -30.0,
+  "cooldownTicks": 0,
+  "damageMin": 90.0,
+  "damageMax": 110.0,
+  "damageText": "100%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Hack at your target, reducing their stats.\n* 90-110% Melee damage.\n* Reduces the target's Defence stat by 5%.\n* Reduces the target's Magic stat by 5%.\n* Increases the base hit chance against the target by 3.\n* Reduces the target's Magic damage by 10%.\n* 1m duration.",
+  "icon": "assets/gear/dragon-hatchet.png"
+ },
+ {
+  "id": "crystal-rain",
+  "name": "Crystal Rain",
+  "style": "Ranged",
+  "weapons": [
+   "seren-godbow"
+  ],
+  "adrenaline": -30.0,
+  "cooldownTicks": 50,
+  "damageMin": 125.0,
+  "damageMax": 155.0,
+  "damageText": "140% per hit (max 700%)",
+  "target": "[[File:Ability multi-target.png|20px|Multi-target ability]] Multi-target",
+  "description": "Launch 5 pairs of crystal arrows into the air.\n* 125-155% Ranged damage per hit.\n* Up to 5 hits.\n* Each pair of arrows will land randomly within 2 tiles of the target's centre.",
+  "icon": "assets/gear/seren-godbow.png"
+ },
+ {
+  "id": "death-essence",
+  "name": "Death Essence",
+  "style": "Necromancy",
+  "weapons": [
+   "omni-guard"
+  ],
+  "adrenaline": -30.0,
+  "cooldownTicks": 100,
+  "damageMin": 360.0,
+  "damageMax": 440.0,
+  "damageText": "400%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Use the power of the Omni guard to charge yourself with power.\n* 360-440% Necromancy damage.\n* Touch of Death, Finger of Death, Death Skulls: Immediately readies Death Spark.\n* 30s (50 ticks) duration.\n* On cast: Immediately readies Death Spark.",
+  "icon": "assets/gear/omni-guard.png"
+ },
+ {
+  "id": "death-grasp",
+  "name": "Death Grasp",
+  "style": "Necromancy",
+  "weapons": [
+   "death-guard-tier-70",
+   "death-guard-tier-80",
+   "death-guard-tier-90"
+  ],
+  "adrenaline": -25.0,
+  "cooldownTicks": 50,
+  "damageMin": 405.0,
+  "damageMax": 495.0,
+  "damageText": "450% (930% with 12 Necrosis stacks)",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Grasp the target with necrotic energy.\n* 405-495% Necromancy damage.\n* Stuns and binds the target for 4.8s (8 ticks).\n* Deals an additional 40% Necromancy damage for each Necrosis stack.\n* Consumes all Necrosis stacks.\nDamage is 40% effective in PvP.",
+  "icon": "assets/gear/death-guard-tier-70.png"
+ },
+ {
+  "id": "deep-burn",
+  "name": "Deep Burn",
+  "style": "Ranged",
+  "weapons": [
+   "strykebow"
+  ],
+  "adrenaline": -25.0,
+  "cooldownTicks": 0,
+  "damageMin": 180.0,
+  "damageMax": 210.0,
+  "damageText": "195%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Unleash the energy stored in your bow.\n* 180-210% Ranged damage on first hit.\n* 12.5% of all Dark Burn stacks damage per hit every 1.2s (2 ticks).\n* 6 hits.\n* Damage over time.\n* Stuns and binds the target for 3s (5 ticks).\n* Consumes all Dark Burn stacks.",
+  "icon": "assets/gear/strykebow.png"
+ },
+ {
+  "id": "defiance",
+  "name": "Defiance",
+  "style": "Ranged",
+  "weapons": [
+   "zanik-s-crossbow"
+  ],
+  "adrenaline": -40.0,
+  "cooldownTicks": 0,
+  "damageMin": 225.0,
+  "damageMax": 275.0,
+  "damageText": "250%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Shoot an empowered bolt, devastating the devout.\n* 225-275% Ranged damage per hit.\n* PvP: Damage is increased by 10% for each Prayer the target has active, up to a maximum of 50%.",
+  "icon": "assets/gear/zanik-s-crossbow.png"
+ },
+ {
+  "id": "descent-of-darkness",
+  "name": "Descent of Darkness",
+  "style": "Ranged",
+  "weapons": [
+   "dark-bow"
+  ],
+  "adrenaline": -65.0,
+  "cooldownTicks": 0,
+  "damageMin": 190.0,
+  "damageMax": 230.0,
+  "damageText": "420%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Unleash the power of darkness in two powerful shots.\n* 190-230% Ranged damage per hit.\n* 2 hits.",
+  "icon": "assets/gear/dark-bow.png"
+ },
+ {
+  "id": "destructive-shot",
+  "name": "Destructive Shot",
+  "style": "Ranged",
+  "weapons": [
+   "zamorak-bow"
+  ],
+  "adrenaline": -40.0,
+  "cooldownTicks": 0,
+  "damageMin": 160.0,
+  "damageMax": 180.0,
+  "damageText": "340% (400% with Zamorak arrows)",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Fire two arrows at once.\n* 160-180% Ranged damage per hit.\n* 2 hits.\n* Deals an additional 55-65% Magic damage if you are using Zamorak arrows.",
+  "icon": "assets/gear/zamorak-bow.png"
+ },
+ {
+  "id": "devour",
+  "name": "Devour",
+  "style": "Magic",
+  "weapons": [
+   "obliteration"
+  ],
+  "adrenaline": -50.0,
+  "cooldownTicks": 0,
+  "damageMin": 200.0,
+  "damageMax": 240.0,
+  "damageText": "220%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Cast a powerful hex at your target, limiting their ability to heal.\n* 200-240% Magic damage.\n* Reduces the targets healing by 50% for 15s (25 ticks).",
+  "icon": "assets/gear/obliteration.png"
+ },
+ {
+  "id": "disrupt",
+  "name": "Disrupt",
+  "style": "Melee",
+  "weapons": [
+   "korasi-s-sword"
+  ],
+  "adrenaline": -60.0,
+  "cooldownTicks": 0,
+  "damageMin": 230.0,
+  "damageMax": 270.0,
+  "damageText": "250%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Call down a powerful storm to strike your foes.\n* 230-270% Magic damage to the target and up to 9 additional enemies within 1 tile of the target.",
+  "icon": "assets/gear/korasi-s-sword.png"
+ },
+ {
+  "id": "draconic-blow",
+  "name": "Draconic Blow",
+  "style": "Melee",
+  "weapons": [
+   "dragon-mace",
+   "superior-dragon-mace"
+  ],
+  "adrenaline": -20.0,
+  "cooldownTicks": 0,
+  "damageMin": 240.0,
+  "damageMax": 280.0,
+  "damageText": "260%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Attack with a massive blow.\n* 240-280% Melee damage.",
+  "icon": "assets/gear/dragon-mace.png"
+ },
+ {
+  "id": "draconic-cleave",
+  "name": "Draconic Cleave",
+  "style": "Melee",
+  "weapons": [
+   "dragon-longsword",
+   "superior-dragon-longsword"
+  ],
+  "adrenaline": -25.0,
+  "cooldownTicks": 0,
+  "damageMin": 275.0,
+  "damageMax": 315.0,
+  "damageText": "295%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Brutally slash at the target.\n* 275-315% Melee damage.",
+  "icon": "assets/gear/dragon-longsword.png"
+ },
+ {
+  "id": "draconic-puncture",
+  "name": "Draconic Puncture",
+  "style": "Melee",
+  "weapons": [
+   "dragon-dagger",
+   "superior-dragon-dagger"
+  ],
+  "adrenaline": -50.0,
+  "cooldownTicks": 0,
+  "damageMin": 125.0,
+  "damageMax": 155.0,
+  "damageText": "280%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Strike the target with two quick stabs.\n* 125-155% Melee damage per hit.\n* 2 hits.\n* Hit chance is increased by 15%.",
+  "icon": "assets/gear/dragon-dagger.png"
+ },
+ {
+  "id": "draconic-slash",
+  "name": "Draconic Slash",
+  "style": "Melee",
+  "weapons": [
+   "dragon-scimitar",
+   "superior-dragon-scimitar"
+  ],
+  "adrenaline": -50.0,
+  "cooldownTicks": 0,
+  "damageMin": 240.0,
+  "damageMax": 280.0,
+  "damageText": "260%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Slash with increased precision.\n* 240-280% Melee damage.\n* Hit chance is increased by 25%.\n* Increases your hit chance with Slash weapons by 25% for 1m.",
+  "icon": "assets/gear/dragon-scimitar.png"
+ },
+ {
+  "id": "energy-drain",
+  "name": "Energy Drain",
+  "style": "Melee",
+  "weapons": [
+   "abyssal-whip"
+  ],
+  "adrenaline": -50.0,
+  "cooldownTicks": 0,
+  "damageMin": 75.0,
+  "damageMax": 85.0,
+  "damageText": "80%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Whip viciously at the target, draining their energy.\n* 75-85% Melee damage.\n* PvP: Drains 100% of the target's run energy.",
+  "icon": "assets/gear/abyssal-whip.png"
+ },
+ {
+  "id": "favour-of-the-war-god",
+  "name": "Favour of the War God",
+  "style": "Melee",
+  "weapons": [
+   "ancient-mace"
+  ],
+  "adrenaline": -100.0,
+  "cooldownTicks": 0,
+  "damageMin": 125.0,
+  "damageMax": 145.0,
+  "damageText": "135%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Attack with the might of the War God.\n* 125-145% Melee damage.\n* Restores Prayer points equal to 10% of the damage dealt.\n* PvP: Ignores the target's protection Prayers.\n* PvP: Reduces the target's Prayer points by 10% of the damage dealt.",
+  "icon": "assets/gear/ancient-mace.png"
+ },
+ {
+  "id": "feint",
+  "name": "Feint",
+  "style": "Melee",
+  "weapons": [
+   "vesta-s-longsword",
+   "superior-vesta-s-longsword"
+  ],
+  "adrenaline": -25.0,
+  "cooldownTicks": 0,
+  "damageMin": 255.0,
+  "damageMax": 295.0,
+  "damageText": "275%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Distract your foe and strike with a deadly stab.\n* 255-295% Melee damage.\n* Hit chance is increased by 75%.",
+  "icon": "assets/gear/vesta-s-longsword.png"
+ },
+ {
+  "id": "fishstabber",
+  "name": "Fishstabber",
+  "style": "Melee",
+  "weapons": [
+   "dragon-harpoon"
+  ],
+  "adrenaline": -100.0,
+  "cooldownTicks": 0,
+  "damageMin": null,
+  "damageMax": null,
+  "damageText": "0%",
+  "target": "[[File:Ability self-target.png|20px|Self-target ability]] Self-target",
+  "description": "Embrace effishiency.\n* Increases your Fishing stat by 3.",
+  "icon": "assets/gear/dragon-harpoon.png"
+ },
+ {
+  "id": "flames-of-zamorak",
+  "name": "Flames of Zamorak",
+  "style": "Magic",
+  "weapons": [
+   "zamorak-staff"
+  ],
+  "adrenaline": -25.0,
+  "cooldownTicks": 0,
+  "damageMin": 200.0,
+  "damageMax": 240.0,
+  "damageText": "220%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Call upon the power of Zamorak to perform a powerful magical attack.\n* 200-240% Magic damage.\n* Reduces the target's Magic stat by 5%.\n* Reduces the target's hit chance by 5% for 1m.",
+  "icon": "assets/gear/zamorak-staff.png"
+ },
+ {
+  "id": "from-the-shadows",
+  "name": "From the Shadows",
+  "style": "Magic",
+  "weapons": [
+   "staff-of-sliske"
+  ],
+  "adrenaline": -50.0,
+  "cooldownTicks": 0,
+  "damageMin": 55.0,
+  "damageMax": 65.0,
+  "damageText": "300%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Summon a wight from the Shadow Realm to attack for you.\n* 55-65% Magic damage per hit every 2.4s (4 ticks).\n* 5 hits.",
+  "icon": "assets/gear/staff-of-sliske.png"
+ },
+ {
+  "id": "get-over-here",
+  "name": "Get Over Here!",
+  "style": "Melee",
+  "weapons": [
+   "lava-whip"
+  ],
+  "adrenaline": -75.0,
+  "cooldownTicks": 0,
+  "damageMin": null,
+  "damageMax": null,
+  "damageText": "0%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Fully extend the whip, immobilizing foes.\n* Stuns and Binds the target for 6s (10 ticks).\n* PvP: Pulls your target from within 10 tiles towards you.",
+  "icon": "assets/gear/lava-whip.png"
+ },
+ {
+  "id": "gravitate",
+  "name": "Gravitate",
+  "style": "Melee",
+  "weapons": [
+   "annihilation"
+  ],
+  "adrenaline": -60.0,
+  "cooldownTicks": 0,
+  "damageMin": null,
+  "damageMax": null,
+  "damageText": "0%",
+  "target": "[[File:Ability self-target.png|20px|Self-target ability]] Self-target",
+  "description": "Draw power into your weapon, increasing it's effectiveness.\n* Attacks generate 1 Gravitate stack.\n* Melee damage is increased by 1% for each stack of Gravitate.\n* 30s (50 ticks) duration.\nMaximum Gravitate stacks: 20.",
+  "icon": "assets/gear/annihilation.png"
+ },
+ {
+  "id": "hamstring",
+  "name": "Hamstring",
+  "style": "Ranged",
+  "weapons": [
+   "morrigan-s-throwing-axe",
+   "superior-morrigan-s-throwing-axe"
+  ],
+  "adrenaline": -50.0,
+  "cooldownTicks": 0,
+  "damageMin": 150.0,
+  "damageMax": 170.0,
+  "damageText": "160%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Launch a shot at your target's legs.\n* 150-170% Ranged damage.\n* PvP: Prevents the target from using movement abilities for 9 seconds.",
+  "icon": "assets/gear/morrigan-s-throwing-axe.png"
+ },
+ {
+  "id": "healing-blade",
+  "name": "Healing Blade",
+  "style": "Melee",
+  "weapons": [
+   "saradomin-godsword"
+  ],
+  "adrenaline": -50.0,
+  "cooldownTicks": 0,
+  "damageMin": 185.0,
+  "damageMax": 215.0,
+  "damageText": "200%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Slash with an attack blessed by Saradomin.\n* 185%-215% Melee damage.\n* Heals you for 50% of the damage dealt.\n* Restores Prayer points equal to 2.5% of the damage dealt.",
+  "icon": "assets/gear/saradomin-godsword.png"
+ },
+ {
+  "id": "iban-blast",
+  "name": "Iban Blast",
+  "style": "Magic",
+  "weapons": [
+   "iban-s-staff"
+  ],
+  "adrenaline": -50.0,
+  "cooldownTicks": 0,
+  "damageMin": 340.0,
+  "damageMax": 390.0,
+  "damageText": "365%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Attack with a powerful blast of chaos magic.\n* 340-390% Magic damage.",
+  "icon": "assets/gear/iban-s-staff.png"
+ },
+ {
+  "id": "ice-cleave",
+  "name": "Ice Cleave",
+  "style": "Melee",
+  "weapons": [
+   "zamorak-godsword"
+  ],
+  "adrenaline": -60.0,
+  "cooldownTicks": 0,
+  "damageMin": 185.0,
+  "damageMax": 215.0,
+  "damageText": "200%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Cleave your target with a chilling blow.\n* 185-215% Melee damage.\n* Binds the target for 9.6s (16 ticks).",
+  "icon": "assets/gear/zamorak-godsword.png"
+ },
+ {
+  "id": "icy-tempest",
+  "name": "Icy Tempest",
+  "style": "Melee",
+  "weapons": [
+   "dark-shard-of-leng",
+   "dark-ice-shard"
+  ],
+  "adrenaline": -30.0,
+  "cooldownTicks": 25,
+  "damageMin": 115.0,
+  "damageMax": 135.0,
+  "damageText": "315% (475% with 10 Primordial ice stacks)",
+  "target": "[[File:Ability area-target.png|20px|Area-target ability]] Area-target",
+  "description": "Destroy those around you with shards of ice from Leng.\n* 115-135% Melee damage.\n* 175-205% Melee damage to the target and up to 9 additional enemies within 1 game square of you.\n* Deals an additional 18%–22% Melee damage for each Primordial Ice stack with each hit.\n* Adrenaline cost is reduced by 12% for each Primordial Ice stack.\n** Adrenaline requirement is unchanged.\n* Consumes all Primordial Ice stacks.\nDespite the tooltip claiming that the damage is 70% effective in player killing situations, it deals the same damage as against monsters.",
+  "icon": "assets/gear/dark-shard-of-leng.png"
+ },
+ {
+  "id": "igneous-showdown",
+  "name": "Igneous Showdown",
+  "style": "Melee",
+  "weapons": [
+   "ek-zekkil"
+  ],
+  "adrenaline": -50.0,
+  "cooldownTicks": 100,
+  "damageMin": 260.0,
+  "damageMax": 300.0,
+  "damageText": "280% (1045% against your Flamebound Rival)",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Marks your target for a fiery duel.\n* 260%-300% Melee damage.\n* Applies Flamebound Rival to the target.\n\n\n\nAgainst your Flamebound Rival:\n* Hits an additional 3 times.\n* Additional hits: 245-265% Damage.\n* Generates 15% Adrenaline.\nDamage is 30% effective in PvP.",
+  "icon": "assets/gear/ek-zekkil.png"
+ },
+ {
+  "id": "impale",
+  "name": "Impale",
+  "style": "Melee",
+  "weapons": [
+   "rune-claws",
+   "rune-claws-1",
+   "rune-claws-2",
+   "rune-claws-3"
+  ],
+  "adrenaline": -25.0,
+  "cooldownTicks": 0,
+  "damageMin": 130.0,
+  "damageMax": 150.0,
+  "damageText": "140%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Impale your target.\n* 130-150% Melee damage.\n* Hit chance is increased by 10%.",
+  "icon": "assets/gear/rune-claws.png"
+ },
+ {
+  "id": "instability",
+  "name": "Instability",
+  "style": "Magic",
+  "weapons": [
+   "fractured-staff-of-armadyl"
+  ],
+  "adrenaline": -50.0,
+  "cooldownTicks": 100,
+  "damageMin": 120.0,
+  "damageMax": 140.0,
+  "damageText": "130%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Launch an unstable blast at your target.\n* 120-140% Magic damage.\n* On critical strike: Launch a Lightning Surge at your target dealing 70-90% Magic damage.\n* 30s (50 ticks) duration.",
+  "icon": "assets/gear/fractured-staff-of-armadyl.png"
+ },
+ {
+  "id": "liquefy",
+  "name": "Liquefy",
+  "style": "Melee",
+  "weapons": [
+   "brackish-blade",
+   "brine-sabre"
+  ],
+  "adrenaline": -50.0,
+  "cooldownTicks": 0,
+  "damageMin": 125.0,
+  "damageMax": 145.0,
+  "damageText": "135%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Slash at your foe with an attack from the deep.\n* 125-145% Melee damage.\n* Increase your Attack stat by 3 + 10%.\n* Increase your Strength stat by 3 + 10%.\n* Increase your Defence stat by 3 + 10%.\n* 1m duration.",
+  "icon": "assets/gear/brackish-blade.png"
+ },
+ {
+  "id": "locate",
+  "name": "Locate",
+  "style": "Ranged",
+  "weapons": [
+   "decimation"
+  ],
+  "adrenaline": -35.0,
+  "cooldownTicks": 0,
+  "damageMin": null,
+  "damageMax": null,
+  "damageText": "0%",
+  "target": "[[File:Ability self-target.png|20px|Self-target ability]] Self-target",
+  "description": "Activate the enchantments of Decimation, causing attacks to also fire at nearby enemies.\n* Single-target Ranged attacks will also be cast on up to 5 additional enemies within 3 tiles of the target.\n* 10.8s (18 ticks) duration.",
+  "icon": "assets/gear/decimation.png"
+ },
+ {
+  "id": "miasmic-barrage",
+  "name": "Miasmic Barrage",
+  "style": "Magic",
+  "weapons": [
+   "zuriel-s-staff",
+   "superior-zuriel-s-staff"
+  ],
+  "adrenaline": -50.0,
+  "cooldownTicks": 0,
+  "damageMin": 200.0,
+  "damageMax": 240.0,
+  "damageText": "170%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Unleash a barrage of miasma.\n* 200-240% Magic damage to up to 8 additional enemies within 1 tile of the target.\n* Reduces the attack rate of enemies hit by 1 for 15s (25 ticks).\n* PvP: Reduces the adrenaline gain of all enemies hit by 50% for 15s (25 ticks).",
+  "icon": "assets/gear/zuriel-s-staff.png"
+ },
+ {
+  "id": "mirrorback",
+  "name": "Mirrorback",
+  "style": "Ranged",
+  "weapons": [
+   "noxious-longbow"
+  ],
+  "adrenaline": -100.0,
+  "cooldownTicks": 0,
+  "damageMin": null,
+  "damageMax": null,
+  "damageText": "0%",
+  "target": "[[File:Ability self-target.png|20px|Self-target ability]] Self-target",
+  "description": "Summon a mirrorback spider to aid you.\n* Reduces damage taken by 50%.\n* Reflects 50% of damage taken back at the attacker.\n* 9.6s (16 ticks) duration.\nMaximum damage mitigation: 10,000.",
+  "icon": "assets/gear/noxious-longbow.png"
+ },
+ {
+  "id": "obliterate",
+  "name": "Obliterate",
+  "style": "Melee",
+  "weapons": [
+   "statius-s-warhammer",
+   "superior-statius-s-warhammer"
+  ],
+  "adrenaline": -50.0,
+  "cooldownTicks": 0,
+  "damageMin": 160.0,
+  "damageMax": 180.0,
+  "damageText": "170%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Smash through your target's guard.\n* 160-180% Melee damage.\n* Reduces the target's Defence stat by 30%.\n* Increases the base hit chance against the target by 5 for 1m.",
+  "icon": "assets/gear/statius-s-warhammer.png"
+ },
+ {
+  "id": "phantom-strike",
+  "name": "Phantom strike",
+  "style": "Ranged",
+  "weapons": [
+   "morrigan-s-javelin",
+   "superior-morrigan-s-javelin"
+  ],
+  "adrenaline": -50.0,
+  "cooldownTicks": 0,
+  "damageMin": 120.0,
+  "damageMax": 140.0,
+  "damageText": "305%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Strike your target with deadly power.\n* 120-140% Ranged damage on first hit.\n* 30-40% Ranged damage per hit every 1.8s (3 ticks).\n* 6 hits.\n* Damage over time.",
+  "icon": "assets/gear/morrigan-s-javelin.png"
+ },
+ {
+  "id": "power-of-darkness",
+  "name": "Power of Darkness",
+  "style": "Magic",
+  "weapons": [
+   "staff-of-darkness"
+  ],
+  "adrenaline": -100.0,
+  "cooldownTicks": 0,
+  "damageMin": null,
+  "damageMax": null,
+  "damageText": "0%",
+  "target": "[[File:Ability self-target.png|20px|Self-target ability]] Self-target",
+  "description": "Coat yourself in a aura of darkness.\n* Reduces damage taken by 25%.\n* Reflects 25% of damage taken back at the attacker.\n* 19.8s (33 ticks) duration.",
+  "icon": "assets/gear/staff-of-darkness.png"
+ },
+ {
+  "id": "power-of-light",
+  "name": "Power of Light",
+  "style": "Magic",
+  "weapons": [
+   "staff-of-light"
+  ],
+  "adrenaline": -100.0,
+  "cooldownTicks": 0,
+  "damageMin": null,
+  "damageMax": null,
+  "damageText": "0%",
+  "target": "[[File:Ability self-target.png|20px|Self-target ability]] Self-target",
+  "description": "Protect yourself with a veil of light.\n* Reduces melee damage taken by 50%.\n* 1m duration.",
+  "icon": "assets/gear/staff-of-light.png"
+ },
+ {
+  "id": "powershot",
+  "name": "Powershot",
+  "style": "Ranged",
+  "weapons": [
+   "magic-longbow",
+   "magic-composite-bow"
+  ],
+  "adrenaline": -35.0,
+  "cooldownTicks": 0,
+  "damageMin": 210.0,
+  "damageMax": 230.0,
+  "damageText": "220%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Take aim with a magical shot.\n* 210-230% Ranged damage.\n* Hit chance is increased by 40%.",
+  "icon": "assets/gear/magic-longbow.png"
+ },
+ {
+  "id": "powerstab",
+  "name": "Powerstab",
+  "style": "Melee",
+  "weapons": [
+   "dragon-2h-sword"
+  ],
+  "adrenaline": -50.0,
+  "cooldownTicks": 0,
+  "damageMin": 260.0,
+  "damageMax": 320.0,
+  "damageText": "290%",
+  "target": "[[File:Ability area-target.png|20px|Area-target ability]] Area-target",
+  "description": "Plunge your sword into the ground to damage nearby enemies.\n* 260-320% Melee damage to up to 25 additional enemies within 2 tiles of the player.",
+  "icon": "assets/gear/dragon-2h-sword.png"
+ },
+ {
+  "id": "quick-smash",
+  "name": "Quick Smash",
+  "style": "Melee",
+  "weapons": [
+   "granite-maul"
+  ],
+  "adrenaline": -50.0,
+  "cooldownTicks": 0,
+  "damageMin": 115.0,
+  "damageMax": 135.0,
+  "damageText": "125%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Crush your target with inhuman speed.\n* 115-135% Melee damage.\nCan be cast during the global cooldown.",
+  "icon": "assets/gear/granite-maul.png"
+ },
+ {
+  "id": "rampage",
+  "name": "Rampage",
+  "style": "Melee",
+  "weapons": [
+   "dragon-battleaxe"
+  ],
+  "adrenaline": -100.0,
+  "cooldownTicks": 0,
+  "damageMin": null,
+  "damageMax": null,
+  "damageText": "0%",
+  "target": "[[File:Ability self-target.png|20px|Self-target ability]] Self-target",
+  "description": "Release a war cry, increasing your strength.\n* Melee attacks deal 1.2x damage.\n* Your hit chance is decreased by 10%.\n* Reduces all non-strength combat stats by 10%.\n* Increase your Strength stat by 25% of the reduced levels.",
+  "icon": "assets/gear/dragon-battleaxe.png"
+ },
+ {
+  "id": "reap",
+  "name": "Reap",
+  "style": "Magic",
+  "weapons": [
+   "penance-trident",
+   "penance-master-trident"
+  ],
+  "adrenaline": -45.0,
+  "cooldownTicks": 0,
+  "damageMin": 270.0,
+  "damageMax": 310.0,
+  "damageText": "290%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Shock your target with a blast of magic.\n* 270-310% Magic damage.\n* On killing blow: Generates 20% adrenaline.",
+  "icon": "assets/gear/penance-trident.png"
+ },
+ {
+  "id": "restorative-shot",
+  "name": "Restorative Shot",
+  "style": "Ranged",
+  "weapons": [
+   "saradomin-bow"
+  ],
+  "adrenaline": -30.0,
+  "cooldownTicks": 0,
+  "damageMin": 135.0,
+  "damageMax": 145.0,
+  "damageText": "140% (200% with Saradomin arrows)",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Fire a precise and enchanted arrow.\n* 135-145% Ranged damage.\n* Heals you for 100% of the damage dealt over 15s (25 ticks).\n* Deals an additional 55-65% Magic damage if you are using Saradomin arrows.",
+  "icon": "assets/gear/saradomin-bow.png"
+ },
+ {
+  "id": "rune-flame",
+  "name": "Rune Flame",
+  "style": "Magic",
+  "weapons": [
+   "mindspike-air",
+   "mindspike-water",
+   "mindspike-earth",
+   "mindspike-fire"
+  ],
+  "adrenaline": -35.0,
+  "cooldownTicks": 0,
+  "damageMin": 120.0,
+  "damageMax": 140.0,
+  "damageText": "130%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Release a runic blast.\n* 120-140% Magic damage.\n* Hit chance is increased by 25%.",
+  "icon": "assets/gear/mindspike-air.png"
+ },
+ {
+  "id": "saradomin-strike",
+  "name": "Saradomin Strike",
+  "style": "Magic",
+  "weapons": [
+   "saradomin-staff"
+  ],
+  "adrenaline": -25.0,
+  "cooldownTicks": 0,
+  "damageMin": 200.0,
+  "damageMax": 240.0,
+  "damageText": "220%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Call upon the power of Saradomin to perform a powerful magical attack.\n* 200-240% Magic damage.\n* PvP: Reduces the target's Prayer points by 30%.",
+  "icon": "assets/gear/saradomin-staff.png"
+ },
+ {
+  "id": "saradomin-s-lightning",
+  "name": "Saradomin's Lightning",
+  "style": "Melee",
+  "weapons": [
+   "saradomin-sword"
+  ],
+  "adrenaline": -100.0,
+  "cooldownTicks": 0,
+  "damageMin": 285.0,
+  "damageMax": 325.0,
+  "damageText": "610%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Call upon Saradomin's power.\n* 285-325% Magic damage per hit.\n* 2 hits.",
+  "icon": "assets/gear/saradomin-sword.png"
+ },
+ {
+  "id": "shadowfall",
+  "name": "Shadowfall",
+  "style": "Ranged",
+  "weapons": [
+   "gloomfire-bow"
+  ],
+  "adrenaline": -65.0,
+  "cooldownTicks": 0,
+  "damageMin": 85.0,
+  "damageMax": 105.0,
+  "damageText": "465%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Unleash 2 arrows, marking your target to be struck by shadows.\n* 85%–105% Ranged damage on first and second hit.\n* 255%–295% Ranged damage on third hit\n* 3 hits",
+  "icon": "assets/gear/gloomfire-bow.png"
+ },
+ {
+  "id": "shove",
+  "name": "Shove",
+  "style": "Melee",
+  "weapons": [
+   "dragon-spear",
+   "zamorakian-spear"
+  ],
+  "adrenaline": -25.0,
+  "cooldownTicks": 0,
+  "damageMin": null,
+  "damageMax": null,
+  "damageText": "0%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Push the target, knocking them off-balance.\n* Stuns and binds the target for 3.6s (6 ticks).\n* Knocks-back the target by 1 tile.",
+  "icon": "assets/gear/dragon-spear.png"
+ },
+ {
+  "id": "slice-dice",
+  "name": "Slice & Dice",
+  "style": "Melee",
+  "weapons": [
+   "dragon-claw",
+   "superior-dragon-claw"
+  ],
+  "adrenaline": -50.0,
+  "cooldownTicks": 0,
+  "damageMin": 180.0,
+  "damageMax": 220.0,
+  "damageText": "400%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Unleash four brutal claw slashes upon your opponent.\n* 180-220% Melee damage on first hit.\n* 90-110% Melee damage on second hit.\n* 45-55% Melee damage on third and fourth hit.\n* 4 hits.",
+  "icon": "assets/gear/dragon-claw.png"
+ },
+ {
+  "id": "soul-crush",
+  "name": "Soul Crush",
+  "style": "Necromancy",
+  "weapons": [
+   "devourer-s-guard"
+  ],
+  "adrenaline": -25.0,
+  "cooldownTicks": 100,
+  "damageMin": 135.0,
+  "damageMax": 165.0,
+  "damageText": "150% (900% with 5 Residual Soul stacks)",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Crush your target with the souls of the undead.\n* 135-165% Necromancy damage, increased by 135-165% Necromancy damage for each Residual Soul stack.\n* Soul Sap, Soul Strike, Volley of Souls, Spectral Scythe: Immediately readies Soul Reave.\n* 30s (50 ticks) duration.\n* On cast: Immediately readies Soul Reave.\n* Consumes all Residual Soul stacks.\nDamage is 40% effective in PvP.",
+  "icon": "assets/gear/devourer-s-guard.png"
+ },
+ {
+  "id": "soulfire",
+  "name": "Soulfire",
+  "style": "Magic",
+  "weapons": [
+   "roar-of-awakening"
+  ],
+  "adrenaline": -35.0,
+  "cooldownTicks": 75,
+  "damageMin": 130.0,
+  "damageMax": 160.0,
+  "damageText": "1255%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Wildly release a dark flame to ignite your target, causing them to Burn.\n* 130-160% Magic damage on first hit.\n* 170-200% Magic damage per hit every 1.8s (3 ticks).\n* 7 hits.\n* Damage over time\n* Generates Conflagrate.\nDamage is 30% effective in PvP.\n\nConflagrate\n* Your next Combust within 15s (25 ticks) deals 40% increased damage.",
+  "icon": "assets/gear/roar-of-awakening.png"
+ },
+ {
+  "id": "soulshot",
+  "name": "Soulshot",
+  "style": "Ranged",
+  "weapons": [
+   "seercull"
+  ],
+  "adrenaline": -50.0,
+  "cooldownTicks": 0,
+  "damageMin": 100.0,
+  "damageMax": 120.0,
+  "damageText": "100-120% (300-320% if the target is level 99+ Magic)",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Unleash a shot that shatters the target's magical prowess.\n* 100-120% Ranged damage.\n* Damage is increased by 2-200% based on the target's Magic stat.\n* Reduces the target's Magic stat by 5%.",
+  "icon": "assets/gear/seercull.png"
+ },
+ {
+  "id": "spear-wall",
+  "name": "Spear Wall",
+  "style": "Melee",
+  "weapons": [
+   "vesta-s-spear",
+   "superior-vesta-s-spear"
+  ],
+  "adrenaline": -50.0,
+  "cooldownTicks": 0,
+  "damageMin": 105.0,
+  "damageMax": 125.0,
+  "damageText": "115%",
+  "target": "[[File:Ability area-target.png|20px|Area-target ability]] Area-target",
+  "description": "Spin your spear, slashing at nearby targets and reflecting incoming blows.\n* 105-125% Melee damage to the target and up to 9 additional enemies within 1 tile of you.\n* Reduces damage taken by 50%.\n* Reflects 50% of damage taken back at the attacker.\n* 4.8s (8 ticks) duration.",
+  "icon": "assets/gear/vesta-s-spear.png"
+ },
+ {
+  "id": "split-soul",
+  "name": "Split Soul",
+  "style": "Ranged",
+  "weapons": [
+   "eldritch-crossbow"
+  ],
+  "adrenaline": -25.0,
+  "cooldownTicks": 0,
+  "damageMin": null,
+  "damageMax": null,
+  "damageText": "0%",
+  "target": "[[File:Ability self-target.png|20px|Self-target ability]] Self-target",
+  "description": "Unleash the dark power of your weapon.\n* 400% of the life points you would have gained from the Soul Split curse is instead dealt to your target.\n* 15s (25 ticks) duration.",
+  "icon": "assets/gear/eldritch-crossbow.png"
+ },
+ {
+  "id": "sunder",
+  "name": "Sunder",
+  "style": "Melee",
+  "weapons": [
+   "barrelchest-anchor"
+  ],
+  "adrenaline": -50.0,
+  "cooldownTicks": 0,
+  "damageMin": 125.0,
+  "damageMax": 145.0,
+  "damageText": "135%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Swing the anchor with deadly force.\n* 125-145% Melee damage.\n* Increases the base hit chance against the target by 4.\n* Reduces the target's damage by 10%.\n* 1m duration.",
+  "icon": "assets/gear/barrelchest-anchor.png"
+ },
+ {
+  "id": "sunfall-slam",
+  "name": "Sunfall Slam",
+  "style": "Melee",
+  "weapons": [
+   "tumeken-s-light"
+  ],
+  "adrenaline": -40.0,
+  "cooldownTicks": 100,
+  "damageMin": 290.0,
+  "damageMax": 300.0,
+  "damageText": "295%",
+  "target": "[[File:Ability area-target.png|20px|Area-target ability]] Area-target",
+  "description": "Slam your target with the full force of Tumeken's Light.\n* 290%-300% Melee damage to the target and up to 9 additional enemies within 2 tiles of you.\n* Your Melee abilities trigger Lesser Purifying Light.\n* 30s (50 ticks) duration.\n\n\nLesser Purifying Light\n* 45%-55% Melee damage to up to 2 additional enemies within 4 tiles of the target.",
+  "icon": "assets/gear/tumeken-s-light.png"
+ },
+ {
+  "id": "sweep",
+  "name": "Sweep",
+  "style": "Melee",
+  "weapons": [
+   "dragon-halberd"
+  ],
+  "adrenaline": -30.0,
+  "cooldownTicks": 0,
+  "damageMin": 120.0,
+  "damageMax": 150.0,
+  "damageText": "270%",
+  "target": "[[File:Ability area-target.png|20px|Area-target ability]] Area-target",
+  "description": "Slash the area in front of you, damaging enemies twice.\n* 120-150% Melee damage per hit to the target and up to 9 additional enemies in a cone in the attack direction.\n* 2 hits.",
+  "icon": "assets/gear/dragon-halberd.png"
+ },
+ {
+  "id": "tempest-of-armadyl",
+  "name": "Tempest of Armadyl",
+  "style": "Magic",
+  "weapons": [
+   "armadyl-battlestaff"
+  ],
+  "adrenaline": -50.0,
+  "cooldownTicks": 0,
+  "damageMin": 45.0,
+  "damageMax": 55.0,
+  "damageText": "300%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Perform a barrage of magical attacks at your opponent.\n* 45%–55% Magic damage per hit every 0.6s (1 tick).\n* 5 hits.\n* Channelled.\n* Deals an additional 5% magic damage with each hit.",
+  "icon": "assets/gear/armadyl-battlestaff.png"
+ },
+ {
+  "id": "the-final-flurry",
+  "name": "The Final Flurry",
+  "style": "Melee",
+  "weapons": [
+   "varanus-s-mercy"
+  ],
+  "adrenaline": -50.0,
+  "cooldownTicks": 0,
+  "damageMin": 80.0,
+  "damageMax": 100.0,
+  "damageText": "491.25% (including crit modifiers)",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Dispatch your target with a flurry of metal.\n* 80-100% Melee damage on first and second hit.\n* +25% Increased Critical Strike Chance & Critical Strike Damage on the first and second hits.\n* 150-180% Melee damage on third Hit\n* +50% Increased Critical Strike Chance and Critical Strike Damage on the third hit.\n* 3 hits",
+  "icon": "assets/gear/varanus-s-mercy.png"
+ },
+ {
+  "id": "the-last-command",
+  "name": "The Last Command",
+  "style": "Magic",
+  "weapons": [
+   "legatus-s-emberstaff"
+  ],
+  "adrenaline": -35.0,
+  "cooldownTicks": 0,
+  "damageMin": 240.0,
+  "damageMax": 280.0,
+  "damageText": "260% (up to 455% for targets below 25% life points)",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Immolate your target with a blast of chaos magic.\n* 240%-280% Magic damage.\n* Deals 1% increased damage for each 1% life points the target is missing, up to a maximum of 75%.\n\nDamage is 70% effective in PvP.",
+  "icon": "assets/gear/legatus-s-emberstaff.png"
+ },
+ {
+  "id": "twin-shot",
+  "name": "Twin Shot",
+  "style": "Ranged",
+  "weapons": [
+   "quickbow"
+  ],
+  "adrenaline": -35.0,
+  "cooldownTicks": 0,
+  "damageMin": 55.0,
+  "damageMax": 65.0,
+  "damageText": "120%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Fire two quick shots.\n* 55-65% Ranged damage per hit.\n* 2 hits.\n* Hit chance is increased by 50%.",
+  "icon": "assets/gear/quickbow.png"
+ },
+ {
+  "id": "twin-fang",
+  "name": "Twin fang",
+  "style": "Ranged",
+  "weapons": [
+   "magic-shortbow"
+  ],
+  "adrenaline": -50.0,
+  "cooldownTicks": 0,
+  "damageMin": 115.0,
+  "damageMax": 145.0,
+  "damageText": "260%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "A quick double attack.\n* 115-145% Ranged damage per hit.\n* 2 hits.\n* Hit chance is reduced by 30%.",
+  "icon": "assets/gear/magic-shortbow.png"
+ },
+ {
+  "id": "vine-call",
+  "name": "Vine Call",
+  "style": "Melee",
+  "weapons": [
+   "abyssal-vine-whip"
+  ],
+  "adrenaline": -60.0,
+  "cooldownTicks": 0,
+  "damageMin": 100.0,
+  "damageMax": 120.0,
+  "damageText": "335%",
+  "target": "[[File:Ability area-target.png|20px|Area-target ability]] Area-target",
+  "description": "Whip at your target, summoning a powerful jade vine to attack your opponent.\n* 100-120% Melee damage on first hit.\n* Creates a 3x3 area at the target.\n* 20-25% Melee damage per hit every 1.8s (3 ticks) to up to 9 additional enemies inside the area.\n* 10 hits.",
+  "icon": "assets/gear/abyssal-vine-whip.png"
+ },
+ {
+  "id": "warstrike",
+  "name": "Warstrike",
+  "style": "Melee",
+  "weapons": [
+   "bandos-godsword"
+  ],
+  "adrenaline": -100.0,
+  "cooldownTicks": 0,
+  "damageMin": 225.0,
+  "damageMax": 265.0,
+  "damageText": "245%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Swing a brutal strike with the might of Bandos.\n* 225-265% Melee damage.\n* Reduces the target's combat stats by 0.5% of the damage dealt.",
+  "icon": "assets/gear/bandos-godsword.png"
+ },
+ {
+  "id": "weaken",
+  "name": "Weaken",
+  "style": "Melee",
+  "weapons": [
+   "darklight"
+  ],
+  "adrenaline": -50.0,
+  "cooldownTicks": 0,
+  "damageMin": 75.0,
+  "damageMax": 85.0,
+  "damageText": "80%",
+  "target": "[[File:Ability single-target.png|20px|Single-target ability]] Single-target",
+  "description": "Strike your target with the power of Darklight.\n* 75-85% Melee damage.\n* Reduces the target's Attack stat by 6%.\n* Reduces the target's Strength stat by 6%.\n* Reduces the target's Defence stat by 6%.\n* Reduces the target's Hit Chance by 6%.\n** 1m duration\n* Reduces the target's damage stat by 6%.\n** 1m duration.\n* Stat reductions are 2x as effective against demons.",
+  "icon": "assets/gear/darklight.png"
+ }
+]

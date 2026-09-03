@@ -58,3 +58,26 @@
     }
   </div>
 </div>
+
+<div class="panel">
+  <h3>Client actions</h3>
+  <p class="muted small">Keys that are not on an action bar. Target cycle is written as (tc) in PvME rotations.</p>
+  <div class="weapons">
+    @for (a of ACTIONS; track a.id) {
+      <button
+        class="weapon"
+        [class.capturing]="isCapturing({ action: a.id })"
+        [class.conflict]="actionConflicts(a.id, a.name).length > 0"
+        (click)="capture({ action: a.id })"
+        [title]="actionConflicts(a.id, a.name).length ? 'Also used by ' + actionConflicts(a.id, a.name).join(', ') : a.description"
+      >
+        <img [src]="a.icon" [alt]="a.name" />
+        <span class="name">{{ a.name }}</span>
+        <span class="key" [class.waiting]="isCapturing({ action: a.id })">{{ isCapturing({ action: a.id }) ? 'Press a key…' : actionLabel(a.id) || '–' }}</span>
+        @if (actionLabel(a.id)) {
+          <span class="clear" (click)="clear({ action: a.id }); $event.stopPropagation()" title="Clear">×</span>
+        }
+      </button>
+    }
+  </div>
+</div>

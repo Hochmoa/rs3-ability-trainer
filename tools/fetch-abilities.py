@@ -16,7 +16,7 @@ UTILITY_KEEP = {"Surge", "Escape", "Dive", "Limitless"}
 SKIP_NAMES = {"Revolution", "Single-Way Wilderness", "Magma Tempest (Targeted)"}
 STYLE = {"Attack": "Melee", "Strength": "Melee", "Melee": "Melee", "Ranged": "Ranged", "Magic": "Magic",
          "Necromancy": "Necromancy", "Defence": "Defence", "Constitution": "Constitution"}
-TYPE_ORDER = {"Basic": 0, "Enhanced": 1, "Threshold": 2, "Ultimate": 3, "Special": 4}
+TYPE_ORDER = {"Basic": 0, "Enhanced": 1, "Threshold": 2, "Ultimate": 3, "Special": 4, "Incantation": 5}
 STYLE_ORDER = {"Melee": 0, "Ranged": 1, "Magic": 2, "Necromancy": 3, "Defence": 4, "Constitution": 5}
 
 
@@ -47,9 +47,10 @@ def main():
             continue
         if j.get("removal"):
             continue
-        if typ == "Utility" and name not in UTILITY_KEEP:
-            continue
         desc = strip_markup(j.get("description"))
+        during_gcd = bool(re.search(r"during the global cooldown", desc, re.I))
+        if typ == "Utility" and name not in UTILITY_KEEP and not during_gcd:
+            continue
         lo, hi, hits = parse_damage_range(desc)
         icon_file = file_of(j.get("image")) or (name + ".png")
         abilities[name] = {
@@ -76,7 +77,27 @@ def main():
             "buffs": [b["id"] for b in j.get("buffs", []) if isinstance(b, dict) and "id" in b],
             "icon": "assets/abilities/" + slug(name) + ".png",
             "_iconFile": icon_file,
-            "triggersGcd": name not in OFF_GCD,
+            "triggersGcd": name not in OFF_GCD and not during_gcd,
+        }
+
+    # Necromancy incantations (Split Soul, Invoke Death, Threads of Fate, ...) are cast like abilities
+    for r in bucket("infobox_incantation", ["name", "json"]):
+        j = r["json"]
+        name = j.get("name") or r.get("name") or ""
+        if not name or name in abilities or "Teleport" in name or j.get("removal"):
+            continue
+        desc = strip_markup(j.get("description"))
+        cd = j.get("cooldown")
+        dur = j.get("duration")
+        abilities[name] = {
+            "id": slug(name), "structId": None, "name": name, "style": "Necromancy", "type": "Incantation",
+            "level": int(j.get("level") or 0), "target": j.get("target") or "Self", "equipment": "Any",
+            "members": True, "basicAttack": False, "adrenaline": 0.0,
+            "cooldownTicks": int(cd) if str(cd).isdigit() else parse_ticks(strip_markup(str(cd))) if cd else None,
+            "damageAvg": None, "damageText": "", "damageMin": None, "damageMax": None, "hits": None, "channelled": False,
+            "durationTicks": int(dur) if str(dur).isdigit() else None,
+            "description": desc, "buffs": [], "icon": "assets/abilities/" + slug(name) + ".png",
+            "_iconFile": file_of(j.get("image")) or (name + " icon.png"), "triggersGcd": True,
         }
 
     # ---- buffs / debuffs linked from abilities

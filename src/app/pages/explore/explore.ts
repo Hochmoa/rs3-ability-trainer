@@ -2,7 +2,7 @@ import { Component, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { DataService } from '../../core/data.service';
-import { STYLES } from '../../core/models';
+import { RotationStep, STYLES } from '../../core/models';
 import { StorageService } from '../../core/storage.service';
 import { SupabaseService, errorText } from '../../core/supabase.service';
 import { RotationRow, SyncService } from '../../core/sync.service';
@@ -56,8 +56,8 @@ export class Explore {
     }
   }
 
-  entity(step: { kind: string; id: string }) {
-    return this.data.step(step as { kind: 'ability'; id: string });
+  entity(step: RotationStep) {
+    return this.data.step(step);
   }
 
   isMine(row: RotationRow): boolean {

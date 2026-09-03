@@ -75,3 +75,19 @@
 .empty {
   text-align: center;
 }
+
+.note-chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 220px;
+  height: 40px;
+  padding: 0 8px;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 11px;
+  font-style: italic;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

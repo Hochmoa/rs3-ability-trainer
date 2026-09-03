@@ -294,3 +294,67 @@ describe('off-GCD steps (prayers, potions)', () => {
     expect(e.events.at(-1)).toMatchObject({ kind: 'on-cooldown', key: 'pot' });
   });
 });
+
+describe('PvME companions (same tick / 2t) and notes', () => {
+  const NOTE: EngineEntity = { key: 'note:1', kind: 'action', name: 'improv', icon: '', gcd: false, adrenaline: 0, cooldownTicks: 0, buffs: [], isNote: true };
+  const TC: EngineEntity = { key: 'action:target-cycle', kind: 'action', name: 'tc', icon: '', gcd: false, adrenaline: 0, cooldownTicks: 0, buffs: [] };
+  const CAT = new Map([...CATALOG, [TC.key, TC]]);
+
+  it('same-tick companion is perfect on the cast tick, late afterwards', () => {
+    const e = new TrainerEngine([A, { ...POT, offsetTicks: 0 }, B], CAT, on);
+    e.start(0);
+    e.press('a', 100);
+    e.press('pot', 300); // both processed at tick 1
+    e.update(600);
+    expect(e.results.map((r) => [r.key, r.outcome]).sort()).toEqual([['a', 'perfect'], ['pot', 'perfect']]);
+
+    const l = new TrainerEngine([A, { ...POT, offsetTicks: 0 }, B], CAT, on);
+    l.start(0);
+    l.press('a', 100);
+    l.update(600);
+    l.press('pot', 700); // tick 2 → one tick late
+    l.update(1200);
+    expect(l.results[1]).toMatchObject({ key: 'pot', outcome: 'late', lateTicks: 1 });
+  });
+
+  it('"2t x" is perfect exactly two ticks after the previous input, early before', () => {
+    const e = new TrainerEngine([A, { ...PRAY, offsetTicks: 2 }, B], CAT, on);
+    e.start(0);
+    e.press('a', 100);
+    e.update(600); // a at tick 1
+    e.press('pray', 1300); // tick 3 = 1 + 2
+    e.update(1800);
+    expect(e.results[1]).toMatchObject({ key: 'pray', outcome: 'perfect', lateTicks: 0 });
+
+    const x = new TrainerEngine([A, { ...PRAY, offsetTicks: 2 }, B], CAT, on);
+    x.start(0);
+    x.press('a', 100);
+    x.update(600);
+    x.press('pray', 700); // tick 2 → one tick early
+    x.update(1200);
+    expect(x.results[1]).toMatchObject({ key: 'pray', outcome: 'early', lateTicks: -1 });
+  });
+
+  it('notes are skipped automatically and never missed', () => {
+    const e = new TrainerEngine([NOTE, A, NOTE, TC, B], CAT, on);
+    e.start(0);
+    expect(e.currentStep?.key).toBe('note:1');
+    e.press('a', 100);
+    e.update(600);
+    expect(e.index).toBe(3); // both notes done, tc expected
+    e.press('b', 2000);
+    e.update(2400);
+    expect(e.results.map((r) => [r.key, r.outcome])).toEqual([['a', 'perfect'], ['action:target-cycle', 'missed'], ['b', 'perfect']]);
+  });
+
+  it('the generic spec key fires the spec the rotation expects for the wielded weapon', () => {
+    const SPEC: EngineEntity = { key: 'spec:death-essence', kind: 'spec', name: 'Death Essence', icon: '', gcd: true, abilityType: 'Special', style: 'Necromancy', adrenaline: -30, cooldownTicks: 100, buffs: [] };
+    const GENERIC: EngineEntity = { key: 'ability:weapon-special-attack', kind: 'ability', name: 'Weapon Special Attack', icon: '', gcd: true, abilityType: 'Special', style: 'Constitution', adrenaline: 0, cooldownTicks: 0, buffs: [] };
+    const cat = new Map([...CAT, [SPEC.key, SPEC], [GENERIC.key, GENERIC]]);
+    const e = new TrainerEngine([SPEC, A], cat, { ...on, loadout: { ...DEFAULT_LOADOUT, startAdrenaline: 50 }, weaponSetup: { start: 'Necromancy', types: { Melee: 'two-handed', Ranged: 'two-handed', Magic: 'two-handed', Necromancy: 'dual-wield' } } });
+    e.start(0);
+    e.press('ability:weapon-special-attack', 100);
+    e.update(600);
+    expect(e.results[0]).toMatchObject({ key: 'spec:death-essence', outcome: 'perfect', adrenaline: 20 });
+  });
+});

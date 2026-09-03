@@ -25,12 +25,31 @@
     }
     <div class="steps">
       @for (s of r.steps; track $index) {
-        @if (entity(s); as e) {
+        @if (s.kind === 'note') {
+          <div class="step note" [class.phase]="s.phase">
+            <span class="num">{{ $index + 1 }}</span>
+            <span class="note-text">{{ s.note }}</span>
+            <span class="muted small">{{ s.phase ? 'phase' : 'note' }}</span>
+            <span class="step-actions">
+              <button class="btn btn-sm" (click)="move($index, -1)" [disabled]="$first" title="Move up">↑</button>
+              <button class="btn btn-sm" (click)="move($index, 1)" [disabled]="$last" title="Move down">↓</button>
+              <button class="btn btn-sm danger" (click)="removeStep($index)" title="Remove">×</button>
+            </span>
+          </div>
+        } @else if (entity(s); as e) {
           <div class="step" [class]="'step ' + e.kind">
             <span class="num">{{ $index + 1 }}</span>
             <span [entityTip]="e"><ability-icon [ability]="e" [px]="44" [keyLabel]="keyOf(e)" /></span>
-            <span class="name">{{ e.name }} <span class="muted small">{{ subtitle(e) }}</span></span>
+            <span class="name">
+              {{ e.name }} <span class="muted small">{{ subtitle(e) }}</span>
+              @if (s.offsetTicks !== undefined && s.offsetTicks > 0) { <span class="tag">+{{ s.offsetTicks }}t</span> }
+              @else if (s.sameTick && !(e.ability?.triggersGcd || e.spec)) { <span class="tag">same tick</span> }
+              @if (s.hint) { <span class="tag hint">{{ s.hint }}</span> }
+            </span>
             <span class="step-actions">
+              @if (e.kind !== 'ability' && e.kind !== 'spec') {
+                <button class="btn btn-sm" (click)="toggleSameTick($index)" [title]="s.sameTick ? 'Expected any time before the next ability' : 'Expected in the same tick as the previous input (PvME +)'">{{ s.sameTick ? '+' : '·' }}</button>
+              }
               <button class="btn btn-sm" (click)="move($index, -1)" [disabled]="$first" title="Move up">↑</button>
               <button class="btn btn-sm" (click)="move($index, 1)" [disabled]="$last" title="Move down">↓</button>
               <button class="btn btn-sm danger" (click)="removeStep($index)" title="Remove">×</button>
@@ -44,6 +63,21 @@
           </div>
         }
       }
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Import from PvME notation</h2>
+    <p class="muted small">
+      Paste a rotation as written on <a href="https://pvme.io" target="_blank" rel="noopener">pvme.io</a> or Discord, e.g.
+      <code>(tc) bloat + vulnbomb → deathskulls → necrobasic</code>. <code>→</code> = next tick, <code>+</code> = same tick,
+      <code>2t x</code> = two ticks later, <code>omniguard spec</code> = weapon switch + its special. Unknown words become notes.
+    </p>
+    <textarea rows="4" [ngModel]="importText()" (ngModelChange)="importText.set($event)" placeholder="deathskulls + 2t undeadslayer → volleyofsouls → fingerofdeath"></textarea>
+    <div class="import-actions">
+      <button class="btn btn-primary" (click)="importPvme()" [disabled]="!importText().trim()">Append steps</button>
+      <button class="btn" (click)="addNote()">Add note</button>
+      @if (importReport(); as rep) { <span class="muted small">{{ rep }}</span> }
     </div>
   </div>
 
@@ -99,7 +133,9 @@
       </div>
       <div class="preview">
         @for (s of r.steps; track $index) {
-          @if (entity(s); as e) {
+          @if (s.kind === 'note') {
+            <span class="note-chip" [title]="s.note">{{ s.phase ? '§ ' : '' }}{{ s.note }}</span>
+          } @else if (entity(s); as e) {
             <span [entityTip]="e"><ability-icon [ability]="e" [px]="40" [keyLabel]="keyOf(e)" /></span>
           } @else {
             <span class="removed" title="removed from the game">?</span>

@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { DataService, Entity } from '../../core/data.service';
 import { keybindLabel } from '../../core/keybind.util';
+import { parsePvme } from '../../core/pvme';
 import { Rotation, RotationStep, STYLES } from '../../core/models';
 import { StorageService } from '../../core/storage.service';
 import { SupabaseService } from '../../core/supabase.service';
@@ -10,7 +11,7 @@ import { SyncService } from '../../core/sync.service';
 import { AbilityIcon } from '../../shared/ability-icon';
 import { EntityTip } from '../../shared/tooltip';
 
-const TABS = [...STYLES, 'Prayers', 'Curses', 'Special', 'Weapons'] as const;
+const TABS = [...STYLES, 'Prayers', 'Curses', 'Special', 'Weapons', 'Specs', 'Actions'] as const;
 type Tab = (typeof TABS)[number];
 const TYPE_ORDER: Record<string, number> = { Basic: 0, Enhanced: 1, Threshold: 2, Ultimate: 3, Special: 4 };
 
@@ -31,6 +32,9 @@ export class Rotations {
   readonly editing = signal<Rotation | null>(null);
   readonly tab = signal<Tab>('Melee');
   readonly search = signal('');
+  readonly importText = signal('');
+  readonly importOpen = signal(false);
+  readonly importReport = signal<string | null>(null);
 
   readonly catalog = computed<Entity[]>(() => {
     const q = this.search().trim().toLowerCase();
@@ -59,9 +63,47 @@ export class Rotations {
   subtitle(e: Entity): string {
     if (e.ability) return e.ability.basicAttack ? 'auto-attack' : e.ability.type + (e.ability.triggersGcd ? '' : ' · no GCD');
     if (e.prayer) return 'level ' + e.prayer.level;
-    if (e.special) return '+' + (e.special.adrenaline || e.special.adrenalineOverTime) + '% adrenaline';
+    if (e.special) return e.special.kind === 'bomb' ? 'thrown · no GCD' : '+' + (e.special.adrenaline || e.special.adrenalineOverTime) + '% adrenaline';
     if (e.weapon) return 'weapon switch · no GCD';
+    if (e.spec) return 'spec · ' + (e.spec.adrenaline ?? 0) + '% adrenaline';
+    if (e.action) return 'client action · no GCD';
     return '';
+  }
+
+  /** what the editor shows for a step: entity, or a note card */
+  stepLabel(s: RotationStep): string {
+    if (s.kind === 'note') return s.note ?? '';
+    return this.entity(s)?.name ?? s.id;
+  }
+
+  /** Parses PvME notation and appends the steps to the rotation being edited. */
+  importPvme(): void {
+    const text = this.importText().trim();
+    if (!text) return;
+    const { steps, unknown } = parsePvme(text, (alias) => this.data.resolvePvmeAlias(alias));
+    if (!steps.length) {
+      this.importReport.set('Nothing recognised.');
+      return;
+    }
+    this.editing.update((r) => (r ? { ...r, steps: [...r.steps, ...steps] } : r));
+    const inputs = steps.filter((s) => s.kind !== 'note').length;
+    this.importReport.set(
+      inputs + ' input' + (inputs === 1 ? '' : 's') + ' imported' + (unknown.length ? ', kept as notes: ' + unknown.join(' · ') : '') + '.',
+    );
+    this.importText.set('');
+  }
+
+  addNote(): void {
+    const text = prompt('Note text (shown in the queue, not an input):');
+    if (text?.trim()) this.editing.update((r) => (r ? { ...r, steps: [...r.steps, { kind: 'note', id: '', note: text.trim() }] } : r));
+  }
+
+  toggleSameTick(i: number): void {
+    this.editing.update((r) => {
+      if (!r) return r;
+      const steps = r.steps.map((s, k) => (k === i ? { ...s, sameTick: !s.sameTick, offsetTicks: s.sameTick ? undefined : s.offsetTicks } : s));
+      return { ...r, steps };
+    });
   }
 
   newRotation(): void {

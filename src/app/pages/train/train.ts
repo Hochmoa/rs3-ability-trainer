@@ -2,9 +2,9 @@ import { DecimalPipe } from '@angular/common';
 import { Component, HostListener, OnDestroy, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { DataService, Entity } from '../../core/data.service';
+import { DataService, Entity, SPEC_KEY } from '../../core/data.service';
 import { keybindFromEvent, keybindKey, keybindLabel } from '../../core/keybind.util';
-import { BAR_POSITIONS, STYLES4, StepResult, Style4, entityKey, visiblePresets } from '../../core/models';
+import { BAR_POSITIONS, STYLES4, StepResult, Style4, entityKey, visiblePresets, RotationStep } from '../../core/models';
 import { StorageService } from '../../core/storage.service';
 import { ActiveBuff, EngineEntity, EngineEvent, GCD_TICKS, TICK_MS, TrainerEngine, UsableReason } from '../../engine/trainer-engine';
 import { AbilityIcon, IconState } from '../../shared/ability-icon';
@@ -22,6 +22,12 @@ interface QueueSlot {
   stepIndex: number;
   kind: 'prev' | 'current' | 'next';
   done: boolean;
+  /** free-text step from an imported rotation */
+  note?: string;
+  phase?: boolean;
+  hint?: string;
+  sameTick?: boolean;
+  offsetTicks?: number;
 }
 
 interface BuffView {
@@ -55,8 +61,10 @@ export class Train implements OnDestroy {
 
   readonly selectedId = signal<string | null>(null);
   readonly rotation = computed(() => this.storage.rotations().find((r) => r.id === this.selectedId()) ?? null);
-  /** rotation steps resolved to entities (null = unknown / removed from the game) */
-  readonly stepEntities = computed<(Entity | null)[]>(() => this.rotation()?.steps.map((s) => this.data.step(s) ?? null) ?? []);
+  /** rotation steps resolved to entities (null = unknown / removed from the game); notes become synthetic entities */
+  readonly stepEntities = computed<(Entity | null)[]>(
+    () => this.rotation()?.steps.map((s, i) => (s.kind === 'note' ? noteEntity(s, i) : this.data.step(s) ?? null)) ?? [],
+  );
   readonly unknownSteps = computed(() => (this.data.loaded() ? this.stepEntities().filter((e) => !e).length : 0));
 
   /** entity key → where it can be pressed ("Main bar 3" / "Magic weapon key"), for all presets a position can show */
@@ -73,7 +81,7 @@ export class Train implements OnDestroy {
         const preset = s.presets.find((p) => p.id === id);
         preset?.slots.forEach((step, i) => {
           const kb = s.slotKeybinds[pos]?.[i];
-          if (step && kb && !m.has(entityKey(step.kind, step.id))) m.set(entityKey(step.kind, step.id), keybindLabel(kb));
+          if (step && step.kind !== 'note' && kb && !m.has(entityKey(step.kind, step.id))) m.set(entityKey(step.kind, step.id), keybindLabel(kb));
         });
       }
     }
@@ -81,12 +89,18 @@ export class Train implements OnDestroy {
       const kb = s.weaponKeybinds[st];
       if (kb) m.set('weapon:' + st.toLowerCase(), keybindLabel(kb));
     }
+    for (const [id, kb] of Object.entries(s.actionKeybinds ?? {})) {
+      if (kb) m.set('action:' + id, keybindLabel(kb));
+    }
+    // the generic "Weapon Special Attack" slot fires every spec
+    const specKey = m.get(SPEC_KEY);
+    if (specKey) for (const sp of this.data.specs()) if (!m.has('spec:' + sp.id)) m.set('spec:' + sp.id, specKey);
     return m;
   });
   readonly unreachable = computed(() => {
     const seen = new Set<string>();
     const r = this.reachable();
-    return this.stepEntities().filter((e): e is Entity => !!e && !r.has(e.key) && !seen.has(e.key) && !!seen.add(e.key));
+    return this.stepEntities().filter((e): e is Entity => !!e && !e.key.startsWith('note:') && !r.has(e.key) && !seen.has(e.key) && !!seen.add(e.key));
   });
   readonly canStart = computed(() => !!this.rotation() && this.stepEntities().length > 0 && this.unreachable().length === 0 && this.unknownSteps() === 0);
 
@@ -166,7 +180,19 @@ export class Train implements OnDestroy {
       if (loop) j = ((idx % steps.length) + steps.length) % steps.length;
       if (j < 0 || j >= steps.length) return null;
       const entity = steps[j];
-      return { entity, key: reach.get(entity.key) ?? '', stepIndex: j, kind, done: this.running() && done.has(j) && kind !== 'prev' };
+      const rs = this.rotation()?.steps[j];
+      return {
+        entity,
+        key: reach.get(entity.key) ?? '',
+        stepIndex: j,
+        kind,
+        done: this.running() && done.has(j) && kind !== 'prev',
+        note: rs?.kind === 'note' ? rs.note ?? '' : undefined,
+        phase: rs?.phase,
+        hint: rs?.hint,
+        sameTick: rs?.sameTick,
+        offsetTicks: rs?.offsetTicks,
+      };
     };
     const out: QueueSlot[] = [];
     const prev = slot(i - 1, 'prev');
@@ -216,14 +242,23 @@ export class Train implements OnDestroy {
     const rot = this.rotation();
     if (!rot || !this.canStart()) return;
     const setup = this.storage.actionBars();
-    const steps = (this.stepEntities() as Entity[]).map((e) => this.data.toEngineEntity(e));
+    const rotSteps = rot.steps;
+    const steps = (this.stepEntities() as Entity[]).map((e, i) => {
+      const s = rotSteps[i];
+      if (s.kind === 'note') return { key: e.key, kind: 'action' as const, name: e.name, icon: e.icon, gcd: false, adrenaline: 0, cooldownTicks: 0, buffs: [], isNote: true };
+      const ee = { ...this.data.toEngineEntity(e) };
+      if (s.offsetTicks !== undefined) ee.offsetTicks = s.offsetTicks;
+      else if (s.sameTick) ee.offsetTicks = 0;
+      return ee;
+    });
     const catalog = new Map<string, EngineEntity>();
     const add = (key: string) => {
       if (catalog.has(key)) return;
       const e = this.data.get(key);
       if (e) catalog.set(key, this.data.toEngineEntity(e));
     };
-    for (const p of setup.presets) for (const step of p.slots) if (step) add(entityKey(step.kind, step.id));
+    for (const p of setup.presets) for (const step of p.slots) if (step && step.kind !== 'note') add(entityKey(step.kind, step.id));
+    for (const id of Object.keys(setup.actionKeybinds ?? {})) add('action:' + id);
     for (const st of STYLES4) add('weapon:' + st.toLowerCase());
     for (const s of steps) catalog.set(s.key, s);
     this.engine = new TrainerEngine(steps, catalog, {
@@ -336,7 +371,10 @@ export class Train implements OnDestroy {
           this.feedback.set({ text: r.name + ' – perfect' + (r.offsetMs ? ' (' + r.offsetMs + ' ms early)' : ''), cls: 'good' });
         } else if (r.outcome === 'late') {
           this.counts.update((c) => ({ ...c, late: c.late + 1 }));
-          this.feedback.set({ text: r.name + ' – late by ' + r.lateTicks + (r.lateTicks === 1 ? ' tick' : ' ticks') + ' (+' + r.offsetMs + ' ms)', cls: 'warn' });
+          this.feedback.set({ text: r.name + ' – late by ' + r.lateTicks + (r.lateTicks === 1 ? ' tick' : ' ticks') + (r.offsetMs ? ' (+' + r.offsetMs + ' ms)' : ''), cls: 'warn' });
+        } else if (r.outcome === 'early') {
+          this.counts.update((c) => ({ ...c, late: c.late + 1 }));
+          this.feedback.set({ text: r.name + ' – ' + -r.lateTicks + (r.lateTicks === -1 ? ' tick' : ' ticks') + ' early', cls: 'warn' });
         } else {
           this.feedback.set({ text: r.name + (r.kind === 'weapon' ? ' wielded' : ' – activated'), cls: 'good' });
         }
@@ -436,6 +474,13 @@ export class Train implements OnDestroy {
         return;
       }
     }
+    for (const [id, ak] of Object.entries(setup.actionKeybinds ?? {})) {
+      if (ak && keybindKey(ak) === k) {
+        e.preventDefault();
+        this.engine?.press('action:' + id, performance.now());
+        return;
+      }
+    }
     for (let pos = 0; pos < BAR_POSITIONS; pos++) {
       const row = setup.slotKeybinds[pos] ?? [];
       for (let i = 0; i < row.length; i++) {
@@ -449,4 +494,16 @@ export class Train implements OnDestroy {
       }
     }
   }
+}
+
+/** A note step shown in the queue like an entity (no key, no engine effect). */
+function noteEntity(step: RotationStep, index: number): Entity {
+  return {
+    key: 'note:' + index,
+    kind: 'action',
+    id: 'note-' + index,
+    name: step.note ?? '',
+    icon: step.phase ? 'assets/actions/phase.png' : 'assets/actions/note.png',
+    group: 'Notes',
+  };
 }

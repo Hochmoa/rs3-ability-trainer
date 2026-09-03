@@ -181,3 +181,79 @@
 .status {
   margin-left: auto;
 }
+
+.step.note {
+  border-left: 3px solid var(--muted);
+  font-style: italic;
+
+  .note-text {
+    flex: 1;
+  }
+
+  &.phase {
+    border-left-color: var(--gold);
+    font-style: normal;
+    font-weight: 600;
+  }
+}
+
+.tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  border: 1px solid var(--gold);
+  border-radius: 10px;
+  color: var(--gold);
+  font-size: 11px;
+  vertical-align: middle;
+
+  &.hint {
+    border-color: var(--border);
+    color: var(--muted);
+  }
+}
+
+.note-chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 220px;
+  height: 40px;
+  padding: 0 8px;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 11px;
+  font-style: italic;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: #0f0f12;
+  color: var(--text);
+  font: inherit;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 13px;
+  resize: vertical;
+
+  &:focus {
+    outline: none;
+    border-color: var(--gold);
+  }
+}
+
+.import-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+code {
+  color: var(--gold);
+}

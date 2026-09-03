@@ -132,7 +132,9 @@ def parse_percent(s: str | None) -> float | None:
     if not s:
         return None
     t = strip_markup(s)
-    m = re.search(r"([+-]?\d+(?:\.\d+)?)\s*%", t)
+    if "%" not in t:
+        return None
+    m = re.search(r"([+-]?\d+(?:\.\d+)?)", t)
     return float(m.group(1)) if m else None
 
 

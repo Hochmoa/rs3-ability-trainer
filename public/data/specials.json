@@ -63,5 +63,23 @@
   "level": 90,
   "description": "+30% adrenaline plus prayer/summoning restore. Shares the 120 s adrenaline potion cooldown.",
   "icon": "assets/specials/enhanced-replenishment-potion.png"
+ },
+ {
+  "id": "vulnerability-bomb",
+  "name": "Vulnerability bomb",
+  "kind": "bomb",
+  "adrenaline": 0,
+  "adrenalineOverTime": 0,
+  "overTimeTicks": 0,
+  "cooldownTicks": 0,
+  "sharedCooldown": "",
+  "level": 103,
+  "description": "Throws a 3x3 bomb: the target takes 10% more damage from all sources for 60 seconds. Off the global cooldown, no cooldown.",
+  "debuff": {
+   "name": "Vulnerability",
+   "durationTicks": 100,
+   "icon": "assets/status/vulnerability-target-status.png"
+  },
+  "icon": "assets/specials/vulnerability-bomb.png"
  }
 ]
