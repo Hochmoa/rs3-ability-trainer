@@ -4,9 +4,11 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "build": "ng build",
+    "build": "ng build && node tools/postbuild.mjs",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "postbuild:only": "node tools/postbuild.mjs",
+    "seo:images": "python tools/make-seo-images.py"
   },
   "private": true,
   "packageManager": "npm@10.9.4",

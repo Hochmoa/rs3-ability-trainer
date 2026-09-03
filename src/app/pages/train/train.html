@@ -1,9 +1,14 @@
+<h1 class="sr-only">RS3 Ability Trainer – practise RuneScape 3 rotations</h1>
 @if (!storage.ready() || !data.loaded()) {
   <p class="muted">Loading…</p>
 } @else if (!storage.rotations().length) {
   <div class="panel empty">
     <h2>No rotation yet</h2>
-    <p>Build a rotation, put its abilities on your action bars and bind keys.</p>
+    <p>
+      This trainer runs RuneScape 3 rotations on the real combat clock: 0.6 s ticks, a 1.8 s global cooldown, adrenaline, cooldowns
+      and the in-game "Allow ability queueing" option, with simulated ping – so you learn <em>when</em> to press, not just what.
+    </p>
+    <p>Build a rotation (or import PvME notation), put its abilities on your action bars, bind keys and press Start.</p>
     <a class="btn btn-primary" routerLink="/rotations">Create a rotation</a>
   </div>
 } @else {

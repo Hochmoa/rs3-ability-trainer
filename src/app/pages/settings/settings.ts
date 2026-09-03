@@ -9,7 +9,7 @@ import { DialogService } from '../../shared/dialog';
   imports: [FormsModule],
   template: `
     <div class="panel">
-      <h2>Settings</h2>
+      <h1>Settings</h1>
       <div class="form">
         <label>
           <span>Simulated ping (ms)</span>

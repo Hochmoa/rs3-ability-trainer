@@ -1,0 +1,17 @@
+{
+  "name": "RS3 Ability Trainer",
+  "short_name": "RS3 Trainer",
+  "description": "Practise RuneScape 3 ability rotations with real tick and global cooldown timing.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0f0f12",
+  "theme_color": "#15140f",
+  "lang": "en",
+  "categories": ["games", "education"],
+  "icons": [
+    { "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "assets/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

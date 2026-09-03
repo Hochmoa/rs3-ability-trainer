@@ -6,6 +6,7 @@
   align-items: center;
   gap: 12px 18px;
 
+  h1,
   h2,
   h3 {
     margin: 0;
@@ -67,7 +68,17 @@
   align-items: center;
   margin-bottom: 14px;
 
-  input {
+  .check {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--muted);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  input[type='search'] {
     margin-left: auto;
     min-width: 200px;
   }

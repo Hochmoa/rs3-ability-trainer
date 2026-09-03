@@ -5,6 +5,7 @@ import { DataService, Entity } from '../../core/data.service';
 import { keybindLabel } from '../../core/keybind.util';
 import { parsePvme } from '../../core/pvme';
 import { Rotation, RotationStep, STYLES } from '../../core/models';
+import { isObscureEntity } from '../../core/obscure';
 import { StorageService } from '../../core/storage.service';
 import { SupabaseService } from '../../core/supabase.service';
 import { SyncService } from '../../core/sync.service';
@@ -39,9 +40,18 @@ export class Rotations {
   readonly importOpen = signal(false);
   readonly importReport = signal<string | null>(null);
 
+  /** same setting as on the action bars page: hide abilities / prayers / weapons nobody uses (core/obscure.ts) */
+  readonly hideObscure = computed(() => this.storage.settings().hideObscureAbilities);
+
+  setHideObscure(v: boolean): void {
+    void this.storage.saveSettings({ ...this.storage.settings(), hideObscureAbilities: v });
+  }
+
   readonly catalog = computed<Entity[]>(() => {
     const q = this.search().trim().toLowerCase();
-    const all = this.data.entities();
+    const hide = this.hideObscure();
+    const byId = this.data.weaponById();
+    const all = this.data.entities().filter((e) => !hide || !isObscureEntity(e, byId));
     const list = q ? all.filter((e) => e.name.toLowerCase().includes(q)) : all.filter((e) => e.group === this.tab());
     return [...list].sort((a, b) => {
       if (a.kind !== b.kind) return a.kind.localeCompare(b.kind);
