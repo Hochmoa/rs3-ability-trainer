@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ResolvedLoadout, defaultResolvedLoadout } from './loadout-resolved';
-import { EngineConfig, EngineEntity, TrainerEngine } from './trainer-engine';
+import { EngineConfig, EngineEntity, TICK_MS, TrainerEngine } from './trainer-engine';
 
 /** old-style loadout knobs used by these tests */
 interface Loadout { startAdrenaline?: number; ringOfVigour?: boolean; conservationOfEnergy?: boolean; furyOfTheSmall?: boolean; heightenedSenses?: boolean; vestmentsOfHavoc?: boolean; impatientRank?: number }
@@ -400,5 +400,22 @@ describe('PvME companions (same tick / 2t) and notes', () => {
     e.press('ability:weapon-special-attack', 100);
     e.update(600);
     expect(e.results[0]).toMatchObject({ key: 'spec:death-essence', outcome: 'perfect', adrenaline: 20 });
+  });
+});
+
+describe('trainer adrenaline options', () => {
+  it('fullAdrenaline starts the session at the maximum', () => {
+    const e = make([A, B], { fullAdrenaline: true }, { heightenedSenses: true });
+    e.start(0);
+    expect(e.adrenaline).toBe(110);
+  });
+
+  it('rechargeAdrenaline adds 10% per tick, capped at the maximum', () => {
+    const e = make([A, B], { rechargeAdrenaline: true });
+    e.start(0);
+    e.update(TICK_MS * 3 + 1);
+    expect(e.adrenaline).toBe(30);
+    e.update(TICK_MS * 30);
+    expect(e.adrenaline).toBe(100);
   });
 });

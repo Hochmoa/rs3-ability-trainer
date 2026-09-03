@@ -5,7 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DataService, Entity, SPEC_KEY } from '../../core/data.service';
 import { keybindFromEvent, keybindKey, keybindLabel } from '../../core/keybind.util';
-import { AttackPattern, BAR_POSITIONS, BarShape, barLayout, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, PrayerStats, STYLES4, StepResult, Style4, WeaponSpec, entityKey, isStyle4, loadoutWeapons, visiblePresets, RotationStep } from '../../core/models';
+import { AttackPattern, BAR_POSITIONS, BarShape, barLayout, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, PrayerStats, STYLES4, Settings, StepResult, Style4, WeaponSpec, entityKey, isStyle4, loadoutWeapons, visiblePresets, RotationStep } from '../../core/models';
 import { StorageService } from '../../core/storage.service';
 import { resolveLoadout } from '../../engine/loadout-resolver';
 import { BUFF_BY_ID, ruleFor } from '../../engine/rules';
@@ -751,6 +751,10 @@ export class Train implements OnDestroy {
   }
 
   // ------------------------------------------------------------------ enemy config
+
+  setSetting<K extends keyof Settings>(key: K, value: Settings[K]): void {
+    void this.storage.saveSettings({ ...this.storage.settings(), [key]: value });
+  }
 
   setEnemy<K extends keyof EnemyConfig>(key: K, value: EnemyConfig[K]): void {
     const e = { ...this.enemy(), [key]: value, preset: key === 'enabled' ? this.enemy().preset : null };

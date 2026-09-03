@@ -210,13 +210,7 @@
 
     @case ('relics') {
       <div class="form">
-        <label>
-          <span>Adrenaline at session start</span>
-          <span class="row">
-            <input type="range" min="0" max="100" step="5" [ngModel]="l().startAdrenaline" (ngModelChange)="setStart($event)" />
-            <b class="val">{{ l().startAdrenaline }}%</b>
-          </span>
-        </label>
+        <p class="muted small">Starting adrenaline is set on the <a routerLink="/train">Train</a> page ("100% adrenaline at start").</p>
         <h3>Prayer book</h3>
         <label>
           <span>Prayers used in this loadout</span>

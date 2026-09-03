@@ -1,5 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { DataService } from '../../core/data.service';
 import { Gizmo, Loadout as LoadoutModel, Perk, RELICS, SetEffect, Style, Weapon, newLoadout } from '../../core/models';
 import { StorageService } from '../../core/storage.service';
@@ -10,7 +11,7 @@ const STYLE_ORDER: Style[] = ['Melee', 'Ranged', 'Magic', 'Necromancy'];
 
 @Component({
   selector: 'app-loadout',
-  imports: [FormsModule],
+  imports: [FormsModule, RouterLink],
   templateUrl: './loadout.html',
   styleUrl: './loadout.scss',
 })
@@ -149,10 +150,6 @@ export class Loadout {
 
   setPrayerBook(v: string): void {
     this.patch({ prayerBook: v === 'Prayers' ? 'Prayers' : 'Curses' });
-  }
-
-  setStart(v: unknown): void {
-    this.patch({ startAdrenaline: Math.max(0, Math.min(100, Math.round(Number(v) || 0))) });
   }
 
   // ---------------------------------------------------------------- armour / items

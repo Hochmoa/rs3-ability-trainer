@@ -13,6 +13,14 @@
   .hint {
     font-size: 13px;
   }
+
+  label.check {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
 }
 
 .empty {

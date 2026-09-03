@@ -16,12 +16,19 @@ export interface Wield {
   twoHand: string | null;
 }
 
+/** adrenaline gained per tick with the "recharge adrenaline" trainer option */
+export const RECHARGE_PER_TICK = 10;
+
 export interface EngineConfig {
   pingMs: number;
   jitterMs: number;
   /** In-game "Ability queueing" setting. On: a press during the GCD is queued and casts when the GCD ends. Off: it is ignored. */
   abilityQueueing: boolean;
   loop: boolean;
+  /** start with full adrenaline instead of the loadout's start value */
+  fullAdrenaline?: boolean;
+  /** +10% adrenaline at every server tick (like hitting a training dummy while resting) */
+  rechargeAdrenaline?: boolean;
   /** resolved loadout for the weapons wielded at the start */
   loadout: ResolvedLoadout;
   /** weapons wielded at the start; weapon-switch steps change it */
@@ -257,7 +264,7 @@ export class TrainerEngine {
     this.index = 0;
     this.castTick = null;
     this.wield = { mainHand: null, offHand: null, twoHand: null, ...(this.config.startWield ?? {}) };
-    this.adrenaline = Math.max(0, Math.min(this.maxAdrenaline, this.loadout.startAdrenaline));
+    this.adrenaline = this.config.fullAdrenaline ? this.maxAdrenaline : Math.max(0, Math.min(this.maxAdrenaline, this.loadout.startAdrenaline));
     this.results = [];
     this.buffs = [];
     this.stacks.clear();
@@ -1167,6 +1174,7 @@ export class TrainerEngine {
 
   private advanceTick(tick: number): void {
     this.lastTick = tick;
+    if (this.config.rechargeAdrenaline) this.addAdrenaline(RECHARGE_PER_TICK);
     for (const o of this.overTime) {
       if (tick <= o.untilTick) this.addAdrenaline(o.perTick);
     }

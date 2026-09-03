@@ -22,11 +22,19 @@
     } @else {
       <button class="btn" (click)="stop()">Stop (Esc)</button>
     }
+    <label class="check" title="Every session starts with full adrenaline">
+      <input type="checkbox" [checked]="storage.settings().fullAdrenaline" (change)="setSetting('fullAdrenaline', !storage.settings().fullAdrenaline)" [disabled]="running()" />
+      100% adrenaline at start
+    </label>
+    <label class="check" title="+10% adrenaline every tick (0.6 s), like at a training dummy – practise thresholds and ultimates without building up">
+      <input type="checkbox" [checked]="storage.settings().rechargeAdrenaline" (change)="setSetting('rechargeAdrenaline', !storage.settings().rechargeAdrenaline)" [disabled]="running()" />
+      Recharge adrenaline (+10%/tick)
+    </label>
     <span class="muted hint">
       Ping {{ storage.settings().pingMs }} ms ± {{ storage.settings().jitterMs }} · ability queueing
       {{ storage.settings().abilityQueueing ? 'on' : 'off' }}
       @if (storage.settings().loop) { · loop }
-      · loadout <a routerLink="/loadout">{{ storage.loadout().name }}</a> · start {{ storage.loadout().startAdrenaline }}% · {{ prayerBook() === 'Curses' ? 'curses' : 'standard prayers' }}
+      · loadout <a routerLink="/loadout">{{ storage.loadout().name }}</a> · {{ prayerBook() === 'Curses' ? 'curses' : 'standard prayers' }}
     </span>
   </div>
 

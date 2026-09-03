@@ -178,9 +178,13 @@ export interface Settings {
   /** in-game "Ability queueing": on = a press during the GCD is queued and casts when the GCD ends; off = ignored */
   abilityQueueing: boolean;
   loop: boolean;
+  /** start every session with full adrenaline (training-dummy style) */
+  fullAdrenaline: boolean;
+  /** +10% adrenaline every tick, so thresholds/ultimates can be practised without building up */
+  rechargeAdrenaline: boolean;
 }
 
-export const DEFAULT_SETTINGS: Settings = { pingMs: 60, jitterMs: 20, abilityQueueing: false, loop: false };
+export const DEFAULT_SETTINGS: Settings = { pingMs: 60, jitterMs: 20, abilityQueueing: false, loop: false, fullAdrenaline: false, rechargeAdrenaline: false };
 
 // ---------------------------------------------------------------- equipment data (public/data/*.json)
 
