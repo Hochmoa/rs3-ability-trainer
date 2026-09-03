@@ -106,15 +106,22 @@ create index rotations_public_updated on public.rotations (updated_at desc) wher
 create index rotations_public_copies on public.rotations (copies desc) where is_public;
 create index rotations_owner on public.rotations (owner_id);
 
--- every step must be an object with kind + id
-alter table public.rotations add constraint rotations_steps_shape check (
-  not exists (
-    select 1 from jsonb_array_elements(steps) s
-    where jsonb_typeof(s) <> 'object'
-       or not (s ? 'kind') or not (s ? 'id')
-       or s ->> 'kind' not in ('ability', 'prayer', 'special')
-  )
-);
+-- every step must be an object with kind + id (a CHECK may not contain a subquery, so it goes through a function)
+create or replace function public.rotation_steps_valid(steps jsonb)
+returns boolean
+language sql
+immutable
+as $$
+  select jsonb_typeof(steps) = 'array'
+     and not exists (
+       select 1 from jsonb_array_elements(steps) s
+       where jsonb_typeof(s) <> 'object'
+          or not (s ? 'kind') or not (s ? 'id')
+          or s ->> 'kind' not in ('ability', 'prayer', 'special')
+     );
+$$;
+
+alter table public.rotations add constraint rotations_steps_shape check (public.rotation_steps_valid(steps));
 
 alter table public.rotations enable row level security;
 
