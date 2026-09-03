@@ -1,0 +1,76 @@
+{
+  "siteName": "RS3 Ability Trainer",
+  "origin": "https://rs3trainer.hochware.com",
+  "image": "/assets/og-image.png",
+  "author": { "name": "Martin Hochmair", "url": "https://hochware.com" },
+  "description": "Free RuneScape 3 rotation trainer: real 0.6 s ticks, 1.8 s global cooldown, adrenaline, ability queueing and ping simulation. Import PvME rotations and practise them.",
+  "routes": [
+    {
+      "path": "",
+      "title": "RS3 Ability Trainer – Practise RuneScape 3 Rotations",
+      "h1": "RS3 Ability Trainer",
+      "description": "Free RuneScape 3 rotation trainer: real 0.6 s ticks, 1.8 s global cooldown, adrenaline, ability queueing and ping simulation. Import PvME rotations and practise them.",
+      "priority": 1.0,
+      "changefreq": "weekly"
+    },
+    {
+      "path": "rotations",
+      "title": "Rotation Builder & PvME Import – RS3 Ability Trainer",
+      "h1": "Rotations",
+      "description": "Build RuneScape 3 ability rotations step by step or import PvME notation. Abilities, prayers, weapon switches and special attacks with wiki data: cooldown, adrenaline, damage.",
+      "priority": 0.9,
+      "changefreq": "weekly"
+    },
+    {
+      "path": "explore",
+      "title": "Explore Public RS3 Rotations – RS3 Ability Trainer",
+      "h1": "Explore rotations",
+      "description": "Browse and copy public RuneScape 3 rotations shared by other players, filter by combat style and practise them with real tick timing.",
+      "priority": 0.9,
+      "changefreq": "daily"
+    },
+    {
+      "path": "bars",
+      "title": "Action Bar Setup – RS3 Ability Trainer",
+      "h1": "Action bars",
+      "description": "Recreate your RuneScape 3 action bars: presets, slot layout and bar binding exactly like in the game, so the trainer matches your real interface.",
+      "priority": 0.7,
+      "changefreq": "monthly"
+    },
+    {
+      "path": "keybinds",
+      "title": "Keybinds – RS3 Ability Trainer",
+      "h1": "Keybinds",
+      "description": "Bind keys and modifier combinations (Ctrl, Shift, Alt) to action bar slots and weapon switches, exactly like your RuneScape 3 setup.",
+      "priority": 0.7,
+      "changefreq": "monthly"
+    },
+    {
+      "path": "loadout",
+      "title": "Loadouts: Weapons, Perks & Relics – RS3 Ability Trainer",
+      "h1": "Loadouts",
+      "description": "Set up your RuneScape 3 loadout: weapons and switches, armour, perks, relics and prayer book. The trainer applies their effects to cooldowns and adrenaline.",
+      "priority": 0.7,
+      "changefreq": "monthly"
+    },
+    {
+      "path": "settings",
+      "title": "Trainer Settings – RS3 Ability Trainer",
+      "h1": "Settings",
+      "description": "Trainer settings: simulated ping and jitter, the in-game 'Allow ability queueing' option, looping and enemy behaviour.",
+      "priority": 0.4,
+      "changefreq": "monthly"
+    },
+    {
+      "path": "privacy",
+      "title": "Privacy – RS3 Ability Trainer",
+      "h1": "Privacy",
+      "description": "What the RS3 Ability Trainer stores in your browser and online, where the data lives and how to delete it.",
+      "priority": 0.3,
+      "changefreq": "yearly"
+    },
+    { "path": "account", "title": "Account – RS3 Ability Trainer", "h1": "Account", "description": "Sign in to sync your rotations and keybinds.", "noindex": true },
+    { "path": "admin", "title": "Admin – RS3 Ability Trainer", "h1": "Admin", "description": "Staff area.", "noindex": true },
+    { "path": "auth/callback", "title": "Signing in – RS3 Ability Trainer", "h1": "Signing in", "description": "Finishing sign-in.", "noindex": true }
+  ]
+}

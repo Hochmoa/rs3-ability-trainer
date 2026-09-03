@@ -24,7 +24,7 @@
     </div>
   }
   <div class="panel">
-    <h2>Rotation <span class="muted">({{ r.steps.length }} steps)</span></h2>
+    <h1>Rotation <span class="muted">({{ r.steps.length }} steps)</span></h1>
     @if (!r.steps.length) {
       <p class="muted">Click abilities, prayers or potions in the catalog below to append them. Prayers and potions don't use the global cooldown – put them right before the ability they belong to.</p>
     }
@@ -113,7 +113,7 @@
   </div>
 } @else {
   <div class="panel list-head">
-    <h2>Rotations</h2>
+    <h1>Rotations</h1>
     <button class="btn btn-primary" (click)="newRotation()">New rotation</button>
     <span class="muted small status">
       @if (supabase.user()) {

@@ -1,5 +1,5 @@
 <div class="panel head">
-  <h2>Loadouts</h2>
+  <h1>Loadouts</h1>
   <div class="chips">
     @for (lo of storage.loadouts(); track lo.id) {
       <button class="chip" [class.active]="lo.id === l().id" (click)="select(lo.id)">{{ lo.name }}</button>
