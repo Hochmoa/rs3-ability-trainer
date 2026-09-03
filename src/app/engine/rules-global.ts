@@ -63,9 +63,10 @@ export const GLOBAL_RULES: GlobalRule[] = [
     hitAdrenaline: 5,
   },
   {
-    id: 'anima-charged-others',
-    notes: ['Only Sonic Wave, Greater Sonic Wave, Dragon Breath and (Greater) Concentrated Blast consume Anima Charged (' + W + 'Anima_Charged )'],
-    when: { abilities: [] },
+    id: 'anima-dragon-breath',
+    notes: ['Dragon Breath consumes Anima Charged with its hit (260–310% instead of 110–130%) (' + W + 'Anima_Charged )'],
+    when: { abilities: ['dragon-breath'], buff: 'anima-charged' },
+    onHit: [{ kind: 'remove-buff', id: 'anima-charged', when: { hit: 0 } }],
   },
   {
     id: 'flow-consume',
@@ -98,7 +99,7 @@ export const GLOBAL_RULES: GlobalRule[] = [
   {
     id: 'concentrated-crit-consume',
     notes: ['The Concentrated Blast crit bonus applies to the next Magic ability and is then removed (' + W + 'Concentrated_Blast )'],
-    when: { style: 'Magic', buff: 'concentrated-crit', gcd: true, excludeAbilities: ['concentrated-blast', 'greater-concentrated-blast'] },
+    when: { style: 'Magic', buff: 'concentrated-crit', gcd: true, excludeAbilities: ['concentrated-blast', 'greater-concentrated-blast', 'sunshine', 'greater-sunshine'] },
     consumes: 'concentrated-crit',
   },
   {

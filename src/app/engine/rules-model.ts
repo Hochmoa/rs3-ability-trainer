@@ -50,6 +50,12 @@ export interface BuffDef {
   adrenalinePerTickStyle?: Style;
   /** critical strike chance added to hits (add ≥ 1 = guaranteed) of `style`; firstHitOnly = first hit of a multi-hit / channel; never for a hit of the cast that created the buff */
   crit?: { add: number; style?: Style; firstHitOnly?: boolean };
+  /** critical strike chance per stack held (Concentrated Blast: the stacks are the percent) */
+  critChancePerStack?: number;
+  /** critical strike damage added while active (Channelled Might +15%) */
+  critDamageAdd?: number;
+  /** swapping the main-hand weapon removes it (Concentrated Blast stacks) */
+  removedOnMainHandSwap?: boolean;
   /** icon path override (else the wiki buff icon, else the source ability's icon) */
   icon?: string;
   /** effect description for the tooltip */
@@ -68,6 +74,8 @@ export interface Condition {
   duringGcd?: boolean;
   /** loadout item / set threshold active */
   item?: string;
+  /** ... not active (Sunshine's periodic damage unless Planted Feet) */
+  notItem?: string;
   /** main-hand (or 2h) style */
   style?: Style;
   /** probability 0..1 (rolled once per evaluation) */
@@ -179,6 +187,8 @@ export interface ChannelSpec {
   asDotWhen?: Condition;
   /** Blood Siphon: the last hit also deals this share of what the earlier hits of the channel dealt */
   finalAddsPriorShare?: number;
+  /** every hit's roll × this (Tumeken's Asphyxiate: 8 hits at 0.6) */
+  damageMult?: number;
   /** every hit is a critical strike (Smoke Tendrils) */
   guaranteedCrit?: boolean;
 }
@@ -225,6 +235,10 @@ export interface AbilityRule {
   spiritHit?: string;
   /** bleed / burn: `hits` damage-over-time hits every `everyTicks` (first after `startTicks`, default everyTicks); no crits, no style buffs */
   bleed?: BleedSpec;
+  /** a bleed that depends on the state at the cast (Sunshine's periodic damage unless Planted Feet, Combust instant with Kerapac's wraps); first match wins, else `bleed` */
+  bleedWhen?: { when: Condition; bleed: BleedSpec }[];
+  /** critical strike modifiers of the ability itself (Wild Magic +10% chance / +20% damage; Magma Tempest never crits) */
+  crit?: { chanceAdd?: number; damageAdd?: number; never?: boolean };
   /** one hit per stack held (Volley of Souls) */
   hitsPerStack?: StackId;
   /** situational damage multipliers (Finger of Death 1.5x under Living Death) */

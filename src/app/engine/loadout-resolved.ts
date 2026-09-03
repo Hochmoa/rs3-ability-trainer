@@ -50,6 +50,10 @@ export interface ResolvedLoadout {
   fullChannelBuffs: Record<string, { buff: string; durationTicks: number; requiresWeapon?: 'bow' | 'crossbow' }[]>;
   /** buff id → critical strike chance added while it is active (Dracolich infusion +20% / +40% ranged) */
   buffCritAdd: Record<string, { add: number; style?: Style }>;
+  /** buff id → critical strike damage added while it is active, replacing the definition's (Tumeken 5: Channelled Might +35%) */
+  buffCritDamageAdd: Record<string, number>;
+  /** critical strike damage added to every hit (Fractured Staff of Armadyl +20%) */
+  critDamageAdd: number;
   /** Vestments of havoc (2): adrenaline after a melee ultimate */
   adrenalineAfterUltimate: { style: Style; amount: number; overTicks: number; instantIfActive: number } | null;
   /** main-hand / 2h style */
@@ -101,6 +105,8 @@ export function defaultResolvedLoadout(): ResolvedLoadout {
     channelAdrenalinePerTick: {},
     fullChannelBuffs: {},
     buffCritAdd: {},
+    buffCritDamageAdd: {},
+    critDamageAdd: 0,
     adrenalineAfterUltimate: null,
     style: null,
     has2h: false,

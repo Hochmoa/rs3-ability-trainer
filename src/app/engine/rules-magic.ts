@@ -47,7 +47,9 @@ export const MAGIC_RULES: AbilityRule[] = [
   {
     ability: 'dragon-breath',
     notes: ['Consumes Anima Charged: 260–310% instead of 110–130% (' + W + 'Runic_Charge )', '1.25x damage against Combusted targets (' + W + 'Dragon_Breath )', 'Kerapac\'s wrist wraps: the next Combust within 6 s is instant (' + W + 'Combust )'],
-    onCast: [{ kind: 'remove-buff', id: 'anima-charged' }],
+    hits: [0],
+    damageRules: [{ when: { buff: 'anima-charged' }, damage: { min: 260, max: 310 } }, { when: { buff: 'combust' }, mult: 1.25 }],
+    onCast: [{ kind: 'buff', id: 'kerapac-window', when: { item: 'kerapac-s-wrist-wraps' } }],
   },
   {
     ability: 'impact',
@@ -58,8 +60,10 @@ export const MAGIC_RULES: AbilityRule[] = [
   {
     ability: 'combust',
     bleed: { hits: 10, everyTicks: 3 },
-    notes: ['Burn: 10 hits every 3 ticks; re-applying refreshes it; removed by Freedom (' + W + 'Combust )'],
-    onCast: [{ kind: 'buff', id: 'combust', refresh: true }],
+    bleedWhen: [{ when: { buff: 'kerapac-window' }, bleed: { hits: 10, everyTicks: 0, startTicks: 0 } }],
+    damageRules: [{ when: { flag: 'instant' }, mult: 1.25 }],
+    notes: ['Burn: 10 hits every 3 ticks; re-applying refreshes it; removed by Freedom (' + W + 'Combust )', "Kerapac's wrist wraps: within 6 s after Dragon Breath all ten hits land at once at +25% (" + W + "Kerapac's_wrist_wraps )"],
+    onCast: [{ kind: 'buff', id: 'combust', refresh: true }, { kind: 'choose', when: { buff: 'kerapac-window' }, then: [{ kind: 'remove-buff', id: 'kerapac-window' }, { kind: 'flag', flag: 'instant', value: true }] }],
   },
   {
     ability: 'chain',
@@ -75,21 +79,22 @@ export const MAGIC_RULES: AbilityRule[] = [
   {
     ability: 'concentrated-blast',
     channel: { ticks: 3, hits: [1, 2, 3] },
-    notes: ['Channelled: 3 beams over 3 ticks; each beam +5% critical strike chance for the next Magic ability (+10% more per beam when Anima Charged, which it consumes) (' + W + 'Concentrated_Blast )'],
-    onCast: [{ kind: 'remove-buff', id: 'anima-charged' }],
-    onHit: [{ kind: 'buff', id: 'concentrated-crit', stacks: 1 }],
+    notes: ['Channelled: 3 beams over 3 ticks; each beam +5% critical strike chance for the next Magic ability (+10% more per beam when Anima Charged, which it consumes); lost on a main-hand swap (' + W + 'Concentrated_Blast )'],
+    onCast: [{ kind: 'choose', when: { buff: 'anima-charged' }, then: [{ kind: 'remove-buff', id: 'anima-charged' }, { kind: 'flag', flag: 'charged', value: true }] }],
+    onHit: [{ kind: 'choose', when: { flag: 'charged' }, then: [{ kind: 'stack', stack: 'concentrated-crit', amount: 15 }], otherwise: [{ kind: 'stack', stack: 'concentrated-crit', amount: 5 }] }],
   },
   {
     ability: 'greater-concentrated-blast',
     replaces: 'concentrated-blast',
     channel: { ticks: 3, hits: [1, 2, 3] },
-    notes: ['Channelled: 3 beams over 3 ticks; each beam +7% critical strike chance for the next Magic ability (+10% more per beam when Anima Charged) (' + W + 'Greater_Concentrated_Blast )'],
-    onCast: [{ kind: 'remove-buff', id: 'anima-charged' }],
-    onHit: [{ kind: 'buff', id: 'concentrated-crit', stacks: 1 }],
+    notes: ['Channelled: 3 beams over 3 ticks; each beam +7% critical strike chance for the next Magic ability (+10% more per beam when Anima Charged); lost on a main-hand swap (' + W + 'Greater_Concentrated_Blast )'],
+    onCast: [{ kind: 'choose', when: { buff: 'anima-charged' }, then: [{ kind: 'remove-buff', id: 'anima-charged' }, { kind: 'flag', flag: 'charged', value: true }] }],
+    onHit: [{ kind: 'choose', when: { flag: 'charged' }, then: [{ kind: 'stack', stack: 'concentrated-crit', amount: 17 }], otherwise: [{ kind: 'stack', stack: 'concentrated-crit', amount: 7 }] }],
   },
   {
     ability: 'wild-magic',
     hits: [0, 0],
+    crit: { chanceAdd: 0.1, damageAdd: 0.2 },
     notes: ['25% adrenaline, 2 hits with +10% crit chance and +20% crit damage (' + W + 'Wild_Magic )', 'Blast diffusion boots: Blast Infused for 10 ticks (' + W + 'Blast_Infused )'],
     onCast: [{ kind: 'buff', id: 'blast-infused', when: { item: 'blast-diffusion-boots' } }],
   },
@@ -101,7 +106,7 @@ export const MAGIC_RULES: AbilityRule[] = [
       'A full channel grants Channelled Might: +15% critical strike damage for 6 ticks (5 Tumeken pieces: 15 ticks, +35%) (' + W + 'Channelled_Might )',
       'Tumeken\'s resplendence (4 pieces): 8 hits on 8 consecutive ticks at 40% less damage (' + W + 'Asphyxiate )',
     ],
-    onHit: [{ kind: 'buff', id: 'stunned', durationTicks: 2 }],
+    onHit: [{ kind: 'buff', id: 'stunned', durationTicks: 2, when: { hit: 0 } }, { kind: 'buff', id: 'stunned', durationTicks: 2, when: { hit: 1 } }, { kind: 'buff', id: 'stunned', durationTicks: 2, when: { hit: 2 } }, { kind: 'buff', id: 'bound', durationTicks: 2, when: { hit: 3 } }],
   },
   {
     ability: 'corruption-blast',
@@ -112,14 +117,16 @@ export const MAGIC_RULES: AbilityRule[] = [
   },
   {
     ability: 'smoke-tendrils',
-    channel: { ticks: 4, hits: [1, 2, 3, 4], guaranteedCrit: true },
-    notes: ['0% adrenaline, 75-tick cooldown, 4 guaranteed critical strikes with self-damage; under Tsunami each crit gives +8% adrenaline (' + W + 'Smoke_Tendrils )'],
+    channel: { ticks: 7, hits: [1, 3, 5, 7], guaranteedCrit: true },
+    hitDamage: [{ min: 55, max: 65 }, { min: 65, max: 80 }, { min: 75, max: 95 }, { min: 85, max: 110 }],
+    notes: ['0% adrenaline, 75-tick cooldown: 4 guaranteed critical strikes every 2 ticks (55–65%, 65–80%, 75–95%, 85–110%) with self-damage; another ability after the GCD cancels the rest; under Tsunami each crit gives +8% adrenaline (' + W + 'Smoke_Tendrils )'],
   },
   {
     ability: 'magma-tempest',
     sharedCooldown: 'magma-tempest',
-    hits: [0, 3, 6, 9, 12, 15, 18, 21],
-    notes: ['20% adrenaline, 5x5 area of 8 hits over 21 ticks; shares its cooldown with the targeted version; hits cannot crit (' + W + 'Magma_Tempest )'],
+    hits: [0, 2, 4, 6, 8, 10, 12, 14],
+    crit: { never: true },
+    notes: ['20% adrenaline, 5x5 area of 8 hits every 2 ticks over 16 ticks; shares its cooldown with the targeted version; hits cannot crit (' + W + 'Magma_Tempest )'],
   },
   {
     ability: 'omnipower',
@@ -131,6 +138,7 @@ export const MAGIC_RULES: AbilityRule[] = [
       '100% adrenaline: Magic attacks inside the 7x7 area deal 1.5x for 50 ticks (Combust, Corruption Blast, Onslaught excluded); the buff starts 1 tick after the cast; leaving the area removes it (' + W + 'Sunshine )',
       'Planted Feet: 63 ticks and no periodic damage (' + W + 'Planted_Feet )',
     ],
+    bleedWhen: [{ when: { notItem: 'planted-feet' }, bleed: { hits: 17, everyTicks: 3, damage: { min: 10, max: 20 } } }],
     onCast: [
       { kind: 'choose', when: { item: 'planted-feet' }, then: [{ kind: 'buff', id: 'sunshine', durationTicks: 63, delayTicks: 1 }], otherwise: [{ kind: 'buff', id: 'sunshine', delayTicks: 1 }] },
     ],
@@ -139,11 +147,13 @@ export const MAGIC_RULES: AbilityRule[] = [
     ability: 'greater-sunshine',
     replaces: 'sunshine',
     notes: ['100% adrenaline: Magic attacks inside the area deal 1.5x for 63 ticks; Planted Feet only removes the periodic damage (' + W + 'Greater_Sunshine )'],
+    bleedWhen: [{ when: { notItem: 'planted-feet' }, bleed: { hits: 21, everyTicks: 3, damage: { min: 10, max: 20 } } }],
     onCast: [{ kind: 'buff', id: 'greater-sunshine', durationTicks: 62, delayTicks: 1 }],
   },
   {
     ability: 'tsunami',
-    notes: ['100% adrenaline (12% less per Glacial Embrace stack, min 40%): for 50 ticks every Magic critical strike generates +8% adrenaline; recasting refreshes it (' + W + 'Tsunami )'],
+    hits: [0],
+    notes: ['100% adrenaline (12% less per Glacial Embrace stack, min 40%): 225–275% hit; for 50 ticks every Magic critical strike generates +8% adrenaline; recasting refreshes it (' + W + 'Tsunami )'],
     onCast: [{ kind: 'buff', id: 'tsunami', refresh: true }],
   },
 ];

@@ -260,6 +260,16 @@ function applyEffect(r: ResolvedLoadout, effect: Record<string, unknown> & { kin
       r.buffDurationMult[e['buff']] = 1;
       // duration override: express as add relative to the rule default (Channelled Might 6 → 15)
       r.buffDurationAdd[e['buff']] = Number(e['durationTicks']) - 6;
+      if (e['critDamage'] !== undefined) r.buffCritDamageAdd[e['buff']] = Number(e['critDamage']);
+      break;
+    case 'crit-in-sunshine':
+      for (const b of ['sunshine', 'greater-sunshine']) r.buffCritAdd[b] = { add: (r.buffCritAdd[b]?.add ?? 0) + Number(e['perPiece']) * Math.min(pieces, 5), style: 'Magic' };
+      break;
+    case 'crit-chance':
+      r.critChanceAdd += e['add'] !== undefined ? Number(e['add']) : Number(e['perPiece']) * Math.min(pieces, 5);
+      break;
+    case 'crit-damage':
+      r.critDamageAdd += Number(e['add']);
       break;
     case 'adrenaline-after-ultimate':
       r.adrenalineAfterUltimate = { style: e['style'] ?? style ?? 'Melee', amount: Number(e['amount']), overTicks: Number(e['overTicks']), instantIfActive: Number(e['instantIfActive']) };
@@ -282,7 +292,7 @@ function applyEffect(r: ResolvedLoadout, effect: Record<string, unknown> & { kin
       break;
     }
     case 'channel-override':
-      r.channelOverrides[e['ability']] = { ticks: Math.max(...(e['hits'] as number[])), hits: e['hits'] as number[], onComplete: [{ kind: 'buff', id: 'channelled-might' }] };
+      r.channelOverrides[e['ability']] = { ticks: Math.max(...(e['hits'] as number[])), hits: e['hits'] as number[], onComplete: [{ kind: 'buff', id: 'channelled-might' }], damageMult: e['damageMult'] !== undefined ? Number(e['damageMult']) : undefined };
       break;
     case 'ability-override':
       if (e['hits']) {

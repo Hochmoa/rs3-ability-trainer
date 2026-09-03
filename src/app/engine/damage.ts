@@ -58,6 +58,9 @@ export const BUFF_FLAT_ADD: { buff: string; style: Style; pct: number; dots: boo
   { buff: 'frostblades', style: 'Melee', pct: 24, dots: false },
 ];
 
+/** self buffs that multiply one ability type of a style, DoTs included (Blast Infused: magic basics +8%) */
+export const BUFF_TYPE_DAMAGE_MULT: { buff: string; style: Style; type: string; mult: number }[] = [{ buff: 'blast-infused', style: 'Magic', type: 'Basic', mult: 1.08 }];
+
 /** target debuffs that raise the damage it takes (dotsOnly: bleed / burn hits only – Corrupted Wounds) */
 export const TARGET_DAMAGE_MULT: { buff: string; mult: number; dotsOnly?: boolean }[] = [
   { buff: 'special:vulnerability-bomb', mult: 1.1 },

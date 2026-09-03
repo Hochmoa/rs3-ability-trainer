@@ -202,11 +202,11 @@ describe('magic: Runic Charge, Flow, Tsunami', () => {
     const e = make(['tsunami', 'smoke-tendrils', 'asphyxiate'], { style: 'Magic', startAdrenaline: 100 });
     cast(e, 'tsunami', 0, 1 * T);
     expect(e.adrenaline).toBe(0);
-    cast(e, 'smoke-tendrils', 2 * T, 4 * T); // hits ticks 5..8
-    e.update(9 * T);
+    cast(e, 'smoke-tendrils', 2 * T, 4 * T); // hits ticks 5, 7, 9, 11
+    e.update(12 * T);
     expect(e.adrenaline).toBe(32);
-    cast(e, 'asphyxiate', 9 * T, 10 * T); // hits 11,13,15,17
-    e.update(18 * T);
+    cast(e, 'asphyxiate', 12 * T, 13 * T); // hits 14, 16, 18, 20
+    e.update(21 * T);
     expect(e.hasBuff('channelled-might')).toBe(true);
   });
 
