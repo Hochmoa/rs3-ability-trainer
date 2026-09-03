@@ -133,6 +133,7 @@
   }
 
   <div class="panel arena">
+   <div class="arena-main">
     <div class="queue-strip">
       @for (s of slots(); track s.stepIndex + '-' + s.kind) {
         @if (s.note !== undefined) {
@@ -337,6 +338,12 @@
         }
       </div>
     }
+   </div>
+   <aside class="gear-side">
+    <div class="gear-head"><b>Equipment &amp; backpack</b> <a routerLink="/loadout">edit</a></div>
+    <gear-panel [equipment]="gearState().equipment" [inventory]="gearState().inventory" [live]="true" [usable]="gearUsable()" [keyOf]="gearKey" (action)="onGear($event)" />
+    <p class="muted small">{{ running() ? 'Click a weapon to wield it, a potion to drink it, armour to wear it; click a worn item to take it off. Changes are not saved to the loadout.' : 'While training: click to switch weapons, drink potions and swap armour. Set effects follow what you wear.' }}</p>
+   </aside>
   </div>
 
   </div>

@@ -1,11 +1,13 @@
 import { Component, Directive, ElementRef, HostListener, Injectable, computed, inject, input, signal } from '@angular/core';
-import { DataService, Entity } from '../core/data.service';
+import { DataService, Entity, GearView } from '../core/data.service';
 import { Buff } from '../core/models';
 import { ruleFor } from '../engine/rules';
 import { TICK_MS } from '../engine/trainer-engine';
 
 interface TipState {
-  entity: Entity;
+  entity?: Entity;
+  /** an equipment item (gear panel) instead of an entity */
+  gear?: GearView;
   x: number;
   y: number;
 }
@@ -54,6 +56,25 @@ export class EntityTip {
   }
 }
 
+/** Put on a gear-panel cell: shows the item (name, tier, set / passive text, perks) while hovering. */
+@Directive({ selector: '[gearTip]' })
+export class GearTip {
+  readonly gearTip = input.required<GearView | null | undefined>();
+  private tips = inject(TooltipService);
+
+  @HostListener('mouseenter', ['$event'])
+  @HostListener('mousemove', ['$event'])
+  show(e: MouseEvent): void {
+    const gear = this.gearTip();
+    if (gear) this.tips.state.set({ gear, x: e.clientX, y: e.clientY });
+  }
+
+  @HostListener('mouseleave')
+  hide(): void {
+    this.tips.state.set(null);
+  }
+}
+
 function seconds(ticks: number | null | undefined): string {
   if (ticks === null || ticks === undefined) return '';
   return (ticks * TICK_MS) / 1000 + ' s (' + ticks + (ticks === 1 ? ' tick)' : ' ticks)');
@@ -69,14 +90,47 @@ interface Note {
   template: `
     @if (tips.state(); as s) {
       <div class="tip" [style.left.px]="pos().x" [style.top.px]="pos().y">
+        @if (s.gear; as g) {
+          <div class="head">
+            @if (g.icon) { <img [src]="g.icon" [alt]="g.name" /> }
+            <div>
+              <div class="name">{{ g.name }}</div>
+              <div class="sub">{{ gearSubtitle(g) }}</div>
+            </div>
+          </div>
+          <table>
+            @if (g.weapon; as w) {
+              @if (g.spec; as sp) { <tr><th>Special</th><td>{{ sp.name }} · {{ sp.adrenaline }}% adrenaline</td></tr> }
+              @if (w.role) { <tr><th>Role</th><td>{{ w.role }}</td></tr> }
+            }
+            @if (g.set; as set) { <tr><th>Set</th><td>{{ set.name }}</td></tr> }
+            @if (g.ref.spec) { <tr><th>Stored spec</th><td>{{ specName(g.ref.spec) }}</td></tr> }
+            @for (gz of g.ref.gizmos ?? []; track $index) {
+              <tr><th>{{ gz.ancient ? 'Ancient gizmo' : 'Gizmo' }}</th><td>{{ perkList(gz) }}</td></tr>
+            }
+            @if (g.special; as sp) {
+              <tr><th>Adrenaline</th><td class="good">{{ sp.adrenaline ? '+' + sp.adrenaline + '%' : '' }}{{ sp.adrenalineOverTime ? '+' + sp.adrenalineOverTime + '% over ' + seconds(sp.overTimeTicks) : '' }}</td></tr>
+              <tr><th>Cooldown</th><td>{{ seconds(sp.cooldownTicks) }} (shared)</td></tr>
+            }
+          </table>
+          @if (g.passive; as pv) { <p class="desc">{{ pv.text }}</p> }
+          @if (g.set; as set) {
+            <div class="rules">
+              @for (t of set.thresholds ?? []; track t.pieces) {
+                <div class="rule"><span><b>{{ t.pieces }}:</b> {{ t.text }}</span></div>
+              }
+            </div>
+          }
+          @if (g.special; as sp) { <p class="desc">{{ sp.description }}</p> }
+        } @else if (s.entity; as e) {
         <div class="head">
-          <img [src]="s.entity.icon" [alt]="s.entity.name" />
+          <img [src]="e.icon" [alt]="e.name" />
           <div>
-            <div class="name">{{ s.entity.name }}</div>
-            <div class="sub">{{ subtitle(s.entity) }}</div>
+            <div class="name">{{ e.name }}</div>
+            <div class="sub">{{ subtitle(e) }}</div>
           </div>
         </div>
-        @if (s.entity.ability; as a) {
+        @if (e.ability; as a) {
           <table>
             <tr><th>Adrenaline</th><td [class]="(a.adrenaline ?? 0) > 0 ? 'good' : (a.adrenaline ?? 0) < 0 ? 'bad' : ''">{{ adrenaline(a.adrenaline) }}</td></tr>
             @if (a.cooldownTicks) { <tr><th>Cooldown</th><td>{{ seconds(a.cooldownTicks) }}</td></tr> }
@@ -115,7 +169,7 @@ interface Note {
               }
             </div>
           }
-        } @else if (s.entity.prayer; as p) {
+        } @else if (e.prayer; as p) {
           <table>
             <tr><th>Level</th><td>{{ p.level }}</td></tr>
             @if (p.drainPerHour) { <tr><th>Drain</th><td>{{ p.drainPerHour }} points / hour</td></tr> }
@@ -124,13 +178,13 @@ interface Note {
           </table>
           @if (p.effect) { <p class="desc">{{ p.effect }}</p> }
           <p class="desc muted">{{ p.description }}</p>
-        } @else if (s.entity.weapon; as w) {
+        } @else if (e.weapon; as w) {
           <table>
             <tr><th>Style</th><td>{{ w.style }}</td></tr>
             <tr><th>GCD</th><td class="warn">instant – switching gear does not use a tick</td></tr>
           </table>
           <p class="desc">Wield your {{ w.style }} weapon. Abilities of other styles are greyed out until you switch back; Defence and Constitution abilities work with any weapon.</p>
-        } @else if (s.entity.special; as sp) {
+        } @else if (e.special; as sp) {
           <table>
             <tr><th>Adrenaline</th><td class="good">{{ sp.adrenaline ? '+' + sp.adrenaline + '%' : '' }}{{ sp.adrenalineOverTime ? '+' + sp.adrenalineOverTime + '% over ' + seconds(sp.overTimeTicks) : '' }}</td></tr>
             <tr><th>Cooldown</th><td>{{ seconds(sp.cooldownTicks) }} (shared)</td></tr>
@@ -138,6 +192,7 @@ interface Note {
             <tr><th>GCD</th><td class="warn">off the global cooldown</td></tr>
           </table>
           <p class="desc">{{ sp.description }}</p>
+        }
         }
       </div>
     }
@@ -265,6 +320,26 @@ export class EntityTooltip {
     const y = s.y + 12 + h > window.innerHeight ? Math.max(4, window.innerHeight - h - 8) : s.y + 12;
     return { x, y };
   });
+
+  gearSubtitle(g: GearView): string {
+    const parts: string[] = [];
+    if (g.special) parts.push(g.special.kind === 'bomb' ? 'Bomb' : 'Adrenaline potion');
+    else if (g.weapon) parts.push(g.weapon.slot === '2h' ? 'Two-handed' : g.weapon.slot === 'shield' ? 'Shield' : g.weapon.slot === 'main' ? 'Main hand' : 'Off-hand');
+    else if (g.gear) parts.push(g.gear.slot.charAt(0).toUpperCase() + g.gear.slot.slice(1) + (g.gear.type ? ' · ' + g.gear.type : ''));
+    if (g.tier) parts.push('tier ' + g.tier);
+    if (g.style) parts.push(g.style);
+    if (g.gizmoSlots && (g.weapon || g.gear?.augmentable)) parts.push('augmentable');
+    return parts.join(' · ');
+  }
+
+  specName(id: string): string {
+    return this.data.specById().get(id)?.name ?? id;
+  }
+
+  perkList(g: { perks: { perk: string; rank: number }[] }): string {
+    if (!g.perks.length) return 'empty';
+    return g.perks.map((p) => (this.data.perkById().get(p.perk)?.name ?? p.perk) + ' ' + p.rank).join(', ');
+  }
 
   subtitle(e: Entity): string {
     if (e.ability) return (e.ability.basicAttack ? 'Auto-attack' : e.ability.type) + ' · ' + e.ability.style + ' · level ' + e.ability.level + (e.ability.members ? '' : ' · free to play');

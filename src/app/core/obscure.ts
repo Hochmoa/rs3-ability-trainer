@@ -1,4 +1,4 @@
-import { Ability, Perk, Prayer, SetEffect, Weapon, WeaponSpec } from './models';
+import { Ability, GearItem, Perk, Prayer, SetEffect, Weapon, WeaponSpec } from './models';
 import { Entity } from './data.service';
 
 /**
@@ -28,6 +28,19 @@ export function isObscureWeapon(w: Weapon): boolean {
   if (w.tier < MIN_WEAPON_TIER) return true;
   const n = w.name;
   if (TOOL_RE.test(n)) return true;
+  if (VARIANT_PREFIX_RE.test(n)) return true;
+  if (UPGRADE_STEP_RE.test(n)) return true;
+  if (PAREN_RE.test(n) && !OK_PAREN_RE.test(n)) return true;
+  return false;
+}
+
+/** Armour and capes below tier 60 / above 95, cosmetic and bracketed variants; jewellery, pocket, aura, ammo and sigils stay (they have no tiers). */
+const TIERED_GEAR_SLOTS = new Set(['head', 'body', 'legs', 'hands', 'feet', 'cape']);
+
+export function isObscureGear(g: GearItem): boolean {
+  if (g.tier > MAX_SURFACE_TIER) return true;
+  if (TIERED_GEAR_SLOTS.has(g.slot) && g.tier < MIN_WEAPON_TIER && !g.passive && !g.set) return true;
+  const n = g.name;
   if (VARIANT_PREFIX_RE.test(n)) return true;
   if (UPGRADE_STEP_RE.test(n)) return true;
   if (PAREN_RE.test(n) && !OK_PAREN_RE.test(n)) return true;

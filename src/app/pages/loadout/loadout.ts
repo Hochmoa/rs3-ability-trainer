@@ -1,112 +1,241 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { CdkDrag, CdkDropList, CdkDropListGroup } from '@angular/cdk/drag-drop';
+import { Component, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { DataService } from '../../core/data.service';
-import { Gizmo, Loadout as LoadoutModel, Perk, RELICS, SetEffect, Style, Weapon, WeaponSpec, newLoadout } from '../../core/models';
-import { isObscurePerk, isObscureSetEffect, isObscureSpec, isObscureWeapon } from '../../core/obscure';
+import { DataService, GearView } from '../../core/data.service';
+import { GearResult, GearState, addItem, equip, moveItem, removeItem, removeWorn, unequip, updateRef } from '../../core/equipment';
+import { EquipSlot, Gizmo, ItemRef, Loadout as LoadoutModel, Perk, RELICS, SLOT_NAMES, Style, WeaponSpec, newLoadout } from '../../core/models';
+import { isObscureGear, isObscurePerk, isObscureSpec, isObscureWeapon } from '../../core/obscure';
 import { StorageService } from '../../core/storage.service';
-import { loadoutWarnings } from '../../engine/loadout-resolver';
+import { LoadoutData, loadoutWarnings, mainStyle, wornPassives, wornSets } from '../../engine/loadout-resolver';
+import { DialogService } from '../../shared/dialog';
+import { GearAction, GearDrag, GearPanel, GearSource } from '../../shared/gear-panel';
+import { ToastService } from '../../shared/toast';
+import { GearTip } from '../../shared/tooltip';
 
-type Tab = 'weapons' | 'armour' | 'perks' | 'relics';
+/** catalog tabs: weapon slots, worn slots, potions */
+type Tab = 'weapons' | 'offhand' | 'head' | 'body' | 'legs' | 'hands' | 'feet' | 'cape' | 'neck' | 'ring' | 'ammo' | 'pocket' | 'aura' | 'sigil' | 'potions';
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'weapons', label: 'Weapons' },
+  { id: 'offhand', label: 'Off-hand & shields' },
+  { id: 'head', label: 'Head' },
+  { id: 'body', label: 'Body' },
+  { id: 'legs', label: 'Legs' },
+  { id: 'hands', label: 'Hands' },
+  { id: 'feet', label: 'Feet' },
+  { id: 'cape', label: 'Cape' },
+  { id: 'neck', label: 'Neck' },
+  { id: 'ring', label: 'Ring' },
+  { id: 'ammo', label: 'Ammo' },
+  { id: 'pocket', label: 'Pocket' },
+  { id: 'aura', label: 'Aura' },
+  { id: 'sigil', label: 'Sigil' },
+  { id: 'potions', label: 'Potions & bombs' },
+];
+/** slots whose catalog gets a tier filter */
+const TIERED: Tab[] = ['weapons', 'offhand', 'head', 'body', 'legs', 'hands', 'feet', 'cape'];
 const STYLE_ORDER: Style[] = ['Melee', 'Ranged', 'Magic', 'Necromancy'];
+
+interface MenuItem {
+  label: string;
+  run: () => void;
+  danger?: boolean;
+}
+
+interface Menu {
+  x: number;
+  y: number;
+  title: string;
+  items: MenuItem[];
+}
+
+/** where an item sits: inventory index or worn slot */
+type Where = { index: number } | { slot: EquipSlot };
+
+interface PerkEdit {
+  where: Where;
+  ref: ItemRef;
+  view: GearView;
+  gizmos: Gizmo[];
+  /** perk type the gizmos take (weapons: weapon gizmos; body / legs / shields: armour gizmos) */
+  type: 'weapon' | 'armour';
+}
+
+interface EofEdit {
+  where: Where;
+  ref: ItemRef;
+  spec: string | null;
+}
 
 @Component({
   selector: 'app-loadout',
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, GearPanel, GearTip, CdkDropListGroup, CdkDropList, CdkDrag],
   templateUrl: './loadout.html',
   styleUrl: './loadout.scss',
 })
 export class Loadout {
   readonly storage = inject(StorageService);
   readonly data = inject(DataService);
+  private dialogs = inject(DialogService);
+  private toast = inject(ToastService);
 
-  readonly tab = signal<Tab>('weapons');
   readonly l = this.storage.loadout;
   readonly RELICS = RELICS;
+  readonly TABS = TABS;
+  readonly STYLE_ORDER = STYLE_ORDER;
+  readonly SLOT_NAMES = SLOT_NAMES;
 
-  // weapon picker
-  readonly weaponSearch = signal('');
-  readonly weaponStyle = signal<Style | 'all'>('all');
+  // ---------------------------------------------------------------- catalog
+
+  readonly tab = signal<Tab>('weapons');
+  readonly search = signal('');
+  readonly style = signal<Style | 'all'>('all');
   readonly minTier = signal(70);
-  readonly weaponSlot = signal<'main' | 'off' | '2h' | 'shield'>('main');
   /** "Hide obscure equipment" – Daemonheim tiers, tools, cosmetics, sap-level junk (core/obscure.ts) */
   readonly hideObscure = computed(() => this.storage.settings().hideObscureEquipment);
+  readonly tiered = computed(() => TIERED.includes(this.tab()));
 
   setHideObscure(v: boolean): void {
     void this.storage.saveSettings({ ...this.storage.settings(), hideObscureEquipment: v });
   }
 
-  readonly weaponList = computed<Weapon[]>(() => {
-    const q = this.weaponSearch().trim().toLowerCase();
-    const style = this.weaponStyle();
-    const slot = this.weaponSlot();
-    const tier = this.minTier();
+  readonly catalog = computed<GearView[]>(() => {
+    if (!this.data.loaded()) return [];
+    const tab = this.tab();
+    const q = this.search().trim().toLowerCase();
+    const style = this.style();
+    const tier = this.tiered() ? this.minTier() : 0;
     const hide = this.hideObscure();
-    return this.data
-      .weapons()
-      .filter((w) => (slot === 'off' ? w.slot === 'off' || w.slot === 'shield' : w.slot === slot))
-      .filter((w) => style === 'all' || w.style === style || w.slot === 'shield')
-      .filter((w) => w.tier >= tier || !!w.spec)
-      .filter((w) => !hide || !isObscureWeapon(w))
-      .filter((w) => !q || w.name.toLowerCase().includes(q))
-      .sort((a, b) => b.tier - a.tier || a.name.localeCompare(b.name))
-      .slice(0, 150);
+    let refs: ItemRef[];
+    if (tab === 'weapons' || tab === 'offhand') {
+      refs = this.data
+        .weapons()
+        .filter((w) => (tab === 'weapons' ? w.slot === 'main' || w.slot === '2h' : w.slot === 'off' || w.slot === 'shield'))
+        .filter((w) => style === 'all' || w.style === style || w.slot === 'shield')
+        .filter((w) => w.tier >= tier || !!w.spec)
+        .filter((w) => !hide || !isObscureWeapon(w))
+        .filter((w) => !q || w.name.toLowerCase().includes(q))
+        .sort((a, b) => b.tier - a.tier || a.name.localeCompare(b.name))
+        .map((w) => ({ kind: 'weapon', id: w.id }));
+    } else if (tab === 'potions') {
+      refs = this.data
+        .specials()
+        .filter((s) => !q || s.name.toLowerCase().includes(q))
+        .map((s) => ({ kind: 'special', id: s.id }));
+    } else {
+      refs = this.data
+        .gear()
+        .filter((g) => g.slot === tab)
+        .filter((g) => style === 'all' || g.style === style || g.style === 'Hybrid' || g.style === null)
+        .filter((g) => g.tier >= tier || !!g.passive || !!g.set)
+        .filter((g) => !hide || !isObscureGear(g))
+        .filter((g) => !q || g.name.toLowerCase().includes(q))
+        .sort((a, b) => b.tier - a.tier || a.name.localeCompare(b.name))
+        .map((g) => ({ kind: 'gear', id: g.id }));
+    }
+    return refs
+      .slice(0, 200)
+      .map((r) => this.data.view(r))
+      .filter((v): v is GearView => !!v);
   });
 
-  readonly mainHand = computed(() => (this.l().mainHand ? this.data.weaponById().get(this.l().mainHand!) : null));
-  readonly offHand = computed(() => (this.l().offHand ? this.data.weaponById().get(this.l().offHand!) : null));
-  readonly twoHand = computed(() => (this.l().twoHand ? this.data.weaponById().get(this.l().twoHand!) : null));
+  /** the catalog list never receives drops from itself; dropping a worn / carried item on it removes the item */
+  readonly fromPanel = (drag: CdkDrag<GearDrag>): boolean => drag.data?.from.kind !== 'catalog';
+
+  dragOf(v: GearView): GearDrag {
+    return { ref: v.ref, from: { kind: 'catalog' } };
+  }
+
+  // ---------------------------------------------------------------- state
+
+  readonly loadoutData = computed<LoadoutData>(() => ({
+    weaponById: this.data.weaponById(),
+    specById: this.data.specById(),
+    perkById: this.data.perkById(),
+    setEffectById: this.data.setEffectById(),
+    gearById: this.data.gearById(),
+    specEntity: (s) => this.data.specEntity(s),
+  }));
+  readonly warnings = computed(() => (this.data.loaded() ? loadoutWarnings(this.l(), this.loadoutData()) : []));
+  readonly sets = computed(() => (this.data.loaded() ? wornSets(this.l(), this.loadoutData()) : []));
+  readonly passives = computed(() => (this.data.loaded() ? wornPassives(this.l(), this.loadoutData()).filter((p) => p.slot !== 'talent') : []));
+  readonly wieldedStyle = computed(() => (this.data.loaded() ? mainStyle(this.l(), this.loadoutData()) : null));
   readonly weaponSpec = computed(() => {
-    const id = this.twoHand()?.spec ?? this.mainHand()?.spec ?? this.offHand()?.spec ?? null;
-    return id ? this.data.specById().get(id) : null;
+    if (!this.data.loaded()) return null;
+    const eq = this.l().equipment;
+    for (const r of [eq.twoHand, eq.mainHand, eq.offHand]) {
+      const w = r?.kind === 'weapon' ? this.data.weaponById().get(r.id) : null;
+      if (w?.spec) return this.data.specById().get(w.spec) ?? null;
+    }
+    return null;
   });
-  readonly eofSpec = computed(() => (this.l().eofSpec ? this.data.specById().get(this.l().eofSpec!) : null));
-  readonly specsByStyle = computed(() => {
-    const out = new Map<Style, WeaponSpec[]>();
-    const hide = this.hideObscure();
-    const byId = this.data.weaponById();
-    const eof = this.l().eofSpec;
-    // the selected spec stays listed even when it is obscure, so the dropdown never shows an empty value
-    const specs = this.data.specs().filter((x) => !hide || x.id === eof || !isObscureSpec(x, byId));
-    for (const s of STYLE_ORDER) out.set(s, specs.filter((x) => x.style === s));
-    return out;
+  readonly eofSpec = computed(() => {
+    const neck = this.l().equipment.neck;
+    const id = neck?.spec ?? null;
+    return id ? this.data.specById().get(id) ?? null : null;
   });
-  readonly STYLE_ORDER = STYLE_ORDER;
+  readonly hasEof = computed(() => {
+    const neck = this.l().equipment.neck;
+    return neck?.kind === 'gear' && this.data.gearById().get(neck.id)?.passive === 'essence-of-finality';
+  });
 
-  readonly armourSets = computed<SetEffect[]>(() => {
-    const hide = this.hideObscure();
-    const current = this.l().armourSet;
-    return this.data.setEffects().filter((s) => s.kind === 'set' && (!hide || s.id === current || !isObscureSetEffect(s)));
-  });
-  readonly items = computed<SetEffect[]>(() => this.data.setEffects().filter((s) => s.kind === 'item'));
-  readonly currentSet = computed(() => (this.l().armourSet ? this.data.setEffectById().get(this.l().armourSet!) : null));
+  private state(): GearState {
+    return { equipment: this.l().equipment, inventory: this.l().inventory };
+  }
 
-  /** perks in use stay selectable even when obscure, so an existing gizmo never shows an empty select */
-  private readonly perksInUse = computed(() => new Set([...this.l().weaponGizmos, ...this.l().armourGizmos].flatMap((g) => g.perks.map((p) => p.perk))));
-  private readonly visiblePerks = computed<Perk[]>(() => {
-    const hide = this.hideObscure();
-    const used = this.perksInUse();
-    return this.data.perks().filter((p) => !hide || used.has(p.id) || !isObscurePerk(p));
-  });
-  readonly weaponPerks = computed<Perk[]>(() => this.visiblePerks().filter((p) => p.gizmos.some((g) => g === 'weapon' || g === 'ancient-weapon') && p.gizmos.every((g) => g !== 'tool' || p.gizmos.length > 1)));
-  readonly armourPerks = computed<Perk[]>(() => this.visiblePerks().filter((p) => p.gizmos.some((g) => g === 'armour' || g === 'ancient-armour')));
+  private apply(r: GearResult, done?: string): boolean {
+    if (r.error) {
+      this.toast.show(r.error, 'warn');
+      return false;
+    }
+    this.patch({ equipment: r.state.equipment, inventory: r.state.inventory });
+    if (done) this.toast.show(done);
+    return true;
+  }
 
-  readonly warnings = computed(() =>
-    loadoutWarnings(this.l(), {
-      weaponById: this.data.weaponById(),
-      specById: this.data.specById(),
-      perkById: this.data.perkById(),
-      setEffectById: this.data.setEffectById(),
-      specEntity: (s) => this.data.specEntity(s),
-    }),
-  );
+  constructor() {
+    // loadouts saved before the inventory: flags (Ring of vigour, armour set + pieces, EoF spec) become worn items, once
+    effect(() => {
+      if (!this.data.loaded() || !this.storage.ready()) return;
+      for (const l of this.storage.loadouts()) {
+        const migrated = this.migrateLegacy(l);
+        if (migrated) void this.storage.saveLoadout(migrated);
+      }
+    });
+  }
 
-  readonly weaponGizmoCount = computed(() => {
-    const l = this.l();
-    if (l.twoHand) return 2;
-    const off = this.offHand();
-    return (l.mainHand ? 1 : 0) + (off && off.slot !== 'shield' ? 1 : 0);
-  });
+  private migrateLegacy(l: LoadoutModel): LoadoutModel | null {
+    if (!l.items.length && !l.armourSet && !(l.eofSpec && !l.equipment.neck)) return null;
+    let s: GearState = { equipment: l.equipment, inventory: l.inventory };
+    const wear = (ref: ItemRef) => {
+      const r = equip(s, ref, (x) => this.data.slotOf(x));
+      if (!r.error) s = r.state;
+      else s = addItem(s, ref).state;
+    };
+    const gear = this.data.gear();
+    for (const id of l.items) {
+      const item = gear.find((g) => g.passive === id);
+      if (item && !Object.values(s.equipment).some((r) => r?.id === item.id)) wear({ kind: 'gear', id: item.id });
+    }
+    if (l.armourSet) {
+      const order = ['body', 'legs', 'head', 'hands', 'feet', 'cape'];
+      const pieces = gear.filter((g) => g.set === l.armourSet).sort((a, b) => order.indexOf(a.slot) - order.indexOf(b.slot) || b.tier - a.tier);
+      let n = 0;
+      const usedSlots = new Set<string>();
+      for (const p of pieces) {
+        if (n >= l.armourPieces) break;
+        if (usedSlots.has(p.slot) || s.equipment[p.slot]) continue;
+        wear({ kind: 'gear', id: p.id });
+        usedSlots.add(p.slot);
+        n++;
+      }
+    }
+    if (l.eofSpec && !s.equipment.neck) {
+      const eof = gear.find((g) => g.passive === 'essence-of-finality');
+      if (eof) wear({ kind: 'gear', id: eof.id, spec: l.eofSpec });
+    }
+    return { ...l, equipment: s.equipment, inventory: s.inventory, items: [], armourSet: null, armourPieces: 0 };
+  }
 
   // ---------------------------------------------------------------- loadout list
 
@@ -126,8 +255,8 @@ export class Loadout {
     void this.storage.saveLoadout(copy).then(() => this.storage.setActiveLoadout(copy.id));
   }
 
-  remove(): void {
-    if (!confirm('Delete loadout "' + this.l().name + '"?')) return;
+  async remove(): Promise<void> {
+    if (!(await this.dialogs.confirm('Delete loadout "' + this.l().name + '"?', { ok: 'Delete', danger: true }))) return;
     void this.storage.deleteLoadout(this.l().id);
   }
 
@@ -139,103 +268,160 @@ export class Loadout {
     void this.storage.saveLoadout({ ...this.l(), ...p });
   }
 
-  // ---------------------------------------------------------------- weapons
+  // ---------------------------------------------------------------- gear panel + catalog actions
 
-  pick(w: Weapon): void {
-    if (w.slot === '2h') this.patch({ twoHand: w.id, mainHand: null, offHand: null });
-    else if (w.slot === 'main') this.patch({ mainHand: w.id, twoHand: null });
-    else this.patch({ offHand: w.id, twoHand: null });
+  private slotOf = (r: ItemRef): EquipSlot | null => this.data.slotOf(r);
+
+  onGear(a: GearAction): void {
+    switch (a.kind) {
+      case 'drop-equip':
+        this.dropEquip(a.drag, a.slot);
+        break;
+      case 'drop-inv':
+        this.dropInv(a.drag, a.index);
+        break;
+      case 'click':
+        if (a.from.kind === 'inv') this.wear(a.ref, a.from.index);
+        else if (a.from.kind === 'equip') this.takeOff(a.from.slot);
+        break;
+      case 'menu':
+        this.openMenu(a.ref, a.from, a.x, a.y);
+        break;
+    }
   }
 
-  clearWeapon(slot: 'main' | 'off' | '2h'): void {
-    if (slot === 'main') this.patch({ mainHand: null });
-    else if (slot === 'off') this.patch({ offHand: null });
-    else this.patch({ twoHand: null });
+  private dropEquip(d: GearDrag, slot: EquipSlot): void {
+    if (d.from.kind === 'equip') return; // same slot family – nothing to do
+    const from = d.from.kind === 'inv' ? d.from.index : null;
+    this.apply(equip(this.state(), d.ref, this.slotOf, from, slot));
   }
 
-  setEof(id: string | null): void {
-    this.patch({ eofSpec: id || null });
+  private dropInv(d: GearDrag, index: number): void {
+    if (d.from.kind === 'catalog') this.apply(addItem(this.state(), d.ref, index));
+    else if (d.from.kind === 'inv') this.apply(moveItem(this.state(), d.from.index, index));
+    else this.apply(unequip(this.state(), d.from.slot, this.slotOf, index));
   }
 
-  /** weapons carried for switching (rotation steps "weapon:<id>") */
-  readonly switches = computed<Weapon[]>(() => this.l().switches.map((id) => this.data.weaponById().get(id)).filter((w): w is Weapon => !!w));
-
-  isSwitch(id: string): boolean {
-    return this.l().switches.includes(id);
+  /** an item dropped back on the catalog leaves the loadout */
+  dropOnCatalog(d: GearDrag | undefined): void {
+    if (!d) return;
+    if (d.from.kind === 'inv') this.apply(removeItem(this.state(), d.from.index));
+    else if (d.from.kind === 'equip') this.apply(removeWorn(this.state(), d.from.slot));
   }
 
-  toggleSwitch(id: string): void {
-    const cur = this.l().switches;
-    this.patch({ switches: cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id] });
+  /** click on a catalog item: into the backpack */
+  addFromCatalog(v: GearView): void {
+    this.apply(addItem(this.state(), v.ref), v.name + ' added to the backpack');
   }
 
-  removeSwitch(id: string): void {
-    this.patch({ switches: this.l().switches.filter((x) => x !== id) });
+  wearFromCatalog(v: GearView): void {
+    if (!this.slotOf(v.ref)) return this.addFromCatalog(v);
+    this.apply(equip(this.state(), v.ref, this.slotOf), v.name + (v.weapon ? ' wielded' : ' worn'));
   }
 
-  setPrayerBook(v: string): void {
-    this.patch({ prayerBook: v === 'Prayers' ? 'Prayers' : 'Curses' });
+  private wear(ref: ItemRef, index: number): void {
+    const view = this.data.view(ref);
+    if (!this.slotOf(ref)) return; // potions stay in the backpack
+    this.apply(equip(this.state(), ref, this.slotOf, index), (view?.name ?? ref.id) + (ref.kind === 'weapon' ? ' wielded' : ' worn'));
   }
 
-  // ---------------------------------------------------------------- armour / items
-
-  setArmourSet(id: string | null): void {
-    const set = id ? this.data.setEffectById().get(id) : null;
-    this.patch({ armourSet: id || null, armourPieces: set ? set.maxPieces ?? 0 : 0 });
+  private takeOff(slot: EquipSlot): void {
+    this.apply(unequip(this.state(), slot, this.slotOf));
   }
 
-  setPieces(v: unknown): void {
-    const max = this.currentSet()?.maxPieces ?? 0;
-    this.patch({ armourPieces: Math.max(0, Math.min(max, Math.round(Number(v) || 0))) });
+  menuCatalog(e: MouseEvent, v: GearView): void {
+    e.preventDefault();
+    this.openMenu(v.ref, { kind: 'catalog' }, e.clientX, e.clientY);
   }
 
-  hasItem(id: string): boolean {
-    return this.l().items.includes(id);
+  // ---------------------------------------------------------------- context menu
+
+  readonly menu = signal<Menu | null>(null);
+
+  private openMenu(ref: ItemRef, from: GearSource, x: number, y: number): void {
+    const view = this.data.view(ref);
+    if (!view) return;
+    const items: MenuItem[] = [];
+    const wearable = !!this.slotOf(ref);
+    const where: Where | null = from.kind === 'inv' ? { index: from.index } : from.kind === 'equip' ? { slot: from.slot } : null;
+    if (from.kind === 'catalog') {
+      if (wearable) items.push({ label: ref.kind === 'weapon' ? 'Wield' : 'Wear', run: () => this.wearFromCatalog(view) });
+      items.push({ label: 'Add to backpack', run: () => this.addFromCatalog(view) });
+    } else if (from.kind === 'inv') {
+      if (wearable) items.push({ label: ref.kind === 'weapon' ? 'Wield' : 'Wear', run: () => this.wear(ref, from.index) });
+    } else {
+      items.push({ label: 'Take off', run: () => this.takeOff(from.slot) });
+    }
+    if (where && view.gizmoSlots > 0) items.push({ label: 'Invention perks…', run: () => this.editPerks(where, ref, view) });
+    if (where && view.passive?.id === 'essence-of-finality') items.push({ label: 'Stored special attack…', run: () => this.editEof(where, ref) });
+    if (from.kind === 'inv') items.push({ label: 'Drop', danger: true, run: () => this.apply(removeItem(this.state(), from.index)) });
+    if (from.kind === 'equip') items.push({ label: 'Drop', danger: true, run: () => this.apply(removeWorn(this.state(), from.slot)) });
+    const w = Math.min(x, window.innerWidth - 220);
+    const h = Math.min(y, window.innerHeight - 40 * (items.length + 1));
+    this.menu.set({ x: w, y: h, title: view.name, items });
   }
 
-  toggleItem(id: string): void {
-    const items = this.hasItem(id) ? this.l().items.filter((x) => x !== id) : [...this.l().items, id];
-    this.patch({ items });
+  runMenu(item: MenuItem): void {
+    this.menu.set(null);
+    item.run();
   }
 
-  itemText(i: SetEffect): string {
-    return i.text ?? '';
+  @HostListener('document:click')
+  @HostListener('document:keydown.escape')
+  closeMenu(): void {
+    if (this.menu()) this.menu.set(null);
   }
 
   // ---------------------------------------------------------------- perks
 
-  gizmo(kind: 'weapon' | 'armour', i: number): Gizmo {
-    return (kind === 'weapon' ? this.l().weaponGizmos : this.l().armourGizmos)[i] ?? { ancient: false, perks: [] };
+  readonly perkEdit = signal<PerkEdit | null>(null);
+
+  private editPerks(where: Where, ref: ItemRef, view: GearView): void {
+    const type: 'weapon' | 'armour' = ref.kind === 'weapon' && view.weapon?.slot !== 'shield' ? 'weapon' : 'armour';
+    const gizmos: Gizmo[] = Array.from({ length: view.gizmoSlots }, (_, i) => ({ ancient: !!ref.gizmos?.[i]?.ancient, perks: [...(ref.gizmos?.[i]?.perks ?? [])] }));
+    this.perkEdit.set({ where, ref, view, gizmos, type });
   }
 
-  setGizmo(kind: 'weapon' | 'armour', i: number, g: Gizmo): void {
-    const list = [...(kind === 'weapon' ? this.l().weaponGizmos : this.l().armourGizmos)];
-    list[i] = g;
-    this.patch(kind === 'weapon' ? { weaponGizmos: list } : { armourGizmos: list });
+  /** perks in use stay selectable even when obscure, so an existing gizmo never shows an empty select */
+  readonly perkOptions = computed<Perk[]>(() => {
+    const e = this.perkEdit();
+    if (!e) return [];
+    const hide = this.hideObscure();
+    const used = new Set(e.gizmos.flatMap((g) => g.perks.map((p) => p.perk)));
+    const type = e.type;
+    return this.data
+      .perks()
+      .filter((p) => p.gizmos.some((g) => g === type || g === 'ancient-' + type))
+      .filter((p) => !hide || used.has(p.id) || !isObscurePerk(p));
+  });
+
+  setGizmoAncient(i: number, ancient: boolean): void {
+    this.perkEdit.update((e) => e && { ...e, gizmos: e.gizmos.map((g, k) => (k === i ? { ...g, ancient } : g)) });
   }
 
-  toggleAncient(kind: 'weapon' | 'armour', i: number): void {
-    const g = this.gizmo(kind, i);
-    this.setGizmo(kind, i, { ...g, ancient: !g.ancient });
+  setPerk(i: number, slot: number, perkId: string): void {
+    this.perkEdit.update((e) => {
+      if (!e) return e;
+      const g = e.gizmos[i];
+      const perks = [...g.perks];
+      if (!perkId) perks.splice(slot, 1);
+      else {
+        const perk = this.data.perkById().get(perkId);
+        const max = perk ? (g.ancient ? perk.maxRankAncient : perk.maxRank) : 1;
+        perks[slot] = { perk: perkId, rank: Math.max(1, max) };
+      }
+      return { ...e, gizmos: e.gizmos.map((x, k) => (k === i ? { ...x, perks: perks.filter(Boolean) } : x)) };
+    });
   }
 
-  setPerk(kind: 'weapon' | 'armour', i: number, slot: number, perkId: string): void {
-    const g = this.gizmo(kind, i);
-    const perks = [...g.perks];
-    if (!perkId) {
-      perks.splice(slot, 1);
-    } else {
-      const perk = this.data.perkById().get(perkId);
-      const max = perk ? (g.ancient ? perk.maxRankAncient : perk.maxRank) : 1;
-      perks[slot] = { perk: perkId, rank: Math.max(1, max) };
-    }
-    this.setGizmo(kind, i, { ...g, perks: perks.filter(Boolean) });
-  }
-
-  setRank(kind: 'weapon' | 'armour', i: number, slot: number, v: unknown): void {
-    const g = this.gizmo(kind, i);
-    const perks = g.perks.map((p, k) => (k === slot ? { ...p, rank: Math.max(1, Math.round(Number(v) || 1)) } : p));
-    this.setGizmo(kind, i, { ...g, perks });
+  setRank(i: number, slot: number, v: unknown): void {
+    this.perkEdit.update(
+      (e) =>
+        e && {
+          ...e,
+          gizmos: e.gizmos.map((g, k) => (k === i ? { ...g, perks: g.perks.map((p, j) => (j === slot ? { ...p, rank: Math.max(1, Math.round(Number(v) || 1)) } : p)) } : g)),
+        },
+    );
   }
 
   maxRank(g: Gizmo, perkId: string): number {
@@ -247,11 +433,57 @@ export class Loadout {
     return Array.from({ length: Math.max(1, n) }, (_, i) => i + 1);
   }
 
-  perkName(id: string): string {
-    return this.data.perkById().get(id)?.name ?? id;
+  savePerks(): void {
+    const e = this.perkEdit();
+    if (!e) return;
+    const gizmos = e.gizmos.map((g) => ({ ancient: g.ancient, perks: g.perks.filter((p) => p.perk) }));
+    const ref: ItemRef = { ...e.ref };
+    if (gizmos.some((g) => g.perks.length || g.ancient)) ref.gizmos = gizmos;
+    else delete ref.gizmos;
+    this.patch(updateRef(this.state(), e.where, ref));
+    this.perkEdit.set(null);
   }
 
-  // ---------------------------------------------------------------- relics / talents
+  // ---------------------------------------------------------------- Essence of Finality
+
+  readonly eofEdit = signal<EofEdit | null>(null);
+  readonly specsByStyle = computed(() => {
+    const out = new Map<Style, WeaponSpec[]>();
+    const hide = this.hideObscure();
+    const byId = this.data.weaponById();
+    const current = this.eofEdit()?.spec ?? null;
+    const specs = this.data.specs().filter((x) => !hide || x.id === current || !isObscureSpec(x, byId));
+    for (const s of STYLE_ORDER) out.set(s, specs.filter((x) => x.style === s));
+    return out;
+  });
+
+  private editEof(where: Where, ref: ItemRef): void {
+    this.eofEdit.set({ where, ref, spec: ref.spec ?? null });
+  }
+
+  setEofSpec(id: string | null): void {
+    this.eofEdit.update((e) => e && { ...e, spec: id || null });
+  }
+
+  saveEof(): void {
+    const e = this.eofEdit();
+    if (!e) return;
+    const ref: ItemRef = { ...e.ref };
+    if (e.spec) ref.spec = e.spec;
+    else delete ref.spec;
+    this.patch(updateRef(this.state(), e.where, ref));
+    this.eofEdit.set(null);
+  }
+
+  eofNotes(id: string | null): WeaponSpec | null {
+    return id ? this.data.specById().get(id) ?? null : null;
+  }
+
+  // ---------------------------------------------------------------- prayer book, relics, talents
+
+  setPrayerBook(v: string): void {
+    this.patch({ prayerBook: v === 'Prayers' ? 'Prayers' : 'Curses' });
+  }
 
   hasRelic(id: string): boolean {
     return this.l().relics.includes(id);
@@ -264,5 +496,20 @@ export class Loadout {
 
   setSpiritPact(v: unknown): void {
     this.patch({ spiritPact: Math.max(0, Math.min(3, Math.round(Number(v) || 0))) as 0 | 1 | 2 | 3 });
+  }
+
+  freeSlots(): number {
+    return this.l().inventory.filter((x) => !x).length;
+  }
+
+  meta(v: GearView): string {
+    const parts: string[] = [];
+    if (v.tier) parts.push('T' + v.tier);
+    if (v.style) parts.push(v.style);
+    if (v.weapon?.spec) parts.push('spec');
+    if (v.weapon?.role === 'conduit' || v.weapon?.role === 'siphon') parts.push(v.weapon.role);
+    if (v.set) parts.push('set');
+    if (v.passive) parts.push('passive');
+    return parts.join(' · ');
   }
 }

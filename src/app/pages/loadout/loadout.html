@@ -12,11 +12,14 @@
     Name
     <input type="text" [ngModel]="l().name" (ngModelChange)="rename($event)" maxlength="40" />
   </label>
-  <label class="check" title="Hides Daemonheim-tier gear, tools, cosmetic and recolour variants, intermediate smithing upgrades (+1 … +4), sub-tier-60 weapons, Warpriest / Void sets and non-combat perks. The pickers only – nothing already in the loadout is removed.">
+  <label class="check" title="Hides Daemonheim-tier gear, tools, cosmetic and recolour variants, intermediate smithing upgrades (+1 … +4), sub-tier-60 gear and non-combat perks. The catalog only – nothing already in the loadout is removed.">
     <input type="checkbox" [checked]="hideObscure()" (change)="setHideObscure(!hideObscure())" />
     Hide obscure equipment
   </label>
-  <p class="muted small">The active loadout drives the simulation: weapon requirements, special attacks, adrenaline modifiers, buff durations. Numbers from the RuneScape Wiki (after the Combat Style Modernisation, March 2026).</p>
+  <p class="muted small">
+    Drag items from the catalog into the equipment slots or the backpack, like in game. Click a catalog item to put it in the backpack, click a backpack item to wear it, click a worn item to take it off.
+    Right-click an item for Invention perks (augmentable weapons, body, legs, shields) and the Essence of Finality special. While training, weapons in the backpack are switches, potions in it can be drunk and armour can be swapped.
+  </p>
   @if (warnings().length) {
     <div class="warnings">
       @for (w of warnings(); track w) {
@@ -26,182 +29,144 @@
   }
 </div>
 
-<div class="panel">
-  <div class="tabs">
-    <button class="tab" [class.active]="tab() === 'weapons'" (click)="tab.set('weapons')">Weapons & specials</button>
-    <button class="tab" [class.active]="tab() === 'armour'" (click)="tab.set('armour')">Armour & items</button>
-    <button class="tab" [class.active]="tab() === 'perks'" (click)="tab.set('perks')">Invention perks</button>
-    <button class="tab" [class.active]="tab() === 'relics'" (click)="tab.set('relics')">Relics & adrenaline</button>
+<div class="panel gear-page" cdkDropListGroup>
+  <div class="catalog">
+    <div class="tabs small">
+      @for (t of TABS; track t.id) {
+        <button class="tab" [class.active]="tab() === t.id" (click)="tab.set(t.id)">{{ t.label }}</button>
+      }
+    </div>
+    <div class="picker-controls">
+      @if (tab() !== 'potions') {
+        <select [ngModel]="style()" (ngModelChange)="style.set($event)">
+          <option value="all">All styles</option>
+          @for (st of STYLE_ORDER; track st) { <option [value]="st">{{ st }}</option> }
+        </select>
+      }
+      @if (tiered()) {
+        <label class="tier">Tier ≥ <input type="number" min="1" max="100" [ngModel]="minTier()" (ngModelChange)="minTier.set(+$event || 1)" /></label>
+      }
+      <input type="search" placeholder="Search…" [ngModel]="search()" (ngModelChange)="search.set($event)" />
+    </div>
+    <div class="item-grid" cdkDropList cdkDropListSortingDisabled id="catalog" [cdkDropListEnterPredicate]="fromPanel" (cdkDropListDropped)="dropOnCatalog($event.item.data)">
+      @for (v of catalog(); track v.ref.kind + v.ref.id) {
+        <div class="item" [class.has-spec]="v.weapon?.spec" [class.has-effect]="v.set || v.passive" cdkDrag [cdkDragData]="dragOf(v)" [gearTip]="v" (click)="addFromCatalog(v)" (dblclick)="wearFromCatalog(v)" (contextmenu)="menuCatalog($event, v)">
+          @if (v.icon) { <img [src]="v.icon" alt="" draggable="false" /> } @else { <span class="noicon"></span> }
+          <span class="iname">{{ v.name }}</span>
+          <span class="imeta">{{ meta(v) }}</span>
+        </div>
+      } @empty {
+        <p class="muted">{{ data.loaded() ? 'Nothing matches.' : 'Loading…' }}</p>
+      }
+    </div>
+    <p class="muted small">Up to 200 results; items with a special attack, set effect or passive always appear regardless of the tier filter.{{ hideObscure() ? ' Obscure gear is hidden (checkbox at the top).' : '' }} Drop an item back here to remove it from the loadout.</p>
   </div>
 
-  @switch (tab()) {
-    @case ('weapons') {
-      <div class="equipped">
-        <div class="slot-box">
-          <span class="slot-label">Two-handed</span>
-          @if (twoHand(); as w) {
-            <div class="equip"><img [src]="w.icon" alt="" /> <span>{{ w.name }} <small class="muted">T{{ w.tier }} {{ w.style }}</small></span> <button class="btn btn-sm" (click)="clearWeapon('2h')">×</button></div>
-          } @else { <span class="muted">–</span> }
-        </div>
-        <div class="slot-box">
-          <span class="slot-label">Main hand</span>
-          @if (mainHand(); as w) {
-            <div class="equip"><img [src]="w.icon" alt="" /> <span>{{ w.name }} <small class="muted">T{{ w.tier }} {{ w.style }}{{ w.role ? ' · ' + w.role : '' }}</small></span> <button class="btn btn-sm" (click)="clearWeapon('main')">×</button></div>
-          } @else { <span class="muted">–</span> }
-        </div>
-        <div class="slot-box">
-          <span class="slot-label">Off-hand / shield</span>
-          @if (offHand(); as w) {
-            <div class="equip"><img [src]="w.icon" alt="" /> <span>{{ w.name }} <small class="muted">T{{ w.tier }} {{ w.style }}{{ w.role ? ' · ' + w.role : '' }}</small></span> <button class="btn btn-sm" (click)="clearWeapon('off')">×</button></div>
-          } @else { <span class="muted">–</span> }
-        </div>
-        <div class="slot-box switches">
-          <span class="slot-label">Carried switches</span>
-          @for (w of switches(); track w.id) {
-            <div class="equip"><img [src]="w.icon" alt="" /> <span>{{ w.name }} <small class="muted">T{{ w.tier }} {{ w.style }}{{ w.spec ? ' · spec' : '' }}</small></span> <button class="btn btn-sm" (click)="removeSwitch(w.id)">×</button></div>
-          } @empty { <span class="muted">none – use "+" in the list below to carry a weapon for switching</span> }
-        </div>
-        <div class="slot-box">
-          <span class="slot-label">Weapon special attack</span>
-          @if (weaponSpec(); as s) {
-            <div class="equip"><span><b>{{ s.name }}</b> <small class="muted">{{ s.adrenaline }}% adrenaline{{ s.cooldownTicks ? ' · ' + (s.cooldownTicks * 0.6) + ' s cooldown' : '' }}{{ s.ignoresGcd ? ' · off GCD' : '' }}</small></span></div>
-          } @else { <span class="muted">the wielded weapon has no special attack</span> }
-        </div>
-        <div class="slot-box">
-          <span class="slot-label">Essence of Finality</span>
-          <select [ngModel]="l().eofSpec" (ngModelChange)="setEof($event)">
-            <option [ngValue]="null">– no EoF spec –</option>
-            @for (st of STYLE_ORDER; track st) {
-              <optgroup [label]="st">
-                @for (s of specsByStyle().get(st) ?? []; track s.id) {
-                  <option [ngValue]="s.id">{{ s.name }} ({{ s.weapons[0] }}) – {{ s.adrenaline }}%</option>
-                }
-              </optgroup>
-            }
-          </select>
-          @if (eofSpec(); as s) {
-            @if (s.eof.notes) { <small class="muted">{{ s.eof.notes }}</small> }
-            @if (s.eof.storable === 'unknown') { <small class="warn">The wiki does not say whether this spec can be stored.</small> }
-          }
-        </div>
+  <div class="worn">
+    <gear-panel [equipment]="l().equipment" [inventory]="l().inventory" [editable]="true" (action)="onGear($event)" />
+    <p class="muted small">{{ freeSlots() }} free backpack slots</p>
+    <div class="effects">
+      <div class="effect">
+        <span class="slot-label">Weapon special attack</span>
+        @if (weaponSpec(); as s) {
+          <span><b>{{ s.name }}</b> <small class="muted">{{ s.adrenaline }}% adrenaline{{ s.cooldownTicks ? ' · ' + (s.cooldownTicks * 0.6) + ' s cooldown' : '' }}{{ s.ignoresGcd ? ' · off GCD' : '' }}</small></span>
+        } @else { <span class="muted">the wielded weapon has no special attack</span> }
       </div>
-
-      <div class="picker">
-        <div class="picker-controls">
-          <div class="tabs small">
-            <button class="tab" [class.active]="weaponSlot() === 'main'" (click)="weaponSlot.set('main')">Main hand</button>
-            <button class="tab" [class.active]="weaponSlot() === 'off'" (click)="weaponSlot.set('off')">Off-hand & shields</button>
-            <button class="tab" [class.active]="weaponSlot() === '2h'" (click)="weaponSlot.set('2h')">Two-handed</button>
-          </div>
-          <select [ngModel]="weaponStyle()" (ngModelChange)="weaponStyle.set($event)">
-            <option value="all">All styles</option>
-            @for (st of STYLE_ORDER; track st) { <option [value]="st">{{ st }}</option> }
-          </select>
-          <label class="tier">Tier ≥ <input type="number" min="1" max="100" [ngModel]="minTier()" (ngModelChange)="minTier.set(+$event || 1)" /></label>
-          <input type="search" placeholder="Search weapons…" [ngModel]="weaponSearch()" (ngModelChange)="weaponSearch.set($event)" />
-        </div>
-        <div class="weapon-grid">
-          @for (w of weaponList(); track w.id) {
-            <button class="weapon" (click)="pick(w)" [class.has-spec]="w.spec" [class.carried]="isSwitch(w.id)">
-              @if (w.icon) { <img [src]="w.icon" alt="" /> } @else { <span class="noicon"></span> }
-              <span class="wname">{{ w.name }}</span>
-              <span class="wmeta">T{{ w.tier }} · {{ w.style }}{{ w.spec ? ' · spec' : '' }}{{ w.role === 'conduit' ? ' · conduit' : w.role === 'siphon' ? ' · siphon' : '' }}</span>
-              <span class="carry" (click)="toggleSwitch(w.id); $event.stopPropagation()" [title]="isSwitch(w.id) ? 'Stop carrying as switch' : 'Carry as switch (weapon-switch steps in rotations)'">{{ isSwitch(w.id) ? '✓' : '+' }}</span>
-            </button>
-          } @empty {
-            <p class="muted">No weapons match.</p>
-          }
-        </div>
-        <p class="muted small">Showing up to 150 results; weapons with a special attack always appear regardless of the tier filter.{{ hideObscure() ? ' Obscure gear is hidden (checkbox at the top).' : '' }}</p>
+      <div class="effect">
+        <span class="slot-label">Essence of Finality</span>
+        @if (!hasEof()) {
+          <span class="muted">no Essence of Finality amulet worn (Neck)</span>
+        } @else if (eofSpec(); as s) {
+          <span><b>{{ s.name }}</b> <small class="muted">{{ s.adrenaline }}%</small></span>
+          @if (s.eof.notes) { <small class="muted">{{ s.eof.notes }}</small> }
+        } @else { <span class="muted">empty – right-click the amulet to store a special</span> }
       </div>
-    }
-
-    @case ('armour') {
-      <div class="form">
-        <label>
-          <span>Armour set</span>
-          <select [ngModel]="l().armourSet" (ngModelChange)="setArmourSet($event)">
-            <option [ngValue]="null">– none –</option>
-            @for (s of armourSets(); track s.id) { <option [ngValue]="s.id">{{ s.name }}{{ s.style ? ' (' + s.style + ')' : '' }}</option> }
-          </select>
-        </label>
-        @if (currentSet(); as set) {
-          <label>
-            <span>Pieces worn</span>
-            <span class="row">
-              <input type="range" min="0" [max]="set.maxPieces ?? 5" step="1" [ngModel]="l().armourPieces" (ngModelChange)="setPieces($event)" />
-              <b class="val">{{ l().armourPieces }} / {{ set.maxPieces }}</b>
-            </span>
-          </label>
+      @for (s of sets(); track s.set.id) {
+        <div class="effect">
+          <span class="slot-label">{{ s.set.name }} · {{ s.pieces }} / {{ s.set.maxPieces }} pieces</span>
           <ul class="thresholds">
-            @for (t of set.thresholds ?? []; track t.pieces) {
-              <li [class.active]="l().armourPieces >= t.pieces" [class.damage-only]="t.class === 'damage' || t.class === 'defensive'">
-                <b>{{ t.pieces }} pieces:</b> {{ t.text }}
-                @if (t.class === 'damage') { <small class="muted">(damage only, stored for later)</small> }
+            @for (t of s.set.thresholds ?? []; track t.pieces) {
+              <li [class.active]="s.pieces >= t.pieces" [class.damage-only]="t.class === 'damage' || t.class === 'defensive'">
+                <b>{{ t.pieces }}:</b> {{ t.text }}
+                @if (t.class === 'damage') { <small class="muted">(damage only)</small> }
                 @if (t.class === 'defensive') { <small class="muted">(defensive, no effect on the simulation)</small> }
               </li>
             }
           </ul>
-          <a class="src" [href]="set.source" target="_blank" rel="noopener">wiki</a>
-        }
-
-        <h3>Item passives</h3>
-        <div class="items">
-          @for (i of items(); track i.id) {
-            <label class="check item" [class.damage-only]="i.class === 'damage' || i.class === 'defensive'">
-              <input type="checkbox" [checked]="hasItem(i.id)" (change)="toggleItem(i.id)" />
-              <span>
-                <b>{{ i.name }}</b>
-                <small class="muted">{{ i.style ? i.style + ' · ' : '' }}{{ itemText(i) }}</small>
-                @if (i.class === 'damage') { <small class="muted"> (damage only)</small> }
-              </span>
-            </label>
-          }
         </div>
-      </div>
-    }
+      }
+      @for (p of passives(); track p.id) {
+        <div class="effect" [class.damage-only]="p.class === 'damage' || p.class === 'defensive'">
+          <span class="slot-label">{{ p.name }}</span>
+          <small class="muted">{{ p.text }}</small>
+        </div>
+      }
+    </div>
+  </div>
+</div>
 
-    @case ('perks') {
-      <p class="muted small">
-        Gizmo rules as in game: a two-handed weapon holds 2 weapon gizmos, dual wield 1 + 1, one-handed + shield 1 weapon gizmo (the shield takes an armour gizmo); body and legs hold one armour gizmo each; 2 perks per gizmo; an ancient gizmo raises the maximum rank by one and unlocks Relentless / Ruthless. Perks that affect adrenaline, cooldowns or durations are simulated; damage perks are stored for the later damage calculator.
-      </p>
+<div class="panel">
+  <div class="form">
+    <p class="muted small">Starting adrenaline is set on the <a routerLink="/train">Train</a> page ("100% adrenaline at start").</p>
+    <h3>Prayer book</h3>
+    <label>
+      <span>Prayers used in this loadout</span>
+      <select [ngModel]="l().prayerBook" (ngModelChange)="setPrayerBook($event)">
+        <option value="Curses">Ancient Curses (Soul Split, Deflect …)</option>
+        <option value="Prayers">Standard prayers (Protect from …)</option>
+      </select>
+      <small class="muted">Prayers of the other book are ignored while training.</small>
+    </label>
+    <h3>Archaeology relics</h3>
+    @for (r of RELICS; track r.id) {
+      <label class="check">
+        <input type="checkbox" [checked]="hasRelic(r.id)" (change)="toggleRelic(r.id)" />
+        <span><b>{{ r.name }}</b> <small class="muted">{{ r.text }}</small></span>
+      </label>
+    }
+    <h3>Necromancy talents</h3>
+    <label>
+      <span>Spirit Pact</span>
+      <select [ngModel]="l().spiritPact" (ngModelChange)="setSpiritPact($event)">
+        <option [ngValue]="0">none – conjures last 42 s</option>
+        <option [ngValue]="1">Spirit Pact I – 48 s</option>
+        <option [ngValue]="2">Spirit Pact II – 54 s</option>
+        <option [ngValue]="3">Spirit Pact III – 60 s</option>
+      </select>
+    </label>
+  </div>
+</div>
+
+@if (menu(); as m) {
+  <div class="ctx" [style.left.px]="m.x" [style.top.px]="m.y" (click)="$event.stopPropagation()">
+    <div class="ctx-title">{{ m.title }}</div>
+    @for (i of m.items; track i.label) {
+      <button class="ctx-item" [class.danger]="i.danger" (click)="runMenu(i)">{{ i.label }}</button>
+    }
+  </div>
+}
+
+@if (perkEdit(); as e) {
+  <div class="backdrop" (click)="perkEdit.set(null)">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <h3>Invention perks – {{ e.view.name }}</h3>
+      <p class="muted small">{{ e.type === 'weapon' ? 'Weapon gizmo' : 'Armour gizmo' }}{{ e.gizmos.length > 1 ? 's' : '' }}; 2 perks per gizmo, an ancient gizmo raises the maximum rank by one. Perks that affect adrenaline, cooldowns or durations (●) are simulated; damage perks are stored for later.</p>
       <div class="gizmos">
-        @for (i of [0, 1]; track i) {
-          <div class="gizmo" [class.unused]="i >= weaponGizmoCount()">
-            <div class="gizmo-head">
-              <b>Weapon gizmo {{ i + 1 }}</b>
-              <label class="check"><input type="checkbox" [checked]="gizmo('weapon', i).ancient" (change)="toggleAncient('weapon', i)" /> ancient</label>
-            </div>
-            @for (slot of [0, 1]; track slot) {
-              <div class="perk-row">
-                <select [ngModel]="gizmo('weapon', i).perks[slot]?.perk ?? ''" (ngModelChange)="setPerk('weapon', i, slot, $event)">
-                  <option value="">– empty –</option>
-                  @for (p of weaponPerks(); track p.id) { <option [value]="p.id">{{ p.name }}{{ p.class === 'adrenaline' || p.class === 'cooldown' ? ' ●' : '' }}</option> }
-                </select>
-                @if (gizmo('weapon', i).perks[slot]; as gp) {
-                  <select [ngModel]="gp.rank" (ngModelChange)="setRank('weapon', i, slot, $event)">
-                    @for (r of ranks(maxRank(gizmo('weapon', i), gp.perk)); track r) { <option [ngValue]="r">rank {{ r }}</option> }
-                  </select>
-                }
-              </div>
-            }
-          </div>
-        }
-        @for (i of [0, 1]; track i) {
+        @for (g of e.gizmos; track $index; let i = $index) {
           <div class="gizmo">
             <div class="gizmo-head">
-              <b>Armour gizmo {{ i + 1 }} <small class="muted">({{ i === 0 ? 'body' : 'legs' }})</small></b>
-              <label class="check"><input type="checkbox" [checked]="gizmo('armour', i).ancient" (change)="toggleAncient('armour', i)" /> ancient</label>
+              <b>Gizmo {{ i + 1 }}</b>
+              <label class="check"><input type="checkbox" [checked]="g.ancient" (change)="setGizmoAncient(i, !g.ancient)" /> ancient</label>
             </div>
             @for (slot of [0, 1]; track slot) {
               <div class="perk-row">
-                <select [ngModel]="gizmo('armour', i).perks[slot]?.perk ?? ''" (ngModelChange)="setPerk('armour', i, slot, $event)">
+                <select [ngModel]="g.perks[slot]?.perk ?? ''" (ngModelChange)="setPerk(i, slot, $event)">
                   <option value="">– empty –</option>
-                  @for (p of armourPerks(); track p.id) { <option [value]="p.id">{{ p.name }}{{ p.class === 'adrenaline' || p.class === 'cooldown' ? ' ●' : '' }}</option> }
+                  @for (p of perkOptions(); track p.id) { <option [value]="p.id">{{ p.name }}{{ p.class === 'adrenaline' || p.class === 'cooldown' ? ' ●' : '' }}</option> }
                 </select>
-                @if (gizmo('armour', i).perks[slot]; as gp) {
-                  <select [ngModel]="gp.rank" (ngModelChange)="setRank('armour', i, slot, $event)">
-                    @for (r of ranks(maxRank(gizmo('armour', i), gp.perk)); track r) { <option [ngValue]="r">rank {{ r }}</option> }
+                @if (g.perks[slot]; as gp) {
+                  <select [ngModel]="gp.rank" (ngModelChange)="setRank(i, slot, $event)">
+                    @for (r of ranks(maxRank(g, gp.perk)); track r) { <option [ngValue]="r">rank {{ r }}</option> }
                   </select>
                 }
               </div>
@@ -209,40 +174,36 @@
           </div>
         }
       </div>
-      <p class="muted small">● = affects the simulation (adrenaline, cooldowns, durations).</p>
-    }
-
-    @case ('relics') {
-      <div class="form">
-        <p class="muted small">Starting adrenaline is set on the <a routerLink="/train">Train</a> page ("100% adrenaline at start").</p>
-        <h3>Prayer book</h3>
-        <label>
-          <span>Prayers used in this loadout</span>
-          <select [ngModel]="l().prayerBook" (ngModelChange)="setPrayerBook($event)">
-            <option value="Curses">Ancient Curses (Soul Split, Deflect …)</option>
-            <option value="Prayers">Standard prayers (Protect from …)</option>
-          </select>
-          <small class="muted">Prayers of the other book are ignored while training.</small>
-        </label>
-        <h3>Archaeology relics</h3>
-        @for (r of RELICS; track r.id) {
-          <label class="check">
-            <input type="checkbox" [checked]="hasRelic(r.id)" (change)="toggleRelic(r.id)" />
-            <span><b>{{ r.name }}</b> <small class="muted">{{ r.text }}</small></span>
-          </label>
-        }
-        <h3>Necromancy talents</h3>
-        <label>
-          <span>Spirit Pact</span>
-          <select [ngModel]="l().spiritPact" (ngModelChange)="setSpiritPact($event)">
-            <option [ngValue]="0">none – conjures last 42 s</option>
-            <option [ngValue]="1">Spirit Pact I – 48 s</option>
-            <option [ngValue]="2">Spirit Pact II – 54 s</option>
-            <option [ngValue]="3">Spirit Pact III – 60 s</option>
-          </select>
-        </label>
-        <p class="muted small">Adrenaline potions are rotation steps (catalog tab "Special"), not part of the loadout.</p>
+      <div class="actions">
+        <button class="btn" (click)="perkEdit.set(null)">Cancel</button>
+        <button class="btn btn-primary" (click)="savePerks()">Save</button>
       </div>
-    }
-  }
-</div>
+    </div>
+  </div>
+}
+
+@if (eofEdit(); as e) {
+  <div class="backdrop" (click)="eofEdit.set(null)">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <h3>Essence of Finality – stored special attack</h3>
+      <select [ngModel]="e.spec" (ngModelChange)="setEofSpec($event)">
+        <option [ngValue]="null">– no special stored –</option>
+        @for (st of STYLE_ORDER; track st) {
+          <optgroup [label]="st">
+            @for (s of specsByStyle().get(st) ?? []; track s.id) {
+              <option [ngValue]="s.id">{{ s.name }} ({{ s.weapons[0] }}) – {{ s.adrenaline }}%</option>
+            }
+          </optgroup>
+        }
+      </select>
+      @if (eofNotes(e.spec); as s) {
+        @if (s.eof.notes) { <p class="muted small">{{ s.eof.notes }}</p> }
+        @if (s.eof.storable === 'unknown') { <p class="warn small">The wiki does not say whether this spec can be stored.</p> }
+      }
+      <div class="actions">
+        <button class="btn" (click)="eofEdit.set(null)">Cancel</button>
+        <button class="btn btn-primary" (click)="saveEof()">Save</button>
+      </div>
+    </div>
+  </div>
+}

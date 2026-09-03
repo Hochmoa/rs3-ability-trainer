@@ -35,6 +35,8 @@ export interface EngineConfig {
   startWield?: Wield;
   /** re-resolves the loadout after a weapon switch (style, spec, shield, conduit ...) */
   resolveWield?: (wield: Wield) => ResolvedLoadout;
+  /** potions / bombs need to be in the backpack: entity key ("special:adrenaline-potion") → carried? (missing = everything is carried) */
+  hasItem?: (key: string) => boolean;
   /** prayer book of the session (default Curses); prayers of the other book are ignored */
   prayerBook?: PrayerBook;
   /** simulated enemy; only used when enabled */
@@ -582,6 +584,7 @@ export class TrainerEngine {
 
   /** Why an entity cannot cast at `tick` (cooldown, adrenaline, rule requirement), or null. */
   private blocker(entity: EngineEntity, tick: number): EngineEvent | null {
+    if (entity.kind === 'special' && this.config.hasItem && !this.config.hasItem(entity.key)) return { kind: 'requirement', key: entity.key, text: 'not in your inventory' };
     const cd = this.cooldownLeft(entity.key, tick);
     if (cd > 0) return { kind: 'on-cooldown', key: entity.key, readyInTicks: cd };
     const req = this.requirementFailure(entity, tick);
@@ -902,15 +905,24 @@ export class TrainerEngine {
     if (w.slot === '2h') this.wield = { mainHand: null, offHand: null, twoHand: w.id };
     else if (w.slot === 'main') this.wield = { ...this.wield, mainHand: w.id, twoHand: null };
     else this.wield = { ...this.wield, offHand: w.id, twoHand: null };
-    if (this.config.resolveWield) {
-      const start = this.loadout.startAdrenaline;
-      this.config.loadout = this.config.resolveWield(this.wield);
-      this.config.loadout.startAdrenaline = start;
-      this.adrenaline = Math.min(this.adrenaline, this.maxAdrenaline);
-    } else {
-      this.config.loadout = { ...this.config.loadout, style: w.style };
-    }
+    if (this.config.resolveWield) this.refreshLoadout();
+    else this.config.loadout = { ...this.config.loadout, style: w.style };
     this.events.push({ kind: 'weapon', id: w.id, style: w.style });
+  }
+
+  /** Sets the weapons in hand directly (taking a weapon off in the gear panel) and re-resolves the loadout. */
+  setWield(w: Wield): void {
+    this.wield = { ...w };
+    if (this.config.resolveWield) this.refreshLoadout();
+  }
+
+  /** Re-resolves the loadout through `resolveWield` – call after armour / jewellery changed while training. */
+  refreshLoadout(): void {
+    if (!this.config.resolveWield) return;
+    const start = this.loadout.startAdrenaline;
+    this.config.loadout = this.config.resolveWield(this.wield);
+    this.config.loadout.startAdrenaline = start;
+    this.adrenaline = Math.min(this.adrenaline, this.maxAdrenaline);
   }
 
   /** Abilities that hit the target (for hit effects) unless the rule/data says otherwise. */

@@ -3,7 +3,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { forkJoin } from 'rxjs';
 import { ruleFor } from '../engine/rules';
 import { EngineBuff, EngineEntity } from '../engine/trainer-engine';
-import { ACTIONS, Ability, Action, Buff, EntityKind, Perk, Prayer, RotationStep, SPEC_KEY, SetEffect, Special, Weapon, WeaponSpec, entityKey } from './models';
+import { ACTIONS, Ability, Action, Buff, EntityKind, EquipSlot, GearItem, ItemRef, Perk, Prayer, RotationStep, SPEC_KEY, SetEffect, Special, Style, Weapon, WeaponSpec, entityKey, weaponSlot } from './models';
 
 /** Anything that can sit in a rotation / get a keybind, in one shape for lists and tooltips. */
 export interface Entity {
@@ -23,6 +23,30 @@ export interface Entity {
   action?: Action;
 }
 
+/** One item instance (worn or in the backpack) with everything the gear panel and its tooltip show. */
+export interface GearView {
+  ref: ItemRef;
+  name: string;
+  icon: string | null;
+  /** slot it is worn in, null for potions */
+  slot: EquipSlot | null;
+  tier: number;
+  style: Style | 'Hybrid' | null;
+  /** can hold Invention gizmos (2 for a two-handed weapon) */
+  gizmoSlots: number;
+  /** armour set it belongs to */
+  set: SetEffect | null;
+  /** passive effect (set-effects.json, kind "item") */
+  passive: SetEffect | null;
+  weapon?: Weapon;
+  gear?: GearItem;
+  special?: Special;
+  /** weapon: its special attack */
+  spec?: WeaponSpec;
+  /** entity key for the engine ("weapon:…", "special:…"), null for plain gear */
+  entityKey: string | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class DataService {
   private http = inject(HttpClient);
@@ -35,6 +59,8 @@ export class DataService {
   readonly specs = signal<WeaponSpec[]>([]);
   readonly perks = signal<Perk[]>([]);
   readonly setEffects = signal<SetEffect[]>([]);
+  /** every wearable non-weapon item (gear.json) */
+  readonly gear = signal<GearItem[]>([]);
   /** PvME emoji alias → entity key ("deathskulls" → "ability:death-skulls", "omniguard" → "gear:omni-guard") */
   readonly pvmeAliases = signal<Record<string, string>>({});
   readonly loaded = signal(false);
@@ -44,6 +70,8 @@ export class DataService {
   readonly specById = computed(() => new Map(this.specs().map((s) => [s.id, s])));
   readonly perkById = computed(() => new Map(this.perks().map((p) => [p.id, p])));
   readonly setEffectById = computed(() => new Map(this.setEffects().map((s) => [s.id, s])));
+  readonly gearById = computed(() => new Map(this.gear().map((g) => [g.id, g])));
+  readonly specialById = computed(() => new Map(this.specials().map((s) => [s.id, s])));
   readonly entities = computed<Entity[]>(() => [
     ...this.abilities().map<Entity>((a) => ({ key: entityKey('ability', a.id), kind: 'ability', id: a.id, name: a.name, icon: a.icon, group: a.style, ability: a })),
     ...this.prayers().map<Entity>((p) => ({ key: entityKey('prayer', p.id), kind: 'prayer', id: p.id, name: p.name, icon: p.icon, group: p.book, prayer: p })),
@@ -65,6 +93,7 @@ export class DataService {
       perks: this.http.get<Perk[]>('data/perks.json'),
       setEffects: this.http.get<SetEffect[]>('data/set-effects.json'),
       aliases: this.http.get<Record<string, string>>('data/pvme-aliases.json'),
+      gear: this.http.get<GearItem[]>('data/gear.json'),
     }).subscribe({
       next: (d) => {
         this.abilities.set(d.abilities);
@@ -76,6 +105,7 @@ export class DataService {
         this.perks.set(d.perks);
         this.setEffects.set(d.setEffects);
         this.pvmeAliases.set(d.aliases);
+        this.gear.set(d.gear);
         this.loaded.set(true);
       },
       error: (err) => console.error('data files failed to load', err),
@@ -84,6 +114,60 @@ export class DataService {
 
   get(key: string): Entity | undefined {
     return this.byKey().get(key);
+  }
+
+  /** Slot an item goes into; null = cannot be worn (potions, unknown ids). */
+  slotOf(ref: Pick<ItemRef, 'kind' | 'id'>): EquipSlot | null {
+    if (ref.kind === 'weapon') {
+      const w = this.weaponById().get(ref.id);
+      return w ? weaponSlot(w) : null;
+    }
+    if (ref.kind === 'gear') return this.gearById().get(ref.id)?.slot ?? null;
+    return null;
+  }
+
+  /** Everything the gear panel shows for an item ref; null when the id left the data files. */
+  view(ref: ItemRef): GearView | null {
+    if (ref.kind === 'weapon') {
+      const w = this.weaponById().get(ref.id);
+      if (!w) return null;
+      const passive = this.setEffectById().get(w.id);
+      const spec = w.spec ? this.specById().get(w.spec) : undefined;
+      return {
+        ref,
+        name: w.name,
+        icon: w.icon,
+        slot: weaponSlot(w),
+        tier: w.tier,
+        style: w.style,
+        gizmoSlots: w.slot === '2h' ? 2 : 1,
+        set: null,
+        passive: passive?.kind === 'item' ? passive : null,
+        weapon: w,
+        spec,
+        entityKey: entityKey('weapon', w.id),
+      };
+    }
+    if (ref.kind === 'gear') {
+      const g = this.gearById().get(ref.id);
+      if (!g) return null;
+      return {
+        ref,
+        name: g.name,
+        icon: g.icon,
+        slot: g.slot,
+        tier: g.tier,
+        style: g.style,
+        gizmoSlots: g.augmentable && (g.slot === 'body' || g.slot === 'legs') ? 1 : 0,
+        set: g.set ? this.setEffectById().get(g.set) ?? null : null,
+        passive: g.passive ? this.setEffectById().get(g.passive) ?? null : null,
+        gear: g,
+        entityKey: null,
+      };
+    }
+    const sp = this.specialById().get(ref.id);
+    if (!sp) return null;
+    return { ref, name: sp.name, icon: sp.icon, slot: null, tier: 0, style: null, gizmoSlots: 0, set: null, passive: null, special: sp, entityKey: entityKey('special', sp.id) };
   }
 
   /** Entity of a rotation step; undefined for notes and for things that left the game. */

@@ -1,8 +1,8 @@
 /**
- * Turns a saved Loadout (ids of weapons, perks, sets, relics) into the numbers the engine uses.
+ * Turns a saved Loadout (worn items, perks on them, relics) into the numbers the engine uses.
  * Effect kinds are the ones written in public/data/set-effects.json and perks.json.
  */
-import { Loadout, Perk, SetEffect, Style, Weapon, WeaponSpec } from '../core/models';
+import { EquipSlot, GearItem, Gizmo, ItemRef, Loadout, Perk, SetEffect, Style, WEAPON_SETS, Weapon, WeaponSpec, loadoutWield } from '../core/models';
 import { ResolvedLoadout, defaultResolvedLoadout } from './loadout-resolved';
 import type { EngineEntity } from './trainer-engine';
 
@@ -11,29 +11,87 @@ export interface LoadoutData {
   specById: Map<string, WeaponSpec>;
   perkById: Map<string, Perk>;
   setEffectById: Map<string, SetEffect>;
+  /** gear.json (armour, jewellery ...); missing = only weapons are known */
+  gearById?: Map<string, GearItem>;
   specEntity: (spec: WeaponSpec) => EngineEntity;
+}
+
+/** The worn items with the data behind them. */
+interface Worn {
+  two: Weapon | null;
+  main: Weapon | null;
+  off: Weapon | null;
+  /** worn gear items (not weapons) */
+  gear: { slot: EquipSlot; ref: ItemRef; item: GearItem }[];
+  /** gizmos with the type of gizmo they hold */
+  gizmos: { type: 'weapon' | 'armour'; label: string; gizmo: Gizmo }[];
+  /** set id -> pieces worn */
+  sets: Map<string, number>;
+  /** passive ids of worn items (rings, capes, weapon passives) */
+  passives: Set<string>;
+  eofSpec: string | null;
+}
+
+function worn(l: Loadout, data: LoadoutData): Worn {
+  const w = loadoutWield(l);
+  const two = w.twoHand ? data.weaponById.get(w.twoHand) ?? null : null;
+  const main = w.mainHand ? data.weaponById.get(w.mainHand) ?? null : null;
+  const off = w.offHand ? data.weaponById.get(w.offHand) ?? null : null;
+  const out: Worn = { two, main, off, gear: [], gizmos: [], sets: new Map(), passives: new Set(), eofSpec: null };
+  const eq = l.equipment ?? {};
+  const legacy = !l.equipment;
+  for (const wp of [two, main, off]) {
+    if (!wp) continue;
+    if (data.setEffectById.get(wp.id)?.kind === 'item') out.passives.add(wp.id);
+    const set = WEAPON_SETS[wp.id];
+    if (set) out.sets.set(set, (out.sets.get(set) ?? 0) + 1);
+  }
+  for (const [slot, ref] of Object.entries(eq) as [EquipSlot, ItemRef | null | undefined][]) {
+    if (!ref) continue;
+    if (ref.kind === 'gear') {
+      const item = data.gearById?.get(ref.id);
+      if (!item) continue;
+      out.gear.push({ slot, ref, item });
+      if (item.set) out.sets.set(item.set, (out.sets.get(item.set) ?? 0) + 1);
+      if (item.passive) out.passives.add(item.passive);
+      if (item.passive === 'essence-of-finality') out.eofSpec = ref.spec ?? l.eofSpec ?? null;
+      for (const g of ref.gizmos ?? []) out.gizmos.push({ type: 'armour', label: item.name, gizmo: g });
+    } else if (ref.kind === 'weapon') {
+      const wp = data.weaponById.get(ref.id);
+      const type = wp?.slot === 'shield' ? 'armour' : 'weapon';
+      for (const g of ref.gizmos ?? []) out.gizmos.push({ type, label: wp?.name ?? ref.id, gizmo: g });
+    }
+  }
+  if (legacy) {
+    // loadouts saved before the inventory: flags instead of items
+    for (const id of l.items ?? []) out.passives.add(id);
+    if (l.armourSet) out.sets.set(l.armourSet, l.armourPieces);
+    out.eofSpec = l.eofSpec;
+    (l.weaponGizmos ?? []).forEach((g, i) => out.gizmos.push({ type: 'weapon', label: 'Weapon gizmo ' + (i + 1), gizmo: g }));
+    (l.armourGizmos ?? []).forEach((g, i) => out.gizmos.push({ type: 'armour', label: 'Armour gizmo ' + (i + 1), gizmo: g }));
+  } else {
+    // legacy passives / set that the loadout page has not moved into slots yet still count
+    for (const id of l.items ?? []) out.passives.add(id);
+    if (l.armourSet && !out.sets.size) out.sets.set(l.armourSet, l.armourPieces);
+    if (!out.eofSpec && l.eofSpec && !eq.neck) out.eofSpec = l.eofSpec;
+  }
+  return out;
 }
 
 /** Validation messages for the loadout page (gizmo rules etc.). */
 export function loadoutWarnings(l: Loadout, data: LoadoutData): string[] {
   const out: string[] = [];
-  if (l.twoHand && (l.mainHand || l.offHand)) out.push('A two-handed weapon cannot be combined with a main-hand or off-hand item.');
-  const main = l.mainHand ? data.weaponById.get(l.mainHand) : null;
-  const off = l.offHand ? data.weaponById.get(l.offHand) : null;
+  const wn = worn(l, data);
+  const { main, off } = wn;
   if (main && off && off.slot !== 'shield' && off.role !== 'defender' && main.style !== off.style) out.push('Main-hand and off-hand weapons have different combat styles.');
-  const eof = l.eofSpec ? data.specById.get(l.eofSpec) : null;
+  const eof = wn.eofSpec ? data.specById.get(wn.eofSpec) : null;
   const style = mainStyle(l, data);
   if (eof && style && eof.style !== style) out.push('The Essence of Finality special (' + eof.style + ') needs a weapon of the same style.');
-  const weaponGizmos = l.twoHand ? 2 : (l.mainHand ? 1 : 0) + (off && off.slot !== 'shield' ? 1 : 0);
-  l.weaponGizmos.slice(0, 2).forEach((g, i) => {
-    if (i >= weaponGizmos && g.perks.length) out.push('Weapon gizmo ' + (i + 1) + ' has no weapon to sit on.');
-    checkGizmo(g, 'weapon', data, out, 'Weapon gizmo ' + (i + 1));
-  });
-  l.armourGizmos.forEach((g, i) => checkGizmo(g, 'armour', data, out, 'Armour gizmo ' + (i + 1)));
+  for (const g of wn.gizmos) checkGizmo(g.gizmo, g.type, data, out, g.label);
   return out;
 }
 
-function checkGizmo(g: Loadout['weaponGizmos'][number], type: 'weapon' | 'armour', data: LoadoutData, out: string[], label: string): void {
+function checkGizmo(g: Gizmo, type: 'weapon' | 'armour', data: LoadoutData, out: string[], label: string): void {
   let slots = 0;
   for (const p of g.perks) {
     const perk = data.perkById.get(p.perk);
@@ -49,16 +107,18 @@ function checkGizmo(g: Loadout['weaponGizmos'][number], type: 'weapon' | 'armour
 }
 
 export function mainStyle(l: Loadout, data: LoadoutData): Style | null {
-  const w = l.twoHand ? data.weaponById.get(l.twoHand) : l.mainHand ? data.weaponById.get(l.mainHand) : null;
-  return w?.style ?? null;
+  const w = loadoutWield(l);
+  const wp = w.twoHand ? data.weaponById.get(w.twoHand) : w.mainHand ? data.weaponById.get(w.mainHand) : null;
+  return wp?.style ?? null;
 }
 
 export function resolveLoadout(l: Loadout, data: LoadoutData): ResolvedLoadout {
   const r = defaultResolvedLoadout();
   r.startAdrenaline = l.startAdrenaline;
-  const two = l.twoHand ? data.weaponById.get(l.twoHand) : null;
-  const main = two ?? (l.mainHand ? data.weaponById.get(l.mainHand) : null) ?? null;
-  const off = l.offHand ? data.weaponById.get(l.offHand) : null;
+  const wn = worn(l, data);
+  const two = wn.two;
+  const main = two ?? wn.main;
+  const off = wn.off;
   r.style = main?.style ?? null;
   r.has2h = !!two;
   r.hasShield = off?.slot === 'shield';
@@ -70,8 +130,8 @@ export function resolveLoadout(l: Loadout, data: LoadoutData): ResolvedLoadout {
     const spec = data.specById.get(specId);
     if (spec) r.weaponSpec = data.specEntity(spec);
   }
-  if (l.eofSpec) {
-    const spec = data.specById.get(l.eofSpec);
+  if (wn.eofSpec) {
+    const spec = data.specById.get(wn.eofSpec);
     if (spec) r.eofSpec = data.specEntity(spec);
   }
   if (off?.name === 'Soulbound lantern' || off?.name.startsWith('Soulbound lantern')) r.stackCaps['residual-souls'] = 5;
@@ -85,8 +145,8 @@ export function resolveLoadout(l: Loadout, data: LoadoutData): ResolvedLoadout {
 
   // perks: highest rank per perk counts
   const ranks = new Map<string, number>();
-  for (const g of [...l.weaponGizmos, ...l.armourGizmos]) {
-    for (const p of g.perks) ranks.set(p.perk, Math.max(ranks.get(p.perk) ?? 0, p.rank));
+  for (const g of wn.gizmos) {
+    for (const p of g.gizmo.perks) ranks.set(p.perk, Math.max(ranks.get(p.perk) ?? 0, p.rank));
   }
   for (const [id, rank] of ranks) {
     const perk = data.perkById.get(id);
@@ -95,18 +155,18 @@ export function resolveLoadout(l: Loadout, data: LoadoutData): ResolvedLoadout {
     applyPerk(r, perk, rank);
   }
 
-  // armour set thresholds
-  if (l.armourSet) {
-    const set = data.setEffectById.get(l.armourSet);
+  // armour set thresholds (every set with worn pieces)
+  for (const [setId, pieces] of wn.sets) {
+    const set = data.setEffectById.get(setId);
     for (const t of set?.thresholds ?? []) {
-      if (l.armourPieces >= t.pieces) {
+      if (pieces >= t.pieces) {
         r.items.add(set!.id + ':' + t.pieces);
-        applyEffect(r, t.effect, l.armourPieces, set!.style);
+        applyEffect(r, t.effect, pieces, set!.style);
       }
     }
   }
   // single items
-  const items = new Set(l.items);
+  const items = new Set(wn.passives);
   for (const id of [...items]) {
     const item = data.setEffectById.get(id);
     if (item?.effect?.kind === 'includes') for (const inc of item.effect['items'] as string[]) items.add(inc);
@@ -118,6 +178,21 @@ export function resolveLoadout(l: Loadout, data: LoadoutData): ResolvedLoadout {
     applyEffect(r, item.effect, 1, item.style);
   }
   return r;
+}
+
+/** Armour sets worn with how many pieces (for the loadout page). */
+export function wornSets(l: Loadout, data: LoadoutData): { set: SetEffect; pieces: number }[] {
+  const out: { set: SetEffect; pieces: number }[] = [];
+  for (const [id, pieces] of worn(l, data).sets) {
+    const set = data.setEffectById.get(id);
+    if (set) out.push({ set, pieces });
+  }
+  return out;
+}
+
+/** Passive item effects in play (for the loadout page). */
+export function wornPassives(l: Loadout, data: LoadoutData): SetEffect[] {
+  return [...worn(l, data).passives].map((id) => data.setEffectById.get(id)).filter((x): x is SetEffect => !!x);
 }
 
 function weaponType(w: Weapon): 'bow' | 'crossbow' | 'other' {

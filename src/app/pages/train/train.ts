@@ -4,8 +4,9 @@ import { Component, HostListener, OnDestroy, computed, effect, inject, signal } 
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DataService, Entity, SPEC_KEY } from '../../core/data.service';
+import { applyWield, equip, unequip } from '../../core/equipment';
 import { keybindFromEvent, keybindKey, keybindLabel } from '../../core/keybind.util';
-import { AttackPattern, BAR_POSITIONS, BarShape, barLayout, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, PrayerStats, STYLES4, Settings, StepResult, Style4, WeaponSpec, entityKey, isStyle4, loadoutWeapons, visiblePresets, RotationStep } from '../../core/models';
+import { AttackPattern, BAR_POSITIONS, BarShape, barLayout, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, EquipSlot, ItemRef, Loadout, PrayerStats, STYLES4, Settings, StepResult, Style4, WeaponSpec, entityKey, isStyle4, loadoutWeapons, loadoutWield, parseEntityKey, visiblePresets, RotationStep } from '../../core/models';
 import { StorageService } from '../../core/storage.service';
 import { resolveLoadout } from '../../engine/loadout-resolver';
 import { BUFF_BY_ID, ruleFor } from '../../engine/rules';
@@ -14,6 +15,8 @@ import { ActiveBuff, EngineEntity, EngineEvent, GCD_TICKS, TICK_MS, TrainerEngin
 import { SOUL_SPLIT } from '../../engine/prayer-rules';
 import { AbilityIcon, IconState } from '../../shared/ability-icon';
 import { ActionBar, SlotView } from '../../shared/action-bar';
+import { GearAction, GearPanel } from '../../shared/gear-panel';
+import { ToastService } from '../../shared/toast';
 import { EntityTip } from '../../shared/tooltip';
 
 interface Feedback {
@@ -74,7 +77,7 @@ const EMPTY_PRAYER_STATS: PrayerStats = { ticks: 0, soulSplitTicks: 0, attacks: 
 
 @Component({
   selector: 'app-train',
-  imports: [AbilityIcon, ActionBar, RouterLink, FormsModule, EntityTip, DecimalPipe, CdkDropListGroup, CdkDropList, CdkDrag],
+  imports: [AbilityIcon, ActionBar, RouterLink, FormsModule, EntityTip, DecimalPipe, CdkDropListGroup, CdkDropList, CdkDrag, GearPanel],
   templateUrl: './train.html',
   styleUrl: './train.scss',
 })
@@ -82,6 +85,7 @@ export class Train implements OnDestroy {
   readonly storage = inject(StorageService);
   readonly data = inject(DataService);
   private route = inject(ActivatedRoute);
+  private toast = inject(ToastService);
 
   readonly TICK_MS = TICK_MS;
   readonly GCD_MS = TICK_MS * GCD_TICKS;
@@ -114,15 +118,23 @@ export class Train implements OnDestroy {
     specById: this.data.specById(),
     perkById: this.data.perkById(),
     setEffectById: this.data.setEffectById(),
+    gearById: this.data.gearById(),
     specEntity: (s: WeaponSpec) => this.data.specEntity(s),
   }));
+  /** equipment + backpack of the running session (weapon switches, drunk potions, swapped armour); null = not running */
+  readonly live = signal<Loadout | null>(null);
+  /** what the gear panel shows: the live state while training, the saved loadout otherwise */
+  readonly gearState = computed(() => this.live() ?? this.storage.loadout());
+  private slotOf = (r: ItemRef): EquipSlot | null => this.data.slotOf(r);
   /** steps the active loadout cannot perform (no 2h, no shield, no spec weapon ...) */
   readonly equipmentWarnings = computed<string[]>(() => {
     if (!this.data.loaded()) return [];
     const probe = new TrainerEngine([], new Map(), { ...this.storage.settings(), loadout: this.resolved() });
     probe.start(0);
     const out = new Set<string>();
+    const inv = this.storage.loadout().inventory;
     for (const e of this.stepEntities()) {
+      if (e?.special && !inv.some((r) => r?.kind === 'special' && r.id === e.id)) out.add(e.name + ': not in your backpack (Loadout page)');
       if (!e?.ability) continue;
       const rule = ruleFor(e.ability.id);
       for (const r of rule?.requires ?? []) {
@@ -163,6 +175,11 @@ export class Train implements OnDestroy {
     }
     for (const [id, kb] of Object.entries(s.actionKeybinds ?? {})) {
       if (kb) m.set('action:' + id, keybindLabel(kb));
+    }
+    // potions and weapons in the backpack can be clicked there
+    for (const r of this.storage.loadout().inventory) {
+      if (r?.kind === 'special' && !m.has('special:' + r.id)) m.set('special:' + r.id, 'click');
+      if (r?.kind === 'weapon' && !m.has('weapon:' + r.id)) m.set('weapon:' + r.id, 'click');
     }
     // the generic "Weapon Special Attack" slot fires every spec
     const specKey = m.get(SPEC_KEY);
@@ -400,7 +417,7 @@ export class Train implements OnDestroy {
 
   /** carried weapons of the active loadout with their switch keys */
   readonly carriedWeapons = computed(() =>
-    loadoutWeapons(this.storage.loadout())
+    loadoutWeapons(this.gearState())
       .map((id) => this.data.get('weapon:' + id))
       .filter((e): e is Entity => !!e)
       .map((e) => ({ entity: e, key: keybindLabel(this.storage.actionBars().weaponKeybinds[e.id]) })),
@@ -439,14 +456,26 @@ export class Train implements OnDestroy {
     for (const p of setup.presets) for (const step of p.slots) if (step && step.kind !== 'note') add(entityKey(step.kind, step.id));
     for (const id of Object.keys(setup.actionKeybinds ?? {})) add('action:' + id);
     for (const id of loadoutWeapons(this.storage.loadout())) add('weapon:' + id);
+    for (const r of this.storage.loadout().inventory) if (r?.kind === 'special') add('special:' + r.id);
     for (const s of steps) catalog.set(s.key, s);
     const enemy = this.enemy();
-    const l = this.storage.loadout();
+    const l = structuredClone(this.storage.loadout());
+    this.live.set(l);
     this.engine = new TrainerEngine(steps, catalog, {
       ...this.storage.settings(),
       loadout: this.resolved(),
-      startWield: { mainHand: l.mainHand, offHand: l.offHand, twoHand: l.twoHand },
-      resolveWield: (w: Wield) => resolveLoadout({ ...l, ...w }, this.loadoutData()),
+      startWield: loadoutWield(l),
+      // a weapon switch moves the weapons between hands and backpack; armour and jewellery stay as swapped
+      resolveWield: (w: Wield) => {
+        const cur = this.live() ?? l;
+        const next = { ...cur, ...applyWield(cur, w, this.slotOf) };
+        this.live.set(next);
+        return resolveLoadout(next, this.loadoutData());
+      },
+      hasItem: (key: string) => {
+        const { kind, id } = parseEntityKey(key);
+        return (this.live() ?? l).inventory.some((r) => r?.kind === kind && r.id === id);
+      },
       prayerBook: this.prayerBook(),
       enemy: enemy.enabled ? { ...enemy, styles: [...enemy.styles] } : undefined,
     });
@@ -491,8 +520,47 @@ export class Train implements OnDestroy {
     this.finished.set(true);
     this.gcdPhase.set(1);
     this.gcdRemaining.set(0);
+    this.live.set(null);
     this.saveSession();
   }
+
+  /** click in the gear panel while training: wield / drink / wear / take off */
+  onGear(a: GearAction): void {
+    if (a.kind !== 'click') return;
+    const e = this.engine;
+    const l = this.live();
+    if (!this.running() || !e || !l) {
+      this.toast.show('Start a session to use the backpack; the loadout is edited on the Loadout page.');
+      return;
+    }
+    const name = this.data.view(a.ref)?.name ?? a.ref.id;
+    if (a.from.kind === 'inv') {
+      if (a.ref.kind === 'weapon') return e.press('weapon:' + a.ref.id, performance.now());
+      if (a.ref.kind === 'special') return e.press('special:' + a.ref.id, performance.now());
+      const r = equip(l, a.ref, this.slotOf, a.from.index);
+      if (r.error) return this.toast.show(r.error, 'warn');
+      this.live.set({ ...l, ...r.state });
+      e.refreshLoadout();
+      this.feedback.set({ text: name + ' worn', cls: 'info' });
+    } else if (a.from.kind === 'equip') {
+      const r = unequip(l, a.from.slot, this.slotOf);
+      if (r.error) return this.toast.show(r.error, 'warn');
+      this.live.set({ ...l, ...r.state });
+      if (a.ref.kind === 'weapon') e.setWield(loadoutWield(this.live()!));
+      else e.refreshLoadout();
+      this.feedback.set({ text: name + ' taken off', cls: 'info' });
+    }
+  }
+
+  /** backpack potions grey out like bar slots when they cannot be drunk right now */
+  readonly gearUsable = computed<((ref: ItemRef) => boolean) | null>(() => {
+    if (!this.running()) return null;
+    const state = this.slotState();
+    return (ref) => ref.kind !== 'special' || (state.get('special:' + ref.id)?.usable ?? 'ok') === 'ok';
+  });
+
+  /** switch key of a carried weapon, shown on its backpack cell */
+  readonly gearKey = (ref: ItemRef): string => (ref.kind === 'weapon' ? keybindLabel(this.storage.actionBars().weaponKeybinds[ref.id]) : '');
 
   private frame = (now: number): void => {
     if (this.tick(now)) this.raf = requestAnimationFrame(this.frame);
@@ -514,6 +582,7 @@ export class Train implements OnDestroy {
     this.gcdRemaining.set(e.gcdRemainingMs(now));
     this.index.set(e.index);
     this.adrenaline.set(e.adrenaline);
+    if (e.maxAdrenaline !== this.maxAdrenaline()) this.maxAdrenaline.set(e.maxAdrenaline);
     this.syncWield(e);
     this.expectedKey.set(e.currentStep?.key ?? null);
     this.queuedKey.set(e.queuedKey);
@@ -556,6 +625,7 @@ export class Train implements OnDestroy {
       this.stopLoops();
       this.running.set(false);
       this.finished.set(true);
+      this.live.set(null);
       this.saveSession();
       return false;
     }

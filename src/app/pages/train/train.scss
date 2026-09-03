@@ -747,3 +747,43 @@
   color: #ffe27a;
   text-shadow: 0 0 3px #000, 0 0 3px #000;
 }
+
+// equipment + backpack beside the arena
+.arena {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+
+  @media (max-width: 960px) {
+    flex-direction: column;
+  }
+}
+
+.arena-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.gear-side {
+  flex: none;
+  width: 232px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  .gear-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 13px;
+
+    a {
+      font-size: 12px;
+    }
+  }
+
+  @media (max-width: 960px) {
+    width: 100%;
+    max-width: 320px;
+  }
+}

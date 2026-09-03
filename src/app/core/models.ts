@@ -317,30 +317,107 @@ export interface Gizmo {
   perks: GizmoPerk[];
 }
 
-/** Everything outside the rotation: weapons, special attacks, armour set, item passives, perks, relics. */
+// ---------------------------------------------------------------- gear (public/data/gear.json) + equipment
+
+/** The worn slots of the in-game equipment screen. */
+export type GearSlot = 'head' | 'cape' | 'neck' | 'ammo' | 'mainHand' | 'body' | 'offHand' | 'legs' | 'hands' | 'feet' | 'ring' | 'pocket' | 'aura' | 'sigil';
+/** Keys of the equipment record: the worn slots plus "twoHand" – a two-handed weapon shows in the main-hand slot and blocks the off-hand. */
+export type EquipSlot = GearSlot | 'twoHand';
+export const GEAR_SLOTS: GearSlot[] = ['head', 'cape', 'neck', 'ammo', 'mainHand', 'body', 'offHand', 'legs', 'hands', 'feet', 'ring', 'pocket', 'aura', 'sigil'];
+export const SLOT_NAMES: Record<EquipSlot, string> = {
+  head: 'Head',
+  cape: 'Cape',
+  neck: 'Neck',
+  ammo: 'Ammunition',
+  mainHand: 'Main hand',
+  twoHand: 'Two-handed',
+  body: 'Body',
+  offHand: 'Off-hand',
+  legs: 'Legs',
+  hands: 'Hands',
+  feet: 'Feet',
+  ring: 'Ring',
+  pocket: 'Pocket',
+  aura: 'Aura',
+  sigil: 'Sigil',
+};
+/** backpack size, like in the game */
+export const INVENTORY_SIZE = 28;
+
+/** A wearable non-weapon item (gear.json): armour, capes, jewellery, ammo, pocket, aura, sigil. */
+export interface GearItem {
+  id: string;
+  name: string;
+  slot: Exclude<GearSlot, 'mainHand' | 'offHand'>;
+  style: Style | 'Hybrid' | null;
+  tier: number;
+  type: string | null;
+  armour: number;
+  lifePoints: number;
+  prayer: number;
+  /** armour set it belongs to (set-effects.json, kind "set") */
+  set: string | null;
+  /** item passive (set-effects.json, kind "item") */
+  passive: string | null;
+  /** an "Augmented …" version exists: can hold Invention gizmos */
+  augmentable: boolean;
+  icon: string | null;
+}
+
+/** Weapons that count as pieces of an armour set (set-effects.json). */
+export const WEAPON_SETS: Record<string, string> = {
+  'roar-of-awakening': 'song-of-destruction',
+  'ode-to-deceit': 'song-of-destruction',
+};
+
+/** One item instance in a slot or the inventory. */
+export interface ItemRef {
+  /** weapon = weapons.json (incl. shields and defenders), gear = gear.json, special = specials.json (potions, bombs) */
+  kind: 'weapon' | 'gear' | 'special';
+  id: string;
+  /** Invention gizmos sitting on this item (2 for a two-handed weapon, otherwise 1) */
+  gizmos?: Gizmo[];
+  /** Essence of Finality amulet: the stored special attack (specs.json id) */
+  spec?: string | null;
+}
+
+export type Equipment = Partial<Record<EquipSlot, ItemRef | null>>;
+
+export function sameRef(a: ItemRef | null | undefined, b: ItemRef | null | undefined): boolean {
+  return !!a && !!b && a.kind === b.kind && a.id === b.id;
+}
+
+/** Everything outside the rotation: worn equipment, backpack, prayer book, relics. */
 export interface Loadout {
   id: string;
   name: string;
   /** start of a training session, 0..100 */
   startAdrenaline: number;
-  /** weapon ids (weapons.json) in hand at the start; twoHand excludes mainHand/offHand */
+  /** worn items per slot */
+  equipment: Equipment;
+  /** backpack, INVENTORY_SIZE slots; weapons in it are switches, potions in it can be drunk while training */
+  inventory: (ItemRef | null)[];
+  /**
+   * Weapons in hand at the start – derived from `equipment` on every save (kept for older readers such as
+   * shared setups); twoHand excludes mainHand/offHand.
+   */
   mainHand: string | null;
   offHand: string | null;
   twoHand: string | null;
-  /** further weapons carried for switching (weapon ids); rotation steps "weapon:<id>" wield them */
+  /** weapons carried in the inventory (derived from `inventory`); rotation steps "weapon:<id>" wield them */
   switches: string[];
   /** active prayer book – standard prayers or Ancient Curses; never mixed inside a session */
   prayerBook: 'Prayers' | 'Curses';
   /** special attack stored in the Essence of Finality amulet (specs.json id) */
   eofSpec: string | null;
-  /** armour set (set-effects.json, kind "set") and how many pieces are worn */
+  /** legacy (builds before the inventory): armour set and pieces worn – the loadout page moves them into `equipment` once */
   armourSet: string | null;
   armourPieces: number;
-  /** single-item passives (set-effects.json, kind "item") */
+  /** legacy: single-item passives (set-effects.json, kind "item") – moved into `equipment` by the loadout page */
   items: string[];
-  /** two weapon gizmos (2h) or one per weapon (dual wield / 1h) */
+  /** legacy: two weapon gizmos (2h) or one per weapon – now stored on the ItemRef */
   weaponGizmos: Gizmo[];
-  /** body + legs (+ shield) */
+  /** legacy: body + legs gizmos – now stored on the ItemRef */
   armourGizmos: Gizmo[];
   /** Archaeology relics: fury-of-the-small, conservation-of-energy, heightened-senses, persistent-rage */
   relics: string[];
@@ -360,6 +437,8 @@ export function newLoadout(name = 'Default'): Loadout {
     id: crypto.randomUUID(),
     name,
     startAdrenaline: 0,
+    equipment: {},
+    inventory: Array(INVENTORY_SIZE).fill(null),
     mainHand: null,
     offHand: null,
     twoHand: null,
@@ -490,8 +569,26 @@ export function migrateLegacyLoadout(old: Partial<LegacyLoadout>): Loadout {
 /** Weapon ids a loadout carries: the starting set plus the switches. */
 export function loadoutWeapons(l: Loadout): string[] {
   const out: string[] = [];
-  for (const id of [l.twoHand, l.mainHand, l.offHand, ...l.switches]) if (id && !out.includes(id)) out.push(id);
+  if (l.equipment) {
+    const eq = l.equipment;
+    for (const r of [eq.twoHand, eq.mainHand, eq.offHand, ...(l.inventory ?? [])]) if (r?.kind === 'weapon' && !out.includes(r.id)) out.push(r.id);
+    return out;
+  }
+  for (const id of [l.twoHand, l.mainHand, l.offHand, ...(l.switches ?? [])]) if (id && !out.includes(id)) out.push(id);
   return out;
+}
+
+/** Worn weapons of a loadout as ids (twoHand excludes mainHand/offHand). */
+export function loadoutWield(l: Loadout): { mainHand: string | null; offHand: string | null; twoHand: string | null } {
+  if (!l.equipment) return { mainHand: l.mainHand, offHand: l.offHand, twoHand: l.twoHand };
+  const w = (r: ItemRef | null | undefined) => (r?.kind === 'weapon' ? r.id : null);
+  const twoHand = w(l.equipment.twoHand);
+  return { twoHand, mainHand: twoHand ? null : w(l.equipment.mainHand), offHand: twoHand ? null : w(l.equipment.offHand) };
+}
+
+/** Equipment slot a weapons.json item goes into. */
+export function weaponSlot(w: Pick<Weapon, 'slot'>): EquipSlot {
+  return w.slot === '2h' ? 'twoHand' : w.slot === 'main' ? 'mainHand' : 'offHand';
 }
 
 /** Simulated enemy for prayer training: attacks in a fixed rhythm, the matching overhead must be active on the hit tick. */

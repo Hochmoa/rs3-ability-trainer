@@ -1,7 +1,7 @@
 import { Injectable, computed, signal } from '@angular/core';
 import { IDBPDatabase, deleteDB, openDB } from 'idb';
 import { Subject } from 'rxjs';
-import { ActionBarSetup, DEFAULT_ENEMY, DEFAULT_SETTINGS, EnemyConfig, Keybind, LegacyLoadout, Loadout, Rotation, RotationStep, Session, SetupBundle, SetupMeta, Settings, defaultActionBars, migrateLegacyLoadout, newLoadout } from './models';
+import { ActionBarSetup, DEFAULT_ENEMY, DEFAULT_SETTINGS, EnemyConfig, Equipment, INVENTORY_SIZE, ItemRef, Keybind, LegacyLoadout, Loadout, Rotation, RotationStep, Session, SetupBundle, SetupMeta, Settings, defaultActionBars, migrateLegacyLoadout, newLoadout } from './models';
 
 const DB_NAME = 'rs3trainer';
 const CONSENT_KEY = 'rs3trainer.consent';
@@ -356,6 +356,53 @@ function normaliseLoadout(l: Partial<Loadout>): Loadout {
   out.armourGizmos = (l.armourGizmos ?? base.armourGizmos).map((g) => ({ ancient: !!g.ancient, perks: [...(g.perks ?? [])] }));
   while (out.weaponGizmos.length < 2) out.weaponGizmos.push({ ancient: false, perks: [] });
   while (out.armourGizmos.length < 2) out.armourGizmos.push({ ancient: false, perks: [] });
+  if (l.equipment) {
+    out.equipment = cleanEquipment(l.equipment);
+    out.inventory = Array.from({ length: INVENTORY_SIZE }, (_, i) => cleanRef(l.inventory?.[i]));
+  } else {
+    // builds before the inventory: weapons in hand + switches (+ their gizmos) become worn / carried items
+    const eq: Equipment = {};
+    const g = (i: number) => (out.weaponGizmos[i]?.perks.length ? [out.weaponGizmos[i]] : undefined);
+    if (l.twoHand) eq.twoHand = { kind: 'weapon', id: l.twoHand, gizmos: out.weaponGizmos.some((x) => x.perks.length) ? out.weaponGizmos.slice(0, 2) : undefined };
+    else {
+      if (l.mainHand) eq.mainHand = { kind: 'weapon', id: l.mainHand, gizmos: g(0) };
+      if (l.offHand) eq.offHand = { kind: 'weapon', id: l.offHand, gizmos: g(1) };
+    }
+    out.equipment = eq;
+    out.inventory = Array.from({ length: INVENTORY_SIZE }, (_, i) => (out.switches[i] ? { kind: 'weapon', id: out.switches[i] } : null));
+  }
+  // derived weapon fields for older readers (shared setups, sessions)
+  const w = (r: ItemRef | null | undefined) => (r?.kind === 'weapon' ? r.id : null);
+  out.twoHand = w(out.equipment.twoHand);
+  out.mainHand = out.twoHand ? null : w(out.equipment.mainHand);
+  out.offHand = out.twoHand ? null : w(out.equipment.offHand);
+  out.switches = out.inventory.filter((r): r is ItemRef => r?.kind === 'weapon').map((r) => r.id).filter((id, i, a) => a.indexOf(id) === i);
+  return out;
+}
+
+function cleanRef(r: ItemRef | null | undefined): ItemRef | null {
+  if (!r || typeof r.id !== 'string' || !['weapon', 'gear', 'special'].includes(r.kind)) return null;
+  const out: ItemRef = { kind: r.kind, id: r.id };
+  if (r.gizmos?.length) {
+    out.gizmos = r.gizmos.map((g) => ({
+      ancient: !!g.ancient,
+      perks: (g.perks ?? []).filter((p) => p && typeof p.perk === 'string').map((p) => ({ perk: p.perk, rank: Math.max(1, Math.round(Number(p.rank) || 1)) })),
+    }));
+  }
+  if (r.spec) out.spec = r.spec;
+  return out;
+}
+
+function cleanEquipment(eq: Equipment): Equipment {
+  const out: Equipment = {};
+  for (const [slot, r] of Object.entries(eq) as [keyof Equipment, ItemRef | null | undefined][]) {
+    const c = cleanRef(r);
+    if (c) out[slot] = c;
+  }
+  if (out.twoHand) {
+    delete out.mainHand;
+    delete out.offHand;
+  }
   return out;
 }
 
