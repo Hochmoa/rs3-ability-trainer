@@ -113,9 +113,11 @@ describe('isObscurePrayer', () => {
 
 describe('abilities, sets, perks', () => {
   const ability = (id: string) => ({ id }) as Ability;
-  it('hides slayer passives and unused ultimates, keeps everything else', () => {
-    expect(isObscureAbility(ability('demon-slayer'))).toBe(true);
-    expect(isObscureAbility(ability('transfigure'))).toBe(true);
+  it('hides skilling abilities and unused ultimates, keeps slayer abilities and everything else', () => {
+    expect(isObscureAbility(ability('demon-slayer'))).toBe(false);
+    expect(isObscureAbility(ability('transfigure'))).toBe(false);
+    expect(isObscureAbility(ability('kuradal-s-favour'))).toBe(true);
+    expect(isObscureAbility(ability('ice-asylum'))).toBe(true);
     expect(isObscureAbility(ability('ingenuity-of-the-humans'))).toBe(false);
     expect(isObscureAbility(ability('death-skulls'))).toBe(false);
   });

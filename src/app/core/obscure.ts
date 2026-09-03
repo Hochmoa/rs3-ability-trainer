@@ -57,16 +57,12 @@ export function isObscurePerk(p: Perk): boolean {
 
 // ---------------------------------------------------------------- abilities
 
-/** Slayer passives, self-healing ultimates nobody uses, skilling abilities, PvP-only stuff. */
+/** Slayer buffs (Kuradal, Insight), self-healing ultimates nobody uses, skilling abilities, PvP-only stuff. */
 const OBSCURE_ABILITIES = new Set([
-  'demon-slayer',
-  'dragon-slayer',
-  'undead-slayer',
   'kuradal-s-favour',
   'slayer-s-insight',
   'siphon',
   'golden-touch',
-  'transfigure',
   'guthix-s-blessing',
   'ice-asylum',
   'revenge',
