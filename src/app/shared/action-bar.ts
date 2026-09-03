@@ -12,6 +12,8 @@ export interface SlotView {
   usable: UsableReason | null;
   /** seconds left on the entity's own cooldown, 0 = none */
   cooldownS: number;
+  /** 0..1 progress of the entity's own cooldown (1 = ready); drives the sweep overlay */
+  cooldownPhase: number;
   /** 0..1 GCD progress for GCD abilities, 1 = no overlay */
   gcdPhase: number;
   gcdRemainingMs: number;
@@ -51,7 +53,7 @@ export interface SlotView {
               <img [src]="s.entity.icon" [alt]="s.entity.name" draggable="false" />
               @if (s.cooldownS > 0) {
                 <!-- the ability's own cooldown wins: its remaining seconds, no GCD sweep -->
-                <div class="cd"></div>
+                <div class="cd" [style.background]="overlay(s.cooldownPhase)"></div>
                 <span class="seconds small">{{ ceil(s.cooldownS) }}</span>
               } @else if (s.gcdPhase < 1) {
                 <!-- global cooldown: sweep only, no number -->
@@ -185,9 +187,6 @@ export interface SlotView {
     .cd {
       position: absolute;
       inset: 0;
-    }
-    .cd {
-      background: rgba(0, 0, 0, 0.6);
     }
     .seconds {
       position: absolute;
