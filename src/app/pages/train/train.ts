@@ -158,9 +158,8 @@ export class Train implements OnDestroy {
         });
       }
     }
-    for (const st of STYLES4) {
-      const kb = s.weaponKeybinds[st];
-      if (kb) m.set('weapon:' + st.toLowerCase(), keybindLabel(kb));
+    for (const [id, kb] of Object.entries(s.weaponKeybinds)) {
+      if (kb) m.set('weapon:' + id, keybindLabel(kb));
     }
     for (const [id, kb] of Object.entries(s.actionKeybinds ?? {})) {
       if (kb) m.set('action:' + id, keybindLabel(kb));
@@ -439,7 +438,7 @@ export class Train implements OnDestroy {
     };
     for (const p of setup.presets) for (const step of p.slots) if (step && step.kind !== 'note') add(entityKey(step.kind, step.id));
     for (const id of Object.keys(setup.actionKeybinds ?? {})) add('action:' + id);
-    for (const st of STYLES4) add('weapon:' + st.toLowerCase());
+    for (const id of loadoutWeapons(this.storage.loadout())) add('weapon:' + id);
     for (const s of steps) catalog.set(s.key, s);
     const enemy = this.enemy();
     const l = this.storage.loadout();
@@ -798,11 +797,10 @@ export class Train implements OnDestroy {
     if (!kb) return;
     const k = keybindKey(kb);
     const setup = this.storage.actionBars();
-    for (const st of STYLES4) {
-      const wk = setup.weaponKeybinds[st];
+    for (const [id, wk] of Object.entries(setup.weaponKeybinds)) {
       if (wk && keybindKey(wk) === k) {
         e.preventDefault();
-        this.engine?.press('weapon:' + st.toLowerCase(), performance.now());
+        this.engine?.press('weapon:' + id, performance.now());
         return;
       }
     }
