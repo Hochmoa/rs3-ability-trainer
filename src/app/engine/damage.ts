@@ -60,14 +60,23 @@ export const BUFF_FLAT_ADD: { buff: string; style: Style; pct: number; dots: boo
 
 /** target debuffs that raise the damage it takes (dotsOnly: bleed / burn hits only – Corrupted Wounds) */
 export const TARGET_DAMAGE_MULT: { buff: string; mult: number; dotsOnly?: boolean }[] = [
-  { buff: 'haunted', mult: 1.1 },
   { buff: 'special:vulnerability-bomb', mult: 1.1 },
   { buff: 'corrupted-wounds', mult: 1.2, dotsOnly: true },
 ];
 
-/** conjured spirits attack on their own: % of ability damage every n ticks (wiki conjure pages); spirits cannot crit */
-export const SPIRIT_ATTACKS: Record<string, { everyTicks: number; min: number; max: number }> = {
-  'skeleton-warrior': { everyTicks: 5, min: 22, max: 28 },
-  'putrid-zombie': { everyTicks: 6, min: 18, max: 22 },
-  'vengeful-ghost': { everyTicks: 7, min: 18, max: 22 },
+/** target debuffs that add a share of the hit, capped at a share of the player's ability damage (Haunted +10%, cap 20% AD) */
+export const TARGET_DAMAGE_ADD: { buff: string; pct: number; capPctOfAd: number }[] = [{ buff: 'haunted', pct: 0.1, capPctOfAd: 0.2 }];
+
+/**
+ * Conjured spirits attack on their own: % of ability damage every n ticks from `firstTick` after the conjure
+ * (wiki conjure pages); spirits cannot crit. The zombie also poisons every 3 ticks (typeless DoT).
+ */
+export const SPIRIT_ATTACKS: Record<string, { everyTicks: number; firstTick: number; min: number; max: number; poison?: { everyTicks: number; firstTick: number; min: number; max: number } }> = {
+  'skeleton-warrior': { everyTicks: 5, firstTick: 7, min: 22, max: 28 },
+  'putrid-zombie': { everyTicks: 6, firstTick: 7, min: 18, max: 22, poison: { everyTicks: 3, firstTick: 9, min: 8, max: 12 } },
+  'vengeful-ghost': { everyTicks: 7, firstTick: 6, min: 18, max: 22 },
 };
+
+/** Skeleton Warrior Rage: +3% damage per stack, max 25, one stack per skeleton attack */
+export const RAGE_PER_STACK = 0.03;
+export const RAGE_MAX = 25;

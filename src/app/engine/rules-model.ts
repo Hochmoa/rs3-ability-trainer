@@ -82,6 +82,8 @@ export interface Condition {
   stackMax?: { stack: StackId; max: number };
   /** target life points below this share of its maximum (Punish 2.5x under 50%); false when the target has no life points */
   targetLpBelow?: number;
+  /** the cast did not set this flag (Spectral Scythe's last cast rolls no soul) */
+  notFlag?: string;
 }
 
 export type Effect =
@@ -117,6 +119,8 @@ export interface Requirement {
   stackMin?: { stack: StackId; min: number };
   spirit?: string;
   spiritAgeMin?: number;
+  /** any conjured spirit must be out (Life Transfer) */
+  anySpirit?: boolean;
   sequence?: { group: string; step: number };
   adrenalineBelow?: number;
   adrenalineMin?: number;
@@ -173,6 +177,8 @@ export interface ChannelSpec {
   onComplete?: Effect[];
   /** Endless Assault: when this holds at the cast the hits are dealt as an un-cancellable damage over time (still crit / style-buffed) */
   asDotWhen?: Condition;
+  /** Blood Siphon: the last hit also deals this share of what the earlier hits of the channel dealt */
+  finalAddsPriorShare?: number;
   /** every hit is a critical strike (Smoke Tendrils) */
   guaranteedCrit?: boolean;
 }
@@ -214,7 +220,9 @@ export interface AbilityRule {
    * One ability with several casts in a row (Spectral Scythe): cast n uses stages[n-1]; the cooldown starts
    * with cast 1, later casts within the sequence window ignore it; the last cast resets the slot.
    */
-  stages?: { cost: number }[];
+  stages?: { cost: number; damage?: { min: number; max: number } }[];
+  /** the hits are the conjured spirit's (Command Skeleton Warrior): no crit, Rage builds and applies, robes bonus */
+  spiritHit?: string;
   /** bleed / burn: `hits` damage-over-time hits every `everyTicks` (first after `startTicks`, default everyTicks); no crits, no style buffs */
   bleed?: BleedSpec;
   /** one hit per stack held (Volley of Souls) */
@@ -227,6 +235,8 @@ export interface AbilityRule {
     damage?: { min: number; max: number };
     /** +per × missing life points % of the target, capped (Flurry with 4 Bloodlust: 1% per 1%, max 65%) */
     perMissingLp?: { per: number; max: number };
+    /** × (1 + mult × stacks held when the cast started) – Command Phantom Guardian with Valour */
+    perStackAtCast?: { stack: StackId; mult: number };
   }[];
   sharedCooldown?: string;
   /** buffs applied on cast (overrides the wiki buff link) */

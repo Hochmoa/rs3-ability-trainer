@@ -267,6 +267,9 @@ function applyEffect(r: ResolvedLoadout, effect: Record<string, unknown> & { kin
     case 'conjure-duration':
       r.conjureDurationMult *= 1 + Number(e['perPiece']) * Math.min(pieces, 5);
       break;
+    case 'conjure-damage':
+      r.conjureDamageMult *= 1 + Number(e['perPiece']) * Math.min(pieces, 5);
+      break;
     case 'conjure-duration-add':
       break; // Spirit Pact is read from loadout.spiritPact
     case 'channel-adrenaline-per-tick':
@@ -286,7 +289,7 @@ function applyEffect(r: ResolvedLoadout, effect: Record<string, unknown> & { kin
         const base = ruleFor(e['ability'])?.hits?.[0] ?? 0; // Overpower lands at +3: both Igneous hits do
         r.hitsOverrides[e['ability']] = Array.from({ length: Number(e['hits']) }, (_, i) => (base > 0 ? base : i === 0 ? 0 : 1));
       }
-      if (e['bounces']) r.hitsOverrides[e['ability']] = Array.from({ length: Number(e['bounces']) + 1 }, (_, i) => i * 2);
+      if (e['bounces']) r.hitsOverrides[e['ability']] = Array.from({ length: Number(e['bounces']) / 2 + 1 }, (_, i) => i * 4); // one target: every second bounce lands on it
       if (e['damageMin'] !== undefined && e['damageMax'] !== undefined) r.damageOverrides[e['ability']] = { min: Number(e['damageMin']), max: Number(e['damageMax']) };
       break;
     case 'vigour':

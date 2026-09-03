@@ -35,7 +35,8 @@ export const NECROMANCY_RULES: AbilityRule[] = [
   },
   {
     ability: 'soul-sap',
-    notes: ['Grants 1 Residual Soul per target hit (cap 3, 5 with the soulbound lantern) (' + W + 'Soul_Sap )'],
+    requires: [{ text: 'needs a conduit (necromancy off-hand)', equipment: 'conduit' }],
+    notes: ['Needs a conduit. Grants 1 Residual Soul per target hit (cap 3, 5 with the soulbound lantern) (' + W + 'Soul_Sap )'],
     onHit: [{ kind: 'stack', stack: 'residual-souls', amount: 1 }],
   },
   {
@@ -48,15 +49,17 @@ export const NECROMANCY_RULES: AbilityRule[] = [
   {
     ability: 'command-skeleton-warrior',
     requires: [{ text: 'needs an active Skeleton Warrior (6 ticks after the conjure)', spirit: 'skeleton-warrior', spiritAgeMin: COMMAND_READY_AFTER }],
-    hits: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-    notes: ['Requires the skeleton; 25-tick cooldown; the skeleton attacks on the 10 consecutive ticks after the "RAAAR!" tick, each hit adds Rage (+3% damage, max 25) (' + W + 'Command_Skeleton_Warrior )'],
+    hits: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+    spiritHit: 'skeleton-warrior',
+    notes: ['Requires the skeleton; 25-tick cooldown; "RAAAR!" a tick later, then the skeleton attacks on 10 consecutive ticks (spirit hits: no crit), each hit adds Rage (+3% damage, max 25) (' + W + 'Command_Skeleton_Warrior )'],
   },
   conjure('putrid-zombie', 'Putrid Zombie', ['Conjure Putrid Zombie has a 50-tick cooldown from the cast, which only matters after the zombie exploded early (' + W + 'Conjure_Putrid_Zombie )']),
   {
     ability: 'command-putrid-zombie',
     requires: [{ text: 'needs an active Putrid Zombie (6 ticks after the conjure)', spirit: 'putrid-zombie', spiritAgeMin: COMMAND_READY_AFTER }],
     hits: [4],
-    notes: ['The zombie explodes 4 ticks later for 360–440% and is removed; re-conjure at the earliest 50 ticks after the conjure (' + W + 'Command_Putrid_Zombie )'],
+    spiritHit: 'putrid-zombie',
+    notes: ['The zombie explodes 4 ticks later for 360–440% (spirit damage, no crit) and is removed; re-conjure at the earliest 50 ticks after the conjure (' + W + 'Command_Putrid_Zombie )'],
     onCast: [{ kind: 'dismiss', spirit: 'putrid-zombie', reconjureAfterTicks: 50 }],
   },
   conjure('vengeful-ghost', 'Vengeful Ghost'),
@@ -71,6 +74,8 @@ export const NECROMANCY_RULES: AbilityRule[] = [
     ability: 'command-phantom-guardian',
     requires: [{ text: 'needs an active Phantom Guardian (6 ticks after the conjure)', spirit: 'phantom-guardian', spiritAgeMin: COMMAND_READY_AFTER }],
     hits: [4],
+    spiritHit: 'phantom-guardian',
+    damageRules: [{ when: {}, perStackAtCast: { stack: 'valour', mult: 0.2 } }],
     notes: ['15-tick cooldown; hit 4 ticks later of 45–55% × (1 + 0.2 × Valour), consumes all Valour (' + W + 'Command_Phantom_Guardian )'],
     onCast: [{ kind: 'stack-set', stack: 'valour', amount: 0 }],
   },
@@ -86,26 +91,27 @@ export const NECROMANCY_RULES: AbilityRule[] = [
   },
   {
     ability: 'bloat',
-    bleed: { hits: 10, everyTicks: 3, splitTotal: true },
-    notes: ['20% adrenaline; DoT of 10 hits every 3 ticks; recasting resets it; spreads on death; removed by Freedom (' + W + 'Bloat )'],
+    bleed: { hits: 10, everyTicks: 3, direct: true, factors: Array(10).fill(0.25) },
+    notes: ['20% adrenaline: a 135–165% hit, then Bloated – 10 hits of 25% of that hit every 3 ticks; recasting resets it; spreads on death; removed by Freedom (' + W + 'Bloat )'],
     onCast: [{ kind: 'buff', id: 'bloated', refresh: true }],
   },
   {
     ability: 'soul-strike',
     requires: [{ text: 'needs 1 Residual Soul', stackMin: { stack: 'residual-souls', min: 1 } }],
-    notes: ['Consumes 1 Residual Soul; stuns the target for 1 tick (' + W + 'Soul_Strike )'],
+    notes: ['Consumes 1 Residual Soul; stuns and binds the target for 5 ticks (' + W + 'Soul_Strike )'],
     onCast: [{ kind: 'consume-stack', stack: 'residual-souls', amount: 1 }],
-    onHit: [{ kind: 'buff', id: 'stunned', durationTicks: 1 }],
+    onHit: [{ kind: 'buff', id: 'stunned', durationTicks: 5 }, { kind: 'buff', id: 'bound', durationTicks: 5 }],
   },
   {
     ability: 'spectral-scythe',
     sequence: { group: 'spectral-scythe', step: 1, windowTicks: 25 },
-    stages: [{ cost: 10 }, { cost: 20 }, { cost: 30 }],
+    stages: [{ cost: 10, damage: { min: 72, max: 88 } }, { cost: 20, damage: { min: 180, max: 220 } }, { cost: 30, damage: { min: 225, max: 275 } }],
+    damageRules: [{ when: { flag: 'last-stage' }, perMissingLp: { per: 0.01, max: 1 } }],
     notes: [
       'Three casts in one slot: cast 1 (10%) starts the 25-tick cooldown and opens cast 2 (−20%) for 25 ticks, cast 2 opens cast 3 (−30%); cast 3 or an expired window resets to cast 1 (' + W + 'Spectral_Scythe )',
       'Casts 1 and 2 have a 25% chance per target to grant a Residual Soul; cast 3 deals up to 2x on low-health targets (' + W + 'Spectral_Scythe )',
     ],
-    onHit: [{ kind: 'stack', stack: 'residual-souls', amount: 1, when: { chance: 0.25 } }],
+    onHit: [{ kind: 'stack', stack: 'residual-souls', amount: 1, when: { chance: 0.25, notFlag: 'last-stage' } }],
   },
   {
     ability: 'volley-of-souls',
@@ -116,12 +122,13 @@ export const NECROMANCY_RULES: AbilityRule[] = [
   },
   {
     ability: 'blood-siphon',
-    channel: { ticks: 9, hits: [2, 4, 6, 8, 9] },
+    channel: { ticks: 9, hits: [2, 4, 6, 8, 9], finalAddsPriorShare: 0.7 },
+    hitDamage: [{ min: 22, max: 28 }, { min: 22, max: 28 }, { min: 22, max: 28 }, { min: 22, max: 28 }, { min: 117, max: 143 }],
     notes: ['0% adrenaline, 75-tick cooldown, 9-tick channel: 4 AoE hits every 2 ticks healing 70%, then a final hit of 117–143% plus the healed amount; cancelled if the target dies or leaves range (' + W + 'Blood_Siphon )'],
   },
   {
     ability: 'death-skulls',
-    hits: [0, 2, 4, 6, 8],
+    hits: [0, 4, 8], // one target: the skull bounces monster → player → monster, so every second bounce lands
     cooldownRules: [{ ticks: 17, when: { buff: 'living-death' } }],
     notes: [
       '60% adrenaline, initial hit plus 4 bounces every 2 ticks (6 with Igneous Kal-Mor / Kal-Zuk) (' + W + 'Death_Skulls )',
@@ -157,6 +164,7 @@ export const NECROMANCY_RULES: AbilityRule[] = [
   },
   {
     ability: 'life-transfer',
+    requires: [{ text: 'needs an active conjured spirit', anySpirit: true }],
     notes: ['Incantation, 45 s cooldown: costs 50% of your base life points and extends every active conjured spirit by 21 s (35 ticks) (' + W + 'Life_Transfer )'],
     onCast: [{ kind: 'extend-spirits', ticks: 35 }],
   },

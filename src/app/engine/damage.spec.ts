@@ -17,6 +17,7 @@ function engine(steps: EngineEntity[], opts: { lifePoints?: number; random?: num
   const catalog = new Map(steps.map((s) => [s.key, s]));
   const loadout = defaultResolvedLoadout();
   loadout.style = opts.style ?? 'Necromancy';
+  loadout.hasConduit = true;
   loadout.abilityDamage = 1000;
   const e = new TrainerEngine(steps, catalog, { pingMs: 0, jitterMs: 0, abilityQueueing: false, loop: false, loadout, fullAdrenaline: true, targetLifePoints: opts.lifePoints });
   e.random = () => opts.random ?? 0.5;

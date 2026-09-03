@@ -2,7 +2,7 @@ import { COMMAND_READY_AFTER, CONJURE_BASE_TICKS } from './rules-necromancy';
 import { AbilityType, EnemyConfig, EntityKind, PrayerStats, Prebuild, SPEC_KEY, StepResult, Style, Style4, isStyle4 } from '../core/models';
 import { ResolvedLoadout, defaultResolvedLoadout } from './loadout-resolved';
 import { PROTECTION, PrayerBook, SOUL_SPLIT, bookOf, togglePrayer } from './prayer-rules';
-import { BASE_CRIT_CHANCE, BUFF_DAMAGE_MULT, BUFF_FLAT_ADD, SPIRIT_ATTACKS, TARGET_DAMAGE_MULT, critMultiplier } from './damage';
+import { BASE_CRIT_CHANCE, BUFF_DAMAGE_MULT, BUFF_FLAT_ADD, RAGE_MAX, RAGE_PER_STACK, SPIRIT_ATTACKS, TARGET_DAMAGE_ADD, TARGET_DAMAGE_MULT, critMultiplier } from './damage';
 import { MORPH_TARGETS } from './morphs';
 import { BUFF_BY_ID, MODELLED_WIKI_BUFFS, GLOBALS, ruleFor } from './rules';
 import { AbilityRule, ChannelSpec, Condition, Effect, GlobalRule, Requirement, StackId } from './rules-model';
@@ -128,6 +128,8 @@ export interface Spirit {
   spirit: string;
   sinceTick: number;
   endTick: number;
+  /** Skeleton Warrior: Rage stacks (+3% per attack, max 25) */
+  rage: number;
 }
 
 export interface ActiveChannel {
@@ -137,6 +139,8 @@ export interface ActiveChannel {
   hits: number;
   hitsDone: number;
   cancelled: boolean;
+  /** damage the channel's hits dealt so far (Blood Siphon's last hit adds a share of it) */
+  dealt: number;
 }
 
 export type EngineEvent =
@@ -205,6 +209,8 @@ interface ScheduledHit {
   castMult: number;
   /** flags the cast set (Bloodlust spent) – conditions of its hits read them */
   flags: Set<string>;
+  /** the hit is the conjured spirit's (Command Skeleton Warrior): no crit, Rage, robes */
+  spirit?: string;
 }
 
 interface SequenceState {
@@ -1006,6 +1012,8 @@ export class TrainerEngine {
     const castMultFirstOnly = globals.some((g) => g.damageMult?.firstHitOnly);
     const idleTicks = tick - this.lastAttackTick;
     this.castFlags = new Set();
+    if (rule?.stages && stage >= rule.stages.length) this.castFlags.add('last-stage');
+    for (const d of rule?.damageRules ?? []) if (d.perStackAtCast) castMult *= 1 + d.perStackAtCast.mult * this.stack(d.perStackAtCast.stack);
 
     // effects
     for (const eff of rule?.onCast ?? []) this.applyEffect(eff, tick, entity, 0);
@@ -1028,7 +1036,7 @@ export class TrainerEngine {
     let hits = opt.noGain ? undefined : this.loadout.hitsOverrides[entity.id] ?? rule?.hits ?? acting.hits ?? (this.isDamaging(acting, rule) ? [0] : undefined);
     if (rule?.hitsPerStack) hits = Array(Math.max(1, stacksBefore)).fill(0);
     const override = this.loadout.damageOverrides[entity.id];
-    let damage = override ?? (acting.damageMin !== undefined && acting.damageMax !== undefined ? { min: acting.damageMin, max: acting.damageMax } : null);
+    let damage = override ?? rule?.stages?.[Math.min(stage, rule.stages.length) - 1]?.damage ?? (acting.damageMin !== undefined && acting.damageMax !== undefined ? { min: acting.damageMin, max: acting.damageMax } : null);
     if (damage && rule?.damageRamp) {
       const k = Math.max(0, Math.min(rule.damageRamp.maxTicks, idleTicks));
       damage = { min: damage.min + k * rule.damageRamp.perTick.min, max: damage.max + k * rule.damageRamp.perTick.max };
@@ -1053,7 +1061,7 @@ export class TrainerEngine {
       );
       this.lastAttackTick = tick;
     } else if (channel) {
-      this.channel = { key: entity.key, castTick: tick, endTick: tick + channel.ticks, hits: channel.hits.length, hitsDone: 0, cancelled: false };
+      this.channel = { key: entity.key, castTick: tick, endTick: tick + channel.ticks, hits: channel.hits.length, hitsDone: 0, cancelled: false, dealt: 0 };
       channel.hits.forEach((offset, i) =>
         this.scheduled.push({ key: entity.key, entity, rule, tick: tick + offset, index: i, total: channel.hits.length, channel: this.channel, guaranteedCrit: !!channel.guaranteedCrit || !!rule?.guaranteedCrit, damage: hitDamage(i), mult, flat, castMult: multAt(i), flags }),
       );
@@ -1073,7 +1081,7 @@ export class TrainerEngine {
     } else if (hits) {
       hits.forEach((offset, i) => {
         if (!hitWanted(i)) return;
-        this.scheduled.push({ key: entity.key, entity, rule, tick: tick + offset, index: i, total: hits.length, channel: null, guaranteedCrit: !!rule?.guaranteedCrit, damage: hitDamage(i), mult, flat, castMult, flags });
+        this.scheduled.push({ key: entity.key, entity, rule, tick: tick + offset, index: i, total: hits.length, channel: null, guaranteedCrit: !!rule?.guaranteedCrit, damage: hitDamage(i), mult, flat, castMult, flags, spirit: rule?.spiritHit });
       });
       this.lastAttackTick = tick;
     }
@@ -1156,7 +1164,7 @@ export class TrainerEngine {
       if (b.sourceKey === h.key && b.startTick === (h.channel?.castTick ?? h.tick)) continue; // granted by this very cast
       critAdd += c.add;
     }
-    const crit = !h.dot && (h.guaranteedCrit || critAdd >= 1 || this.random() < BASE_CRIT_CHANCE + critAdd);
+    const crit = !h.dot && !h.spirit && (h.guaranteedCrit || critAdd >= 1 || this.random() < BASE_CRIT_CHANCE + critAdd);
     if (h.damage) this.dealHit(h, crit);
     for (const g of globals) {
       for (const eff of g.onHit ?? []) this.applyEffect(eff, h.tick, h.entity, h.index);
@@ -1177,7 +1185,7 @@ export class TrainerEngine {
       const duration = Math.round((CONJURE_BASE_TICKS + this.loadout.conjureDurationAdd) * this.loadout.conjureDurationMult);
       // remaining lifetime from the pre-build; default: conjured 6 ticks ago, so it is commandable right away
       const left = Math.max(1, Math.min(duration, pb.remaining?.['spirit:' + spirit] ?? duration - COMMAND_READY_AFTER));
-      this.spirits.set(spirit, { spirit, sinceTick: left - duration, endTick: left });
+      this.spirits.set(spirit, { spirit, sinceTick: left - duration, endTick: left, rage: 0 });
       this.applyBuff('spirit-' + spirit, 0, 'prebuild', left);
     }
     for (const id of pb.abilities ?? []) {
@@ -1214,12 +1222,21 @@ export class TrainerEngine {
       }
     }
     let amount = ((min + this.random() * Math.max(0, max - min)) / 100 + h.flat) * l.abilityDamage;
+    if (h.spirit) {
+      const sp = this.spirits.get(h.spirit);
+      amount *= l.conjureDamageMult;
+      if (sp) {
+        amount *= 1 + RAGE_PER_STACK * sp.rage;
+        sp.rage = Math.min(RAGE_MAX, sp.rage + 1);
+      }
+    }
     if (crit) amount *= critMultiplier();
     const style = h.entity.style;
     amount *= h.mult;
     if (h.entity.abilityType === 'Ultimate' && !h.dot) amount *= l.ultimateDamageMult;
     amount *= h.castMult;
     for (const m of TARGET_DAMAGE_MULT) if ((!m.dotsOnly || h.dot) && this.hasBuff(m.buff)) amount *= m.mult;
+    amount += this.targetDamageAdd(amount);
     for (const d of rules) {
       if (d.mult !== undefined) amount *= d.mult;
       if (d.perMissingLp) {
@@ -1228,7 +1245,29 @@ export class TrainerEngine {
         amount *= 1 + Math.min(d.perMissingLp.max, d.perMissingLp.per * missing);
       }
     }
-    this.applyDamage(h.key, Math.floor(amount + 1e-6), crit, !!h.dot, h.tick); // epsilon: 0.175 + 0.12 is 0.29499… in floating point
+    if (h.channel) {
+      const spec = this.loadout.channelOverrides[h.entity.id] ?? h.rule?.channel ?? h.entity.channel;
+      if (spec?.finalAddsPriorShare && h.index === h.total - 1) amount += spec.finalAddsPriorShare * h.channel.dealt;
+    }
+    const dealt = Math.floor(amount + 1e-6); // epsilon: 0.175 + 0.12 is 0.29499… in floating point
+    if (h.channel) h.channel.dealt += dealt;
+    this.applyDamage(h.key, dealt, crit, !!h.dot, h.tick);
+    this.splitSoul(h, dealt);
+  }
+
+  /** Haunted: +10% of the hit, capped at 20% of the ability damage */
+  private targetDamageAdd(amount: number): number {
+    let add = 0;
+    for (const t of TARGET_DAMAGE_ADD) if (this.hasBuff(t.buff)) add += Math.min(t.pct * amount, t.capPctOfAd * this.loadout.abilityDamage);
+    return add;
+  }
+
+  /** Split Soul: 400% of what Soul Split would heal from this hit is dealt to the target (Soul Split tiers: 10% up to 2,000, 5% to 4,000, 1.25% above) */
+  private splitSoul(h: ScheduledHit, dealt: number): void {
+    if (h.dot || h.spirit || !this.hasBuff('split-soul') || !this.activePrayers.has(SOUL_SPLIT)) return;
+    const heal = dealt <= 2000 ? 0.1 * dealt : dealt <= 4000 ? 200 + 0.05 * (dealt - 2000) : 300 + 0.0125 * (dealt - 4000);
+    const extra = Math.floor(4 * heal);
+    if (extra > 0) this.applyDamage(h.key + ':split-soul', extra, false, false, h.tick);
   }
 
   /** product of the active style buffs (Berserk, Sunshine, Death's Swiftness) for a hit of `style` */
@@ -1391,7 +1430,7 @@ export class TrainerEngine {
       case 'conjure': {
         if (this.spirits.has(eff.spirit)) break;
         const duration = Math.round((eff.durationTicks + this.loadout.conjureDurationAdd) * this.loadout.conjureDurationMult);
-        this.spirits.set(eff.spirit, { spirit: eff.spirit, sinceTick: tick, endTick: tick + duration });
+        this.spirits.set(eff.spirit, { spirit: eff.spirit, sinceTick: tick, endTick: tick + duration, rage: 0 });
         this.applyBuff('spirit-' + eff.spirit, tick, entity.key, duration);
         break;
       }
@@ -1412,6 +1451,7 @@ export class TrainerEngine {
   private conditionMet(c: Condition, tick: number, hitIndex: number, flags: Set<string> = this.castFlags): boolean {
     if (c.buff && !this.hasBuff(c.buff)) return false;
     if (c.flag !== undefined && !flags.has(c.flag)) return false;
+    if (c.notFlag !== undefined && flags.has(c.notFlag)) return false;
     if (c.targetLpBelow !== undefined) {
       const lp = this.config.targetLifePoints;
       if (!lp || this.targetHp / lp >= c.targetLpBelow) return false;
@@ -1435,6 +1475,7 @@ export class TrainerEngine {
     if (r.buff && !this.hasBuff(r.buff)) return false;
     if (r.notBuff && this.hasBuff(r.notBuff)) return false;
     if (r.stackMin && this.stack(r.stackMin.stack) < r.stackMin.min) return false;
+    if (r.anySpirit && this.spirits.size === 0) return false;
     if (r.spirit) {
       const s = this.spirits.get(r.spirit);
       if (!s) return false;
@@ -1547,10 +1588,23 @@ export class TrainerEngine {
     // conjured spirits attack on their own (Necromancy Spirit damage, no crits)
     for (const [name, s] of this.spirits) {
       const a = SPIRIT_ATTACKS[name];
-      if (!a || tick <= s.sinceTick || (tick - s.sinceTick) % a.everyTicks !== 0 || tick > s.endTick) continue;
-      let amount = ((a.min + this.random() * (a.max - a.min)) / 100) * this.loadout.abilityDamage;
-      for (const m of TARGET_DAMAGE_MULT) if (this.hasBuff(m.buff)) amount *= m.mult;
-      this.applyDamage('spirit:' + name, Math.floor(amount), false, false, tick);
+      if (!a || tick > s.endTick) continue;
+      const age = tick - s.sinceTick;
+      if (age >= a.firstTick && (age - a.firstTick) % a.everyTicks === 0) {
+        let amount = ((a.min + this.random() * (a.max - a.min)) / 100) * this.loadout.abilityDamage * this.loadout.conjureDamageMult;
+        amount *= 1 + RAGE_PER_STACK * s.rage;
+        if (name === 'skeleton-warrior') s.rage = Math.min(RAGE_MAX, s.rage + 1);
+        for (const m of TARGET_DAMAGE_MULT) if (!m.dotsOnly && this.hasBuff(m.buff)) amount *= m.mult;
+        amount += this.targetDamageAdd(amount);
+        this.applyDamage('spirit:' + name, Math.floor(amount), false, false, tick);
+      }
+      const p = a.poison;
+      if (p && age >= p.firstTick && (age - p.firstTick) % p.everyTicks === 0) {
+        let amount = ((p.min + this.random() * (p.max - p.min)) / 100) * this.loadout.abilityDamage * this.loadout.conjureDamageMult;
+        for (const m of TARGET_DAMAGE_MULT) if (this.hasBuff(m.buff)) amount *= m.mult;
+        amount += this.targetDamageAdd(amount);
+        this.applyDamage('spirit:' + name + '-poison', Math.floor(amount), false, true, tick);
+      }
     }
     for (const [name, s] of [...this.spirits]) {
       if (s.endTick <= tick) {
@@ -1574,6 +1628,8 @@ export class TrainerEngine {
       this.prayerStats.attacks++;
       if (prayed) this.prayerStats.prayed++;
       else this.prayerStats.hits++;
+      const guardian = this.spirits.get('phantom-guardian');
+      if (guardian && tick - guardian.sinceTick > 5) this.setStacks('valour', this.stack('valour') + 1, tick, 'spirit:phantom-guardian');
       this.events.push({ kind: 'attack', style, tick, prayed, needed });
       this.scheduleAttack(tick + Math.max(1, this.config.enemy!.intervalTicks));
     } else if (this.activePrayers.has(SOUL_SPLIT)) {

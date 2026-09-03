@@ -30,6 +30,8 @@ export interface ResolvedLoadout {
   /** conjure lifetime: (base + add) × mult */
   conjureDurationAdd: number;
   conjureDurationMult: number;
+  /** Robes of the First Necromancer (2): spirit damage × (1 + 0.07 per piece) */
+  conjureDamageMult: number;
   /** stack caps changed by items (soulbound lantern: residual-souls 5) */
   stackCaps: Partial<Record<StackId, number>>;
   /** ability id → channel replacing the rule's (Tumeken's Asphyxiate) */
@@ -89,6 +91,7 @@ export function defaultResolvedLoadout(): ResolvedLoadout {
     cooldownMult: {},
     conjureDurationAdd: 0,
     conjureDurationMult: 1,
+    conjureDamageMult: 1,
     stackCaps: {},
     channelOverrides: {},
     hitsOverrides: {},

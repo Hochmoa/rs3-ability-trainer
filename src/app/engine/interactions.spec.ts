@@ -254,7 +254,7 @@ describe('necromancy: Living Death, Necrosis, souls, conjures', () => {
   });
 
   it('Volley of Souls needs 2 Residual Souls and consumes all; Soul Sap grants 1 (cap 3, 5 with the lantern)', () => {
-    const e = make(['soul-sap', 'soul-sap', 'volley-of-souls'], { style: 'Necromancy' });
+    const e = make(['soul-sap', 'soul-sap', 'volley-of-souls'], { style: 'Necromancy', hasConduit: true });
     expect(e.requirementFailure(ability('volley-of-souls'), 0)).toContain('2 Residual Souls');
     cast(e, 'soul-sap', 0, 1 * T);
     cast(e, 'soul-sap', 2 * T, 10 * T); // 9-tick cooldown: queued until tick 10
@@ -262,7 +262,7 @@ describe('necromancy: Living Death, Necrosis, souls, conjures', () => {
     expect(e.requirementFailure(ability('volley-of-souls'), 10)).toBeNull();
     cast(e, 'volley-of-souls', 11 * T, 13 * T);
     expect(e.stack('residual-souls')).toBe(0);
-    const l = make(['soul-sap'], { style: 'Necromancy', stackCaps: { 'residual-souls': 5 } });
+    const l = make(['soul-sap'], { style: 'Necromancy', hasConduit: true, stackCaps: { 'residual-souls': 5 } });
     for (let i = 0; i < 6; i++) cast(l, 'soul-sap', i * 10 * T, (i * 10 + 1) * T);
     expect(l.stack('residual-souls')).toBe(5);
   });
