@@ -111,7 +111,12 @@ export class Train implements OnDestroy {
         const preset = s.presets.find((p) => p.id === id);
         preset?.slots.forEach((step, i) => {
           const kb = s.slotKeybinds[pos]?.[i];
-          if (step && step.kind !== 'note' && kb && !m.has(entityKey(step.kind, step.id))) m.set(entityKey(step.kind, step.id), keybindLabel(kb));
+          // a slot without a keybind can still be clicked, like in the game
+          if (step && step.kind !== 'note') {
+            const key = entityKey(step.kind, step.id);
+            if (kb) m.set(key, keybindLabel(kb));
+            else if (!m.has(key)) m.set(key, 'click');
+          }
         });
       }
     }
@@ -443,7 +448,10 @@ export class Train implements OnDestroy {
     const state = new Map<string, { usable: UsableReason; cooldownS: number }>();
     for (const key of e.catalog.keys()) {
       const cd = e.cooldownLeft(key, tick);
-      state.set(key, { usable: e.usable(key, tick), cooldownS: cd > 0 ? (e.tickTime(tick + cd) - now) / 1000 : 0 });
+      // an ability on cooldown keeps its colour (the sweep + seconds show the cooldown); only missing
+      // adrenaline / resources / gear grey it out, like in the game
+      const usable = e.usable(key, tick);
+      state.set(key, { usable: usable === 'cooldown' ? 'ok' : usable, cooldownS: cd > 0 ? (e.tickTime(tick + cd) - now) / 1000 : 0 });
     }
     this.slotState.set(state);
     if (e.state !== 'running') {

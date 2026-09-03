@@ -49,14 +49,13 @@ export interface SlotView {
           >
             @if (s.entity) {
               <img [src]="s.entity.icon" [alt]="s.entity.name" draggable="false" />
-              @if (s.gcdPhase < 1) {
-                <div class="gcd" [style.background]="overlay(s.gcdPhase)"></div>
-                @if (s.gcdRemainingMs > 0) {
-                  <span class="seconds">{{ ceil(s.gcdRemainingMs / 1000) }}</span>
-                }
-              } @else if (s.cooldownS > 0) {
+              @if (s.cooldownS > 0) {
+                <!-- the ability's own cooldown wins: its remaining seconds, no GCD sweep -->
                 <div class="cd"></div>
                 <span class="seconds small">{{ ceil(s.cooldownS) }}</span>
+              } @else if (s.gcdPhase < 1) {
+                <!-- global cooldown: sweep only, no number -->
+                <div class="gcd" [style.background]="overlay(s.gcdPhase)"></div>
               }
               @if (editable()) {
                 <button class="edit move left" [disabled]="$first" (click)="slotMove.emit({ slot: $index, dir: -1 }); $event.stopPropagation()" title="Move left">‹</button>
