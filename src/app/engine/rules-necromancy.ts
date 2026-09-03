@@ -64,7 +64,7 @@ export const NECROMANCY_RULES: AbilityRule[] = [
     ability: 'command-vengeful-ghost',
     requires: [{ text: 'needs an active Vengeful Ghost (6 ticks after the conjure)', spirit: 'vengeful-ghost', spiritAgeMin: COMMAND_READY_AFTER }],
     notes: ['From the next ghost hit on every hit applies Haunted (+10% damage taken, capped) for the rest of the ghost\'s life (' + W + 'Command_Vengeful_Ghost )'],
-    onCast: [{ kind: 'buff', id: 'haunted', refresh: true }],
+    onCast: [{ kind: 'buff', id: 'haunted', untilSpirit: 'vengeful-ghost' }],
   },
   conjure('phantom-guardian', 'Phantom Guardian', ['The guardian gains Valour whenever you take a hit (max 25) (' + W + 'Valour )']),
   {
@@ -88,7 +88,7 @@ export const NECROMANCY_RULES: AbilityRule[] = [
     ability: 'bloat',
     bleed: { hits: 10, everyTicks: 3, splitTotal: true },
     notes: ['20% adrenaline; DoT of 10 hits every 3 ticks; recasting resets it; spreads on death; removed by Freedom (' + W + 'Bloat )'],
-    onHit: [{ kind: 'buff', id: 'bloated', refresh: true }],
+    onCast: [{ kind: 'buff', id: 'bloated', refresh: true }],
   },
   {
     ability: 'soul-strike',

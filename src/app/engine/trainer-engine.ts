@@ -120,6 +120,8 @@ export interface ActiveBuff {
   /** ticks added by extend-buff (for maxTotal) */
   extended: number;
   sourceKey: string;
+  /** bound to this conjured spirit: ends with it, extended with it (Haunted) */
+  spirit?: string;
 }
 
 export interface Spirit {
@@ -1214,14 +1216,22 @@ export class TrainerEngine {
         for (const e of eff.then ?? []) this.applyEffect(e, tick, entity, hitIndex);
         break;
       }
-      case 'buff':
+      case 'buff': {
+        if (eff.untilSpirit) {
+          const s = this.spirits.get(eff.untilSpirit);
+          if (!s) break;
+          this.applyBuff(eff.id, tick, entity.key, Math.max(1, s.endTick - tick), eff.stacks, true);
+          const b = this.buff(eff.id);
+          if (b) b.spirit = eff.untilSpirit;
+          break;
+        }
         this.applyBuff(eff.id, tick, entity.key, eff.durationTicks, eff.stacks, eff.refresh ?? true);
         break;
+      }
       case 'extend-spirits': {
         for (const s of this.spirits.values()) {
           s.endTick += eff.ticks;
-          const b = this.buff('spirit-' + s.spirit);
-          if (b && b.endTick !== null) b.endTick += eff.ticks;
+          for (const b of this.buffs) if ((b.id === 'spirit-' + s.spirit || b.spirit === s.spirit) && b.endTick !== null) b.endTick += eff.ticks;
         }
         break;
       }
@@ -1275,6 +1285,7 @@ export class TrainerEngine {
         const s = this.spirits.get(eff.spirit);
         this.spirits.delete(eff.spirit);
         this.removeBuff('spirit-' + eff.spirit);
+        this.buffs = this.buffs.filter((b) => b.spirit !== eff.spirit);
         if (s && eff.reconjureAfterTicks) this.reconjureReady.set(eff.spirit, s.sinceTick + eff.reconjureAfterTicks);
         break;
       }
@@ -1422,6 +1433,7 @@ export class TrainerEngine {
       if (s.endTick <= tick) {
         this.spirits.delete(name);
         this.removeBuff('spirit-' + name);
+        this.buffs = this.buffs.filter((b) => b.spirit !== name);
       }
     }
     for (const [group, s] of [...this.sequences]) {

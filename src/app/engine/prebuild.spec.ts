@@ -85,4 +85,48 @@ describe('pre-build', () => {
     expect(e.spirits.get('vengeful-ghost')?.endTick).toBe(64 + 35);
     expect(e.buff('spirit-skeleton-warrior')?.endTick).toBe(55);
   });
+
+  it('Haunted lasts as long as the commanded ghost and is extended by Life Transfer', () => {
+    const command = ability('command-vengeful-ghost', { abilityType: 'Enhanced', adrenaline: 0 });
+    const transfer = ability('life-transfer', { abilityType: 'Incantation', adrenaline: 0 });
+    const catalog = new Map([command, transfer].map((e) => [e.key, e]));
+    const loadout = defaultResolvedLoadout();
+    loadout.style = 'Necromancy';
+    loadout.hasConduit = true;
+    const e = new TrainerEngine([command, transfer], catalog, {
+      pingMs: 0, jitterMs: 0, abilityQueueing: false, loop: true, loadout,
+      prebuild: { stacks: {}, spirits: ['vengeful-ghost'], abilities: [], prayers: [], remaining: { 'spirit:vengeful-ghost': 20 } },
+    });
+    e.random = () => 0.99;
+    e.start(0);
+    e.press(command.key, 0);
+    e.update(TICK_MS);
+    expect(e.buff('haunted')?.endTick).toBe(20); // ghost ends at tick 20, so does Haunted
+    e.press(transfer.key, 4 * TICK_MS);
+    e.update(5 * TICK_MS);
+    expect(e.spirits.get('vengeful-ghost')?.endTick).toBe(55);
+    expect(e.buff('haunted')?.endTick).toBe(55);
+    e.update(56 * TICK_MS);
+    expect(e.hasBuff('haunted')).toBe(false);
+  });
+
+  it('a DoT debuff starts on the cast and counts down instead of resetting on every DoT hit', () => {
+    const bloat = ability('bloat', { abilityType: 'Enhanced', adrenaline: -20, damageMin: 135, damageMax: 165 });
+    const catalog = new Map([[bloat.key, bloat]]);
+    const loadout = defaultResolvedLoadout();
+    loadout.style = 'Necromancy';
+    loadout.hasConduit = true;
+    const e = new TrainerEngine([bloat], catalog, { pingMs: 0, jitterMs: 0, abilityQueueing: false, loop: true, loadout });
+    e.random = () => 0.99;
+    e.start(0);
+    e.adrenaline = 100;
+    e.press(bloat.key, 0);
+    e.update(TICK_MS);
+    const end = e.buff('bloated')?.endTick;
+    expect(end).toBe(30); // cast on tick 0, 10 hits every 3 ticks
+    e.update(20 * TICK_MS); // several DoT hits later the timer is untouched
+    expect(e.buff('bloated')?.endTick).toBe(end);
+    e.update(32 * TICK_MS);
+    expect(e.hasBuff('bloated')).toBe(false);
+  });
 });

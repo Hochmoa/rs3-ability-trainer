@@ -117,7 +117,7 @@ export const BUFFS: BuffDef[] = [
   { id: 'bloated', name: 'Bloated', kind: 'Debuff', on: 'target', durationTicks: 30, wikiId: 48338,
     text: 'DoT: 10 hits of 25% of the initial hit every 3 ticks. Recasting resets it. Spreads on death. Removed by Freedom.', source: W + 'Bloat' },
   { id: 'haunted', name: 'Haunted', kind: 'Debuff', on: 'target', durationTicks: 7, wikiId: 48344,
-    text: '+10% damage taken from all player sources (capped), refreshed by every hit of the commanded Vengeful Ghost.', source: W + 'Command_Vengeful_Ghost' },
+    text: '+10% damage taken from all player sources (capped). Every hit of the commanded Vengeful Ghost refreshes it, so it lasts as long as the ghost.', source: W + 'Command_Vengeful_Ghost' },
   { id: 'spirit-skeleton-warrior', name: 'Skeleton Warrior', kind: 'Buff', on: 'self', durationTicks: 70, wikiId: 48335,
     text: 'Conjured spirit (42 s base, longer with Spirit Pact / Robes of the First Necromancer). Command Skeleton Warrior available 6 ticks after the conjure.', source: W + 'Conjure_Skeleton_Warrior' },
   { id: 'spirit-putrid-zombie', name: 'Putrid Zombie', kind: 'Buff', on: 'self', durationTicks: 70, wikiId: 48336,

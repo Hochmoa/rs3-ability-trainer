@@ -85,7 +85,8 @@ export type Effect =
   | { kind: 'stack-set'; stack: StackId; amount: number }
   /** take stacks away (only when at least `min` are held); `then` runs after a successful consume */
   | { kind: 'consume-stack'; stack: StackId; amount: number | 'all'; min?: number; when?: Condition; then?: Effect[] }
-  | { kind: 'buff'; id: string; durationTicks?: number; refresh?: boolean; when?: Condition; stacks?: number }
+  /** `untilSpirit`: the buff lives exactly as long as that conjured spirit (Haunted while the commanded ghost hits) */
+  | { kind: 'buff'; id: string; durationTicks?: number; refresh?: boolean; when?: Condition; stacks?: number; untilSpirit?: string }
   | { kind: 'extend-buff'; buff: string; ticks: number; maxTotal?: number; when?: Condition }
   /** Life Transfer: every active conjured spirit lives `ticks` longer */
   | { kind: 'extend-spirits'; ticks: number }

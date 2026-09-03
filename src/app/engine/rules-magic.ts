@@ -58,7 +58,7 @@ export const MAGIC_RULES: AbilityRule[] = [
     ability: 'combust',
     bleed: { hits: 10, everyTicks: 3 },
     notes: ['Burn: 10 hits every 3 ticks; re-applying refreshes it; removed by Freedom (' + W + 'Combust )'],
-    onHit: [{ kind: 'buff', id: 'combust', refresh: true }],
+    onCast: [{ kind: 'buff', id: 'combust', refresh: true }],
   },
   {
     ability: 'chain',
@@ -107,7 +107,7 @@ export const MAGIC_RULES: AbilityRule[] = [
     sharedCooldown: 'corruption',
     bleed: { hits: 5, everyTicks: 2, startTicks: 0, factors: [1, 0.8, 0.6, 0.4, 0.2] },
     notes: ['20% adrenaline; DoT of 5 hits every 2 ticks; shares its cooldown with Corruption Shot; removed by Freedom (' + W + 'Corruption_Blast )'],
-    onHit: [{ kind: 'buff', id: 'corruption-blast', refresh: true }],
+    onCast: [{ kind: 'buff', id: 'corruption-blast', refresh: true }],
   },
   {
     ability: 'smoke-tendrils',
