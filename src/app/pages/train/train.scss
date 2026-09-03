@@ -591,3 +591,65 @@
 .prayer-summary {
   margin: 0 0 12px;
 }
+
+.action-bars {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  grid-auto-flow: dense;
+
+  .bar-cell {
+    position: relative;
+    min-width: 0;
+
+    &.wide {
+      grid-column: span 2;
+    }
+  }
+
+  &.editing .bar-cell {
+    outline: 1px dashed var(--gold);
+    outline-offset: 2px;
+    border-radius: 4px;
+    padding-top: 22px;
+    cursor: default;
+  }
+
+  .bar-tools {
+    position: absolute;
+    top: 0;
+    left: 4px;
+    right: 4px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+
+    .handle {
+      cursor: grab;
+      color: var(--gold);
+      letter-spacing: -2px;
+      padding: 0 4px;
+    }
+
+    .btn-sm {
+      padding: 0 8px;
+      line-height: 18px;
+      font-size: 12px;
+    }
+  }
+
+  .cdk-drag-placeholder {
+    opacity: 0.3;
+  }
+}
+
+.layout-hint {
+  margin: 4px 0 8px;
+}
+
+.btn.active {
+  border-color: var(--gold);
+  color: var(--gold);
+}

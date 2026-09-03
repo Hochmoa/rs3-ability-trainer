@@ -18,6 +18,7 @@
     </label>
     @if (!running()) {
       <button class="btn btn-primary" (click)="start()" [disabled]="!canStart()">Start</button>
+      <button class="btn" [class.active]="editLayout()" (click)="editLayout.set(!editLayout())" title="Arrange the action bars: drag to reorder, toggle half width">{{ editLayout() ? 'Done' : 'Layout' }}</button>
     } @else {
       <button class="btn" (click)="stop()">Stop (Esc)</button>
     }
@@ -245,11 +246,22 @@
       </div>
     </div>
 
-    <div class="action-bars">
+    <div class="action-bars" [class.editing]="editLayout() && !running()" cdkDropList [cdkDropListData]="bars()" (cdkDropListDropped)="reorderBars($event)" [cdkDropListDisabled]="!editLayout() || running()">
       @for (b of bars(); track b.position) {
-        <action-bar [position]="b.position" [presetName]="b.presetName" [slots]="b.slots" (slotClick)="slotClick(b.position, $event)" />
+        <div class="bar-cell" [class]="'bar-cell ' + b.shape" cdkDrag [cdkDragDisabled]="!editLayout() || running()">
+          @if (editLayout() && !running()) {
+            <div class="bar-tools">
+              <span class="handle" cdkDragHandle title="Drag to move">⋮⋮</span>
+              <button class="btn btn-sm" (click)="toggleShape(b.position)" [title]="b.shape === 'wide' ? 'Make half width (2 × 7)' : 'Make full width (1 × 14)'">{{ b.shape === 'wide' ? '½' : '1/1' }}</button>
+            </div>
+          }
+          <action-bar [position]="b.position" [presetName]="b.presetName" [slots]="b.slots" [compact]="b.shape === 'compact'" (slotClick)="slotClick(b.position, $event)" />
+        </div>
       }
     </div>
+    @if (editLayout() && !running()) {
+      <p class="muted small layout-hint">Drag a bar to move it, ½ makes it half as wide with two rows of seven slots – two half bars share one line. Keybinds stay with slot numbers 1–14.</p>
+    }
 
     <div class="counts">
       <span class="good">Perfect {{ counts().perfect }}</span>

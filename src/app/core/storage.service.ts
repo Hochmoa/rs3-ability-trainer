@@ -218,6 +218,7 @@ function mergeActionBars(stored: Partial<ActionBarSetup>): ActionBarSetup {
     weaponKeybinds: { ...d.weaponKeybinds, ...(stored.weaponKeybinds ?? {}) },
     weapons: { ...d.weapons, ...(stored.weapons ?? {}) },
     startWeapon: stored.startWeapon ?? d.startWeapon,
+    layout: stored.layout,
     updatedAt: stored.updatedAt,
     syncedAt: stored.syncedAt,
   };

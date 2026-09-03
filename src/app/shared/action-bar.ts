@@ -27,7 +27,7 @@ export interface SlotView {
   selector: 'action-bar',
   imports: [EntityTip],
   template: `
-    <div class="bar" [class.main]="position() === 0">
+    <div class="bar" [class.main]="position() === 0" [class.compact]="compact()">
       <div class="label" [title]="presetName()">
         <span class="pos">{{ position() === 0 ? 'M' : position() }}</span>
         <span class="preset">{{ presetName() }}</span>
@@ -105,6 +105,12 @@ export interface SlotView {
       flex: 1;
       min-width: 0;
     }
+    .bar.compact .slots {
+      grid-template-columns: repeat(7, 1fr);
+    }
+    .bar.compact .label {
+      width: 44px;
+    }
     .slot {
       position: relative;
       aspect-ratio: 1;
@@ -181,6 +187,8 @@ export interface SlotView {
 })
 export class ActionBar {
   readonly position = input.required<number>();
+  /** half width, two rows of 7 slots */
+  readonly compact = input<boolean>(false);
   readonly presetName = input<string>('');
   readonly slots = input.required<SlotView[]>();
   readonly slotClick = output<number>();

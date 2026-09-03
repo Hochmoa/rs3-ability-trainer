@@ -224,6 +224,25 @@ export const BAR_PRESETS = 18;
 export const BAR_POSITIONS = 5;
 export const BAR_POSITION_NAMES = ['Main bar', 'Additional bar 1', 'Additional bar 2', 'Additional bar 3', 'Additional bar 4'];
 
+/** wide = one row of 14 slots, compact = half width with two rows of 7 */
+export type BarShape = 'wide' | 'compact';
+
+export interface BarLayout {
+  /** positions (0..4) in display order */
+  order: number[];
+  /** shape per position (index = position) */
+  shape: BarShape[];
+}
+
+/** Normalised layout: every position exactly once, a shape for each. */
+export function barLayout(setup: Pick<ActionBarSetup, 'layout'>): BarLayout {
+  const all = Array.from({ length: BAR_POSITIONS }, (_, i) => i);
+  const order = (setup.layout?.order ?? []).filter((p, i, a) => all.includes(p) && a.indexOf(p) === i);
+  for (const p of all) if (!order.includes(p)) order.push(p);
+  const shape = all.map((p) => setup.layout?.shape?.[p] ?? 'wide');
+  return { order, shape };
+}
+
 export interface ActionBarSetup {
   presets: ActionBarPreset[];
   /** preset id shown at each position when no style binding applies (null = empty position) */
@@ -241,6 +260,8 @@ export interface ActionBarSetup {
   syncedAt?: number;
   /** client keybinds that are not bar slots: "target-cycle", ... */
   actionKeybinds?: Record<string, Keybind | null>;
+  /** on-screen arrangement of the 5 positions (missing = all wide, in order) */
+  layout?: BarLayout;
 }
 
 const MAIN_BAR_DEFAULT_CODES = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0', 'Minus', 'Equal'];

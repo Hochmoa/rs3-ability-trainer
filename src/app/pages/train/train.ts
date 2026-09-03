@@ -1,10 +1,11 @@
+import { CdkDrag, CdkDragDrop, CdkDragHandle, CdkDropList, moveItemInArray } from '@angular/cdk/drag-drop';
 import { DecimalPipe } from '@angular/common';
 import { Component, HostListener, OnDestroy, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DataService, Entity, SPEC_KEY } from '../../core/data.service';
 import { keybindFromEvent, keybindKey, keybindLabel } from '../../core/keybind.util';
-import { AttackPattern, BAR_POSITIONS, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, PrayerStats, STYLES4, StepResult, Style4, entityKey, visiblePresets, RotationStep } from '../../core/models';
+import { AttackPattern, BAR_POSITIONS, BarShape, barLayout, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, PrayerStats, STYLES4, StepResult, Style4, entityKey, visiblePresets, RotationStep } from '../../core/models';
 import { StorageService } from '../../core/storage.service';
 import { ActiveBuff, EngineEntity, EngineEvent, GCD_TICKS, TICK_MS, TrainerEngine, UsableReason } from '../../engine/trainer-engine';
 import { SOUL_SPLIT } from '../../engine/prayer-rules';
@@ -43,6 +44,7 @@ interface BarView {
   position: number;
   presetName: string;
   slots: SlotView[];
+  shape: BarShape;
 }
 
 interface IncomingView {
@@ -62,7 +64,7 @@ const EMPTY_PRAYER_STATS: PrayerStats = { ticks: 0, soulSplitTicks: 0, attacks: 
 
 @Component({
   selector: 'app-train',
-  imports: [AbilityIcon, ActionBar, RouterLink, FormsModule, EntityTip, DecimalPipe],
+  imports: [AbilityIcon, ActionBar, RouterLink, FormsModule, EntityTip, DecimalPipe, CdkDropList, CdkDrag, CdkDragHandle],
   templateUrl: './train.html',
   styleUrl: './train.scss',
 })
@@ -83,6 +85,9 @@ export class Train implements OnDestroy {
   ];
   readonly enemy = this.storage.enemy;
   readonly enemyOpen = signal(false);
+  /** layout edit mode: drag bars to reorder, toggle wide / compact */
+  readonly editLayout = signal(false);
+  readonly layout = computed(() => barLayout(this.storage.actionBars()));
 
   readonly selectedId = signal<string | null>(null);
   readonly rotation = computed(() => this.storage.rotations().find((r) => r.id === this.selectedId()) ?? null);
@@ -181,7 +186,9 @@ export class Train implements OnDestroy {
     const expected = this.expectedKey();
     const queued = this.queuedKey();
     const flash = this.flashKey();
-    return shown.map((id, pos) => {
+    const layout = this.layout();
+    return layout.order.map((pos) => {
+      const id = shown[pos] ?? null;
       const preset = id === null ? null : s.presets.find((p) => p.id === id) ?? null;
       const slots: SlotView[] = (preset?.slots ?? Array(14).fill(null)).map((step, i) => {
         const entity = step ? this.data.step(step) ?? null : null;
@@ -199,9 +206,22 @@ export class Train implements OnDestroy {
           flash: running && entity && flash?.key === entity.key ? flash.kind : null,
         };
       });
-      return { position: pos, presetName: preset?.name ?? '– empty –', slots };
+      return { position: pos, presetName: preset?.name ?? '– empty –', slots, shape: layout.shape[pos] };
     });
   });
+
+  /** drag & drop in layout edit mode */
+  reorderBars(event: CdkDragDrop<BarView[]>): void {
+    const order = [...this.layout().order];
+    moveItemInArray(order, event.previousIndex, event.currentIndex);
+    void this.storage.saveActionBars({ ...this.storage.actionBars(), layout: { order, shape: [...this.layout().shape] } });
+  }
+
+  toggleShape(position: number): void {
+    const shape = [...this.layout().shape];
+    shape[position] = shape[position] === 'compact' ? 'wide' : 'compact';
+    void this.storage.saveActionBars({ ...this.storage.actionBars(), layout: { order: [...this.layout().order], shape } });
+  }
 
   readonly slots = computed<QueueSlot[]>(() => {
     const entities = this.stepEntities();
