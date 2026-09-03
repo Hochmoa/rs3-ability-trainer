@@ -265,6 +265,12 @@ function applyEffect(r: ResolvedLoadout, effect: Record<string, unknown> & { kin
     case 'channel-adrenaline-per-tick':
       r.channelAdrenalinePerTick[e['ability']] = (r.channelAdrenalinePerTick[e['ability']] ?? 0) + Number(e['perPiece']) * pieces;
       break;
+    case 'buff-on-full-channel': {
+      const list = (r.fullChannelBuffs[e['ability']] ??= []);
+      list.push({ buff: e['buff'], durationTicks: Number(e['durationTicks']), requiresWeapon: e['requiresWeapon'] });
+      if (e['critChance']) r.buffCritAdd[e['buff']] = { add: Number(e['critChance']), style: style ?? undefined };
+      break;
+    }
     case 'channel-override':
       r.channelOverrides[e['ability']] = { ticks: Math.max(...(e['hits'] as number[])), hits: e['hits'] as number[], onComplete: [{ kind: 'buff', id: 'channelled-might' }] };
       break;

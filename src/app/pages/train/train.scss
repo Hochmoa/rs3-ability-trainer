@@ -179,6 +179,24 @@
   }
 }
 
+.bar.channel {
+  .fill {
+    background: linear-gradient(90deg, #3d1a6d, #a24be0);
+  }
+
+  .value {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    text-align: center;
+    line-height: 18px;
+    font-size: 12px;
+    font-weight: 700;
+    text-shadow: 0 0 3px #000;
+  }
+}
+
 .bar.adrenaline {
   .fill {
     background: linear-gradient(90deg, #7a4a10, #ffb300);
@@ -708,54 +726,20 @@
   }
 }
 
-.stacks-bar .stack {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 3px 8px;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: #0a0a0c;
-  font-size: 12px;
-
-  img {
-    width: 18px;
-    height: 18px;
-  }
-
-  .stack-name {
-    color: var(--muted);
-  }
-
-  .max {
-    color: var(--muted);
-    font-size: 11px;
-  }
-
-  b {
-    color: var(--gold);
-    font-size: 14px;
-  }
-
-  &.bloodlust b {
-    color: #ff6f60;
-  }
-  &.necrosis b {
-    color: #b39ddb;
-  }
-  &.residual-souls b {
-    color: #80deea;
-  }
-}
-
+// stacking buffs (Bloodlust, Necrosis ...): the count sits top-left, a timer (if any) bottom-right
 .status .stacks {
   position: absolute;
-  left: 1px;
+  left: 2px;
   top: 0;
-  font-size: 10px;
-  font-weight: 700;
+  font-size: 13px;
+  line-height: 13px;
+  font-weight: 800;
   color: #ffe27a;
-  text-shadow: 0 0 3px #000, 0 0 3px #000;
+  text-shadow: 0 0 3px #000, 0 0 3px #000, 0 0 4px #000;
+}
+
+.status.stacking {
+  border-color: rgba(255, 226, 122, 0.6);
 }
 
 // equipment + backpack beside the arena

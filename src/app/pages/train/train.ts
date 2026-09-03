@@ -9,7 +9,7 @@ import { keybindFromEvent, keybindKey, keybindLabel } from '../../core/keybind.u
 import { AttackPattern, BAR_POSITIONS, BarShape, barLayout, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, EquipSlot, ItemRef, Loadout, PrayerStats, Prebuild, STYLES4, Settings, StepResult, Style4, WeaponSpec, emptyPrebuild, entityKey, isStyle4, loadoutWeapons, loadoutWield, parseEntityKey, prebuildIsEmpty, visiblePresets, RotationStep } from '../../core/models';
 import { StorageService } from '../../core/storage.service';
 import { resolveLoadout } from '../../engine/loadout-resolver';
-import { BUFF_BY_ID, STACK_DEFS, ruleFor, stackMax, stackName } from '../../engine/rules';
+import { BUFF_BY_ID, ruleFor, stackMax, stackName } from '../../engine/rules';
 import { STYLE_STACKS, StackId } from '../../engine/rules-model';
 import { COMMAND_READY_AFTER, CONJURE_BASE_TICKS } from '../../engine/rules-necromancy';
 import { ActiveBuff, EngineEntity, EngineEvent, GCD_TICKS, TICK_MS, TrainerEngine, UsableReason, Wield } from '../../engine/trainer-engine';
@@ -47,14 +47,19 @@ interface BuffView {
   kind: 'Buff' | 'Debuff';
   remainingS: number | null;
   stacks: number;
+  /** cap of a stacking buff (definition, raised by the loadout) */
+  max: number | null;
 }
 
-interface StackView {
-  id: StackId;
+interface ChannelView {
+  key: string;
   name: string;
   icon: string | null;
-  value: number;
-  max: number;
+  /** 0..1 by time */
+  phase: number;
+  hitsDone: number;
+  hits: number;
+  remainingS: number;
 }
 
 interface BarView {
@@ -343,12 +348,17 @@ export class Train implements OnDestroy {
     return w && isStyle4(w.style) ? w.style : 'Melee';
   });
   readonly buffs = signal<BuffView[]>([]);
-  readonly stacks = signal<StackView[]>([]);
   /** entity key → remaining internal cooldown ms */
   readonly cooldowns = signal<Record<string, { remainingMs: number; totalMs: number }>>({});
   readonly channelling = signal<string | null>(null);
+  /** the running channelled ability for the progress bar */
+  readonly channel = signal<ChannelView | null>(null);
+  /** the rotation contains a channelled ability → the channel bar is shown while training */
+  readonly rotationHasChannel = computed(() => this.stepEntities().some((e) => !!e?.ability && !!ruleFor(e.ability.id)?.channel));
   readonly iconState = signal<IconState>('idle');
   readonly feedback = signal<Feedback | null>(null);
+  /** a channel was cut by the cast reported next – appended to that cast's feedback line */
+  private cancelNote: string | null = null;
   readonly counts = signal({ perfect: 0, late: 0, early: 0, wrong: 0, missed: 0 });
   readonly results = signal<StepResult[]>([]);
   readonly expectedKey = signal<string | null>(null);
@@ -636,18 +646,18 @@ export class Train implements OnDestroy {
     this.prayerStats.set({ ...EMPTY_PRAYER_STATS });
     this.incoming.set(null);
     this.attackLog.set([]);
-    this.stacks.set([]);
     this.cooldowns.set({});
     this.channelling.set(null);
+    this.channel.set(null);
     this.morphs.set(new Map());
     this.startedAt = Date.now();
     this.results.set([]);
     this.counts.set({ perfect: 0, late: 0, early: 0, wrong: 0, missed: 0 });
     this.doneSteps.set(new Set());
     this.buffs.set([]);
-    this.stacks.set([]);
     this.cooldowns.set({});
     this.channelling.set(null);
+    this.channel.set(null);
     this.maxAdrenaline.set(this.engine.maxAdrenaline);
     const first = this.slots().find((s) => s.kind === 'current');
     this.feedback.set({ text: 'Press ' + first?.key + ' (' + first?.entity.name + ') to start.', cls: 'info' });
@@ -746,8 +756,6 @@ export class Train implements OnDestroy {
     this.expectedKey.set(e.currentStep?.key ?? null);
     this.queuedKey.set(e.queuedKey);
     this.buffs.set(e.buffs.map((b) => this.buffView(b, now)));
-    const caps = this.resolved().stackCaps;
-    this.stacks.set(this.styleStacks().map((id) => ({ id, name: stackName(id), icon: this.data.buffIcon(STACK_DEFS[id]?.wikiId), value: e.stack(id), max: stackMax(id, caps) })));
     const cds: Record<string, { remainingMs: number; totalMs: number }> = {};
     for (const s of this.slots()) {
       const remainingMs = e.cooldownRemainingMs(s.entity.key, now);
@@ -759,6 +767,8 @@ export class Train implements OnDestroy {
     }
     this.cooldowns.set(cds);
     this.channelling.set(e.channel && !e.channel.cancelled ? e.channel.key : null);
+    const cp = e.channelProgress(now);
+    this.channel.set(cp ? { ...cp, name: this.name(cp.key), icon: e.catalog.get(cp.key)?.icon ?? null, remainingS: cp.remainingMs / 1000 } : null);
     this.syncPrayers(e, now);
     if (now >= this.flashUntil) {
       this.iconState.set(e.isQueued ? 'queued' : 'idle');
@@ -844,6 +854,15 @@ export class Train implements OnDestroy {
     if (next !== this.weapon()) this.weapon.set(next);
   }
 
+  /** "Piercing Shot – late by 1 tick · Rapid Fire channel cancelled, 5 hits lost" */
+  private appendCancelNote(): void {
+    const note = this.cancelNote;
+    if (!note) return;
+    this.cancelNote = null;
+    const f = this.feedback();
+    if (f) this.feedback.set({ text: f.text + ' · ' + note, cls: f.cls === 'good' ? 'warn' : f.cls });
+  }
+
   private buffView(b: ActiveBuff, now: number): BuffView {
     const remaining = b.endTick === null ? null : Math.max(0, (this.engine!.tickTime(b.endTick) - now) / 1000);
     let icon = b.icon;
@@ -851,7 +870,9 @@ export class Train implements OnDestroy {
       const def = BUFF_BY_ID.get(b.id);
       icon = this.data.buffIcon(def?.wikiId) ?? this.engine!.catalog.get(b.sourceKey)?.icon ?? null;
     }
-    return { id: b.id, name: b.name, icon, kind: b.kind, remainingS: remaining, stacks: b.stacks };
+    const def = BUFF_BY_ID.get(b.id);
+    const max = def?.stacks ? stackMax(b.id as StackId, this.resolved().stackCaps) : null;
+    return { id: b.id, name: b.name, icon, kind: b.kind, remainingS: remaining, stacks: b.stacks, max: max === Infinity ? null : max };
   }
 
   private applyEvent(ev: EngineEvent, now: number): void {
@@ -887,12 +908,16 @@ export class Train implements OnDestroy {
         } else {
           this.feedback.set({ text: r.name + (r.kind === 'weapon' ? ' wielded' : ' – activated'), cls: 'good' });
         }
+        this.appendCancelNote();
+        if (false) {
+        }
         this.flash('fired', r.key, now, 200);
         break;
       }
       case 'wrong-fired':
         this.counts.update((c) => ({ ...c, wrong: c.wrong + 1 }));
         this.feedback.set({ text: this.name(ev.key) + (this.data.get(ev.key)?.kind === 'ability' ? ' cast' : ' activated') + ' instead of ' + this.name(ev.expected) + ' – try again', cls: 'bad' });
+        this.appendCancelNote();
         this.flash('wrong', ev.key, now, 300);
         break;
       case 'too-early':
@@ -952,7 +977,8 @@ export class Train implements OnDestroy {
         this.flash('wrong', ev.key, now, 300);
         break;
       case 'channel-cancelled':
-        this.feedback.set({ text: this.name(ev.key) + ' channel cancelled – ' + ev.hitsLost + (ev.hitsLost === 1 ? ' hit' : ' hits') + ' lost', cls: 'warn' });
+        this.cancelNote = this.name(ev.key) + ' channel cancelled, ' + ev.hitsLost + (ev.hitsLost === 1 ? ' hit' : ' hits') + ' lost';
+        this.feedback.set({ text: this.cancelNote, cls: 'warn' });
         break;
       case 'hit': {
         const id = ++this.hitId;

@@ -38,6 +38,10 @@ export interface ResolvedLoadout {
   hitsOverrides: Record<string, number[]>;
   /** ability id → adrenaline per tick while channelling (Dracolich Rapid Fire) */
   channelAdrenalinePerTick: Record<string, number>;
+  /** ability id → buffs a full channel grants (Dracolich infusion after Rapid Fire with a bow) */
+  fullChannelBuffs: Record<string, { buff: string; durationTicks: number; requiresWeapon?: 'bow' | 'crossbow' }[]>;
+  /** buff id → critical strike chance added while it is active (Dracolich infusion +20% / +40% ranged) */
+  buffCritAdd: Record<string, { add: number; style?: Style }>;
   /** Vestments of havoc (2): adrenaline after a melee ultimate */
   adrenalineAfterUltimate: { style: Style; amount: number; overTicks: number; instantIfActive: number } | null;
   /** main-hand / 2h style */
@@ -83,6 +87,8 @@ export function defaultResolvedLoadout(): ResolvedLoadout {
     channelOverrides: {},
     hitsOverrides: {},
     channelAdrenalinePerTick: {},
+    fullChannelBuffs: {},
+    buffCritAdd: {},
     adrenalineAfterUltimate: null,
     style: null,
     has2h: false,

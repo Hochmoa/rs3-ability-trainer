@@ -266,6 +266,20 @@
           <div class="window" [style.width.%]="storage.settings().abilityQueueing ? 100 : 100 / 3" title="press window"></div>
         </div>
       </div>
+      @if (channel(); as c) {
+        <div class="bar-row">
+          <span class="bar-label">Channel <small>{{ c.name }}</small></span>
+          <div class="bar channel" [title]="c.name + ': ' + c.hitsDone + ' of ' + c.hits + ' hits – another ability cancels the rest'">
+            <div class="fill" [style.width.%]="c.phase * 100"></div>
+            <span class="value">{{ c.phase * 100 | number: '1.0-0' }}% · {{ c.hitsDone }}/{{ c.hits }} hits · {{ c.remainingS | number: '1.1-1' }} s</span>
+          </div>
+        </div>
+      } @else if (running() && rotationHasChannel()) {
+        <div class="bar-row">
+          <span class="bar-label">Channel</span>
+          <div class="bar channel"><span class="value muted">–</span></div>
+        </div>
+      }
       <div class="bar-row">
         <span class="bar-label">Adrenaline</span>
         <div class="bar adrenaline">
@@ -292,7 +306,7 @@
         <div class="status-bar">
           <span class="label">Buffs</span>
           @for (b of selfBuffs(); track b.id) {
-            <div class="status buff" [title]="b.name">
+            <div class="status buff" [class.stacking]="b.stacks" [title]="b.name + (b.stacks ? ' ' + b.stacks + (b.max ? '/' + b.max : '') + (b.remainingS === null ? ' (no timer – until consumed)' : '') : '')">
               @if (b.icon) { <img [src]="b.icon" [alt]="b.name" /> } @else { <span class="fallback">{{ b.name.slice(0, 2) }}</span> }
               @if (b.stacks) { <span class="stacks">{{ b.stacks }}</span> }
               @if (b.remainingS !== null) { <span class="timer">{{ b.remainingS | number: '1.0-0' }}</span> }
@@ -312,18 +326,6 @@
             <span class="muted none">–</span>
           }
         </div>
-        @if (stacks().length) {
-          <div class="status-bar stacks-bar">
-            <span class="label">Stacks</span>
-            @for (s of stacks(); track s.id) {
-              <div class="stack" [class]="'stack ' + s.id" [title]="s.name + ' – max ' + s.max">
-                @if (s.icon) { <img [src]="s.icon" [alt]="s.name" /> }
-                <span class="stack-name">{{ s.name }}</span>
-                <b>{{ s.value }}</b><span class="max">/{{ s.max }}</span>
-              </div>
-            }
-          </div>
-        }
       </div>
       <div class="status-bar prayers">
         <span class="label">Prayers</span>

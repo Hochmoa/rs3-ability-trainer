@@ -374,6 +374,17 @@ export class TrainerEngine {
     return this.buffs.some((b) => b.id === id);
   }
 
+  /** The running channel at `now`: progress by time (0..1), hits landed so far, time left. Null when nothing channels. */
+  channelProgress(now: number): { key: string; phase: number; hitsDone: number; hits: number; remainingMs: number } | null {
+    const ch = this.channel;
+    if (!ch || ch.cancelled) return null;
+    const start = this.tickTime(ch.castTick);
+    const end = this.tickTime(ch.endTick);
+    if (now >= end && ch.hitsDone >= ch.hits) return null;
+    const phase = end > start ? Math.max(0, Math.min(1, (now - start) / (end - start))) : 1;
+    return { key: ch.key, phase, hitsDone: ch.hitsDone, hits: ch.hits, remainingMs: Math.max(0, end - now) };
+  }
+
   buff(id: string): ActiveBuff | undefined {
     return this.buffs.find((b) => b.id === id);
   }
@@ -1043,6 +1054,11 @@ export class TrainerEngine {
       this.onHit(h);
       if (h.channel && h.channel.hitsDone === h.channel.hits) {
         for (const eff of ch?.onComplete ?? []) this.applyEffect(eff, h.tick, h.entity, h.index);
+        // set effects that need the full channel (Dracolich infusion: Rapid Fire with a bow)
+        for (const fb of this.loadout.fullChannelBuffs[h.entity.id] ?? []) {
+          if (fb.requiresWeapon && this.loadout.weaponType !== fb.requiresWeapon) continue;
+          this.applyBuff(fb.buff, h.tick, h.entity.key, fb.durationTicks);
+        }
         if (this.channel === h.channel) this.channel = null;
       }
     }
@@ -1052,7 +1068,9 @@ export class TrainerEngine {
     const globals = this.matchingGlobals(h.entity);
     for (const eff of h.rule?.onHit ?? []) this.applyEffect(eff, h.tick, h.entity, h.index);
     for (const id of h.rule?.hitBuffs ?? []) this.applyBuff(id, h.tick, h.entity.key);
-    const crit = !h.dot && (h.guaranteedCrit || (this.hasBuff('greater-fury') && h.index === 0 && h.entity.style === 'Melee') || this.random() < BASE_CRIT_CHANCE + this.loadout.critChanceAdd);
+    let critAdd = this.loadout.critChanceAdd;
+    for (const [id, c] of Object.entries(this.loadout.buffCritAdd)) if ((!c.style || c.style === h.entity.style) && this.hasBuff(id)) critAdd += c.add;
+    const crit = !h.dot && (h.guaranteedCrit || (this.hasBuff('greater-fury') && h.index === 0 && h.entity.style === 'Melee') || this.random() < BASE_CRIT_CHANCE + critAdd);
     if (h.damage) this.dealHit(h, crit);
     for (const g of globals) {
       for (const eff of g.onHit ?? []) this.applyEffect(eff, h.tick, h.entity, h.index);
