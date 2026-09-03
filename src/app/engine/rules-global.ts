@@ -14,6 +14,18 @@ export const GLOBAL_RULES: GlobalRule[] = [
     ],
   },
   {
+    id: 'occultist-ring',
+    notes: ["Occultist's ring: every Necromancy ability cast has a 10% chance to grant 2 Necrosis (" + W + 'Necrosis )'],
+    when: { style: 'Necromancy', gcd: true },
+    onCast: [{ kind: 'stack', stack: 'necrosis', amount: 2, cap: 12, when: { item: 'occultist-s-ring', chance: 0.1 } }],
+  },
+  {
+    id: 'zorgoth-soul-ring',
+    notes: ["Zorgoth's soul ring: every Necromancy hit has a 5% chance to grant a Residual Soul (" + W + 'Residual_Soul )'],
+    when: { style: 'Necromancy', gcd: true },
+    onHit: [{ kind: 'stack', stack: 'residual-souls', amount: 1, cap: 3, when: { item: 'zorgoth-s-soul-ring', chance: 0.05 } }],
+  },
+  {
     id: 'meteor-strike-basics',
     notes: ['Meteor Strike: melee basic abilities generate 1.5x adrenaline (not the basic attack) (' + W + 'Meteor_Strike )'],
     when: { style: 'Melee', type: 'Basic', gcd: true, buff: 'meteor-strike', excludeAbilities: ['attack', 'bladed-dive', 'dive'] },

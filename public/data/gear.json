@@ -40255,7 +40255,7 @@
   "lifePoints": 0,
   "prayer": 5.0,
   "set": null,
-  "passive": null,
+  "passive": "occultist-s-ring",
   "augmentable": false,
   "icon": "assets/gear/occultist-s-ring.png"
  },
@@ -41530,7 +41530,7 @@
   "lifePoints": 0,
   "prayer": 5.0,
   "set": null,
-  "passive": null,
+  "passive": "zorgoth-s-soul-ring",
   "augmentable": false,
   "icon": "assets/gear/zorgoth-s-soul-ring.png"
  }
