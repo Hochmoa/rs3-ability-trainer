@@ -12,6 +12,10 @@
     Name
     <input type="text" [ngModel]="l().name" (ngModelChange)="rename($event)" maxlength="40" />
   </label>
+  <label class="check" title="Hides Daemonheim-tier gear, tools, cosmetic and recolour variants, intermediate smithing upgrades (+1 … +4), sub-tier-60 weapons, Warpriest / Void sets and non-combat perks. The pickers only – nothing already in the loadout is removed.">
+    <input type="checkbox" [checked]="hideObscure()" (change)="setHideObscure(!hideObscure())" />
+    Hide obscure equipment
+  </label>
   <p class="muted small">The active loadout drives the simulation: weapon requirements, special attacks, adrenaline modifiers, buff durations. Numbers from the RuneScape Wiki (after the Combat Style Modernisation, March 2026).</p>
   @if (warnings().length) {
     <div class="warnings">
@@ -108,7 +112,7 @@
             <p class="muted">No weapons match.</p>
           }
         </div>
-        <p class="muted small">Showing up to 150 results; weapons with a special attack always appear regardless of the tier filter.</p>
+        <p class="muted small">Showing up to 150 results; weapons with a special attack always appear regardless of the tier filter.{{ hideObscure() ? ' Obscure gear is hidden (checkbox at the top).' : '' }}</p>
       </div>
     }
 

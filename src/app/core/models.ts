@@ -182,9 +182,22 @@ export interface Settings {
   fullAdrenaline: boolean;
   /** +10% adrenaline every tick, so thresholds/ultimates can be practised without building up */
   rechargeAdrenaline: boolean;
+  /** loadout pickers: hide weapons / sets / perks that are never used in current PvM (core/obscure.ts) */
+  hideObscureEquipment: boolean;
+  /** catalogs: hide abilities and prayers that are never used in current PvM (core/obscure.ts) */
+  hideObscureAbilities: boolean;
 }
 
-export const DEFAULT_SETTINGS: Settings = { pingMs: 60, jitterMs: 20, abilityQueueing: false, loop: false, fullAdrenaline: false, rechargeAdrenaline: false };
+export const DEFAULT_SETTINGS: Settings = {
+  pingMs: 60,
+  jitterMs: 20,
+  abilityQueueing: false,
+  loop: false,
+  fullAdrenaline: false,
+  rechargeAdrenaline: false,
+  hideObscureEquipment: true,
+  hideObscureAbilities: true,
+};
 
 // ---------------------------------------------------------------- equipment data (public/data/*.json)
 

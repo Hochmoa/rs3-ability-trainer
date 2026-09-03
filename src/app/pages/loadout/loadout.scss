@@ -37,6 +37,14 @@
     }
   }
 
+  .check {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+    cursor: pointer;
+  }
+
   .warnings {
     margin-top: 8px;
     color: var(--warn);

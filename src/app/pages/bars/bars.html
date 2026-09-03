@@ -68,6 +68,10 @@
               <button class="tab" [class.active]="tab() === t && !search()" (click)="tab.set(t); search.set('')">{{ t }}</button>
             }
           </div>
+          <label class="check" title="Hides what is practically never on a PvM bar: Slayer passives and unused ultimates, standard prayers below level 36 and Smite, the Sap / Leech and utility curses, and obscure weapons (tools, cosmetics, Daemonheim tiers). Search also respects it.">
+            <input type="checkbox" [checked]="hideObscure()" (change)="setHideObscure(!hideObscure())" />
+            Hide obscure abilities/prayers
+          </label>
           <input type="search" placeholder="Search everything…" [ngModel]="search()" (ngModelChange)="search.set($event)" />
         </div>
         <div class="grid">

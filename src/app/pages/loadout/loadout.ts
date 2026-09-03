@@ -2,7 +2,8 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { DataService } from '../../core/data.service';
-import { Gizmo, Loadout as LoadoutModel, Perk, RELICS, SetEffect, Style, Weapon, newLoadout } from '../../core/models';
+import { Gizmo, Loadout as LoadoutModel, Perk, RELICS, SetEffect, Style, Weapon, WeaponSpec, newLoadout } from '../../core/models';
+import { isObscurePerk, isObscureSetEffect, isObscureSpec, isObscureWeapon } from '../../core/obscure';
 import { StorageService } from '../../core/storage.service';
 import { loadoutWarnings } from '../../engine/loadout-resolver';
 
@@ -28,17 +29,25 @@ export class Loadout {
   readonly weaponStyle = signal<Style | 'all'>('all');
   readonly minTier = signal(70);
   readonly weaponSlot = signal<'main' | 'off' | '2h' | 'shield'>('main');
+  /** "Hide obscure equipment" – Daemonheim tiers, tools, cosmetics, sap-level junk (core/obscure.ts) */
+  readonly hideObscure = computed(() => this.storage.settings().hideObscureEquipment);
+
+  setHideObscure(v: boolean): void {
+    void this.storage.saveSettings({ ...this.storage.settings(), hideObscureEquipment: v });
+  }
 
   readonly weaponList = computed<Weapon[]>(() => {
     const q = this.weaponSearch().trim().toLowerCase();
     const style = this.weaponStyle();
     const slot = this.weaponSlot();
     const tier = this.minTier();
+    const hide = this.hideObscure();
     return this.data
       .weapons()
       .filter((w) => (slot === 'off' ? w.slot === 'off' || w.slot === 'shield' : w.slot === slot))
       .filter((w) => style === 'all' || w.style === style || w.slot === 'shield')
       .filter((w) => w.tier >= tier || !!w.spec)
+      .filter((w) => !hide || !isObscureWeapon(w))
       .filter((w) => !q || w.name.toLowerCase().includes(q))
       .sort((a, b) => b.tier - a.tier || a.name.localeCompare(b.name))
       .slice(0, 150);
@@ -53,18 +62,34 @@ export class Loadout {
   });
   readonly eofSpec = computed(() => (this.l().eofSpec ? this.data.specById().get(this.l().eofSpec!) : null));
   readonly specsByStyle = computed(() => {
-    const out = new Map<Style, typeof this.data.specs extends () => infer R ? R : never>();
-    for (const s of STYLE_ORDER) out.set(s, this.data.specs().filter((x) => x.style === s));
+    const out = new Map<Style, WeaponSpec[]>();
+    const hide = this.hideObscure();
+    const byId = this.data.weaponById();
+    const eof = this.l().eofSpec;
+    // the selected spec stays listed even when it is obscure, so the dropdown never shows an empty value
+    const specs = this.data.specs().filter((x) => !hide || x.id === eof || !isObscureSpec(x, byId));
+    for (const s of STYLE_ORDER) out.set(s, specs.filter((x) => x.style === s));
     return out;
   });
   readonly STYLE_ORDER = STYLE_ORDER;
 
-  readonly armourSets = computed<SetEffect[]>(() => this.data.setEffects().filter((s) => s.kind === 'set'));
+  readonly armourSets = computed<SetEffect[]>(() => {
+    const hide = this.hideObscure();
+    const current = this.l().armourSet;
+    return this.data.setEffects().filter((s) => s.kind === 'set' && (!hide || s.id === current || !isObscureSetEffect(s)));
+  });
   readonly items = computed<SetEffect[]>(() => this.data.setEffects().filter((s) => s.kind === 'item'));
   readonly currentSet = computed(() => (this.l().armourSet ? this.data.setEffectById().get(this.l().armourSet!) : null));
 
-  readonly weaponPerks = computed<Perk[]>(() => this.data.perks().filter((p) => p.gizmos.some((g) => g === 'weapon' || g === 'ancient-weapon') && p.gizmos.every((g) => g !== 'tool' || p.gizmos.length > 1)));
-  readonly armourPerks = computed<Perk[]>(() => this.data.perks().filter((p) => p.gizmos.some((g) => g === 'armour' || g === 'ancient-armour')));
+  /** perks in use stay selectable even when obscure, so an existing gizmo never shows an empty select */
+  private readonly perksInUse = computed(() => new Set([...this.l().weaponGizmos, ...this.l().armourGizmos].flatMap((g) => g.perks.map((p) => p.perk))));
+  private readonly visiblePerks = computed<Perk[]>(() => {
+    const hide = this.hideObscure();
+    const used = this.perksInUse();
+    return this.data.perks().filter((p) => !hide || used.has(p.id) || !isObscurePerk(p));
+  });
+  readonly weaponPerks = computed<Perk[]>(() => this.visiblePerks().filter((p) => p.gizmos.some((g) => g === 'weapon' || g === 'ancient-weapon') && p.gizmos.every((g) => g !== 'tool' || p.gizmos.length > 1)));
+  readonly armourPerks = computed<Perk[]>(() => this.visiblePerks().filter((p) => p.gizmos.some((g) => g === 'armour' || g === 'ancient-armour')));
 
   readonly warnings = computed(() =>
     loadoutWarnings(this.l(), {
