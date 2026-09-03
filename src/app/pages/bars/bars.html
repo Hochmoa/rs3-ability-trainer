@@ -42,14 +42,13 @@
             <div
               class="slot"
               [class.filled]="!!e"
-              cdkDropList
-              cdkDropListSortingDisabled
-              [id]="'slot-' + $index"
-              [cdkDropListConnectedTo]="slotIds()"
-              (cdkDropListDropped)="drop($event, $index)"
+              [class.can-drop]="isDragging()"
+              [class.hover]="hoverSlot() === $index"
+              [class.dragging]="dragSlot() === $index"
+              [attr.data-slot]="$index"
             >
               @if (e) {
-                <div class="drag" [entityTip]="e">
+                <div class="drag" [entityTip]="e" (pointerdown)="startDrag($event, e, $index)">
                   <img [src]="e.icon" [alt]="e.name" draggable="false" />
                   <button class="mv left" [disabled]="$first" (click)="move($index, -1); $event.stopPropagation()" title="Move left">‹</button>
                   <button class="mv right" [disabled]="$last" (click)="move($index, 1); $event.stopPropagation()" title="Move right">›</button>
@@ -60,7 +59,7 @@
             </div>
           }
         </div>
-        <p class="muted small">Drag from the catalog into a slot or click an icon in the catalog to fill the first free slot; use ‹ › on a slot to shift it. Keybinds are set per bar position on the <a routerLink="/keybinds">Keybinds</a> page.</p>
+        <p class="muted small">Drag from the catalog into a slot or click an icon in the catalog to fill the first free slot. Drag an ability within the bar to move or swap it (or use ‹ ›). Keybinds are set per bar position on the <a routerLink="/keybinds">Keybinds</a> page.</p>
       </div>
 
       <div class="panel">
@@ -73,9 +72,9 @@
           </div>
           <input type="search" placeholder="Search everything…" [ngModel]="search()" (ngModelChange)="search.set($event)" />
         </div>
-        <div class="grid" cdkDropList id="catalog" [cdkDropListConnectedTo]="slotIds()" cdkDropListSortingDisabled>
+        <div class="grid">
           @for (e of catalog(); track e.key) {
-            <button class="cell" cdkDrag [cdkDragData]="e" (click)="add(e)" [entityTip]="e">
+            <button class="cell" (pointerdown)="startDrag($event, e, null)" (click)="add(e)" [entityTip]="e">
               <ability-icon [ability]="e" [px]="48" />
               <span class="cell-name">{{ e.name }}</span>
               <span class="cell-type">{{ subtitle(e) }}</span>

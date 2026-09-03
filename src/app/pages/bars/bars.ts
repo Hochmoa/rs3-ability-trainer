@@ -1,4 +1,3 @@
-import { CdkDrag, CdkDragDrop, CdkDropList } from '@angular/cdk/drag-drop';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -16,7 +15,7 @@ const TYPE_ORDER: Record<string, number> = { Basic: 0, Enhanced: 1, Threshold: 2
 /** Action bar setup: 18 presets with drag & drop, positions, style bindings, weapon types. */
 @Component({
   selector: 'app-bars',
-  imports: [FormsModule, RouterLink, CdkDropList, CdkDrag, AbilityIcon, EntityTip],
+  imports: [FormsModule, RouterLink, AbilityIcon, EntityTip],
   templateUrl: './bars.html',
   styleUrl: './bars.scss',
 })
@@ -35,7 +34,13 @@ export class Bars {
 
   readonly preset = computed(() => this.setup().presets.find((p) => p.id === this.selectedId()) ?? this.setup().presets[0]);
   readonly slotEntities = computed<(Entity | null)[]>(() => this.preset().slots.map((s) => (s ? this.data.step(s) ?? null : null)));
-  readonly slotIds = computed(() => this.preset().slots.map((_, i) => 'slot-' + i));
+  /** slot under the pointer while dragging */
+  readonly hoverSlot = signal<number | null>(null);
+  /** slot being dragged (dimmed) */
+  readonly dragSlot = signal<number | null>(null);
+  readonly isDragging = signal(false);
+  private drag: { entity: Entity; fromSlot: number | null; startX: number; startY: number; ghost: HTMLElement | null; moved: boolean } | null = null;
+  private suppressClick = false;
 
   readonly catalog = computed<Entity[]>(() => {
     const q = this.search().trim().toLowerCase();
@@ -91,13 +96,76 @@ export class Bars {
     });
   }
 
-  /** drop from the catalog onto slot `target` */
-  drop(event: CdkDragDrop<unknown>, target: number): void {
-    if (event.previousContainer.id !== 'catalog') return;
-    const e = event.item.data as Entity;
+  /**
+   * Pointer-based drag: the source stays where it is (the CDK hid it and left a gap in the catalog),
+   * a ghost icon follows the pointer and the slot underneath is highlighted. Catalog → slot sets the
+   * slot; slot → slot swaps the two slots.
+   */
+  startDrag(ev: PointerEvent, entity: Entity, fromSlot: number | null): void {
+    if (ev.button !== 0) return;
+    ev.preventDefault();
+    this.drag = { entity, fromSlot, startX: ev.clientX, startY: ev.clientY, ghost: null, moved: false };
+    window.addEventListener('pointermove', this.onDragMove);
+    window.addEventListener('pointerup', this.onDragEnd, { once: true });
+    window.addEventListener('pointercancel', this.onDragEnd, { once: true });
+  }
+
+  private onDragMove = (ev: PointerEvent): void => {
+    const d = this.drag;
+    if (!d) return;
+    if (!d.moved) {
+      if (Math.hypot(ev.clientX - d.startX, ev.clientY - d.startY) < 6) return;
+      d.moved = true;
+      d.ghost = this.makeGhost(d.entity);
+      this.dragSlot.set(d.fromSlot);
+      this.isDragging.set(true);
+    }
+    if (d.ghost) {
+      d.ghost.style.left = ev.clientX - 24 + 'px';
+      d.ghost.style.top = ev.clientY - 24 + 'px';
+    }
+    this.hoverSlot.set(this.slotUnder(ev));
+  };
+
+  private onDragEnd = (ev: PointerEvent): void => {
+    const d = this.drag;
+    this.drag = null;
+    window.removeEventListener('pointermove', this.onDragMove);
+    window.removeEventListener('pointerup', this.onDragEnd);
+    window.removeEventListener('pointercancel', this.onDragEnd);
+    if (!d) return;
+    d.ghost?.remove();
+    this.hoverSlot.set(null);
+    this.dragSlot.set(null);
+    this.isDragging.set(false);
+    if (!d.moved) return; // plain click – handled by (click)
+    this.suppressClick = true;
+    window.setTimeout(() => (this.suppressClick = false), 0);
+    const target = this.slotUnder(ev);
+    if (target === null) return;
     this.mutatePreset((slots) => {
-      slots[target] = { kind: e.kind, id: e.id };
+      if (d.fromSlot === null) {
+        slots[target] = { kind: d.entity.kind, id: d.entity.id };
+      } else if (d.fromSlot !== target) {
+        [slots[d.fromSlot], slots[target]] = [slots[target], slots[d.fromSlot]];
+      }
     });
+  };
+
+  private slotUnder(ev: PointerEvent): number | null {
+    const el = document.elementFromPoint(ev.clientX, ev.clientY)?.closest('[data-slot]') as HTMLElement | null;
+    return el ? Number(el.dataset['slot']) : null;
+  }
+
+  private makeGhost(e: Entity): HTMLElement {
+    const g = document.createElement('div');
+    g.className = 'drag-ghost';
+    const img = document.createElement('img');
+    img.src = e.icon;
+    img.alt = e.name;
+    g.appendChild(img);
+    document.body.appendChild(g);
+    return g;
   }
 
   /** ‹ › on a slot: swap with the neighbour */
@@ -111,6 +179,7 @@ export class Bars {
 
   /** click in the catalog: first empty slot */
   add(e: Entity): void {
+    if (this.suppressClick) return;
     this.mutatePreset((slots) => {
       const i = slots.findIndex((s) => !s);
       if (i >= 0) slots[i] = { kind: e.kind, id: e.id };

@@ -84,6 +84,38 @@
   &.conflict {
     border-color: var(--warn);
   }
+
+  .clear {
+    position: absolute;
+    top: 0;
+    right: 0;
+    padding: 0 4px;
+    font-size: 12px;
+    line-height: 14px;
+    color: var(--muted);
+    background: rgba(0, 0, 0, 0.6);
+    border-bottom-left-radius: 3px;
+
+    &:hover {
+      color: var(--bad);
+    }
+  }
+}
+
+.slot.flash,
+.weapon.flash {
+  animation: flash-red 2s ease-out;
+}
+
+@keyframes flash-red {
+  0%,
+  70% {
+    border-color: var(--bad);
+    box-shadow: 0 0 8px var(--bad);
+  }
+  100% {
+    box-shadow: none;
+  }
 }
 
 .weapons {

@@ -2,7 +2,7 @@
   <h2>Keybinds</h2>
   <p class="muted small">
     Keys belong to a bar position and slot, exactly like in the game: whatever preset is shown there fires on that key.
-    Click a slot, then press the key or combination. Modifiers show as c (Ctrl), s (Shift), a (Alt), e.g. c+3. Esc cancels, Backspace clears.
+    Click a slot, then press the key or combination. Modifiers show as c (Ctrl), s (Shift), a (Alt), e.g. c+3. Esc cancels, Backspace or the × clears. A key can only be bound once; binding it again moves it and frees the old slot.
     Browser-reserved combos (Ctrl+W, Ctrl+T, F5, …) won't work reliably. Fill the presets on the <a routerLink="/bars">Action bars</a> page.
   </p>
 </div>
@@ -19,6 +19,7 @@
           class="slot"
           [class.capturing]="isCapturing({ pos: pos, slot: i })"
           [class.conflict]="slotConflicts(pos, i).length > 0"
+          [class.flash]="isFlashing({ pos: pos, slot: i })"
           (click)="capture({ pos: pos, slot: i })"
           [title]="slotConflicts(pos, i).length ? 'Also used by ' + slotConflicts(pos, i).join(', ') : 'Slot ' + (i + 1)"
         >
@@ -30,6 +31,9 @@
           <span class="key" [class.waiting]="isCapturing({ pos: pos, slot: i })">
             {{ isCapturing({ pos: pos, slot: i }) ? '…' : label(pos, i) || '–' }}
           </span>
+          @if (label(pos, i) && !isCapturing({ pos: pos, slot: i })) {
+            <span class="clear" (click)="clear({ pos: pos, slot: i }); $event.stopPropagation()" title="Clear keybind">×</span>
+          }
         </button>
       }
     </div>
@@ -45,6 +49,7 @@
         class="weapon"
         [class.capturing]="isCapturing({ weapon: st })"
         [class.conflict]="weaponConflicts(st).length > 0"
+        [class.flash]="isFlashing({ weapon: st })"
         (click)="capture({ weapon: st })"
         [title]="weaponConflicts(st).length ? 'Also used by ' + weaponConflicts(st).join(', ') : ''"
       >
@@ -68,6 +73,7 @@
         class="weapon"
         [class.capturing]="isCapturing({ action: a.id })"
         [class.conflict]="actionConflicts(a.id, a.name).length > 0"
+        [class.flash]="isFlashing({ action: a.id })"
         (click)="capture({ action: a.id })"
         [title]="actionConflicts(a.id, a.name).length ? 'Also used by ' + actionConflicts(a.id, a.name).join(', ') : a.description"
       >

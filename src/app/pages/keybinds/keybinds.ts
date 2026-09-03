@@ -4,6 +4,7 @@ import { DataService, Entity } from '../../core/data.service';
 import { keybindFromEvent, keybindKey, keybindLabel } from '../../core/keybind.util';
 import { ACTIONS, BAR_POSITION_NAMES, Keybind, STYLES4, Style4 } from '../../core/models';
 import { StorageService } from '../../core/storage.service';
+import { ToastService } from '../../shared/toast';
 import { EntityTip } from '../../shared/tooltip';
 
 type Target = { pos: number; slot: number } | { weapon: Style4 } | { action: string };
@@ -24,6 +25,10 @@ export class Keybinds {
   readonly ACTIONS = ACTIONS;
   readonly setup = this.storage.actionBars;
   readonly capturing = signal<Target | null>(null);
+  /** target whose keybind was just taken away – highlighted red for two seconds */
+  readonly flashing = signal<Target | null>(null);
+  private toasts = inject(ToastService);
+  private flashTimer = 0;
 
   /** keybind → list of places using it */
   readonly conflicts = computed(() => {
@@ -102,12 +107,71 @@ export class Keybinds {
     this.capturing.set(this.isCapturing(t) ? null : t);
   }
 
+  /** Sets the keybind; a key may only live in one place, so it is removed wherever else it was bound. */
   private assign(t: Target, kb: Keybind | null): void {
     const s = structuredClone(this.setup());
+    if (kb) {
+      const key = keybindKey(kb);
+      const previous = this.findOther(s, key, t);
+      if (previous) {
+        this.put(s, previous, null);
+        this.flash(previous);
+        this.toasts.show('Removed bind ' + keybindLabel(kb) + ' from ' + this.describe(previous), 'warn');
+      }
+    }
+    this.put(s, t, kb);
+    void this.storage.saveActionBars(s);
+  }
+
+  private put(s: ReturnType<typeof this.setup>, t: Target, kb: Keybind | null): void {
     if ('weapon' in t) s.weaponKeybinds[t.weapon] = kb;
     else if ('action' in t) s.actionKeybinds = { ...(s.actionKeybinds ?? {}), [t.action]: kb };
     else s.slotKeybinds[t.pos][t.slot] = kb;
-    void this.storage.saveActionBars(s);
+  }
+
+  private sameTarget(a: Target, b: Target): boolean {
+    if ('weapon' in a) return 'weapon' in b && a.weapon === b.weapon;
+    if ('action' in a) return 'action' in b && a.action === b.action;
+    return 'pos' in b && a.pos === b.pos && a.slot === b.slot;
+  }
+
+  /** Any other place that currently holds this key. */
+  private findOther(s: ReturnType<typeof this.setup>, key: string, self: Target): Target | null {
+    for (let pos = 0; pos < s.slotKeybinds.length; pos++) {
+      for (let slot = 0; slot < s.slotKeybinds[pos].length; slot++) {
+        const kb = s.slotKeybinds[pos][slot];
+        const t: Target = { pos, slot };
+        if (kb && keybindKey(kb) === key && !this.sameTarget(t, self)) return t;
+      }
+    }
+    for (const st of STYLES4) {
+      const kb = s.weaponKeybinds[st];
+      const t: Target = { weapon: st };
+      if (kb && keybindKey(kb) === key && !this.sameTarget(t, self)) return t;
+    }
+    for (const a of ACTIONS) {
+      const kb = s.actionKeybinds?.[a.id];
+      const t: Target = { action: a.id };
+      if (kb && keybindKey(kb) === key && !this.sameTarget(t, self)) return t;
+    }
+    return null;
+  }
+
+  describe(t: Target): string {
+    if ('weapon' in t) return t.weapon + ' weapon switch';
+    if ('action' in t) return ACTIONS.find((a) => a.id === t.action)?.name ?? t.action;
+    return 'slot ' + (t.slot + 1) + ' in bar ' + this.POSITIONS[t.pos];
+  }
+
+  isFlashing(t: Target): boolean {
+    const f = this.flashing();
+    return !!f && this.sameTarget(f, t);
+  }
+
+  private flash(t: Target): void {
+    window.clearTimeout(this.flashTimer);
+    this.flashing.set(t);
+    this.flashTimer = window.setTimeout(() => this.flashing.set(null), 2000);
   }
 
   clear(t: Target): void {
