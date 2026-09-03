@@ -360,17 +360,20 @@ export class TrainerEngine {
     this.inflight.sort((a, b) => a.arrival - b.arrival);
     for (;;) {
       const next = this.inflight[0];
+      // nothing happens instantly: an input is processed by the server on the first tick at or after its arrival
+      const inputAt = next ? this.tickTime(this.tickOf(next.arrival)) : Infinity;
       const castAt = this.pending ? this.tickTime(this.pending.tick) : Infinity;
       const tickAt = this.tickTime(this.lastTick + 1);
-      // advance server ticks (over-time adrenaline, buff expiry) before anything scheduled later
-      if (tickAt <= now && tickAt <= castAt && (!next || tickAt <= next.arrival)) {
+      if (inputAt <= now && inputAt <= tickAt && inputAt <= castAt) {
+        // inputs of a tick come first (a prayer switched on this tick counts for this tick's attack)
+        this.inflight.shift();
+        this.handle(next!);
+      } else if (tickAt <= now && tickAt <= castAt) {
+        // advance server ticks (over-time adrenaline, buff expiry) before anything scheduled later
         this.advanceTick(this.lastTick + 1);
-      } else if (castAt <= now && (!next || castAt <= next.arrival)) {
+      } else if (castAt <= now) {
         this.cast();
         if (this.state !== 'running') return;
-      } else if (next && next.arrival <= now) {
-        this.inflight.shift();
-        this.handle(next);
       } else {
         break;
       }

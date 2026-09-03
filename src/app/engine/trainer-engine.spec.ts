@@ -45,9 +45,9 @@ describe('timing – common', () => {
     const e = make([A, B]);
     e.start(0);
     e.press('a', 100);
-    e.update(599);
+    e.update(599); // the press is only processed on tick 1 (t=600) – nothing happens at arrival
     expect(e.results.length).toBe(0);
-    expect(e.isQueued).toBe(true);
+    expect(e.isQueued).toBe(false);
     e.update(600);
     expect(e.results[0]).toMatchObject({ key: 'a', outcome: 'perfect', firedAtTick: 1, adrenaline: 9 });
     expect(e.index).toBe(1);
@@ -58,11 +58,11 @@ describe('timing – common', () => {
     for (const cfg of [off, on]) {
       const e = afterFirstFire(cfg);
       e.press('b', 1900);
-      e.update(1900);
-      expect(e.events[0]).toMatchObject({ kind: 'queued', fireTick: 4, marginMs: 500 });
-      e.update(2399);
+      e.update(2399); // processed on tick 4 (t=2400), not before
+      expect(e.events.length).toBe(0);
       expect(e.results.length).toBe(1);
       e.update(2400);
+      expect(e.events[0]).toMatchObject({ kind: 'queued', fireTick: 4, marginMs: 500 });
       expect(e.results[1]).toMatchObject({ key: 'b', outcome: 'perfect', lateTicks: 0, offsetMs: 500, firedAtTick: 4 });
     }
   });
@@ -119,7 +119,7 @@ describe('ability queueing OFF', () => {
   it('ignores the expected ability pressed before the last tick', () => {
     const e = afterFirstFire();
     e.press('b', 1300);
-    e.update(1300);
+    e.update(1800); // processed on tick 3
     expect(e.events[0]).toMatchObject({ kind: 'too-early', ticksEarly: 1 });
     e.press('b', 2500);
     e.update(3000);
@@ -129,7 +129,7 @@ describe('ability queueing OFF', () => {
   it('ignores a wrong ability pressed during the GCD', () => {
     const e = afterFirstFire();
     e.press('c', 1300);
-    e.update(1300);
+    e.update(1800); // processed on tick 3
     expect(e.events[0]).toMatchObject({ kind: 'wrong', key: 'c', expected: 'b' });
     expect(e.castTick).toBe(1);
   });
@@ -161,7 +161,7 @@ describe('ability queueing ON', () => {
   it('queues a press anywhere during the GCD and casts at the GCD end', () => {
     const e = afterFirstFire(on);
     e.press('b', 700);
-    e.update(700);
+    e.update(1200); // processed on tick 2
     expect(e.events[0]).toMatchObject({ kind: 'queued', fireTick: 4, marginMs: 1700 });
     expect(e.isQueued).toBe(true);
     e.update(2400);
@@ -172,7 +172,7 @@ describe('ability queueing ON', () => {
     const e = afterFirstFire(on);
     e.press('b', 700);
     e.press('c', 1300);
-    e.update(1300);
+    e.update(1800); // b processed on tick 2, c on tick 3
     expect(e.queuedKey).toBe('c');
     e.update(2400);
     expect(e.events.at(-1)).toMatchObject({ kind: 'wrong-fired', key: 'c', tick: 4 });
@@ -253,6 +253,20 @@ describe('adrenaline', () => {
 });
 
 describe('off-GCD steps (prayers, potions)', () => {
+  it('nothing happens instantly: an off-GCD press takes effect on the next tick, not at arrival', () => {
+    const e = make([A, PRAY, B]);
+    e.start(0);
+    e.press('a', 100);
+    e.update(600);
+    e.press('pray', 700); // arrives at 700, processed at tick 2 = 1200
+    e.update(1199);
+    expect(e.results.length).toBe(1);
+    expect(e.events.some((x) => x.kind === 'prayer')).toBe(false);
+    e.update(1200);
+    expect(e.results[1]).toMatchObject({ key: 'pray', outcome: 'done', firedAtTick: 2 });
+    expect(e.events.some((x) => x.kind === 'prayer')).toBe(true);
+  });
+
   it('a prayer step activates on its tick, stays as a buff and the ability after it is judged normally', () => {
     const e = make([A, PRAY, B]);
     e.start(0);
