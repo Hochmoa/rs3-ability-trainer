@@ -113,7 +113,8 @@ export class SeoService {
     const description = route?.description ?? seo.description;
     const noindex = route?.noindex ?? false;
 
-    this.setLink('canonical', canonical);
+    if (noindex) this.doc.head.querySelector('link[rel="canonical"]')?.remove();
+    else this.setLink('canonical', canonical);
     this.meta.updateTag({ name: 'description', content: description });
     this.meta.updateTag({ name: 'robots', content: noindex ? ROBOTS_NOINDEX : ROBOTS_INDEX });
     this.meta.updateTag({ property: 'og:url', content: canonical });
