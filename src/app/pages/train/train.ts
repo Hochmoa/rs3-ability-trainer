@@ -470,13 +470,26 @@ export class Train implements OnDestroy {
     const layout = this.layout();
     const morphs = this.morphs();
     const activeKeys = new Set(this.activePrayers().map((p) => p.key));
+    // like the game: the special-attack slot shows the wielded weapon, the Essence of Finality slot the amulet worn
+    const gear = this.gearState();
+    const wield = running ? this.wielded() : [loadoutWield(gear).twoHand, loadoutWield(gear).mainHand].filter((x): x is string => !!x);
+    const mainWeapon = wield.map((id) => this.data.get('weapon:' + id)?.weapon).find((w) => w && w.slot !== 'off' && w.slot !== 'shield');
+    const weaponIcon = mainWeapon?.icon ?? null;
+    const neck = gear.equipment?.neck;
+    const neckIcon = neck ? (this.data.view(neck)?.icon ?? null) : null;
+    const dynamicIcon = (e: Entity): string | null => {
+      if (e.kind === 'spec' || e.key === SPEC_KEY) return weaponIcon;
+      if (e.key === 'ability:essence-of-finality') return neckIcon;
+      return null;
+    };
     return layout.order.map((pos) => {
       const id = shown[pos] ?? null;
       const preset = id === null ? null : s.presets.find((p) => p.id === id) ?? null;
       const slots: SlotView[] = (preset?.slots ?? Array(14).fill(null)).map((step, i) => {
         const entity = step ? this.data.step(step) ?? null : null;
         const m = running && entity ? morphs.get(entity.key) : undefined;
-        const morph = m ? { entity: m.entity, stage: m.stage } : null;
+        const icon = entity && !m ? dynamicIcon(entity) : null;
+        const morph = m ? { entity: m.entity, stage: m.stage } : icon && entity ? { entity: { ...entity, icon }, stage: 1 } : null;
         const shown = morph?.entity ?? entity;
         const st = shown ? state.get(shown.key) : undefined;
         const isGcdAbility = !!shown?.ability?.triggersGcd;
