@@ -114,7 +114,10 @@ export const NECROMANCY_RULES: AbilityRule[] = [
   conjure('vengeful-ghost', 'Vengeful Ghost'),
   {
     ability: 'command-vengeful-ghost',
-    requires: [{ text: 'needs an active Vengeful Ghost (6 ticks after the conjure)', spirit: 'vengeful-ghost', spiritAgeMin: COMMAND_READY_AFTER }],
+    requires: [
+      { text: 'needs an active Vengeful Ghost (6 ticks after the conjure)', spirit: 'vengeful-ghost', spiritAgeMin: COMMAND_READY_AFTER },
+      { text: 'the target is already Haunted – wait for the ghost to expire', notBuff: 'haunted' },
+    ],
     notes: ['From the next ghost hit on every hit applies Haunted (+10% damage taken, capped) for the rest of the ghost\'s life (' + W + 'Command_Vengeful_Ghost )'],
     onCast: [{ kind: 'buff', id: 'haunted', untilSpirit: 'vengeful-ghost' }],
   },

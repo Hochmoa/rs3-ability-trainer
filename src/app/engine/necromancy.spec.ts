@@ -120,6 +120,16 @@ describe('necromancy: spirits', () => {
     expect(hits(e, 'ability:finger-of-death')[0].amount).toBe(3200); // 3000 + min(300, 200)
   });
 
+  it('Command Vengeful Ghost cannot be used again while the target is Haunted', () => {
+    const e = make(['command-vengeful-ghost', 'command-vengeful-ghost'], {}, { prebuild: { stacks: {}, spirits: ['vengeful-ghost'], abilities: [], prayers: [] } });
+    cast(e, 'command-vengeful-ghost', 1);
+    expect(e.hasBuff('haunted')).toBe(true);
+    expect(e.requirementFailure(ability('command-vengeful-ghost'), 4)).toContain('Haunted');
+    cast(e, 'command-vengeful-ghost', 4);
+    expect(e.events.some((x) => x.kind === 'requirement' && x.key === 'ability:command-vengeful-ghost')).toBe(true);
+    expect(e.results.length).toBe(1);
+  });
+
   it('the skeleton attacks from its 7th tick every 5 ticks, each attack adds Rage (+3%); the zombie poisons every 3 ticks', () => {
     const e = make(['conjure-skeleton-warrior', 'conjure-putrid-zombie']);
     cast(e, 'conjure-skeleton-warrior', 1);
