@@ -109,8 +109,10 @@ export interface ResolvedLoadout {
   weaponSpec: EngineEntity | null;
   /** special attack stored in the Essence of Finality, as an entity */
   eofSpec: EngineEntity | null;
-  /** player ability damage for the wielded weapons (engine/damage.ts; level 99, no armour bonus) */
+  /** player ability damage for the wielded weapons (engine/damage.ts; level 99 boosted by the loadout's overload, no armour bonus) */
   abilityDamage: number;
+  /** combat level the ability damage was computed with: 99, or 116 / 118 / 120 under an overload / supreme / elder overload */
+  combatLevel: number;
   /** extra critical strike chance (Biting 2% per rank) */
   critChanceAdd: number;
   /** Precise: minimum hit +1.5% of the max per rank (not DoTs, except Bloat's initial hit) */
@@ -193,6 +195,7 @@ export function defaultResolvedLoadout(): ResolvedLoadout {
     weaponSpec: null,
     eofSpec: null,
     abilityDamage: 0,
+    combatLevel: 99,
     critChanceAdd: 0,
     preciseRank: 0,
     equilibriumRank: 0,

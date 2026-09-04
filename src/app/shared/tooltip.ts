@@ -1,7 +1,7 @@
 import { Component, Directive, ElementRef, HostListener, Injectable, computed, inject, input, signal } from '@angular/core';
 import { DataService, Entity, GearView } from '../core/data.service';
-import { Buff, SPELLBOOK_NAMES } from '../core/models';
-import { ruleFor } from '../engine/rules';
+import { Buff, SPELLBOOK_NAMES, Special } from '../core/models';
+import { ruleFor, specialRuleFor } from '../engine/rules';
 import { TICK_MS } from '../engine/trainer-engine';
 
 interface TipState {
@@ -263,12 +263,26 @@ interface Note {
           <p class="desc">Wield your {{ w.style }} weapon. Abilities of other styles are greyed out until you switch back; Defence and Constitution abilities work with any weapon.</p>
         } @else if (e.special; as sp) {
           <table>
-            <tr><th>Adrenaline</th><td class="good">{{ sp.adrenaline ? '+' + sp.adrenaline + '%' : '' }}{{ sp.adrenalineOverTime ? '+' + sp.adrenalineOverTime + '% over ' + seconds(sp.overTimeTicks) : '' }}</td></tr>
-            <tr><th>Cooldown</th><td>{{ seconds(sp.cooldownTicks) }} (shared)</td></tr>
-            <tr><th>Herblore</th><td>{{ sp.level }}</td></tr>
+            @if (sp.adrenaline || sp.adrenalineOverTime) {
+              <tr><th>Adrenaline</th><td class="good">{{ sp.adrenaline ? '+' + sp.adrenaline + '%' : '' }}{{ sp.adrenalineOverTime ? '+' + sp.adrenalineOverTime + '% over ' + seconds(sp.overTimeTicks) : '' }}</td></tr>
+            }
+            @if (sp.debuff; as d) { <tr><th>Target</th><td>{{ d.name }} for {{ seconds(d.durationTicks) }}</td></tr> }
+            @if (sp.cooldownTicks) { <tr><th>Cooldown</th><td>{{ seconds(sp.cooldownTicks) }}{{ sp.sharedCooldown ? ' (shared)' : '' }}</td></tr> }
+            @if (sp.level) { <tr><th>Herblore</th><td>{{ sp.level }}</td></tr> }
             <tr><th>GCD</th><td class="warn">off the global cooldown</td></tr>
           </table>
           <p class="desc">{{ sp.description }}</p>
+          @if (specialNotes(sp.id).length) {
+            <div class="rules">
+              <div class="rules-title">Interactions</div>
+              @for (n of specialNotes(sp.id); track $index) {
+                <div class="rule">
+                  <span>{{ n.text }}</span>
+                  @if (n.url) { <a class="src" [href]="n.url" target="_blank" rel="noopener">wiki</a> }
+                </div>
+              }
+            </div>
+          }
         }
         }
       </div>
@@ -410,7 +424,7 @@ export class EntityTooltip {
 
   gearSubtitle(g: GearView): string {
     const parts: string[] = [];
-    if (g.special) parts.push(g.special.kind === 'bomb' ? 'Bomb' : 'Adrenaline potion');
+    if (g.special) parts.push(specialKind(g.special));
     else if (g.weapon) parts.push(g.weapon.slot === '2h' ? 'Two-handed' : g.weapon.slot === 'shield' ? 'Shield' : g.weapon.slot === 'main' ? 'Main hand' : 'Off-hand');
     else if (g.gear) parts.push(g.gear.slot.charAt(0).toUpperCase() + g.gear.slot.slice(1) + (g.gear.type ? ' · ' + g.gear.type : ''));
     if (g.tier) parts.push('tier ' + g.tier);
@@ -445,7 +459,7 @@ export class EntityTooltip {
   subtitle(e: Entity): string {
     if (e.ability) return (e.ability.basicAttack ? 'Auto-attack' : e.ability.type) + ' · ' + e.ability.style;
     if (e.prayer) return (e.prayer.book === 'Curses' ? 'Ancient curse' : 'Prayer') + ' · level ' + e.prayer.level;
-    if (e.special) return 'Adrenaline potion';
+    if (e.special) return specialKind(e.special);
     if (e.weapon) return 'Weapon switch · ' + e.weapon.style;
     if (e.spell) return (e.spell.kind === 'autocast' ? 'Auto-cast spell · ' : 'Spell · ') + SPELLBOOK_NAMES[e.spell.book] + ' · level ' + e.spell.level;
     return '';
@@ -467,13 +481,29 @@ export class EntityTooltip {
 
   /** interaction rules of an ability, split into text + wiki link */
   notes(abilityId: string): Note[] {
-    return (ruleFor(abilityId)?.notes ?? []).map((n) => {
-      const m = n.match(/\((https?:\/\/\S+)\s*\)\s*$/);
-      return m ? { text: n.slice(0, m.index).trim(), url: m[1] } : { text: n, url: null };
-    });
+    return splitNotes(ruleFor(abilityId)?.notes);
+  }
+
+  /** interaction rules of a potion / bomb / device (rules-consumables.ts) */
+  specialNotes(specialId: string): Note[] {
+    return splitNotes(specialRuleFor(specialId)?.notes);
   }
 
   firstLine(s: string): string {
     return s.split('\n')[0].replace(/^\*\s*/, '');
   }
+}
+
+function splitNotes(notes: string[] | undefined): Note[] {
+  return (notes ?? []).map((n) => {
+    const m = n.match(/\((https?:\/\/\S+)\s*\)\s*$/);
+    return m ? { text: n.slice(0, m.index).trim(), url: m[1] } : { text: n, url: null };
+  });
+}
+
+/** subtitle of a specials.json item: "Adrenaline potion", "Powerburst", "Bomb", "Device" */
+function specialKind(s: Special): string {
+  if (s.kind === 'bomb') return 'Bomb';
+  if (s.kind === 'device') return 'Device';
+  return s.adrenaline || s.adrenalineOverTime ? 'Adrenaline potion' : s.id.startsWith('powerburst') ? 'Powerburst' : 'Potion';
 }

@@ -8,7 +8,7 @@ export const RANGED_RULES: AbilityRule[] = [
     ability: 'escape',
     moves: true,
     offGcd: true,
-    notes: ['Ignores the global cooldown, no adrenaline, 34-tick cooldown (17 with Mobile); no longer shares a cooldown with Surge outside PvP (' + W + 'Escape )'],
+    notes: ['Ignores the global cooldown, no adrenaline, 34-tick cooldown (17 with Mobile); no longer shares a cooldown with Surge outside PvP, so the Powerburst of acceleration does not affect it (' + W + 'Escape )'],
   },
   {
     ability: 'ranged',

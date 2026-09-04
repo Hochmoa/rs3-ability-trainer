@@ -202,6 +202,8 @@ export class DataService {
   resolvePvmeAlias(alias: string): RotationStep[] | null {
     const key = this.pvmeAliases()[alias];
     if (!key) return null;
+    // "note:<text>": a known token that is no input (overloads, weapon poison – set on the Loadout page)
+    if (key.startsWith('note:')) return [{ kind: 'note', id: '', note: key.slice(5) }];
     if (key.startsWith('gear:')) {
       const w = this.weaponById().get(key.slice(5));
       if (!w) return null;

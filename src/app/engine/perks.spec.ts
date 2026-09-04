@@ -53,6 +53,9 @@ interface Setup {
 
 function loadout(s: Setup): Loadout {
   const l = newLoadout('perks');
+  // the numbers below assume level 99 and no poison: the loadout's default elder overload / weapon poison+++ are tested in consumables.spec.ts
+  l.overload = 'none';
+  l.weaponPoison = 0;
   if (s.two) l.equipment.twoHand = { kind: 'weapon', id: s.two, gizmos: s.weapon };
   if (s.main) l.equipment.mainHand = { kind: 'weapon', id: s.main, gizmos: s.weapon?.slice(0, 1) };
   if (s.off) l.equipment.offHand = { kind: 'weapon', id: s.off, gizmos: s.shield ? [s.shield] : s.weapon?.slice(1, 2) };

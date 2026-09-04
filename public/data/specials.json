@@ -81,5 +81,62 @@
    "icon": "assets/status/vulnerability-target-status.png"
   },
   "icon": "assets/specials/vulnerability-bomb.png"
+ },
+ {
+  "id": "powerburst-of-vitality",
+  "name": "Powerburst of vitality",
+  "kind": "potion",
+  "adrenaline": 0,
+  "adrenalineOverTime": 0,
+  "overTimeTicks": 0,
+  "cooldownTicks": 200,
+  "sharedCooldown": "powerburst",
+  "level": 105,
+  "description": "Doubles current and maximum life points for 6 seconds (10 ticks); afterwards the maximum returns and the current life points are capped by it. Off the global cooldown. Shares the 120 s powerburst cooldown with every other powerburst.",
+  "icon": "assets/specials/powerburst-of-vitality.png"
+ },
+ {
+  "id": "powerburst-of-acceleration",
+  "name": "Powerburst of acceleration",
+  "kind": "potion",
+  "adrenaline": 0,
+  "adrenalineOverTime": 0,
+  "overTimeTicks": 0,
+  "cooldownTicks": 200,
+  "sharedCooldown": "powerburst",
+  "level": 111,
+  "description": "Resets the cooldowns of Surge, Dive and Bladed Dive and sets them to 1.2 s (2 ticks) for 6 seconds (10 ticks); Bladed Dive deals no damage meanwhile. Off the global cooldown. Shares the 120 s powerburst cooldown with every other powerburst.",
+  "icon": "assets/specials/powerburst-of-acceleration.png"
+ },
+ {
+  "id": "dominion-mine",
+  "name": "Dominion mine",
+  "kind": "device",
+  "adrenaline": 0,
+  "adrenalineOverTime": 0,
+  "overTimeTicks": 0,
+  "cooldownTicks": 100,
+  "sharedCooldown": "",
+  "level": 0,
+  "description": "Deployed mine: about 5 seconds later it deals 20% of the target's maximum life points (cap 10,000) to a monster of combat level 138 or less. Two mines per minute. Off the global cooldown.",
+  "icon": "assets/specials/dominion-mine.png"
+ },
+ {
+  "id": "sticky-bomb",
+  "name": "Sticky bomb",
+  "kind": "bomb",
+  "adrenaline": 0,
+  "adrenalineOverTime": 0,
+  "overTimeTicks": 0,
+  "cooldownTicks": 0,
+  "sharedCooldown": "",
+  "level": 101,
+  "description": "Throws a 3x3 bomb that binds monsters in it for 6 seconds (10 ticks). No damage. Off the global cooldown, no cooldown.",
+  "debuff": {
+   "name": "Bound",
+   "durationTicks": 10,
+   "icon": "assets/status/bound-target-status.png"
+  },
+  "icon": "assets/specials/sticky-bomb.png"
  }
 ]
