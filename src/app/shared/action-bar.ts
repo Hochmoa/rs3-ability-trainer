@@ -1,4 +1,4 @@
-import { CdkDragDrop, CdkDropList } from '@angular/cdk/drag-drop';
+import { CdkDrag, CdkDragDrop, CdkDropList } from '@angular/cdk/drag-drop';
 import { Component, input, output } from '@angular/core';
 import { Entity } from '../core/data.service';
 import { UsableReason } from '../engine/trainer-engine';
@@ -39,7 +39,7 @@ export interface SlotView {
  */
 @Component({
   selector: 'action-bar',
-  imports: [EntityTip, CdkDropList],
+  imports: [EntityTip, CdkDropList, CdkDrag],
   template: `
     <div class="bar" [class.main]="position() === 0" [class.compact]="compact()" [class.editable]="editable()">
       <div class="slots">
@@ -56,7 +56,10 @@ export interface SlotView {
             (click)="slotClick.emit($index)"
           >
             @if (s.entity) {
-              <img [src]="(s.morph?.entity ?? s.entity).icon" [alt]="(s.morph?.entity ?? s.entity).name" draggable="false" />
+              <!-- the icon can be dragged to another slot / bar while the bars are editable (not during a session) -->
+              <div class="drag" cdkDrag [cdkDragData]="{ pos: position(), slot: $index, entity: s.entity }" [cdkDragDisabled]="!droppable()">
+                <img [src]="(s.morph?.entity ?? s.entity).icon" [alt]="(s.morph?.entity ?? s.entity).name" draggable="false" />
+              </div>
               @if (s.morph && s.morph.stage > 1 && s.morph.entity.key === s.entity.key) {
                 <span class="stage">{{ s.morph.stage }}</span>
               }
@@ -192,6 +195,13 @@ export interface SlotView {
     }
     .slot .cdk-drag-placeholder {
       display: none;
+    }
+    .slot .drag {
+      position: absolute;
+      inset: 0;
+    }
+    .slot .drag.cdk-drag-dragging {
+      opacity: 0.35;
     }
     .slot img {
       width: 100%;
@@ -374,7 +384,8 @@ export class ActionBar {
   /** Revolution range: the first N slots get the yellow frame (main bar only, 0 = none) */
   readonly revolutionSlots = input<number>(0);
   readonly slotClick = output<number>();
-  readonly slotDrop = output<{ slot: number; entity: Entity }>();
+  /** something was dropped on a slot: an entity from the "missing" list, or (`from` set) the icon of another slot */
+  readonly slotDrop = output<{ slot: number; entity: Entity; from?: { pos: number; slot: number } }>();
   readonly slotMove = output<{ slot: number; dir: -1 | 1 }>();
   readonly slotClear = output<number>();
   readonly ceil = Math.ceil;
@@ -404,7 +415,9 @@ export class ActionBar {
   }
 
   onDrop(event: CdkDragDrop<unknown>, slot: number): void {
-    const entity = event.item.data as Entity | undefined;
-    if (entity && typeof entity === 'object' && 'key' in entity) this.slotDrop.emit({ slot, entity });
+    const data = event.item.data as Entity | { pos: number; slot: number; entity: Entity } | undefined;
+    if (!data || typeof data !== 'object') return;
+    if ('key' in data) this.slotDrop.emit({ slot, entity: data });
+    else if ('entity' in data) this.slotDrop.emit({ slot, entity: data.entity, from: { pos: data.pos, slot: data.slot } });
   }
 }

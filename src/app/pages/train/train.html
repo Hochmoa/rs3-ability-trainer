@@ -226,7 +226,7 @@
   @if (unreachable().length) {
     <div class="panel warning missing">
       <div class="missing-text">
-        Not on any keybound bar slot – drag them onto a slot of the bars below (or use the <a routerLink="/bars">Action bars</a> page). Slots without a key are bound on <a routerLink="/keybinds">Keybinds</a>.
+        Not on any keybound bar slot – drag them onto a slot of the bars below (or use the <a routerLink="/bars">Action bars</a> page). Icons on the bars can be dragged to another slot too. Slots without a key are bound on <a routerLink="/keybinds">Keybinds</a>.
       </div>
       <div class="missing-list" cdkDropList id="unreachable" cdkDropListSortingDisabled [cdkDropListEnterPredicate]="never">
         @for (e of unreachable(); track e.key) {
@@ -258,6 +258,39 @@
     <div class="hitsplats" aria-live="off">
       @for (h of hitsplats(); track h.id) {
         <div class="hitsplat" [class.crit]="h.crit" [class.dot]="h.dot" [title]="h.name">{{ h.amount | number: '1.0-0' }}</div>
+      }
+    </div>
+    @if (finishReason(); as why) {
+      @if (!finishDismissed()) {
+        <div class="finish-overlay" role="dialog" aria-label="Session ended">
+          <div class="finish-card" [class.stopped]="why === 'stopped'">
+            <h2>{{ why === 'finished' ? 'Rotation finished' : 'Session stopped' }}</h2>
+            @if (results().length) {
+              <p class="finish-score">{{ accuracy() }}% clean</p>
+              <p class="finish-counts">
+                <span class="good">Perfect {{ counts().perfect }}</span>
+                <span class="warn">Late {{ counts().late }}</span>
+                <span class="bad">Too early {{ counts().early }}</span>
+                <span class="bad">Wrong {{ counts().wrong }}</span>
+                <span class="warn">Missed {{ counts().missed }}</span>
+                @if (damage() > 0) { <span class="muted">{{ damage() | number: '1.0-0' }} damage · {{ dps() | number: '1.0-0' }} DPS</span> }
+              </p>
+            } @else {
+              <p class="muted">Nothing was cast.</p>
+            }
+            <div class="finish-actions">
+              <button class="btn btn-primary" (click)="restart()" [disabled]="!canStart()">↻ Restart</button>
+              <button class="btn" (click)="finishDismissed.set(true)">Close</button>
+            </div>
+            <p class="muted small">The full step list is in the session summary below.</p>
+          </div>
+        </div>
+      }
+    }
+    <div class="queue-head">
+      <span class="muted small">Rotation</span>
+      @if (running() || finished()) {
+        <button class="btn btn-sm" (click)="restart()" [disabled]="!canStart()" title="Reset and start again from the first step">↻ Restart</button>
       }
     </div>
     <div class="queue-strip">
@@ -300,6 +333,21 @@
     <div class="feedback" [class]="'feedback ' + (feedback()?.cls ?? '')">
       {{ feedback()?.text ?? (canStart() ? 'Press Start, then press the keys of the highlighted slots. Weapon switches, prayers and potions have no cooldown.' : '') }}
     </div>
+
+    @if (history().length) {
+      <!-- what the server made of every press, in order – compare with the rotation strip above -->
+      <div class="history" title="Every processed input in order. Green = expected step on time, yellow = late or queued, red = wrong or refused, blue = Revolution, grey = prayer / weapon switch outside the rotation. The number is the rotation step it completed.">
+        <span class="bar-label">Pressed</span>
+        <div class="history-strip" #historyStrip>
+          @for (h of history(); track h.id) {
+            <div [class]="'hist ' + h.kind" [title]="h.text">
+              @if (h.icon) { <img [src]="h.icon" [alt]="h.name" /> } @else { <span class="hist-name">{{ h.name }}</span> }
+              @if (h.step !== undefined) { <span class="step">{{ h.step + 1 }}</span> }
+            </div>
+          }
+        </div>
+      </div>
+    }
 
     <div class="bars">
       <div class="bar-row">
@@ -445,7 +493,7 @@
             [editable]="editLayout() && !running()"
             [revolutionSlots]="revolutionSlots()"
             (slotClick)="slotClick(b.position, $event)"
-            (slotDrop)="dropOnSlot(b.position, $event.slot, $event.entity)"
+            (slotDrop)="dropOnSlot(b.position, $event.slot, $event.entity, $event.from)"
             (slotMove)="moveSlot(b.position, $event.slot, $event.dir)"
             (slotClear)="clearSlot(b.position, $event)"
           />

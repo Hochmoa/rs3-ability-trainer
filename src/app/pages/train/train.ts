@@ -1,12 +1,12 @@
 import { CdkDrag, CdkDropList, CdkDropListGroup } from '@angular/cdk/drag-drop';
 import { DecimalPipe } from '@angular/common';
-import { Component, HostListener, OnDestroy, computed, effect, inject, signal } from '@angular/core';
+import { Component, ElementRef, HostListener, OnDestroy, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DataService, Entity, SPEC_KEY } from '../../core/data.service';
 import { applyWield, equip, unequip } from '../../core/equipment';
 import { keybindFromEvent, keybindKey, keybindLabel } from '../../core/keybind.util';
-import { AttackPattern, BAR_POSITIONS, BAR_SLOTS, BarShape, barLayout, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, EquipSlot, ItemRef, Loadout, PrayerStats, Prebuild, REVOLUTION_MAX_SLOTS, REVOLUTION_MIN_SLOTS, RevolutionSettings, Rotation, STYLES4, Settings, StepResult, Style, Style4, WeaponSpec, emptyPrebuild, entityKey, isStyle4, loadoutWeapons, loadoutWield, parseEntityKey, prebuildIsEmpty, visiblePresets, RotationStep } from '../../core/models';
+import { ActionBarSetup, AttackPattern, BAR_POSITIONS, BAR_SLOTS, BarShape, barLayout, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, EquipSlot, ItemRef, Loadout, PrayerStats, Prebuild, REVOLUTION_MAX_SLOTS, REVOLUTION_MIN_SLOTS, RevolutionSettings, Rotation, STYLES4, Settings, StepResult, Style, Style4, WeaponSpec, emptyPrebuild, entityKey, isStyle4, loadoutWeapons, loadoutWield, parseEntityKey, prebuildIsEmpty, visiblePresets, RotationStep } from '../../core/models';
 import { StorageService } from '../../core/storage.service';
 import { resolveLoadout } from '../../engine/loadout-resolver';
 import { BUFF_BY_ID, ruleFor, stackMax, stackName } from '../../engine/rules';
@@ -24,6 +24,19 @@ import { EntityTip } from '../../shared/tooltip';
 interface Feedback {
   text: string;
   cls: 'good' | 'bad' | 'warn' | 'info';
+}
+
+/** one processed input on the "Pressed" strip – what the server made of a press, in order */
+export interface HistoryEntry {
+  id: number;
+  key: string;
+  name: string;
+  icon: string | null;
+  /** ok = expected step on time · late = expected step late / early · wrong = wrong ability or refused · queued = waits for adrenaline/cooldown · auto = Revolution · other = prayer / weapon switch outside the rotation */
+  kind: 'ok' | 'late' | 'wrong' | 'queued' | 'auto' | 'other';
+  /** rotation step it completed */
+  step?: number;
+  text: string;
 }
 
 interface QueueSlot {
@@ -338,6 +351,13 @@ export class Train implements OnDestroy {
   // live state
   readonly running = signal(false);
   readonly finished = signal(false);
+  /** why the last session ended – drives the big end-of-rotation overlay */
+  readonly finishReason = signal<'finished' | 'stopped' | null>(null);
+  readonly finishDismissed = signal(false);
+  /** every processed input of the session in order (compare with the rotation strip above) */
+  readonly history = signal<HistoryEntry[]>([]);
+  private historyId = 0;
+  private readonly historyStrip = viewChild<ElementRef<HTMLElement>>('historyStrip');
   readonly tickPhase = signal(0);
   readonly gcdPhase = signal(1);
   readonly gcdRemaining = signal(0);
@@ -472,21 +492,36 @@ export class Train implements OnDestroy {
   private editPreset(pos: number, mutate: (slots: (RotationStep | null)[]) => void): void {
     if (this.running()) return;
     const s = structuredClone(this.storage.actionBars());
-    let id = visiblePresets(s, this.startStyle())[pos];
-    if (id === null) {
-      const free = s.presets.find((p) => !p.slots.some(Boolean) && !s.positions.includes(p.id));
-      if (!free) return;
-      id = free.id;
-      s.positions[pos] = id;
-    }
-    const preset = s.presets.find((p) => p.id === id);
-    if (!preset) return;
-    mutate(preset.slots);
+    const slots = this.presetSlots(s, pos);
+    if (!slots) return;
+    mutate(slots);
     void this.storage.saveActionBars(s);
   }
 
-  /** a missing ability was dropped onto a slot of the bar at `pos` */
-  dropOnSlot(pos: number, slot: number, entity: Entity): void {
+  /** slots of the preset shown at `pos` in setup `s` (mutable); an empty position gets the first unused empty preset */
+  private presetSlots(s: ActionBarSetup, pos: number): (RotationStep | null)[] | null {
+    let id = visiblePresets(s, this.startStyle())[pos];
+    if (id === null) {
+      const free = s.presets.find((p) => !p.slots.some(Boolean) && !s.positions.includes(p.id));
+      if (!free) return null;
+      id = free.id;
+      s.positions[pos] = id;
+    }
+    return s.presets.find((p) => p.id === id)?.slots ?? null;
+  }
+
+  /** a missing ability was dropped onto a slot of the bar at `pos` – or (`from`) the icon of another slot: the two swap */
+  dropOnSlot(pos: number, slot: number, entity: Entity, from?: { pos: number; slot: number }): void {
+    if (from) {
+      if (this.running() || (from.pos === pos && from.slot === slot)) return;
+      const s = structuredClone(this.storage.actionBars());
+      const a = this.presetSlots(s, from.pos);
+      const b = this.presetSlots(s, pos);
+      if (!a || !b) return;
+      [a[from.slot], b[slot]] = [b[slot], a[from.slot]];
+      void this.storage.saveActionBars(s);
+      return;
+    }
     if (entity.kind === 'action' || entity.key.startsWith('note:')) return;
     this.editPreset(pos, (slots) => {
       slots[slot] = { kind: entity.kind, id: entity.id } as RotationStep;
@@ -731,6 +766,9 @@ export class Train implements OnDestroy {
     if (this.revolution()) this.feedback.set({ text: 'Revolution is on – the yellow slots of the main bar fire on their own; press what the rotation needs beyond that.', cls: 'info' });
     else this.feedback.set({ text: 'Press ' + first?.key + ' (' + first?.entity.name + ') to start.', cls: 'info' });
     this.finished.set(false);
+    this.finishReason.set(null);
+    this.finishDismissed.set(false);
+    this.history.set([]);
     this.running.set(true);
     this.index.set(0);
     this.iconState.set('idle');
@@ -754,12 +792,19 @@ export class Train implements OnDestroy {
     return slots.map((step) => (step && step.kind !== 'note' ? entityKey(step.kind, step.id) : null));
   }
 
+  /** reset and start again from the first step (queue header, end-of-rotation overlay) */
+  restart(): void {
+    this.stop();
+    this.start();
+  }
+
   stop(): void {
     if (!this.running()) return;
     this.stopLoops();
     this.engine?.stop();
     this.running.set(false);
     this.finished.set(true);
+    if (!this.finishReason()) this.finishReason.set('stopped');
     this.gcdPhase.set(1);
     this.gcdRemaining.set(0);
     this.live.set(null);
@@ -893,6 +938,7 @@ export class Train implements OnDestroy {
       this.stopLoops();
       this.running.set(false);
       this.finished.set(true);
+      if (!this.finishReason()) this.finishReason.set('finished');
       this.live.set(null);
       this.saveSession();
       return false;
@@ -1007,8 +1053,7 @@ export class Train implements OnDestroy {
           this.feedback.set({ text: r.name + (r.kind === 'weapon' ? ' wielded' : ' – activated'), cls: 'good' });
         }
         this.appendCancelNote();
-        if (false) {
-        }
+        this.log(r.key, r.auto ? 'auto' : r.outcome === 'perfect' || r.outcome === 'done' ? 'ok' : 'late', this.feedback()?.text ?? r.name, r.step);
         this.flash('fired', r.key, now, 200);
         break;
       }
@@ -1018,6 +1063,7 @@ export class Train implements OnDestroy {
         if (!ev.matched) {
           this.feedback.set({ text: 'Revolution cast ' + this.name(ev.key) + (ev.expected ? ' – the rotation still waits for ' + this.name(ev.expected) : ''), cls: 'info' });
           this.appendCancelNote();
+          this.log(ev.key, 'auto', this.feedback()?.text ?? '');
           this.flash('fired', ev.key, now, 200);
         }
         break;
@@ -1025,16 +1071,19 @@ export class Train implements OnDestroy {
         this.counts.update((c) => ({ ...c, wrong: c.wrong + 1 }));
         this.feedback.set({ text: this.name(ev.key) + (this.data.get(ev.key)?.kind === 'ability' ? ' cast' : ' activated') + ' instead of ' + this.name(ev.expected) + ' – try again', cls: 'bad' });
         this.appendCancelNote();
+        this.log(ev.key, 'wrong', this.feedback()?.text ?? '');
         this.flash('wrong', ev.key, now, 300);
         break;
       case 'too-early':
         this.counts.update((c) => ({ ...c, early: c.early + 1 }));
         this.feedback.set({ text: 'Too early – ' + ev.ticksEarly + (ev.ticksEarly === 1 ? ' tick' : ' ticks') + ' before the last cooldown tick (queueing is off)', cls: 'bad' });
+        this.log(ev.key, 'wrong', this.feedback()?.text ?? '');
         this.flash('wrong', ev.key, now, 250);
         break;
       case 'wrong':
         this.counts.update((c) => ({ ...c, wrong: c.wrong + 1 }));
         this.feedback.set({ text: 'Wrong ability: ' + this.name(ev.key) + ' – ignored, on cooldown', cls: 'bad' });
+        this.log(ev.key, 'wrong', this.feedback()?.text ?? '');
         this.flash('wrong', ev.key, now, 250);
         break;
       case 'wrong-weapon':
@@ -1043,9 +1092,11 @@ export class Train implements OnDestroy {
           text: this.name(ev.key) + (ev.reason === 'weapon' ? ' needs a ' + (this.data.get(ev.key)?.ability?.style ?? this.data.get(ev.key)?.spec?.style ?? '') + ' weapon – you wield ' + (e.style ?? 'nothing') : ' is not the special attack of the wielded weapon'),
           cls: 'bad',
         });
+        this.log(ev.key, 'wrong', this.feedback()?.text ?? '');
         this.flash('wrong', ev.key, now, 300);
         break;
       case 'weapon':
+        this.log('weapon:' + ev.id, 'other', this.data.name('weapon:' + ev.id) + ' wielded');
         break;
       case 'prayer': {
         const name = this.data.name('prayer:' + ev.id);
@@ -1054,11 +1105,13 @@ export class Train implements OnDestroy {
         } else {
           this.feedback.set({ text: name + ' off', cls: 'info' });
         }
+        this.log('prayer:' + ev.id, 'other', this.feedback()?.text ?? name);
         break;
       }
       case 'wrong-book':
         this.counts.update((c) => ({ ...c, wrong: c.wrong + 1 }));
         this.feedback.set({ text: this.data.name('prayer:' + ev.id) + ' is a ' + (ev.book === 'Curses' ? 'curse' : 'standard prayer') + ' – your book is ' + (this.prayerBook() === 'Curses' ? 'Ancient Curses' : 'standard prayers') + ' (Loadout)', cls: 'bad' });
+        this.log('prayer:' + ev.id, 'wrong', this.feedback()?.text ?? '');
         this.flash('wrong', 'prayer:' + ev.id, now, 300);
         break;
       case 'attack': {
@@ -1076,18 +1129,22 @@ export class Train implements OnDestroy {
       }
       case 'no-adrenaline':
         this.feedback.set({ text: this.name(ev.key) + ' needs ' + ev.need + '% adrenaline, you have ' + Math.floor(ev.have) + '%' + (this.storage.settings().abilityQueueing ? ' – queued until you have it' : ''), cls: 'bad' });
+        this.log(ev.key, queueing ? 'queued' : 'wrong', this.feedback()?.text ?? '');
         this.flash('wrong', ev.key, now, 300);
         break;
       case 'on-cooldown':
         this.feedback.set({ text: this.name(ev.key) + ' is on cooldown for ' + (ev.readyInTicks * TICK_MS) / 1000 + ' s' + (this.storage.settings().abilityQueueing ? ' – queued' : ''), cls: 'bad' });
+        this.log(ev.key, queueing ? 'queued' : 'wrong', this.feedback()?.text ?? '');
         this.flash('wrong', ev.key, now, 300);
         break;
       case 'requirement':
         this.feedback.set({ text: this.name(ev.key) + ': ' + ev.text + (queueing ? ' – queued' : ''), cls: 'bad' });
+        this.log(ev.key, queueing ? 'queued' : 'wrong', this.feedback()?.text ?? '');
         this.flash('wrong', ev.key, now, 300);
         break;
       case 'recast':
         this.feedback.set({ text: this.name(ev.key) + ' released early', cls: 'good' });
+        this.log(ev.key, 'ok', this.feedback()?.text ?? '');
         break;
       case 'channel-cancelled':
         this.cancelNote = this.name(ev.key) + ' channel cancelled, ' + ev.hitsLost + (ev.hitsLost === 1 ? ' hit' : ' hits') + ' lost';
@@ -1116,6 +1173,22 @@ export class Train implements OnDestroy {
         break;
       }
     }
+  }
+
+  /**
+   * Append a processed input to the "Pressed" strip. A prayer / weapon step logs its toggle first and its step
+   * result right after – the second entry upgrades the first instead of duplicating it.
+   */
+  private log(key: string, kind: HistoryEntry['kind'], text: string, step?: number): void {
+    const ent = this.data.get(key);
+    const entry: HistoryEntry = { id: ++this.historyId, key, name: ent?.name ?? this.name(key), icon: ent?.icon ?? null, kind, text, step };
+    this.history.update((list) => {
+      const last = list[list.length - 1];
+      if (last && last.key === key && last.kind === 'other' && kind !== 'other') return [...list.slice(0, -1), { ...entry, id: last.id }];
+      return [...list, entry];
+    });
+    const el = this.historyStrip()?.nativeElement;
+    if (el) requestAnimationFrame(() => (el.scrollLeft = el.scrollWidth));
   }
 
   private flash(kind: 'fired' | 'wrong', key: string, now: number, ms: number): void {
