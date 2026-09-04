@@ -4,11 +4,8 @@
 } @else if (!storage.rotations().length) {
   <div class="panel empty">
     <h2>No rotation yet</h2>
-    <p>
-      This trainer runs RuneScape 3 rotations on the real combat clock: 0.6 s ticks, a 1.8 s global cooldown, adrenaline, cooldowns
-      and the in-game "Allow ability queueing" option, with simulated ping – so you learn <em>when</em> to press, not just what.
-    </p>
-    <p>Build a rotation (or import PvME notation), put its abilities on your action bars, bind keys and press Start.</p>
+    <p>Build one or paste PvME notation, drop the abilities onto your bars, bind your keys, press Start.</p>
+    <p class="muted">The trainer plays it back on the game clock (ticks, global cooldown, adrenaline, cooldowns, a bit of ping) and tells you after every press whether you were on the tick, early or late.</p>
     <a class="btn btn-primary" routerLink="/rotations">Create a rotation</a>
   </div>
 } @else {
