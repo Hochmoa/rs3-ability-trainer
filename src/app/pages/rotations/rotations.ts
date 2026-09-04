@@ -1,6 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { groupCatalog } from '../../core/catalog-groups';
 import { DataService, Entity } from '../../core/data.service';
 import { keybindLabel } from '../../core/keybind.util';
 import { parsePvme } from '../../core/pvme';
@@ -16,7 +17,7 @@ import { DialogService } from '../../shared/dialog';
 
 const TABS = [...STYLES, 'Prayers', 'Curses', 'Special', 'Weapons', 'Specs', 'Actions'] as const;
 type Tab = (typeof TABS)[number];
-const TYPE_ORDER: Record<string, number> = { Basic: 0, Enhanced: 1, Threshold: 2, Ultimate: 3, Special: 4 };
+const TYPE_ORDER: Record<string, number> = { Basic: 0, Enhanced: 1, Threshold: 2, Ultimate: 3, Incantation: 4, Special: 5 };
 
 @Component({
   selector: 'app-rotations',
@@ -64,6 +65,9 @@ export class Rotations {
       return a.name.localeCompare(b.name);
     });
   });
+
+  /** the catalog with a header per ability type (Basic → Enhanced → Threshold → Ultimate …), like the ability book */
+  readonly catalogGroups = computed(() => groupCatalog(this.catalog()));
 
   /** in-game impossibilities in the rotation being edited */
   readonly editWarnings = computed<string[]>(() => {

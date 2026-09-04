@@ -1,7 +1,7 @@
-import { CdkDrag, CdkDragDrop, CdkDropList } from '@angular/cdk/drag-drop';
 import { Component, computed, inject, input, output } from '@angular/core';
 import { DataService, GearView } from '../core/data.service';
 import { EquipSlot, Equipment, GEAR_SLOTS, GearSlot, INVENTORY_SIZE, ItemRef, SLOT_NAMES } from '../core/models';
+import { GearDragService } from './gear-drag';
 import { GearTip } from './tooltip';
 
 /** Where a dragged item comes from. */
@@ -33,31 +33,32 @@ interface Cell {
  * The in-game equipment screen (worn slots in the game's layout) plus the 28-slot backpack.
  * `editable`: items can be dragged between catalog, slots and backpack and right-clicked for a menu.
  * `live`: while training – clicking an item equips / takes off / drinks it; no dragging.
+ *
+ * Dragging is the pointer-based kind of the action bar editor (shared/gear-drag.ts): cells are drop
+ * targets via `data-gear-drop` and receive the drop as a `gear-drop` event; the page's catalog joins
+ * the same drag through the GearDragService.
  */
 @Component({
   selector: 'gear-panel',
-  imports: [CdkDropList, CdkDrag, GearTip],
+  imports: [GearTip],
   template: `
     <div class="gear" [class.live]="live()" [class.editable]="editable()">
       <div class="equipment">
         @for (c of cells(); track c.slot) {
           <div
             class="cell equip"
-            [class]="'cell equip slot-' + c.gear + (c.ref ? ' filled' : ' empty') + (c.blocked ? ' blocked' : '') + (isWielded(c) ? ' wielded' : '')"
+            [class]="'cell equip slot-' + c.gear + (c.ref ? ' filled' : ' empty') + (c.blocked ? ' blocked' : '') + (isWielded(c) ? ' wielded' : '') + (canDrop(c) ? ' can-drop' : '') + (gearDrag.hover() === 'equip:' + c.gear ? ' hover' : '')"
             [attr.data-slot]="c.gear"
+            [attr.data-gear-drop]="canDrop(c) ? 'equip:' + c.gear : null"
             [title]="c.ref ? '' : SLOT_NAMES[c.gear]"
             [gearTip]="c.view"
-            cdkDropList
-            cdkDropListSortingDisabled
-            [cdkDropListDisabled]="!editable() || c.blocked"
-            [cdkDropListEnterPredicate]="acceptsEquip(c)"
             [id]="'equip-' + c.gear"
-            (cdkDropListDropped)="onDropEquip($event, c)"
+            (gear-drop)="onDropEquip($event, c)"
             (click)="clickCell(c)"
             (contextmenu)="menuCell($event, c)"
           >
             @if (c.ref && c.view) {
-              <div class="item" cdkDrag [cdkDragData]="dragOf(c.ref, { kind: 'equip', slot: c.slot })" [cdkDragDisabled]="!editable()">
+              <div class="item" [class.dragging]="gearDrag.isSource('equip', c.slot)" (pointerdown)="startDrag($event, c.ref, { kind: 'equip', slot: c.slot }, c.view)">
                 @if (c.view.icon) { <img [src]="c.view.icon" [alt]="c.view.name" draggable="false" /> } @else { <span class="noicon">{{ c.view.name.slice(0, 3) }}</span> }
                 @if (c.ref.gizmos?.length) { <span class="badge perk" title="augmented">✦</span> }
                 @if (c.ref.spec) { <span class="badge spec" title="stored special attack">S</span> }
@@ -74,18 +75,16 @@ interface Cell {
         @for (v of inv(); track $index) {
           <div
             class="cell inv"
-            [class]="'cell inv' + (v ? ' filled' : ' empty') + (v && usable() && !usable()!(v.ref) ? ' unusable' : '')"
+            [class]="'cell inv' + (v ? ' filled' : ' empty') + (v && usable() && !usable()!(v.ref) ? ' unusable' : '') + (canDropInv() ? ' can-drop' : '') + (gearDrag.hover() === 'inv:' + $index ? ' hover' : '')"
             [gearTip]="v"
-            cdkDropList
-            cdkDropListSortingDisabled
-            [cdkDropListDisabled]="!editable()"
+            [attr.data-gear-drop]="canDropInv() ? 'inv:' + $index : null"
             [id]="'inv-' + $index"
-            (cdkDropListDropped)="onDropInv($event, $index)"
+            (gear-drop)="onDropInv($event, $index)"
             (click)="clickInv($index)"
             (contextmenu)="menuInv($event, $index)"
           >
             @if (v) {
-              <div class="item" cdkDrag [cdkDragData]="dragOf(v.ref, { kind: 'inv', index: $index })" [cdkDragDisabled]="!editable()">
+              <div class="item" [class.dragging]="gearDrag.isSource('inv', $index)" (pointerdown)="startDrag($event, v.ref, { kind: 'inv', index: $index }, v)">
                 @if (v.icon) { <img [src]="v.icon" [alt]="v.name" draggable="false" /> } @else { <span class="noicon">{{ v.name.slice(0, 3) }}</span> }
                 @if (v.ref.gizmos?.length) { <span class="badge perk" title="augmented">✦</span> }
                 @if (v.ref.spec) { <span class="badge spec" title="stored special attack">S</span> }
@@ -170,13 +169,19 @@ interface Cell {
       border-color: var(--gold);
       box-shadow: inset 0 0 6px rgba(201, 162, 39, 0.5);
     }
-    .cell.cdk-drop-list-receiving,
-    .cell.cdk-drop-list-dragging {
-      border-color: var(--gold);
-      background: rgba(201, 162, 39, 0.15);
+    /* every cell that could take the dragged item */
+    .cell.can-drop {
+      border-color: rgba(201, 162, 39, 0.6);
+      border-style: solid;
+      background: rgba(201, 162, 39, 0.1);
     }
-    .cell .cdk-drag-placeholder {
-      opacity: 0.3;
+    /* the cell under the pointer: this is where the drop lands */
+    .cell.hover {
+      border-color: #ffe27a;
+      background: rgba(255, 226, 122, 0.35);
+      box-shadow: 0 0 0 2px #ffe27a, 0 0 12px #ffe27a;
+      transform: scale(1.08);
+      z-index: 1;
     }
     .item {
       position: relative;
@@ -186,6 +191,14 @@ interface Cell {
       align-items: center;
       justify-content: center;
       cursor: grab;
+    }
+    .editable .item {
+      touch-action: none;
+      user-select: none;
+    }
+    /* the item being dragged stays in place, dimmed, until the drop */
+    .item.dragging {
+      opacity: 0.4;
     }
     .live .item {
       cursor: pointer;
@@ -254,6 +267,7 @@ interface Cell {
 })
 export class GearPanel {
   readonly data = inject(DataService);
+  readonly gearDrag = inject(GearDragService);
   readonly equipment = input.required<Equipment>();
   readonly inventory = input.required<(ItemRef | null)[]>();
   readonly editable = input(false);
@@ -296,38 +310,52 @@ export class GearPanel {
     return this.live() && (c.gear === 'mainHand' || c.gear === 'offHand') && !!c.ref;
   }
 
-  /** a slot accepts an item of its own kind only (the game refuses the rest) */
-  acceptsEquip(c: Cell): (drag: CdkDrag<GearDrag>) => boolean {
-    return (drag) => {
-      const d = drag.data;
-      if (!d) return false;
-      const slot = this.data.slotOf(d.ref);
-      if (!slot) return false;
-      if (c.gear === 'mainHand') return slot === 'mainHand' || slot === 'twoHand';
-      return slot === c.gear;
-    };
+  /** pointerdown on a worn / carried item: starts the pointer drag (editable panels only) */
+  startDrag(ev: PointerEvent, ref: ItemRef, from: GearSource, view: GearView): void {
+    if (!this.editable()) return;
+    this.gearDrag.start(ev, this.dragOf(ref, from), view);
   }
 
-  onDropEquip(e: CdkDragDrop<unknown, unknown, GearDrag>, c: Cell): void {
-    const d = e.item.data;
+  /** a slot accepts an item of its own kind only (the game refuses the rest) */
+  acceptsEquip(c: Cell, d: GearDrag): boolean {
+    const slot = this.data.slotOf(d.ref);
+    if (!slot) return false;
+    if (c.gear === 'mainHand') return slot === 'mainHand' || slot === 'twoHand';
+    return slot === c.gear;
+  }
+
+  /** this worn slot could take the item being dragged right now */
+  canDrop(c: Cell): boolean {
+    const d = this.gearDrag.drag();
+    return !!d && this.editable() && !c.blocked && d.from.kind !== 'equip' && this.acceptsEquip(c, d);
+  }
+
+  /** the backpack takes anything while an editable panel is dragged over */
+  canDropInv(): boolean {
+    return this.editable() && !!this.gearDrag.drag();
+  }
+
+  onDropEquip(e: Event, c: Cell): void {
+    const d = (e as CustomEvent<GearDrag>).detail;
     if (!d) return;
     const slot = this.data.slotOf(d.ref);
     if (!slot) return;
     this.action.emit({ kind: 'drop-equip', drag: d, slot });
   }
 
-  onDropInv(e: CdkDragDrop<unknown, unknown, GearDrag>, index: number): void {
-    const d = e.item.data;
+  onDropInv(e: Event, index: number): void {
+    const d = (e as CustomEvent<GearDrag>).detail;
     if (!d) return;
     this.action.emit({ kind: 'drop-inv', drag: d, index });
   }
 
   clickCell(c: Cell): void {
-    if (!c.ref || c.blocked) return;
+    if (!c.ref || c.blocked || this.gearDrag.suppressClick) return;
     this.action.emit({ kind: 'click', ref: c.ref, from: { kind: 'equip', slot: c.slot } });
   }
 
   clickInv(i: number): void {
+    if (this.gearDrag.suppressClick) return;
     const ref = this.inventory()[i];
     if (ref) this.action.emit({ kind: 'click', ref, from: { kind: 'inv', index: i } });
   }

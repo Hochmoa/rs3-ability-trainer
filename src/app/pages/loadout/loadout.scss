@@ -119,9 +119,14 @@
   border: 1px dashed transparent;
   border-radius: 6px;
 
-  &.cdk-drop-list-receiving {
+  /* a worn / carried item is being dragged: dropping it here removes it from the loadout */
+  &.can-receive {
+    border-color: rgba(229, 57, 53, 0.4);
+  }
+
+  &.receiving {
     border-color: var(--bad);
-    background: rgba(229, 57, 53, 0.06);
+    background: rgba(229, 57, 53, 0.08);
   }
 }
 
@@ -137,6 +142,7 @@
   color: var(--text);
   cursor: grab;
   user-select: none;
+  touch-action: none;
 
   &:hover {
     border-color: var(--gold);
@@ -167,10 +173,6 @@
     font-size: 11px;
     color: var(--muted);
   }
-}
-
-.cdk-drag-placeholder {
-  opacity: 0.35;
 }
 
 .worn {

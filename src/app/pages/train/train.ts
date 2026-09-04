@@ -410,6 +410,7 @@ export class Train implements OnDestroy {
     const flash = this.flashKey();
     const layout = this.layout();
     const morphs = this.morphs();
+    const activeKeys = new Set(this.activePrayers().map((p) => p.key));
     return layout.order.map((pos) => {
       const id = shown[pos] ?? null;
       const preset = id === null ? null : s.presets.find((p) => p.id === id) ?? null;
@@ -431,6 +432,7 @@ export class Train implements OnDestroy {
           gcdRemainingMs: running && isGcdAbility ? gcdMs : 0,
           expected: running && !!shown && shown.key === expected,
           queued: running && !!shown && shown.key === queued,
+          active: running && !!entity && activeKeys.has(entity.key),
           flash: running && shown && flash?.key === shown.key ? flash.kind : null,
         };
       });

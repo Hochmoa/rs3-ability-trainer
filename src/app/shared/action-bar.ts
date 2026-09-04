@@ -23,6 +23,8 @@ export interface SlotView {
   expected: boolean;
   /** this slot's ability sits in the game's queue slot */
   queued: boolean;
+  /** the slot's prayer / curse is switched on right now – lit up like in the game */
+  active?: boolean;
   /** brief highlight after a cast */
   flash: 'fired' | 'wrong' | null;
 }
@@ -42,7 +44,7 @@ export interface SlotView {
         @for (s of slots(); track $index) {
           <div
             class="slot"
-            [class]="'slot' + (s.entity ? ' ' + s.entity.kind : ' empty') + (s.expected ? ' expected' : '') + (s.queued ? ' queued' : '') + (s.usable && s.usable !== 'ok' ? ' unusable ' + s.usable : '') + (s.flash ? ' flash-' + s.flash : '')"
+            [class]="'slot' + (s.entity ? ' ' + s.entity.kind : ' empty') + (s.expected ? ' expected' : '') + (s.queued ? ' queued' : '') + (s.active ? ' active' : '') + (s.usable && s.usable !== 'ok' ? ' unusable ' + s.usable : '') + (s.flash ? ' flash-' + s.flash : '')"
             [entityTip]="s.morph?.entity ?? s.entity"
             cdkDropList
             cdkDropListSortingDisabled
@@ -55,6 +57,10 @@ export interface SlotView {
               <img [src]="(s.morph?.entity ?? s.entity).icon" [alt]="(s.morph?.entity ?? s.entity).name" draggable="false" />
               @if (s.morph && s.morph.stage > 1 && s.morph.entity.key === s.entity.key) {
                 <span class="stage">{{ s.morph.stage }}</span>
+              }
+              @if (s.active) {
+                <!-- active prayer / curse: lit-up overlay, like the game's "on" state -->
+                <div class="active-glow"></div>
               }
               @if (s.queued) {
                 <!-- queued: black loading ring, like the game's queue indicator -->
@@ -175,6 +181,29 @@ export interface SlotView {
     }
     .slot.unusable img {
       filter: grayscale(1) brightness(0.45);
+    }
+    /* active prayer / curse: bright white-blue frame with a soft glow and a light wash over the icon
+       (queued / expected / flash rules below override the frame, so those states stay visible on top) */
+    .slot.active {
+      border-color: #e8f6ff;
+      box-shadow: 0 0 7px 1px rgba(200, 235, 255, 0.85), inset 0 0 6px rgba(232, 246, 255, 0.55);
+    }
+    .active-glow {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 50% 40%, rgba(232, 246, 255, 0.3), rgba(232, 246, 255, 0.08) 70%);
+      pointer-events: none;
+      z-index: 1;
+      animation: active-pulse 1.6s ease-in-out infinite;
+    }
+    @keyframes active-pulse {
+      0%,
+      100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.55;
+      }
     }
     .slot.expected {
       border-color: var(--gold);

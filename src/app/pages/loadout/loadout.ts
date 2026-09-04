@@ -1,4 +1,3 @@
-import { CdkDrag, CdkDropList, CdkDropListGroup } from '@angular/cdk/drag-drop';
 import { Component, HostListener, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -9,6 +8,7 @@ import { isObscureGear, isObscurePerk, isObscureSpec, isObscureWeapon } from '..
 import { StorageService } from '../../core/storage.service';
 import { LoadoutData, loadoutWarnings, mainStyle, wornPassives, wornSets } from '../../engine/loadout-resolver';
 import { DialogService } from '../../shared/dialog';
+import { GearDragService } from '../../shared/gear-drag';
 import { GearAction, GearDrag, GearPanel, GearSource } from '../../shared/gear-panel';
 import { ToastService } from '../../shared/toast';
 import { GearTip } from '../../shared/tooltip';
@@ -69,13 +69,14 @@ interface EofEdit {
 
 @Component({
   selector: 'app-loadout',
-  imports: [FormsModule, RouterLink, GearPanel, GearTip, CdkDropListGroup, CdkDropList, CdkDrag],
+  imports: [FormsModule, RouterLink, GearPanel, GearTip],
   templateUrl: './loadout.html',
   styleUrl: './loadout.scss',
 })
 export class Loadout {
   readonly storage = inject(StorageService);
   readonly data = inject(DataService);
+  readonly gearDrag = inject(GearDragService);
   private dialogs = inject(DialogService);
   private toast = inject(ToastService);
 
@@ -139,11 +140,15 @@ export class Loadout {
       .filter((v): v is GearView => !!v);
   });
 
-  /** the catalog list never receives drops from itself; dropping a worn / carried item on it removes the item */
-  readonly fromPanel = (drag: CdkDrag<GearDrag>): boolean => drag.data?.from.kind !== 'catalog';
+  /** the catalog never receives drops from itself; dropping a worn / carried item on it removes the item */
+  readonly catalogReceives = computed(() => {
+    const d = this.gearDrag.drag();
+    return !!d && d.from.kind !== 'catalog';
+  });
 
-  dragOf(v: GearView): GearDrag {
-    return { ref: v.ref, from: { kind: 'catalog' } };
+  /** pointerdown on a catalog item: starts the pointer drag (shared/gear-drag.ts), the item stays in the list */
+  startDrag(ev: PointerEvent, v: GearView): void {
+    this.gearDrag.start(ev, { ref: v.ref, from: { kind: 'catalog' } }, v);
   }
 
   // ---------------------------------------------------------------- state
@@ -303,7 +308,8 @@ export class Loadout {
   }
 
   /** an item dropped back on the catalog leaves the loadout */
-  dropOnCatalog(d: GearDrag | undefined): void {
+  dropOnCatalog(e: Event): void {
+    const d = (e as CustomEvent<GearDrag>).detail;
     if (!d) return;
     if (d.from.kind === 'inv') this.apply(removeItem(this.state(), d.from.index));
     else if (d.from.kind === 'equip') this.apply(removeWorn(this.state(), d.from.slot));
@@ -311,10 +317,12 @@ export class Loadout {
 
   /** click on a catalog item: into the backpack */
   addFromCatalog(v: GearView): void {
+    if (this.gearDrag.suppressClick) return;
     this.apply(addItem(this.state(), v.ref), v.name + ' added to the backpack');
   }
 
   wearFromCatalog(v: GearView): void {
+    if (this.gearDrag.suppressClick) return;
     if (!this.slotOf(v.ref)) return this.addFromCatalog(v);
     this.apply(equip(this.state(), v.ref, this.slotOf), v.name + (v.weapon ? ' wielded' : ' worn'));
   }
