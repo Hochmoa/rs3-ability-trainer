@@ -59,8 +59,9 @@ function loadout(s: Setup): Loadout {
   if (s.two) l.equipment.twoHand = { kind: 'weapon', id: s.two, gizmos: s.weapon };
   if (s.main) l.equipment.mainHand = { kind: 'weapon', id: s.main, gizmos: s.weapon?.slice(0, 1) };
   if (s.off) l.equipment.offHand = { kind: 'weapon', id: s.off, gizmos: s.shield ? [s.shield] : s.weapon?.slice(1, 2) };
-  if (s.body) l.equipment.body = { kind: 'gear', id: 'masterwork-melee-platebody', gizmos: [s.body] };
-  if (s.legs) l.equipment.legs = { kind: 'gear', id: 'masterwork-melee-platelegs', gizmos: [s.legs] };
+  // tank armour (no damage bonus), so the ability damage stays the bare 1692 of the scythe and the perk numbers stay readable
+  if (s.body) l.equipment.body = { kind: 'gear', id: 'teralith-cuirass', gizmos: [s.body] };
+  if (s.legs) l.equipment.legs = { kind: 'gear', id: 'teralith-leggings', gizmos: [s.legs] };
   return l;
 }
 
@@ -224,12 +225,12 @@ describe('gizmo validation (loadoutWarnings)', () => {
 
   it('ancient-only perks need an ancient gizmo', () => {
     expect(warnings({ two: SCYTHE, weapon: [gizmo([['ruthless', 3]], false)] })).toEqual(['Noxious scythe: Ruthless needs an ancient gizmo.', 'Noxious scythe: Ruthless rank 3 exceeds the maximum of 0 (standard gizmo).']);
-    expect(warnings({ two: SCYTHE, body: gizmo([['relentless', 5]], false) })).toContain('Masterwork melee platebody: Relentless needs an ancient gizmo.');
+    expect(warnings({ two: SCYTHE, body: gizmo([['relentless', 5]], false) })).toContain('Teralith cuirass: Relentless needs an ancient gizmo.');
     expect(warnings({ two: SCYTHE, body: gizmo([['relentless', 5]]) })).toEqual([]);
   });
 
   it('weapon perks stay on weapon gizmos, armour perks on armour gizmos (a shield takes an armour gizmo)', () => {
-    expect(warnings({ two: SCYTHE, body: gizmo([['precise', 6]]) })).toEqual(['Masterwork melee platebody: Precise cannot go on a armour gizmo.']);
+    expect(warnings({ two: SCYTHE, body: gizmo([['precise', 6]]) })).toEqual(['Teralith cuirass: Precise cannot go on a armour gizmo.']);
     expect(warnings({ two: SCYTHE, weapon: [gizmo([['turtling', 4]])] })).toEqual(['Noxious scythe: Turtling cannot go on a weapon gizmo.']);
     expect(warnings({ main: HATCHET, off: SHIELD, shield: gizmo([['precise', 6]]) })).toEqual(['Merciless kiteshield: Precise cannot go on a armour gizmo.']);
     expect(warnings({ main: HATCHET, off: SHIELD, shield: gizmo([['turtling', 4], ['bulwark', 4]]) })).toEqual([]);
@@ -237,7 +238,7 @@ describe('gizmo validation (loadoutWarnings)', () => {
 
   it('two slots per gizmo; a two-slot perk fills the gizmo; no perk twice', () => {
     expect(warnings({ two: SCYTHE, weapon: [gizmo([['precise', 6], ['aftershock', 4], ['lunging', 4]])] })).toEqual(['Noxious scythe: more than two perk slots used.']);
-    expect(warnings({ two: SCYTHE, body: gizmo([['enhanced-devoted', 4], ['biting', 4]]) })).toEqual(['Masterwork melee platebody: more than two perk slots used (a two-slot perk cannot be paired with another perk).']);
+    expect(warnings({ two: SCYTHE, body: gizmo([['enhanced-devoted', 4], ['biting', 4]]) })).toEqual(['Teralith cuirass: more than two perk slots used (a two-slot perk cannot be paired with another perk).']);
     expect(warnings({ two: SCYTHE, body: gizmo([['enhanced-devoted', 4]]) })).toEqual([]);
     expect(warnings({ two: SCYTHE, weapon: [gizmo([['precise', 6], ['precise', 5]])] })).toEqual(['Noxious scythe: Precise is in the gizmo twice.', 'Precise is on 2 gizmos: perks do not stack with themselves, only rank 6 counts.']);
     expect(warnings({ two: SCYTHE, weapon: [gizmo([['nonsense', 1]])] })).toEqual(['Noxious scythe: unknown perk "nonsense".']);

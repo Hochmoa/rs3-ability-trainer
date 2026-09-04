@@ -173,6 +173,31 @@
       }
     </div>
     <small class="muted">Base levels without boosts; the overload below raises Attack, Strength, Ranged, Magic, Necromancy and Defence on top. Ability damage takes the wielded style's skill.</small>
+    @if (resolved(); as r) {
+      <h3>Stats</h3>
+      <div class="stats">
+        <div>
+          <span class="slot-label">Ability damage</span> <b>{{ r.abilityDamage }}</b>
+          @if (r.style) {
+            <small class="muted">{{ r.style }}: {{ damageSkillName(r) }} {{ r.combatLevel }} â†’ level part {{ levelPart(r.combatLevel) }}, plus the weapons' tier part and a damage bonus of {{ styleBonus(r) }} (Ã—1.5 with a two-hander or dual wield)</small>
+          } @else {
+            <small class="muted">no weapon in hand</small>
+          }
+        </div>
+        <div>
+          <span class="slot-label">Damage bonus</span>
+          <small class="muted">@for (s of STYLES4; track s) {{{ s }} +{{ r.damageBonus[s] }}{{ $last ? '' : ' Â· ' }}} â€“ power armour, jewellery, capes and pocket items (runescape.wiki: Damage bonus)</small>
+        </div>
+        <div>
+          <span class="slot-label">Critical strike damage</span> <b>+{{ critPct(r) }}%</b>
+          <small class="muted">by the {{ damageSkillName(r) }} level ({{ r.combatLevel }}): +10% at level 1 up to +50% at 90, plus gear bonuses</small>
+        </div>
+        <div>
+          <span class="slot-label">Maximum life points</span> <b>{{ r.maxLifePoints }}</b>
+          <small class="muted">Constitution {{ r.levels.constitution }} Ã— 100 + {{ r.lifePointsBonus }} from the worn armour (Fortitude and the Powerburst of vitality add to it while active)</small>
+        </div>
+      </div>
+    }
     <h3>Consumables in effect</h3>
     <label>
       <span>Overload</span>

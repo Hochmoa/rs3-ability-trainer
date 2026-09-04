@@ -195,6 +195,23 @@ def parse_percent(s: str | None) -> float | None:
     return float(m.group(1)) if m else None
 
 
+BONUS_KEYS = {"melee": "strength", "ranged": "ranged", "magic": "magic", "necromancy": "necromancy"}
+
+
+def damage_bonus(j: dict) -> dict | None:
+    """Strength / Ranged / Magic / Necromancy bonus of an `infobox_bonuses` row (the wiki's "damage bonus" of power armour,
+    jewellery, capes, pocket items ...) keyed by the style it boosts; None when the wiki lists no bonus field at all."""
+    if not any(k in j for k in BONUS_KEYS.values()):
+        return None
+    out = {}
+    for style, key in BONUS_KEYS.items():
+        try:
+            out[style] = float(str(j.get(key) or 0).replace(",", ""))
+        except ValueError:
+            out[style] = 0.0
+    return out
+
+
 def write_json(path: Path, data) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")

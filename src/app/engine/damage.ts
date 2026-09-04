@@ -1,9 +1,9 @@
 /**
- * Damage numbers – runescape.wiki "Ability damage" and "Critical strike" (state September 2026).
- * The trainer assumes level 99 in every combat skill and ignores armour / jewellery damage bonuses (b = 0):
- * the numbers are meant for kill times and DPS comparisons between rotations, not for exact max hits.
+ * Damage numbers – runescape.wiki "Ability damage", "Damage bonus", "Power armour", "Critical strike", "Life points" and the
+ * prayer pages (state September 2026). Every input of the ability damage is the wiki's: the wielded weapons' tier part, the
+ * boosted level of the style's damage skill, and the damage bonus b of the worn armour / jewellery.
  */
-import { CombatSkill, OverloadChoice, Style, Weapon } from '../core/models';
+import { CombatSkill, DamageBonus, GearItem, OverloadChoice, Style, Style4, Weapon } from '../core/models';
 
 /** f(level) = 145·ln(1 + 0.6·level/145) / ln(1.6) – the level curve since the Combat Style Modernisation */
 export function levelCurve(level: number): number {
@@ -69,23 +69,151 @@ export function poisonPct(tier: number): number {
 }
 
 /**
- * Player ability damage: weapons.json already carries the tier part of every weapon (9.6·t main hand,
- * 4.8·t off-hand, 14.4·t two-handed); the skill part is ⌊2.5·f⌋ for the main hand / two-hander and ⌊1.25·f⌋
- * for the off-hand or the second half of a two-hander.
+ * Player ability damage – runescape.wiki/w/Ability_damage, with f = levelCurve(level of the style's damage skill, boosts
+ * included) and b = the damage bonus of the worn gear for that style:
+ *   AD_mh = ⌊2.5·f⌋ + ⌊9.6·t_mh + b⌋
+ *   AD_oh = ⌊0.5·(⌊2.5·f⌋ + ⌊9.6·t_oh + b⌋)⌋
+ *   AD_2h = ⌊2.5·f⌋ + ⌊1.25·f⌋ + ⌊14.4·t_2h + 1.5·b⌋
+ * weapons.json carries the wiki's tier part of every weapon (9.6·t main hand, 4.8·t off-hand = half of its 9.6·t_oh, 14.4·t
+ * two-handed; defenders count as half their tier, hatchets and the like less). So b counts 1.5× with a two-hander or dual
+ * wield and 1× with a main hand + shield; a shield adds no damage. Weapon speed does not enter the ability damage (only the
+ * auto-attack "damage" stat). `capTier`: Ranged uses min(t, ammunition tier) – the weapon part is capped at that tier
+ * (Magic's min(t, spell tier) is not modelled: no autocast spell is chosen in the loadout).
  */
-export function abilityDamageOf(main: Weapon | null, off: Weapon | null, two: Weapon | null, level = 99): number {
+export function abilityDamageOf(main: Weapon | null, off: Weapon | null, two: Weapon | null, level = 99, bonus = 0, capTier?: number): number {
   const lp = levelPart(level);
-  const half = Math.floor(1.25 * levelCurve(level));
-  if (two) return lp + half + (two.abilityDamage ?? 0);
+  const part = (w: Weapon, perTier: number): number => {
+    const ad = w.abilityDamage ?? 0;
+    return capTier !== undefined && capTier < w.tierDamage ? Math.min(ad, perTier * capTier) : ad;
+  };
+  if (two) return lp + Math.floor(1.25 * levelCurve(level)) + Math.floor(part(two, 14.4) + 1.5 * bonus + 1e-9);
   let ad = 0;
-  if (main) ad += lp + (main.abilityDamage ?? 0);
-  if (off && off.slot !== 'shield') ad += half + (off.abilityDamage ?? 0);
+  if (main) ad += lp + Math.floor(part(main, 9.6) + bonus + 1e-9);
+  if (off && off.slot !== 'shield') ad += Math.floor(0.5 * (lp + Math.floor(2 * part(off, 4.8) + bonus + 1e-9)));
   return ad;
 }
 
-/** critical strikes deal +50% at level 90+ (10% at level 1, scaling up to 50%) */
+/**
+ * Power armour damage bonus by slot as a share of the item's damage tier – runescape.wiki/w/Power_armour ("Value by tier"):
+ * helmet 25%, body 37.5%, legs 31.25%, gloves / boots 15.625%; jewellery: neck 57.5%, ring 37.5%; truncated to one decimal
+ * (tier 90: 22.5 / 33.7 / 28.1 / 14.0 / 14.0 = 112.3). Only the fallback for items whose wiki row has no bonus fields –
+ * gear.json carries the wiki's numbers (Vestments of havoc hood 27.5 = damage tier 110 × 25%).
+ */
+export const POWER_ARMOUR_SHARE: Partial<Record<GearItem['slot'], number>> = { head: 0.25, body: 0.375, legs: 0.3125, hands: 0.15625, feet: 0.15625, neck: 0.575, ring: 0.375 };
+
+/** gear.json / weapons.json `bonus` key of a style */
+export const BONUS_KEY: Record<Style4, keyof DamageBonus> = { Melee: 'melee', Ranged: 'ranged', Magic: 'magic', Necromancy: 'necromancy' };
+
+/** damage bonus an item adds to the ability damage of `style`: the wiki's value, else the power armour tier table (tank / hybrid armour without a bonus: 0) */
+export function damageBonusOf(item: GearItem, style: Style4): number {
+  if (item.bonus) return item.bonus[BONUS_KEY[style]] ?? 0;
+  if (!item.type?.includes('Power')) return 0;
+  if (item.style && item.style !== 'Hybrid' && item.style !== style) return 0;
+  const share = POWER_ARMOUR_SHARE[item.slot];
+  return share ? Math.floor((item.damageTier ?? item.tier) * share * 10 + 1e-9) / 10 : 0;
+}
+
+/** gear.json id of the amulet of zealots: +10 to the damage boost of single-stat prayers and leech curses */
+export const AMULET_OF_ZEALOTS = 'amulet-of-zealots';
+
+/**
+ * Critical strike damage by level of the style's damage skill (boosts included) – runescape.wiki/w/Critical_strike: +10% at
+ * level 1, +15% at 20, then +5% per 10 levels up to +50% at 90 and no more above (linear in between: 10% + 0.5% per level over 10).
+ */
 export function critMultiplier(level = 99): number {
-  return 1 + Math.min(0.5, Math.max(0.1, 0.1 + ((level - 1) / 89) * 0.4));
+  return 1 + Math.min(0.5, Math.max(0.1, 0.1 + 0.005 * (level - 10)));
+}
+
+/** maximum life points from Constitution – runescape.wiki/w/Life_points: 100 per level (1,000 at level 10, 9,900 at 99); worn armour adds its life point bonus */
+export const LP_PER_CONSTITUTION_LEVEL = 100;
+export function baseLifePoints(constitution: number): number {
+  return LP_PER_CONSTITUTION_LEVEL * Math.max(10, Math.floor(constitution));
+}
+
+/** Fortitude (Seren curse): the maximum rises by 10 plus 10 per Constitution level (1,000 at 99) – runescape.wiki/w/Fortitude */
+export const FORTITUDE = 'fortitude';
+export function fortitudeLifePoints(constitution: number): number {
+  return 10 + 10 * constitution;
+}
+
+/**
+ * Damage boost of the prayers and curses (prayers.json effect texts; runescape.wiki/w/Turmoil, /Piety, /Ultimate_Strength,
+ * /Leech_Melee_Strength …): since the Combat Style Modernisation every one is a percentage of the style's damage, multiplied
+ * onto the hits like Berserk / Sunshine (wiki "Ability damage": multiplicative damage buffs – not bleeds / DoTs or conjured
+ * spirits). Boosts of one style add up before multiplying (Ultimate Strength 6 + Divine Rage 5 = +11%).
+ * Standard book: Burst / Superhuman / Ultimate Strength +2 / +4 / +6% (Unstoppable / Unrelenting / Overpowering Force, Charge /
+ * Super-charge / Overcharge, Decay / Hastened / Accelerated Decay likewise), Chivalry +7%, Piety / Rigour / Augury / Sanctity
+ * +8%, Divine Rage +5% to all four styles. Curses: Turmoil / Anguish / Torment / Sorrow +10%, Malevolence / Desolation /
+ * Affliction / Ruination +12%, Leech … Strength +2% rising to +8% over time; Sap curses drain the target only. The "+10 levels"
+ * of the curses count for accuracy and armour, not for the level part of the ability damage.
+ * Amulet of zealots: a flat +10 to single-stat prayers and leech curses (Ultimate Strength 16%, Leech 12–18%).
+ */
+export interface PrayerDamage {
+  /** prayers.json id */
+  prayer: string;
+  style: Style4;
+  /** damage boost in % (leech curses: at activation) */
+  pct: number;
+  /** single-stat prayer / leech curse: the amulet of zealots adds AMULET_OF_ZEALOTS_ADD */
+  zealots?: boolean;
+  /** leech curses: the boost rises to this over LEECH_RAMP_TICKS */
+  max?: number;
+}
+
+export const PRAYER_DAMAGE: PrayerDamage[] = [
+  // ---- standard prayers: single-stat
+  { prayer: 'burst-of-strength', style: 'Melee', pct: 2, zealots: true },
+  { prayer: 'superhuman-strength', style: 'Melee', pct: 4, zealots: true },
+  { prayer: 'ultimate-strength', style: 'Melee', pct: 6, zealots: true },
+  { prayer: 'unstoppable-force', style: 'Ranged', pct: 2, zealots: true },
+  { prayer: 'unrelenting-force', style: 'Ranged', pct: 4, zealots: true },
+  { prayer: 'overpowering-force', style: 'Ranged', pct: 6, zealots: true },
+  { prayer: 'charge', style: 'Magic', pct: 2, zealots: true },
+  { prayer: 'super-charge', style: 'Magic', pct: 4, zealots: true },
+  { prayer: 'overcharge', style: 'Magic', pct: 6, zealots: true },
+  { prayer: 'decay', style: 'Necromancy', pct: 2, zealots: true },
+  { prayer: 'hastened-decay', style: 'Necromancy', pct: 4, zealots: true },
+  { prayer: 'accelerated-decay', style: 'Necromancy', pct: 6, zealots: true },
+  // ---- standard prayers: combined
+  { prayer: 'chivalry', style: 'Melee', pct: 7 },
+  { prayer: 'piety', style: 'Melee', pct: 8 },
+  { prayer: 'rigour', style: 'Ranged', pct: 8 },
+  { prayer: 'augury', style: 'Magic', pct: 8 },
+  { prayer: 'sanctity', style: 'Necromancy', pct: 8 },
+  { prayer: 'divine-rage', style: 'Melee', pct: 5 },
+  { prayer: 'divine-rage', style: 'Ranged', pct: 5 },
+  { prayer: 'divine-rage', style: 'Magic', pct: 5 },
+  { prayer: 'divine-rage', style: 'Necromancy', pct: 5 },
+  // ---- ancient curses
+  { prayer: 'leech-melee-strength', style: 'Melee', pct: 2, max: 8, zealots: true },
+  { prayer: 'leech-ranged-strength', style: 'Ranged', pct: 2, max: 8, zealots: true },
+  { prayer: 'leech-magic-strength', style: 'Magic', pct: 2, max: 8, zealots: true },
+  { prayer: 'leech-necromancy-strength', style: 'Necromancy', pct: 2, max: 8, zealots: true },
+  { prayer: 'turmoil', style: 'Melee', pct: 10 },
+  { prayer: 'anguish', style: 'Ranged', pct: 10 },
+  { prayer: 'torment', style: 'Magic', pct: 10 },
+  { prayer: 'sorrow', style: 'Necromancy', pct: 10 },
+  { prayer: 'malevolence', style: 'Melee', pct: 12 },
+  { prayer: 'desolation', style: 'Ranged', pct: 12 },
+  { prayer: 'affliction', style: 'Magic', pct: 12 },
+  { prayer: 'ruination', style: 'Necromancy', pct: 12 },
+];
+
+/** leech curses "increasing over time": the wiki gives no timing – assumed to climb 1% at a time, reaching the maximum after 60 s */
+export const LEECH_RAMP_TICKS = 100;
+export const AMULET_OF_ZEALOTS_ADD = 10;
+
+/** total damage boost in % of the active prayers for a hit of `style`; `ticksActive(prayer)` = ticks since it was switched on (leech ramp) */
+export function prayerDamagePct(active: ReadonlySet<string>, style: Style | null | undefined, zealots: boolean, ticksActive: (prayer: string) => number = () => 0): number {
+  let pct = 0;
+  for (const p of PRAYER_DAMAGE) {
+    if (p.style !== style || !active.has(p.prayer)) continue;
+    let v = p.pct;
+    if (p.max !== undefined) v = Math.min(p.max, p.pct + Math.floor((p.max - p.pct) * Math.max(0, Math.min(1, ticksActive(p.prayer) / LEECH_RAMP_TICKS))));
+    if (zealots && p.zealots) v += AMULET_OF_ZEALOTS_ADD;
+    pct += v;
+  }
+  return pct;
 }
 
 /** base critical strike chance of every hit */

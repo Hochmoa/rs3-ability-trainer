@@ -1,5 +1,6 @@
 """Build public/data/gear.json: every wearable non-weapon item (armour, capes, jewellery, ammo, pocket, aura, sigil)
 with icons, so the loadout page can browse the whole wardrobe and drag items into equipment slots / the inventory.
+Every item carries its armour, life points, prayer and damage bonus per style (engine/damage.ts adds the bonus to the ability damage).
 
 Weapons, shields and defenders live in weapons.json (fetch-weapons.py); this file covers the other slots.
 Source: runescape.wiki bucket `infobox_bonuses`.  python tools/fetch-gear.py
@@ -7,7 +8,7 @@ Source: runescape.wiki bucket `infobox_bonuses`.  python tools/fetch-gear.py
 import json
 import re
 
-from fetch_wiki import ASSETS, DATA, bucket_all, category_members, download, image_urls, slug, write_json
+from fetch_wiki import ASSETS, DATA, bucket_all, category_members, damage_bonus, download, image_urls, slug, write_json
 
 FIELDS = ["page_name", "page_name_sub", "combat_class", "equipment_slot", "equipment_type", "equipment_tier",
           "equipment_armour", "equipment_life_points", "prayer_bonus", "is_cosmetic_recolour", "json"]
@@ -90,6 +91,7 @@ def main():
         if cur is None or rank < cur["_rank"]:
             sid = slug(page)
             passive = PASSIVE_ALIAS.get(sid, sid)
+            j = r.get("json") or {}
             best[page] = {
                 "id": sid,
                 "name": page,
@@ -99,6 +101,10 @@ def main():
                 "type": etype or None,
                 "armour": float(r.get("equipment_armour") or 0),
                 "lifePoints": int(r.get("equipment_life_points") or 0),
+                # damage bonus per style (runescape.wiki/w/Damage_bonus); null = the wiki lists none (engine: tier fallback for power armour)
+                "bonus": damage_bonus(j),
+                # tier the wiki rates the damage bonus at (`tier_armour_damage`: Vestments of havoc 110 at level 95); null = unknown
+                "damageTier": int(j.get("tier_armour_damage") or 0) or None,
                 "prayer": float(r.get("prayer_bonus") or 0),
                 "set": set_of(page),
                 "passive": passive if passive in passives else None,
