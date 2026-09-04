@@ -725,7 +725,13 @@ export interface EnemyConfig {
   firstAttackTicks: number;
   /** life points of the target; 0 = unlimited (training dummy). Damage is tracked whether or not attacks are enabled. */
   lifePoints: number;
+  /** what the target is: Salve amulet, bane ammunition and the Slayer perks only work against their type (missing / null = none of them) */
+  type?: TargetType | null;
 }
+
+/** target classes gear cares about (Undead / Dragon / Demon Slayer perks, Salve amulet, Jas dragonbane / demonbane arrows) */
+export type TargetType = 'undead' | 'dragon' | 'demon';
+export const TARGET_TYPES: TargetType[] = ['undead', 'dragon', 'demon'];
 
 export const DEFAULT_ENEMY: EnemyConfig = {
   enabled: false,
@@ -738,6 +744,7 @@ export const DEFAULT_ENEMY: EnemyConfig = {
   warningTicks: 3,
   firstAttackTicks: 8,
   lifePoints: 0,
+  type: null,
 };
 
 /** Boss presets from runescape.wiki (auto-attack styles and rate; specials are not simulated). */

@@ -10,6 +10,8 @@ import { AbilityRule, ChannelSpec, Condition, Effect, GlobalRule, Requirement, S
 
 /** the Essence of Finality slot: fires the special stored in the amulet with a weapon of the same style */
 export const EOF_KEY = 'ability:essence-of-finality';
+/** hit key of the Bow of the Last Guardian's Perfect Equilibrium bonus hit */
+export const PERFECT_EQUILIBRIUM_KEY = 'passive:perfect-equilibrium';
 
 /** rules of the two special-attack slots merged with the rule of the spec they fire (slot requirements + spec behaviour) */
 const WRAPPER_RULES = new Map<string, AbilityRule>();
@@ -273,6 +275,10 @@ interface ScheduledHit {
   critAdd: number;
   /** an item proc's hit (Scripture of Wen): no rule or global effects, no further procs */
   proc?: boolean;
+  /** absolute damage added after the roll, before the critical strike (Perfect Equilibrium: 33–37% of the triggering hit) */
+  addAbs?: number;
+  /** the hit adds no Perfect Equilibrium stack (the bonus hit itself) */
+  noStack?: boolean;
 }
 
 interface SequenceState {
@@ -601,6 +607,13 @@ export class TrainerEngine {
 
   /** The adrenaline this entity needs right now (requirement) and what it costs. */
   costOf(e: EngineEntity): { need: number; cost: number } {
+    const out = this.baseCostOf(e);
+    // Feasting Spores (Deathspore arrows): the cast is free, the requirement stays
+    for (const g of this.matchingGlobals(e)) if (g.costMult !== undefined && (!g.consumes || this.hasBuff(g.consumes))) out.cost = Math.round(out.cost * g.costMult);
+    return out;
+  }
+
+  private baseCostOf(e: EngineEntity): { need: number; cost: number } {
     const rule = this.ruleOf(e);
     const spec = this.specFor(e);
     if (spec) {
@@ -1068,7 +1081,7 @@ export class TrainerEngine {
     const baseCost = rule?.adrenaline !== undefined ? Math.max(0, -rule.adrenaline) : acting.adrenaline < 0 ? -acting.adrenaline : 0;
     // a Flow-type discount is used up even when it brings the cost to 0
     if (baseCost > 0 || this.isThreshold(entity, rule)) {
-      for (const g of globals) if (g.consumes && g.discount && this.hasBuff(g.consumes)) this.removeBuff(g.consumes);
+      for (const g of globals) if (g.consumes && (g.discount || g.costMult !== undefined) && this.hasBuff(g.consumes)) this.removeBuff(g.consumes);
     }
     if (rule?.cost?.perStack) {
       const p = rule.cost.perStack;
@@ -1163,7 +1176,7 @@ export class TrainerEngine {
     for (const eff of rule?.onCast ?? []) this.applyEffect(eff, tick, entity, 0);
     for (const g of globals) {
       for (const eff of g.onCast ?? []) this.applyEffect(eff, tick, entity, 0);
-      if (g.consumes && !g.discount && this.hasBuff(g.consumes)) this.removeBuff(g.consumes);
+      if (g.consumes && !g.discount && g.costMult === undefined && this.hasBuff(g.consumes)) this.removeBuff(g.consumes);
     }
     const flags = this.castFlags;
 
@@ -1344,7 +1357,9 @@ export class TrainerEngine {
     for (const eff of h.rule?.onHit ?? []) this.applyEffect(eff, h.tick, h.entity, h.index);
     this.castFlags = outerFlags;
     for (const id of h.rule?.hitBuffs ?? []) this.applyBuff(id, h.tick, h.entity.key);
-    if (h.damage) this.dealHit(h, crit);
+    const preCrit = h.damage ? this.dealHit(h, crit) : 0;
+    // a direct hit: not damage over time, not a conjured spirit's, not an item proc's (ammunition effects count these)
+    const direct = !!h.damage && !h.dot && !h.spirit && !h.proc;
     // Instability: a critical strike of the buff's style fires an extra hit a tick later (never from that extra hit itself)
     if (crit && h.damage && !h.dot && !h.spirit) {
       for (const b of this.buffs) {
@@ -1355,12 +1370,37 @@ export class TrainerEngine {
     }
     for (const g of globals) {
       for (const eff of g.onHit ?? []) this.applyEffect(eff, h.tick, h.entity, h.index);
+      if (direct) for (const eff of g.onDirectHit ?? []) this.applyEffect(eff, h.tick, h.entity, h.index);
       if (g.hitAdrenaline) this.addAdrenaline(g.hitAdrenaline * (this.hasBuff('natural-instinct') ? 2 : 1));
       if (g.critAdrenaline && crit) this.addAdrenaline(g.critAdrenaline * (this.hasBuff('natural-instinct') ? 2 : 1));
     }
     const perTick = this.loadout.channelAdrenalinePerTick[h.entity.id];
     if (perTick && h.channel) this.addAdrenaline(perTick);
-    if (h.damage && !h.dot && !h.spirit && !h.proc) this.rollHitProcs(h);
+    if (direct) {
+      this.rollHitProcs(h);
+      this.perfectEquilibrium(h, preCrit);
+    }
+  }
+
+  /**
+   * Bow of the Last Guardian: every direct ranged hit adds a Perfect Equilibrium stack; at 8 (4 during Balance by Force) a bonus
+   * hit of 12–16% ability damage plus 33–37% of the triggering hit (before its critical strike: "Perfect Equilibrium now stores
+   * damage before critical strikes roll") lands on the same tick and the stacks reset. The bonus hit can crit, counts as an arrow
+   * (Deathspore stacks, bolt procs) and never adds a stack itself. Stacks survive unequipping the bow; only the bow builds them.
+   */
+  private perfectEquilibrium(h: ScheduledHit, preCrit: number): void {
+    const pe = this.loadout.perfectEquilibrium;
+    if (!pe || h.noStack || h.entity.style !== 'Ranged') return;
+    const need = this.hasBuff(pe.stacksWithBuff.buff) ? pe.stacksWithBuff.stacks : pe.stacks;
+    const stacks = this.stack('perfect-equilibrium') + 1;
+    if (stacks < need) {
+      this.setStacks('perfect-equilibrium', stacks, h.tick, PERFECT_EQUILIBRIUM_KEY);
+      return;
+    }
+    this.setStacks('perfect-equilibrium', 0, h.tick, PERFECT_EQUILIBRIUM_KEY);
+    const share = (pe.hitShare.min + this.random() * (pe.hitShare.max - pe.hitShare.min)) / 100;
+    const entity: EngineEntity = { key: PERFECT_EQUILIBRIUM_KEY, kind: 'ability', id: 'perfect-equilibrium', name: 'Perfect Equilibrium', icon: '', gcd: false, style: 'Ranged', adrenaline: 0, cooldownTicks: 0, buffs: [] };
+    this.scheduled.push({ key: PERFECT_EQUILIBRIUM_KEY, entity, rule: undefined, tick: h.tick, index: 0, total: 1, channel: null, guaranteedCrit: false, damage: { ...pe.abilityDamage }, mult: this.styleMultiplier('Ranged', false), flat: 0, castMult: 1, flags: new Set(), critAdd: 0, addAbs: share * preCrit, noStack: true });
   }
 
   /** bleeds on the target (Dismember, Slaughter, Massacre) – Jaws of the Abyss and the champion's ring count them */
@@ -1378,6 +1418,13 @@ export class TrainerEngine {
       this.procLockUntil.set(p.id, h.tick + p.cooldownTicks);
       const key = 'proc:' + p.id;
       if (p.buff) this.applyBuff(p.buff.id, h.tick, key, p.buff.durationTicks);
+      if (p.adrenaline) this.addAdrenaline(p.adrenaline);
+      if (p.lpScaledHit) {
+        // Blood Forfeit: (25% + 100% × current / max life points) of the ability damage; no life points configured = full health
+        const lp = this.config.targetLifePoints;
+        const lpShare = lp ? this.targetHp / lp : 1;
+        this.applyDamage(key, Math.floor((p.lpScaledHit.base + p.lpScaledHit.perLpShare * lpShare) * this.loadout.abilityDamage + 1e-6), false, false, h.tick);
+      }
       for (const x of p.hits ?? []) {
         this.scheduled.push({ key, entity: h.entity, rule: undefined, tick: h.tick + x.offset, index: 0, total: 1, channel: null, guaranteedCrit: false, damage: { min: x.min, max: x.max }, mult: 1, flat: 0, castMult: 1, flags: new Set(), critAdd: 0, proc: true });
       }
@@ -1435,8 +1482,8 @@ export class TrainerEngine {
     }
   }
 
-  /** Rolls and applies the damage of one hit (engine/damage.ts). */
-  private dealHit(h: ScheduledHit, crit: boolean): void {
+  /** Rolls and applies the damage of one hit (engine/damage.ts). Returns what the hit would have dealt without its critical strike (Perfect Equilibrium stores that). */
+  private dealHit(h: ScheduledHit, crit: boolean): number {
     const l = this.loadout;
     let { min, max } = h.damage!;
     const rules = (h.rule?.damageRules ?? []).filter((d) => this.conditionMet(d.when, h.tick, h.index, h.flags));
@@ -1470,6 +1517,20 @@ export class TrainerEngine {
         sp.rage = Math.min(RAGE_MAX, sp.rage + 1);
       }
     }
+    const style = h.entity.style;
+    if (!h.proc) for (const m of BUFF_TYPE_DAMAGE_MULT) if (m.style === style && m.type === h.entity.abilityType && this.hasBuff(m.buff)) amount *= m.mult;
+    amount *= h.mult;
+    if (h.entity.abilityType === 'Ultimate' && !h.dot && !h.proc) amount *= l.ultimateDamageMult;
+    amount *= h.castMult;
+    if (h.dot) amount *= l.dotDamageMult[h.entity.id] ?? 1; // Song of Destruction (2): Combust / Corruption Blast × 1.3
+    if (!h.spirit && !h.proc) {
+      // Ful arrows (ranged × 1.15, not DoTs), scrimshaw of the elements / cruelty (× 1.05 / 1.0666, DoTs included)
+      for (const m of l.styleDamageMult) if (m.style === style && (m.dots || !h.dot)) amount *= m.mult;
+      // Ashen Vow: melee × 1.12 against the Flamebound Rival (Igneous Showdown's own hits are boosted by its rule)
+      for (const m of l.targetBuffDamageMult) if ((!m.style || m.style === style) && m.notAbility !== h.entity.id && this.hasBuff(m.buff)) amount *= m.mult;
+    }
+    if (h.addAbs) amount += h.addAbs; // Perfect Equilibrium: the share of the triggering hit
+    let critFactor = 1;
     if (crit) {
       let critMult = critMultiplier() + l.critDamageAdd + (h.rule?.crit?.damageAdd ?? 0) + (h.rule?.hitCrit?.[h.index]?.damageAdd ?? 0);
       for (const b of this.buffs) {
@@ -1477,13 +1538,8 @@ export class TrainerEngine {
         if (add) critMult += add;
       }
       amount *= critMult;
+      critFactor = critMult;
     }
-    const style = h.entity.style;
-    if (!h.proc) for (const m of BUFF_TYPE_DAMAGE_MULT) if (m.style === style && m.type === h.entity.abilityType && this.hasBuff(m.buff)) amount *= m.mult;
-    amount *= h.mult;
-    if (h.entity.abilityType === 'Ultimate' && !h.dot && !h.proc) amount *= l.ultimateDamageMult;
-    amount *= h.castMult;
-    if (h.dot) amount *= l.dotDamageMult[h.entity.id] ?? 1; // Song of Destruction (2): Combust / Corruption Blast × 1.3
     if (!h.spirit) amount *= l.damageMult; // Void knight +5% / +7%
     for (const m of TARGET_DAMAGE_MULT) if ((!m.dotsOnly || h.dot) && this.hasBuff(m.buff)) amount *= m.mult;
     amount += this.targetDamageAdd(amount);
@@ -1504,6 +1560,7 @@ export class TrainerEngine {
     if (h.channel) h.channel.dealt += dealt;
     this.applyDamage(h.key, dealt, crit, !!h.dot, h.tick);
     this.splitSoul(h, dealt);
+    return Math.floor(amount / critFactor + 1e-6);
   }
 
   /** Haunted: +10% of the hit, capped at 20% of the ability damage */
@@ -2137,19 +2194,25 @@ export class TrainerEngine {
   }
 
   private matchingGlobals(e: EngineEntity): GlobalRule[] {
-    if (e.kind !== 'ability') return [];
-    const rule = ruleFor(e.id);
+    if (e.kind !== 'ability' && e.kind !== 'spec') return [];
+    // a special attack – a "spec:" step, the hit of one, or the special behind the Weapon Special Attack / Essence of Finality slot
+    const spec = e.kind === 'spec' ? e : this.specFor(e);
+    const rule = e.kind === 'ability' ? ruleFor(e.id) : undefined;
     return GLOBALS.filter((g) => {
       const w = g.when;
-      if (w.abilities && !w.abilities.includes(e.id)) return false;
-      if (w.excludeAbilities?.includes(e.id)) return false;
-      if (w.style && e.style !== w.style) return false;
-      if (w.styles && (!e.style || !w.styles.includes(e.style))) return false;
-      if (w.type && e.abilityType !== w.type) return false;
-      if (w.types && (!e.abilityType || !w.types.includes(e.abilityType))) return false;
-      if (w.gcd && (!e.gcd || rule?.offGcd)) return false;
-      if (w.costing && !(e.adrenaline < 0 || this.isThreshold(e, rule))) return false;
-      if (w.generating && !((rule?.adrenaline ?? e.adrenaline) > 0)) return false;
+      // specials only match rules that opt in (ammunition effects); those rules see the special's style, type and cost, not the slot's
+      if (e.kind === 'spec' && !w.includeSpecs) return false;
+      const t = spec && w.includeSpecs ? spec : e;
+      const tr = t === e ? rule : specRuleFor(t.id);
+      if (w.abilities && !w.abilities.includes(t.id)) return false;
+      if (w.excludeAbilities?.includes(t.id)) return false;
+      if (w.style && t.style !== w.style) return false;
+      if (w.styles && (!t.style || !w.styles.includes(t.style))) return false;
+      if (w.type && t.abilityType !== w.type) return false;
+      if (w.types && (!t.abilityType || !w.types.includes(t.abilityType))) return false;
+      if (w.gcd && (!t.gcd || tr?.offGcd)) return false;
+      if (w.costing && !(t.adrenaline < 0 || this.isThreshold(t, tr))) return false;
+      if (w.generating && !((tr?.adrenaline ?? t.adrenaline) > 0)) return false;
       if (w.buff && !this.hasBuff(w.buff)) return false;
       if (w.item && !this.loadout.items.has(w.item)) return false;
       if (w.stackMin && this.stack(w.stackMin.stack) < w.stackMin.min) return false;

@@ -18,6 +18,22 @@ export interface HitProc {
   hits?: { offset: number; min: number; max: number }[];
   /** Scripture of Jas: `share` of all damage dealt within `windowTicks` after the proc is dealt again one tick later, capped */
   echo?: { windowTicks: number; share: number; cap: number };
+  /** adrenaline granted at once (Deathmark 10) */
+  adrenaline?: number;
+  /** an extra hit of (base + perLpShare × current / max life points of the target) × ability damage on the same tick (Blood Forfeit 0.25 + 1 × share; a target without life points counts as full) */
+  lpScaledHit?: { base: number; perLpShare: number };
+}
+
+/** Bow of the Last Guardian's passive (set-effects.json kind "perfect-equilibrium") */
+export interface PerfectEquilibrium {
+  /** hits needed for the bonus hit */
+  stacks: number;
+  /** ... while this buff runs (Balance by Force: 4) */
+  stacksWithBuff: { buff: string; stacks: number };
+  /** % of the ability damage the bonus hit rolls */
+  abilityDamage: { min: number; max: number };
+  /** share of the triggering hit's damage (before its critical strike) added to the bonus hit */
+  hitShare: { min: number; max: number };
 }
 
 export interface ResolvedLoadout {
@@ -138,8 +154,14 @@ export interface ResolvedLoadout {
   flanking: { rank: number; perRank: number; abilities: string[] } | null;
   /** Ruthless: +0.5% per rank per stack, 5 stacks, refreshed on kills – needs kills, only reported (see docs/research/perks.md) */
   ruthlessRank: number;
-  /** damage multiplier against a target type (Undead / Dragon / Demon Slayer perks 1.07; applies to DoTs too) – EngineConfig.targetType picks one */
+  /** damage multiplier against a target type (Undead / Dragon / Demon Slayer perks 1.07, Salve amulet (e) 1.2, Jas dragonbane arrows 1.3; applies to DoTs too) – EngineConfig.targetType picks one */
   targetTypeDamageMult: Partial<Record<'undead' | 'dragon' | 'demon', number>>;
+  /** every player hit of `style` × mult (Ful arrows: Ranged 1.15 without DoTs; scrimshaw of the elements / cruelty: Magic / Ranged 1.05 or 1.0666 with DoTs) */
+  styleDamageMult: { style: Style; mult: number; dots: boolean }[];
+  /** hits of `style` × mult while the target carries `buff` (Ashen Vow: melee 1.12 against the Flamebound Rival); `notAbility`: the ability that applies the mark boosts itself through its own rule */
+  targetBuffDamageMult: { buff: string; style?: Style; mult: number; notAbility?: string }[];
+  /** Bow of the Last Guardian: the Perfect Equilibrium passive (null without the bow) */
+  perfectEquilibrium: PerfectEquilibrium | null;
 }
 
 export function defaultResolvedLoadout(): ResolvedLoadout {
@@ -206,5 +228,8 @@ export function defaultResolvedLoadout(): ResolvedLoadout {
     flanking: null,
     ruthlessRank: 0,
     targetTypeDamageMult: {},
+    styleDamageMult: [],
+    targetBuffDamageMult: [],
+    perfectEquilibrium: null,
   };
 }

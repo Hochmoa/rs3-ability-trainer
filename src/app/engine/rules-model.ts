@@ -22,7 +22,10 @@ export type StackId =
   | 'concentrated-crit'
   | 'revenge'
   | 'gravitate'
-  | 'primordial-ice';
+  | 'primordial-ice'
+  | 'feasting-spores'
+  | 'icy-chill'
+  | 'perfect-equilibrium';
 
 /** Which stacks a style shows as resources on the training page (also with 0 stacks). */
 export const STYLE_STACKS: Record<Style, StackId[]> = {
@@ -333,9 +336,18 @@ export interface GlobalRule {
     item?: string;
     /** at least this many stacks held when the cast starts */
     stackMin?: { stack: StackId; min: number };
+    /**
+     * Weapon special attacks match too (a "spec:" step, the Weapon Special Attack / Essence of Finality slot and their hits);
+     * the rule then sees the special's style, type and cost instead of the slot's. Ammunition effects apply to specials.
+     */
+    includeSpecs?: boolean;
   };
   onCast?: Effect[];
   onHit?: Effect[];
+  /** per hit that is neither a damage-over-time hit nor a conjured spirit's nor an item proc's (arrow effects count arrows fired) */
+  onDirectHit?: Effect[];
+  /** multiply the adrenaline cost of the matching cast – the requirement stays (Feasting Spores 0: the ability is free but still needs its adrenaline); taken before `consumes` removes the buff */
+  costMult?: number;
   /** multiply the adrenaline gain of matching abilities (Meteor Strike ×1.5, Natural Instinct ×2) */
   gainMult?: number;
   /** add to the adrenaline gain (Living Death: Touch of Death +6) */

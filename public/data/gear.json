@@ -55,7 +55,7 @@
   "lifePoints": 0,
   "prayer": 0.0,
   "set": null,
-  "passive": null,
+  "passive": "deathspore-arrows",
   "augmentable": false,
   "icon": "assets/gear/deathspore-arrows.png"
  },
@@ -130,7 +130,7 @@
   "lifePoints": 0,
   "prayer": 0.0,
   "set": null,
-  "passive": null,
+  "passive": "ful-arrow",
   "augmentable": false,
   "icon": "assets/gear/ful-arrow.png"
  },
@@ -145,7 +145,7 @@
   "lifePoints": 0,
   "prayer": 0.0,
   "set": null,
-  "passive": null,
+  "passive": "hydrix-bakriminel-bolts-e",
   "augmentable": false,
   "icon": "assets/gear/hydrix-bakriminel-bolts-e.png"
  },
@@ -175,7 +175,7 @@
   "lifePoints": 0,
   "prayer": 0.0,
   "set": null,
-  "passive": null,
+  "passive": "jas-demonbane-arrow",
   "augmentable": false,
   "icon": "assets/gear/jas-demonbane-arrow.png"
  },
@@ -190,7 +190,7 @@
   "lifePoints": 0,
   "prayer": 0.0,
   "set": null,
-  "passive": null,
+  "passive": "jas-dragonbane-arrow",
   "augmentable": false,
   "icon": "assets/gear/jas-dragonbane-arrow.png"
  },
@@ -265,7 +265,7 @@
   "lifePoints": 0,
   "prayer": 0.0,
   "set": null,
-  "passive": null,
+  "passive": "ruby-bakriminel-bolts-e",
   "augmentable": false,
   "icon": "assets/gear/ruby-bakriminel-bolts-e.png"
  },
@@ -310,7 +310,7 @@
   "lifePoints": 0,
   "prayer": 0.0,
   "set": null,
-  "passive": null,
+  "passive": "wen-arrow",
   "augmentable": false,
   "icon": "assets/gear/wen-arrow.png"
  },
@@ -355,7 +355,7 @@
   "lifePoints": 0,
   "prayer": 0.0,
   "set": null,
-  "passive": null,
+  "passive": "black-stone-arrows",
   "augmentable": false,
   "icon": "assets/gear/black-stone-arrows.png"
  },
@@ -35260,7 +35260,7 @@
   "lifePoints": 0,
   "prayer": 3.0,
   "set": null,
-  "passive": null,
+  "passive": "salve-amulet",
   "augmentable": false,
   "icon": "assets/gear/salve-amulet.png"
  },
@@ -35275,7 +35275,7 @@
   "lifePoints": 0,
   "prayer": 3.0,
   "set": null,
-  "passive": null,
+  "passive": "salve-amulet-e",
   "augmentable": false,
   "icon": "assets/gear/salve-amulet-e.png"
  },
@@ -38125,7 +38125,7 @@
   "lifePoints": 0,
   "prayer": 0.0,
   "set": null,
-  "passive": null,
+  "passive": "scrimshaw-of-cruelty",
   "augmentable": false,
   "icon": "assets/gear/scrimshaw-of-cruelty.png"
  },
@@ -38185,7 +38185,7 @@
   "lifePoints": 0,
   "prayer": 0.0,
   "set": null,
-  "passive": null,
+  "passive": "scrimshaw-of-the-elements",
   "augmentable": false,
   "icon": "assets/gear/scrimshaw-of-the-elements.png"
  },
@@ -38200,7 +38200,7 @@
   "lifePoints": 0,
   "prayer": 0.0,
   "set": null,
-  "passive": null,
+  "passive": "scrimshaw-of-vampyrism",
   "augmentable": false,
   "icon": "assets/gear/scrimshaw-of-vampyrism.png"
  },
@@ -39085,7 +39085,7 @@
   "lifePoints": 0,
   "prayer": 0.0,
   "set": null,
-  "passive": null,
+  "passive": "superior-scrimshaw-of-cruelty",
   "augmentable": false,
   "icon": "assets/gear/superior-scrimshaw-of-cruelty.png"
  },
@@ -39145,7 +39145,7 @@
   "lifePoints": 0,
   "prayer": 0.0,
   "set": null,
-  "passive": null,
+  "passive": "superior-scrimshaw-of-the-elements",
   "augmentable": false,
   "icon": "assets/gear/superior-scrimshaw-of-the-elements.png"
  },
@@ -39160,7 +39160,7 @@
   "lifePoints": 0,
   "prayer": 0.0,
   "set": null,
-  "passive": null,
+  "passive": "superior-scrimshaw-of-vampyrism",
   "augmentable": false,
   "icon": "assets/gear/superior-scrimshaw-of-vampyrism.png"
  },

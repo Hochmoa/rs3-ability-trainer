@@ -6,7 +6,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DataService, Entity, SPEC_KEY } from '../../core/data.service';
 import { applyWield, equip, unequip } from '../../core/equipment';
 import { keybindFromEvent, keybindKey, keybindLabel } from '../../core/keybind.util';
-import { ActionBarSetup, AttackPattern, BAR_POSITIONS, BONE_SHIELD_ABILITY, INVENTORY_SIZE, BAR_SLOTS, BarShape, barLayout, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, EquipSlot, ItemRef, Loadout, PrayerStats, Prebuild, REVOLUTION_MAX_SLOTS, REVOLUTION_MIN_SLOTS, RevolutionSettings, Rotation, STYLES4, Settings, StepResult, Style, Style4, WeaponSpec, emptyPrebuild, entityKey, isStyle4, loadoutWeapons, loadoutWield, parseEntityKey, prebuildIsEmpty, visiblePresets, RotationStep } from '../../core/models';
+import { ActionBarSetup, AttackPattern, BAR_POSITIONS, BONE_SHIELD_ABILITY, INVENTORY_SIZE, BAR_SLOTS, BarShape, barLayout, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, TARGET_TYPES, EquipSlot, ItemRef, Loadout, PrayerStats, Prebuild, REVOLUTION_MAX_SLOTS, REVOLUTION_MIN_SLOTS, RevolutionSettings, Rotation, STYLES4, Settings, StepResult, Style, Style4, WeaponSpec, emptyPrebuild, entityKey, isStyle4, loadoutWeapons, loadoutWield, parseEntityKey, prebuildIsEmpty, visiblePresets, RotationStep } from '../../core/models';
 import { StorageService } from '../../core/storage.service';
 import { resolveLoadout } from '../../engine/loadout-resolver';
 import { BUFF_BY_ID, ruleFor, stackMax, stackName } from '../../engine/rules';
@@ -121,6 +121,7 @@ export class Train implements OnDestroy {
   readonly revolutionSlots = computed(() => (this.revolution() ? this.storage.settings().revolution.slots : 0));
   readonly STYLES4 = STYLES4;
   readonly ENEMY_PRESETS = ENEMY_PRESETS;
+  readonly TARGET_TYPES = TARGET_TYPES;
   readonly PATTERNS: { id: AttackPattern; label: string }[] = [
     { id: 'random', label: 'random' },
     { id: 'no-repeat', label: 'random, never the same style twice' },
@@ -779,6 +780,7 @@ export class Train implements OnDestroy {
       revolution: this.revolution() ? { ...this.storage.settings().revolution, bar: this.mainBarKeys(this.startStyle()), resolveBar: (st: Style | null) => this.mainBarKeys(st && isStyle4(st) ? st : this.startStyle()) } : undefined,
       enemy: enemy.enabled ? { ...enemy, styles: [...enemy.styles] } : undefined,
       targetLifePoints: enemy.lifePoints > 0 ? enemy.lifePoints : undefined,
+      targetType: enemy.type ?? undefined,
       prebuild: this.effectivePrebuild(),
     });
     this.damage.set(0);
@@ -1261,8 +1263,8 @@ export class Train implements OnDestroy {
   }
 
   setEnemy<K extends keyof EnemyConfig>(key: K, value: EnemyConfig[K]): void {
-    const e = { ...this.enemy(), [key]: value, preset: key === 'enabled' ? this.enemy().preset : null };
-    if (key === 'enabled') e.preset = this.enemy().preset;
+    // the target type is orthogonal to the attack pattern: it keeps the preset
+    const e = { ...this.enemy(), [key]: value, preset: key === 'enabled' || key === 'type' ? this.enemy().preset : null };
     void this.storage.saveEnemy(e);
   }
 
