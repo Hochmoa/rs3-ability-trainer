@@ -109,7 +109,7 @@ export class Rotations {
   subtitle(e: Entity): string {
     if (e.ability) return e.ability.basicAttack ? 'auto-attack' : e.ability.type + (e.ability.triggersGcd ? '' : ' · no GCD');
     if (e.prayer) return 'level ' + e.prayer.level;
-    if (e.special) return e.special.kind === 'bomb' ? 'thrown · no GCD' : '+' + (e.special.adrenaline || e.special.adrenalineOverTime) + '% adrenaline';
+    if (e.special) return e.special.kind === 'bomb' ? 'thrown · no GCD' : e.special.kind === 'scroll' ? 'familiar scroll · ' + e.special.specialPoints + ' special move points · no GCD' : '+' + (e.special.adrenaline || e.special.adrenalineOverTime) + '% adrenaline';
     if (e.weapon) return 'weapon switch · no GCD';
     if (e.spec) return 'spec · ' + (e.spec.adrenaline ?? 0) + '% adrenaline';
     if (e.action) return 'client action · no GCD';

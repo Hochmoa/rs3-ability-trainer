@@ -119,6 +119,7 @@ export class Loadout {
     } else if (tab === 'potions') {
       refs = this.data
         .specials()
+        .filter((s) => s.kind !== 'scroll') // scrolls come with the familiar (select below the gear)
         .filter((s) => !q || s.name.toLowerCase().includes(q))
         .map((s) => ({ kind: 'special', id: s.id }));
     } else {
@@ -157,8 +158,11 @@ export class Loadout {
     perkById: this.data.perkById(),
     setEffectById: this.data.setEffectById(),
     gearById: this.data.gearById(),
+    familiarById: this.data.familiarById(),
     specEntity: (s) => this.data.specEntity(s),
   }));
+  /** the loadout's familiar with its scroll, for the summary next to the select */
+  readonly familiar = computed(() => (this.l().familiar ? this.data.familiarById().get(this.l().familiar!) ?? null : null));
   readonly warnings = computed(() => (this.data.loaded() ? loadoutWarnings(this.l(), this.loadoutData()) : []));
   /** set thresholds / passives the simulation ignores: "<id>:<kind>" → reason */
   readonly notSimulated = computed<Map<string, string>>(() => {
@@ -513,6 +517,15 @@ export class Loadout {
   toggleRelic(id: string): void {
     const relics = this.hasRelic(id) ? this.l().relics.filter((x) => x !== id) : [...this.l().relics, id];
     this.patch({ relics });
+  }
+
+  seconds(ticks: number): string {
+    return (ticks * 0.6).toFixed(1).replace(/\.0$/, '');
+  }
+
+  setFamiliar(v: unknown): void {
+    const id = typeof v === 'string' && this.data.familiarById().has(v) ? v : null;
+    this.patch({ familiar: id });
   }
 
   setSpiritPact(v: unknown): void {

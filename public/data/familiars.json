@@ -1,0 +1,218 @@
+[
+ {
+  "id": "ripper-demon",
+  "name": "Ripper Demon",
+  "level": 96,
+  "icon": "assets/familiars/ripper-demon.png",
+  "attack": {
+   "everyTicks": 6,
+   "firstTick": 6,
+   "style": "Melee",
+   "damageMin": 670,
+   "damageMax": 1341
+  },
+  "passive": "Deals up to 5% more damage the lower the target's life points are (×(1 + 0.05 × missing share)).",
+  "critChanceAdd": 0,
+  "damagePerMissingLp": 0.05,
+  "scroll": {
+   "id": "death-from-above",
+   "name": "Death From Above",
+   "icon": "assets/familiars/death-from-above.png",
+   "specialPoints": 20,
+   "cooldownTicks": 0,
+   "description": "The Ripper Demon jumps up and its next attack deals 200–320% of its max hit. 20 special move points."
+  }
+ },
+ {
+  "id": "kalgerion-demon",
+  "name": "Kal'gerion demon",
+  "level": 90,
+  "icon": "assets/familiars/kalgerion-demon.png",
+  "attack": {
+   "everyTicks": 4,
+   "firstTick": 4,
+   "style": "Magic",
+   "damageMin": 684,
+   "damageMax": 1368
+  },
+  "passive": "+1% critical strike chance while it is out.",
+  "critChanceAdd": 0.01,
+  "damagePerMissingLp": 0,
+  "scroll": {
+   "id": "crit-i-kal",
+   "name": "Crit-i-Kal",
+   "icon": "assets/familiars/crit-i-kal.png",
+   "specialPoints": 30,
+   "cooldownTicks": 0,
+   "description": "+5% critical strike chance for 60 seconds (all styles). 30 special move points; recasting refreshes the buff."
+  }
+ },
+ {
+  "id": "blood-reaver",
+  "name": "Blood reaver",
+  "level": 73,
+  "icon": "assets/familiars/blood-reaver.png",
+  "attack": {
+   "everyTicks": 5,
+   "firstTick": 5,
+   "style": "Magic",
+   "damageMin": 336,
+   "damageMax": 672
+  },
+  "passive": "Deals 33% of your healing as damage to its target (healing is not simulated).",
+  "critChanceAdd": 0,
+  "damagePerMissingLp": 0,
+  "scroll": {
+   "id": "blood-siphon",
+   "name": "Blood Siphon",
+   "icon": "assets/familiars/blood-siphon.png",
+   "specialPoints": 15,
+   "cooldownTicks": 5,
+   "description": "Transfers 5% of the familiar's max life points (up to 1,000) to you; 3 s cooldown. 15 special move points. Healing is not simulated."
+  }
+ },
+ {
+  "id": "blood-nihil",
+  "name": "Blood nihil",
+  "level": 87,
+  "icon": "assets/familiars/blood-nihil.png",
+  "attack": {
+   "everyTicks": 4,
+   "firstTick": 4,
+   "style": "Melee",
+   "damageMin": 384,
+   "damageMax": 768
+  },
+  "passive": "+5% melee accuracy (accuracy is not simulated).",
+  "critChanceAdd": 0,
+  "damagePerMissingLp": 0,
+  "scroll": {
+   "id": "annihilate-blood",
+   "name": "Annihilate (Blood nihil)",
+   "icon": "assets/familiars/annihilate-blood.png",
+   "specialPoints": 20,
+   "cooldownTicks": 0,
+   "description": "Attacks the target, 50–60% chance to stun it for 3.6 s (the wiki gives no damage numbers – dealt as a normal familiar hit). 20 special move points."
+  }
+ },
+ {
+  "id": "ice-nihil",
+  "name": "Ice nihil",
+  "level": 87,
+  "icon": "assets/familiars/ice-nihil.png",
+  "attack": {
+   "everyTicks": 4,
+   "firstTick": 4,
+   "style": "Necromancy",
+   "damageMin": 384,
+   "damageMax": 768
+  },
+  "passive": "+5% necromancy accuracy (accuracy is not simulated).",
+  "critChanceAdd": 0,
+  "damagePerMissingLp": 0,
+  "scroll": {
+   "id": "annihilate-ice",
+   "name": "Annihilate (Ice nihil)",
+   "icon": "assets/familiars/annihilate-ice.png",
+   "specialPoints": 20,
+   "cooldownTicks": 0,
+   "description": "Attacks the target, 50–60% chance to stun it for 3.6 s (the wiki gives no damage numbers – dealt as a normal familiar hit). 20 special move points."
+  }
+ },
+ {
+  "id": "smoke-nihil",
+  "name": "Smoke nihil",
+  "level": 87,
+  "icon": "assets/familiars/smoke-nihil.png",
+  "attack": {
+   "everyTicks": 4,
+   "firstTick": 4,
+   "style": "Magic",
+   "damageMin": 384,
+   "damageMax": 768
+  },
+  "passive": "+5% magic accuracy (accuracy is not simulated).",
+  "critChanceAdd": 0,
+  "damagePerMissingLp": 0,
+  "scroll": {
+   "id": "annihilate-smoke",
+   "name": "Annihilate (Smoke nihil)",
+   "icon": "assets/familiars/annihilate-smoke.png",
+   "specialPoints": 20,
+   "cooldownTicks": 0,
+   "description": "Attacks the target, 50–60% chance to stun it for 3.6 s (the wiki gives no damage numbers – dealt as a normal familiar hit). 20 special move points."
+  }
+ },
+ {
+  "id": "shadow-nihil",
+  "name": "Shadow nihil",
+  "level": 87,
+  "icon": "assets/familiars/shadow-nihil.png",
+  "attack": {
+   "everyTicks": 4,
+   "firstTick": 4,
+   "style": "Ranged",
+   "damageMin": 384,
+   "damageMax": 768
+  },
+  "passive": "+5% ranged accuracy (accuracy is not simulated).",
+  "critChanceAdd": 0,
+  "damagePerMissingLp": 0,
+  "scroll": {
+   "id": "annihilate-shadow",
+   "name": "Annihilate (Shadow nihil)",
+   "icon": "assets/familiars/annihilate-shadow.png",
+   "specialPoints": 20,
+   "cooldownTicks": 0,
+   "description": "Attacks the target, 50–60% chance to stun it for 3.6 s (the wiki gives no damage numbers – dealt as a normal familiar hit). 20 special move points."
+  }
+ },
+ {
+  "id": "hellhound",
+  "name": "Hellhound",
+  "level": 45,
+  "icon": "assets/familiars/hellhound.png",
+  "attack": {
+   "everyTicks": 4,
+   "firstTick": 4,
+   "style": "Melee",
+   "damageMin": 288,
+   "damageMax": 576
+  },
+  "passive": "Tank familiar: absorbs 20% of the damage dealt to you (damage taken is not simulated).",
+  "critChanceAdd": 0,
+  "damagePerMissingLp": 0,
+  "scroll": {
+   "id": "soul-food",
+   "name": "Soul Food",
+   "icon": "assets/familiars/soul-food.png",
+   "specialPoints": 6,
+   "cooldownTicks": 0,
+   "description": "Heals the hellhound for 10% of its max life points (not simulated). 6 special move points."
+  }
+ },
+ {
+  "id": "pack-mammoth",
+  "name": "Pack mammoth",
+  "level": 99,
+  "icon": "assets/familiars/pack-mammoth.png",
+  "attack": {
+   "everyTicks": 4,
+   "firstTick": 4,
+   "style": "Melee",
+   "damageMin": 648,
+   "damageMax": 1296
+  },
+  "passive": "Beast of burden: holds 32 items and food (not simulated).",
+  "critChanceAdd": 0,
+  "damagePerMissingLp": 0,
+  "scroll": {
+   "id": "mammoth-feast",
+   "name": "Mammoth Feast",
+   "icon": "assets/familiars/mammoth-feast.png",
+   "specialPoints": 6,
+   "cooldownTicks": 0,
+   "description": "Eats a piece of food from the mammoth's inventory and heals you with it without draining adrenaline (not simulated). 6 special move points."
+  }
+ }
+]

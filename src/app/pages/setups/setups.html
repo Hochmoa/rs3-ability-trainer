@@ -70,6 +70,7 @@
                   @if (armour(l); as a) { · {{ a }} }
                   @if (l.eofSpec) { · EoF: {{ l.eofSpec }} }
                   @if (relics(l).length) { · relics: {{ relics(l).join(', ') }} }
+                  @if (l.familiar) { · familiar: {{ familiarName(l) }} }
                   @if (perks(l).length) { · perks: {{ perks(l).join(', ') }} }
                   @if (l.spiritPact) { · Spirit Pact {{ l.spiritPact }} }
                 </div>

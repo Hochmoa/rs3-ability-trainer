@@ -410,7 +410,7 @@ export class EntityTooltip {
 
   gearSubtitle(g: GearView): string {
     const parts: string[] = [];
-    if (g.special) parts.push(g.special.kind === 'bomb' ? 'Bomb' : 'Adrenaline potion');
+    if (g.special) parts.push(g.special.kind === 'bomb' ? 'Bomb' : g.special.kind === 'scroll' ? 'Familiar scroll · ' + g.special.specialPoints + ' special move points' : 'Adrenaline potion');
     else if (g.weapon) parts.push(g.weapon.slot === '2h' ? 'Two-handed' : g.weapon.slot === 'shield' ? 'Shield' : g.weapon.slot === 'main' ? 'Main hand' : 'Off-hand');
     else if (g.gear) parts.push(g.gear.slot.charAt(0).toUpperCase() + g.gear.slot.slice(1) + (g.gear.type ? ' · ' + g.gear.type : ''));
     if (g.tier) parts.push('tier ' + g.tier);
@@ -445,7 +445,7 @@ export class EntityTooltip {
   subtitle(e: Entity): string {
     if (e.ability) return (e.ability.basicAttack ? 'Auto-attack' : e.ability.type) + ' · ' + e.ability.style;
     if (e.prayer) return (e.prayer.book === 'Curses' ? 'Ancient curse' : 'Prayer') + ' · level ' + e.prayer.level;
-    if (e.special) return 'Adrenaline potion';
+    if (e.special) return e.special.kind === 'bomb' ? 'Bomb' : e.special.kind === 'scroll' ? 'Familiar scroll · ' + e.special.specialPoints + ' special move points' : 'Adrenaline potion';
     if (e.weapon) return 'Weapon switch · ' + e.weapon.style;
     if (e.spell) return (e.spell.kind === 'autocast' ? 'Auto-cast spell · ' : 'Spell · ') + SPELLBOOK_NAMES[e.spell.book] + ' · level ' + e.spell.level;
     return '';

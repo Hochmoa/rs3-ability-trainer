@@ -399,6 +399,7 @@ function normaliseLoadout(l: Partial<Loadout>): Loadout {
   const out: Loadout = { ...base, ...l, id: l.id ?? base.id };
   out.items = [...(l.items ?? [])];
   out.relics = [...(l.relics ?? [])];
+  out.familiar = l.familiar ?? null;
   out.switches = [...(l.switches ?? [])];
   out.prayerBook = l.prayerBook === 'Prayers' ? 'Prayers' : 'Curses';
   out.spellbook = l.spellbook === 'ancient' || l.spellbook === 'lunar' ? l.spellbook : 'standard';

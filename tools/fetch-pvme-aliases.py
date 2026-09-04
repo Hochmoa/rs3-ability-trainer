@@ -2,7 +2,7 @@
 
 Source: https://github.com/pvme/pvme-settings (emojis/emojis_v2.json). Aliases are matched by name or by
 slug against our abilities, prayers, specials, specs, weapons (gear:<weapon id>) and armour / jewellery (item:<gear id>);
-a few are mapped by hand. Unmatched aliases
+a few are mapped by hand ("note:<text>" keys become a note step). Unmatched aliases
 (removed abilities, gear we do not model, bosses, ...) are left out and show up as notes when importing.
 Run:  python tools/fetch-pvme-aliases.py   (after the other fetch scripts)
 """
@@ -30,6 +30,19 @@ MANUAL = {
     "replen": "special:replenishment-potion",
     "enhreplen": "special:enhanced-replenishment-potion",
     "vulnbomb": "special:vulnerability-bomb",
+    # familiars (familiars.json): scrolls are pressable specials, pouches become a note
+    "kalgscroll": "special:crit-i-kal",
+    "ripperscroll": "special:death-from-above",
+    "reaverscroll": "special:blood-siphon",
+    "ripperpouch": "note:summon Ripper Demon",
+    "kalgpouch": "note:summon Kal'gerion demon",
+    "reaverpouch": "note:summon Blood reaver",
+    "hellhoundpouch": "note:summon Hellhound",
+    "icenihil": "note:summon Ice nihil",
+    "smokenihil": "note:summon Smoke nihil",
+    "bloodnihil": "note:summon Blood nihil",
+    "shadownihil": "note:summon Shadow nihil",
+    "mammothpouch": "note:summon Pack mammoth",
     "undeadslayer": "ability:undead-slayer",
     "dragonslayer": "ability:dragon-slayer",
     "demonslayer": "ability:demon-slayer",
@@ -77,6 +90,8 @@ def main():
             by_name.setdefault(x["name"].lower(), key)
             by_norm.setdefault(norm(x["name"]), key)
             by_norm.setdefault(norm(x["id"]), key)
+    for f in json.load(open(DATA / "familiars.json", encoding="utf-8")):  # scrolls are "special:<scroll id>" entities
+        by_name.setdefault(f["scroll"]["name"].lower(), "special:" + f["scroll"]["id"])
     known = set(by_name.values())
 
     aliases: dict[str, str] = {}
@@ -91,12 +106,12 @@ def main():
             key = MANUAL.get(alias) or by_name.get(em["name"].lower()) or by_norm.get(norm(em["name"])) or by_norm.get(norm(alias)) or by_norm.get(norm(base))
             if not key and em["name"].lower().startswith("eof"):
                 key = "item:essence-of-finality-amulet"  # "EoF (red)", "EoF (or)(pink)" ... are all the same amulet
-            if key and (key in known or key.startswith("action:")):
+            if key and (key in known or key.startswith("action:") or key.startswith("note:")):
                 aliases[alias.lower()] = key
                 for extra in em.get("id_aliases") or []:  # preset-maker ids ("edracolichcoif") point at the same item
                     aliases.setdefault(str(extra).lower(), key)
     for alias, key in MANUAL.items():
-        if key in known or key.startswith("action:"):
+        if key in known or key.startswith("action:") or key.startswith("note:"):
             aliases[alias] = key
     write_json(DATA / "pvme-aliases.json", dict(sorted(aliases.items())))
     print(len(aliases), "aliases ->", DATA / "pvme-aliases.json")

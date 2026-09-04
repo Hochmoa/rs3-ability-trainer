@@ -130,6 +130,10 @@ export class Setups {
     return (l.relics ?? []).map((id) => RELICS.find((r) => r.id === id)?.name ?? id);
   }
 
+  familiarName(l: Loadout): string {
+    return (l.familiar && this.data.familiarById().get(l.familiar)?.name) || l.familiar || '';
+  }
+
   perks(l: Loadout): string[] {
     const out: string[] = [];
     for (const g of [...(l.weaponGizmos ?? []), ...(l.armourGizmos ?? [])]) {
