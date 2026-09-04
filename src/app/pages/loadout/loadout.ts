@@ -6,7 +6,7 @@ import { GearResult, GearState, addItem, equip, moveItem, removeItem, removeWorn
 import { EquipSlot, Gizmo, ItemRef, Loadout as LoadoutModel, Perk, RELICS, SLOT_NAMES, Style, WeaponSpec, newLoadout } from '../../core/models';
 import { isObscureGear, isObscurePerk, isObscureSpec, isObscureWeapon } from '../../core/obscure';
 import { StorageService } from '../../core/storage.service';
-import { LoadoutData, loadoutWarnings, mainStyle, wornPassives, wornSets } from '../../engine/loadout-resolver';
+import { LoadoutData, NOT_SIMULATED_EFFECT_KINDS, loadoutWarnings, mainStyle, resolveLoadout, wornPassives, wornSets } from '../../engine/loadout-resolver';
 import { DialogService } from '../../shared/dialog';
 import { GearDragService } from '../../shared/gear-drag';
 import { GearAction, GearDrag, GearPanel, GearSource } from '../../shared/gear-panel';
@@ -162,6 +162,17 @@ export class Loadout {
     specEntity: (s) => this.data.specEntity(s),
   }));
   readonly warnings = computed(() => (this.data.loaded() ? loadoutWarnings(this.l(), this.loadoutData()) : []));
+  /** set thresholds / passives the simulation ignores: "<id>:<kind>" → reason */
+  readonly notSimulated = computed<Map<string, string>>(() => {
+    const out = new Map<string, string>();
+    if (!this.data.loaded()) return out;
+    for (const e of resolveLoadout(this.l(), this.loadoutData()).ignoredEffects) out.set(e.id + ':' + e.kind, NOT_SIMULATED_EFFECT_KINDS[e.kind] ?? 'not simulated');
+    return out;
+  });
+
+  ignoredReason(id: string, kind: string | undefined): string | null {
+    return kind ? this.notSimulated().get(id + ':' + kind) ?? null : null;
+  }
   readonly sets = computed(() => (this.data.loaded() ? wornSets(this.l(), this.loadoutData()) : []));
   readonly passives = computed(() => (this.data.loaded() ? wornPassives(this.l(), this.loadoutData()).filter((p) => p.slot !== 'talent') : []));
   readonly wieldedStyle = computed(() => (this.data.loaded() ? mainStyle(this.l(), this.loadoutData()) : null));

@@ -88,8 +88,10 @@
             @for (t of s.set.thresholds ?? []; track t.pieces) {
               <li [class.active]="s.pieces >= t.pieces" [class.damage-only]="t.class === 'damage' || t.class === 'defensive'">
                 <b>{{ t.pieces }}:</b> {{ t.text }}
-                @if (t.class === 'damage') { <small class="muted">(damage only)</small> }
-                @if (t.class === 'defensive') { <small class="muted">(defensive, no effect on the simulation)</small> }
+                @if (ignoredReason(s.set.id, t.effect?.kind); as why) {
+                  <small class="muted">(not simulated: {{ why }})</small>
+                } @else if (t.class === 'damage') { <small class="muted">(damage only)</small> }
+                @else if (t.class === 'defensive') { <small class="muted">(defensive, no effect on the simulation)</small> }
               </li>
             }
           </ul>
@@ -99,6 +101,7 @@
         <div class="effect" [class.damage-only]="p.class === 'damage' || p.class === 'defensive'">
           <span class="slot-label">{{ p.name }}</span>
           <small class="muted">{{ p.text }}</small>
+          @if (ignoredReason(p.id, p.effect?.kind); as why) { <small class="muted">(not simulated: {{ why }})</small> }
         </div>
       }
     </div>
