@@ -154,6 +154,7 @@ interface Note {
             <div>
               <div class="name">{{ g.name }}</div>
               <div class="sub">{{ gearSubtitle(g) }}</div>
+              @if (perkLine(g); as perks) { <div class="perks">✦ {{ perks }}</div> }
             </div>
           </div>
           <table>
@@ -163,9 +164,6 @@ interface Note {
             }
             @if (g.set; as set) { <tr><th>Set</th><td>{{ set.name }}</td></tr> }
             @if (g.ref.spec) { <tr><th>Stored spec</th><td>{{ specName(g.ref.spec) }}</td></tr> }
-            @for (gz of g.ref.gizmos ?? []; track $index) {
-              <tr><th>{{ gz.ancient ? 'Ancient gizmo' : 'Gizmo' }}</th><td>{{ perkList(gz) }}</td></tr>
-            }
             @if (g.special; as sp) {
               <tr><th>Adrenaline</th><td class="good">{{ sp.adrenaline ? '+' + sp.adrenaline + '%' : '' }}{{ sp.adrenalineOverTime ? '+' + sp.adrenalineOverTime + '% over ' + seconds(sp.overTimeTicks) : '' }}</td></tr>
               <tr><th>Cooldown</th><td>{{ seconds(sp.cooldownTicks) }} (shared)</td></tr>
@@ -303,6 +301,13 @@ interface Note {
       color: var(--muted);
       font-size: 12px;
     }
+    /* Invention perks: the first thing after the name, so a hover answers "what is on this item" at once */
+    .perks {
+      margin-top: 3px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #9fd3ff;
+    }
     table {
       border-collapse: collapse;
       width: 100%;
@@ -402,6 +407,13 @@ export class EntityTooltip {
 
   specName(id: string): string {
     return this.data.specById().get(id)?.name ?? id;
+  }
+
+  /** all gizmos of an item on one line: "Precise 6, Equilibrium 4 | Aftershock 4 (ancient)" – null when it holds none */
+  perkLine(g: GearView): string | null {
+    const gizmos = (g.ref.gizmos ?? []).filter((gz) => gz.perks.length);
+    if (!gizmos.length) return null;
+    return gizmos.map((gz) => this.perkList(gz) + (gz.ancient ? ' (ancient)' : '')).join(' | ');
   }
 
   perkList(g: { perks: { perk: string; rank: number }[] }): string {

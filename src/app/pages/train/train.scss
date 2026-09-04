@@ -858,6 +858,8 @@
   align-items: center;
   gap: 8px;
   margin-top: 6px;
+  max-width: 100%;
+  min-width: 0;
 
   .bar-label {
     flex: none;
@@ -870,11 +872,14 @@
 .history-strip {
   display: flex;
   gap: 4px;
-  flex: 1;
+  /* basis 0 + width 0: the strip takes the remaining line and never pushes the page wider */
+  flex: 1 1 0;
+  width: 0;
   min-width: 0;
   overflow-x: auto;
+  overflow-y: hidden;
   padding: 3px 2px;
-  scroll-behavior: smooth;
+  scrollbar-width: thin;
 }
 .hist {
   position: relative;
@@ -890,6 +895,17 @@
     width: 100%;
     height: 100%;
     display: block;
+  }
+  &.item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  &.item img {
+    width: auto;
+    height: auto;
+    max-width: 85%;
+    max-height: 85%;
   }
   .hist-name {
     font-size: 9px;

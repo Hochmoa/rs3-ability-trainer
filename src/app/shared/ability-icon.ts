@@ -7,7 +7,7 @@ export type IconState = 'idle' | 'queued' | 'too-early' | 'wrong' | 'fired' | 'd
   template: `
     <div
       class="icon"
-      [class]="'icon state-' + state()"
+      [class]="'icon state-' + state() + (ability().kind === 'special' || ability().kind === 'weapon' ? ' item' : '')"
       [style.width.px]="px()"
       [style.height.px]="px()"
       [style.font-size.px]="px() / 4"
@@ -41,6 +41,19 @@ export type IconState = 'idle' | 'queued' | 'too-early' | 'wrong' | 'fired' | 'd
       height: 100%;
       display: block;
       image-rendering: auto;
+    }
+    /* inventory icons (potions, weapons) are ~30 px: centred 1:1, never upscaled */
+    .icon.item {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .icon.item img {
+      width: auto;
+      height: auto;
+      max-width: 85%;
+      max-height: 85%;
+      filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.8));
     }
     .cooldown {
       position: absolute;
@@ -94,7 +107,7 @@ export type IconState = 'idle' | 'queued' | 'too-early' | 'wrong' | 'fired' | 'd
 })
 export class AbilityIcon {
   /** anything with a name and an icon: Ability, Prayer, Special or Entity */
-  readonly ability = input.required<{ name: string; icon: string }>();
+  readonly ability = input.required<{ name: string; icon: string; kind?: string }>();
   readonly keyLabel = input<string>('');
   readonly px = input<number>(64);
   /** 0..1, 1 = ready */

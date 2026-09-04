@@ -1,6 +1,6 @@
 import { CdkDrag, CdkDropList, CdkDropListGroup } from '@angular/cdk/drag-drop';
 import { DecimalPipe } from '@angular/common';
-import { Component, ElementRef, HostListener, OnDestroy, computed, effect, inject, signal, viewChild } from '@angular/core';
+import { Component, ElementRef, HostListener, OnDestroy, afterRenderEffect, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DataService, Entity, SPEC_KEY } from '../../core/data.service';
@@ -358,6 +358,12 @@ export class Train implements OnDestroy {
   readonly history = signal<HistoryEntry[]>([]);
   private historyId = 0;
   private readonly historyStrip = viewChild<ElementRef<HTMLElement>>('historyStrip');
+  /** keep the newest entry in view: scroll the strip to its end after every render that added one */
+  private readonly historyScroll = afterRenderEffect(() => {
+    this.history();
+    const el = this.historyStrip()?.nativeElement;
+    if (el) el.scrollLeft = el.scrollWidth;
+  });
   readonly tickPhase = signal(0);
   readonly gcdPhase = signal(1);
   readonly gcdRemaining = signal(0);
@@ -1187,8 +1193,6 @@ export class Train implements OnDestroy {
       if (last && last.key === key && last.kind === 'other' && kind !== 'other') return [...list.slice(0, -1), { ...entry, id: last.id }];
       return [...list, entry];
     });
-    const el = this.historyStrip()?.nativeElement;
-    if (el) requestAnimationFrame(() => (el.scrollLeft = el.scrollWidth));
   }
 
   private flash(kind: 'fired' | 'wrong', key: string, now: number, ms: number): void {

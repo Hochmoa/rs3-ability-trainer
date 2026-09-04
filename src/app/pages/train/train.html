@@ -340,7 +340,7 @@
         <span class="bar-label">Pressed</span>
         <div class="history-strip" #historyStrip>
           @for (h of history(); track h.id) {
-            <div [class]="'hist ' + h.kind" [title]="h.text">
+            <div [class]="'hist ' + h.kind + (h.key.startsWith('special:') || h.key.startsWith('weapon:') ? ' item' : '')" [title]="h.text">
               @if (h.icon) { <img [src]="h.icon" [alt]="h.name" /> } @else { <span class="hist-name">{{ h.name }}</span> }
               @if (h.step !== undefined) { <span class="step">{{ h.step + 1 }}</span> }
             </div>

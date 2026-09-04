@@ -208,6 +208,21 @@ export interface SlotView {
       height: 100%;
       display: block;
     }
+    /* potions and weapons carry ~30 px inventory icons: draw them 1:1 in the middle of the dark cell like the game, never upscaled */
+    .slot.special .drag,
+    .slot.weapon .drag {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .slot.special img,
+    .slot.weapon img {
+      width: auto;
+      height: auto;
+      max-width: 88%;
+      max-height: 88%;
+      filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.8));
+    }
     .slot.unusable img {
       filter: grayscale(1) brightness(0.45);
     }
