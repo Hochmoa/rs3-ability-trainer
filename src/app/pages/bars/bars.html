@@ -92,12 +92,19 @@
           <input type="search" placeholder="Search everything…" [ngModel]="search()" (ngModelChange)="search.set($event)" />
         </div>
         <div class="grid">
-          @for (e of catalog(); track e.key) {
-            <button class="cell" (pointerdown)="startDrag($event, e, null)" (click)="add(e)" [entityTip]="e">
-              <ability-icon [ability]="e" [px]="48" />
-              <span class="cell-name">{{ e.name }}</span>
-              <span class="cell-type">{{ subtitle(e) }}</span>
-            </button>
+          @for (g of catalogGroups(); track g.key) {
+            @if (g.ability || catalogGroups().length > 1) {
+              <div class="group-head"><span>{{ g.label }}</span><span class="count">{{ g.entities.length }}</span></div>
+            }
+            @for (e of g.entities; track e.key) {
+              <button class="cell" (pointerdown)="startDrag($event, e, null)" (click)="add(e)" [entityTip]="e">
+                <ability-icon [ability]="e" [px]="48" />
+                <span class="cell-name">{{ e.name }}</span>
+                <span class="cell-type">{{ subtitle(e) }}</span>
+              </button>
+            }
+          } @empty {
+            <p class="muted small">Nothing matches.</p>
           }
         </div>
       </div>

@@ -1,6 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { groupCatalog } from '../../core/catalog-groups';
 import { DataService, Entity } from '../../core/data.service';
 import { keybindLabel } from '../../core/keybind.util';
 import { ActionBarSetup, BAR_POSITION_NAMES, RotationStep, STYLES, STYLES4, Style4, WEAPON_TYPES, WeaponType } from '../../core/models';
@@ -12,7 +13,7 @@ import { DialogService } from '../../shared/dialog';
 
 const TABS = [...STYLES, 'Prayers', 'Curses', 'Special', 'Weapons'] as const;
 type Tab = (typeof TABS)[number];
-const TYPE_ORDER: Record<string, number> = { Basic: 0, Enhanced: 1, Threshold: 2, Ultimate: 3, Special: 4 };
+const TYPE_ORDER: Record<string, number> = { Basic: 0, Enhanced: 1, Threshold: 2, Ultimate: 3, Incantation: 4, Special: 5 };
 
 /** Action bar setup: 18 presets with drag & drop, positions, style bindings, weapon types. */
 @Component({
@@ -98,6 +99,9 @@ export class Bars {
       return a.name.localeCompare(b.name);
     });
   });
+
+  /** the catalog with a header per ability type (Basic → Enhanced → Threshold → Ultimate …), like the ability book */
+  readonly catalogGroups = computed(() => groupCatalog(this.catalog()));
 
   /** which positions / bindings show a preset – for the list */
   usage(presetId: number): string {

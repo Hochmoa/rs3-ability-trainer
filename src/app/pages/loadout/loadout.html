@@ -29,7 +29,7 @@
   }
 </div>
 
-<div class="panel gear-page" cdkDropListGroup>
+<div class="panel gear-page">
   <div class="catalog">
     <div class="tabs small">
       @for (t of TABS; track t.id) {
@@ -48,9 +48,9 @@
       }
       <input type="search" placeholder="Search…" [ngModel]="search()" (ngModelChange)="search.set($event)" />
     </div>
-    <div class="item-grid" cdkDropList cdkDropListSortingDisabled id="catalog" [cdkDropListEnterPredicate]="fromPanel" (cdkDropListDropped)="dropOnCatalog($event.item.data)">
+    <div class="item-grid" id="catalog" [class.can-receive]="catalogReceives()" [class.receiving]="gearDrag.hover() === 'catalog'" [attr.data-gear-drop]="catalogReceives() ? 'catalog' : null" (gear-drop)="dropOnCatalog($event)">
       @for (v of catalog(); track v.ref.kind + v.ref.id) {
-        <div class="item" [class.has-spec]="v.weapon?.spec" [class.has-effect]="v.set || v.passive" cdkDrag [cdkDragData]="dragOf(v)" [gearTip]="v" (click)="addFromCatalog(v)" (dblclick)="wearFromCatalog(v)" (contextmenu)="menuCatalog($event, v)">
+        <div class="item" [class.has-spec]="v.weapon?.spec" [class.has-effect]="v.set || v.passive" [gearTip]="v" (pointerdown)="startDrag($event, v)" (click)="addFromCatalog(v)" (dblclick)="wearFromCatalog(v)" (contextmenu)="menuCatalog($event, v)">
           @if (v.icon) { <img [src]="v.icon" alt="" draggable="false" /> } @else { <span class="noicon"></span> }
           <span class="iname">{{ v.name }}</span>
           <span class="imeta">{{ meta(v) }}</span>
