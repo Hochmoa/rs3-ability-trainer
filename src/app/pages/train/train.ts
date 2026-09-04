@@ -3,7 +3,7 @@ import { DecimalPipe } from '@angular/common';
 import { Component, ElementRef, HostListener, OnDestroy, afterRenderEffect, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { DataService, Entity, SPEC_KEY } from '../../core/data.service';
+import { DataService, EOF_ICON, Entity, SPEC_KEY } from '../../core/data.service';
 import { applyWield, equip, unequip } from '../../core/equipment';
 import { keybindFromEvent, keybindKey, keybindLabel } from '../../core/keybind.util';
 import { ActionBarSetup, AttackPattern, BAR_POSITIONS, BONE_SHIELD_ABILITY, INVENTORY_SIZE, BAR_SLOTS, BarShape, barLayout, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, TARGET_TYPES, EquipSlot, ItemRef, Loadout, PrayerStats, Prebuild, REVOLUTION_MAX_SLOTS, REVOLUTION_MIN_SLOTS, RevolutionSettings, Rotation, STYLES4, Settings, StepResult, Style, Style4, WeaponSpec, emptyPrebuild, entityKey, isStyle4, loadoutWeapons, loadoutWield, parseEntityKey, prebuildIsEmpty, visiblePresets, RotationStep } from '../../core/models';
@@ -470,18 +470,7 @@ export class Train implements OnDestroy {
     const layout = this.layout();
     const morphs = this.morphs();
     const activeKeys = new Set(this.activePrayers().map((p) => p.key));
-    // like the game: the special-attack slot shows the wielded weapon, the Essence of Finality slot the amulet worn
-    const gear = this.gearState();
-    const wield = running ? this.wielded() : [loadoutWield(gear).twoHand, loadoutWield(gear).mainHand].filter((x): x is string => !!x);
-    const mainWeapon = wield.map((id) => this.data.get('weapon:' + id)?.weapon).find((w) => w && w.slot !== 'off' && w.slot !== 'shield');
-    const weaponIcon = mainWeapon?.icon ?? null;
-    const neck = gear.equipment?.neck;
-    const neckIcon = neck ? (this.data.view(neck)?.icon ?? null) : null;
-    const dynamicIcon = (e: Entity): string | null => {
-      if (e.kind === 'spec' || e.key === SPEC_KEY) return weaponIcon;
-      if (e.key === 'ability:essence-of-finality') return neckIcon;
-      return null;
-    };
+    const dynamicIcon = (e: Entity): string | null => this.eofIcon(e);
     return layout.order.map((pos) => {
       const id = shown[pos] ?? null;
       const preset = id === null ? null : s.presets.find((p) => p.id === id) ?? null;
@@ -613,6 +602,13 @@ export class Train implements OnDestroy {
     void this.storage.saveActionBars({ ...this.storage.actionBars(), layout: { order: [...this.layout().order], shape } });
   }
 
+  /** the spec stored in the Essence of Finality wears the EoF icon; every other spec keeps the generic special-attack icon */
+  private eofIcon(e: Entity): string | null {
+    if (e.kind !== 'spec') return null;
+    const eof = this.resolved().eofSpec;
+    return eof && eof.id === e.id ? EOF_ICON : null;
+  }
+
   readonly slots = computed<QueueSlot[]>(() => {
     const entities = this.stepEntities();
     if (!entities.length || entities.some((e) => !e)) return [];
@@ -625,7 +621,9 @@ export class Train implements OnDestroy {
       let j = idx;
       if (loop) j = ((idx % steps.length) + steps.length) % steps.length;
       if (j < 0 || j >= steps.length) return null;
-      const entity = steps[j];
+      const raw = steps[j];
+      const eofIcon = this.eofIcon(raw);
+      const entity = eofIcon ? { ...raw, icon: eofIcon } : raw;
       const rs = this.rotation()?.steps[j];
       return {
         entity,
