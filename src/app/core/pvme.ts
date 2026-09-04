@@ -76,7 +76,6 @@ export const PVME_MARKERS: Record<string, string> = {
 
 /** Bosses / NPCs used as targets ("(tc) aod", "aod omni", "click dummy"): a target cycle with the target as hint. */
 export const PVME_TARGETS: Record<string, string> = {
-  dummy: 'Combat dummy',
   aod: 'Angel of Death',
   amascuthead: "Amascut's head",
   telos: 'Telos',

@@ -157,10 +157,10 @@ describe('parsePvme – stack and status markers', () => {
 
 describe('parsePvme – targets', () => {
   it('a boss token is a target cycle with the boss as hint', () => {
-    const r = parsePvme('(tc) aod → aod omni → click dummy → telos → tc amascuthead → surge + dummy', resolve);
+    const r = parsePvme('(tc) aod → aod omni → click vorkath → telos → tc amascuthead → surge + vorkath', resolve);
     expect(ids(r.steps)).toEqual(['target-cycle', 'target-cycle', 'omnipower+', 'target-cycle', 'target-cycle', 'target-cycle', 'surge', 'target-cycle+']);
     expect(r.steps.filter((s) => s.id === 'target-cycle').map((s) => s.hint)).toEqual([
-      'Angel of Death', 'Angel of Death', 'Combat dummy', 'Telos', "Amascut's head", 'Combat dummy',
+      'Angel of Death', 'Angel of Death', 'Vorkath', 'Telos', "Amascut's head", 'Vorkath',
     ]);
     expect(r.unknown).toEqual([]);
   });
@@ -205,7 +205,7 @@ describe('pvme-aliases.json', () => {
   it('every alias key is normalised and every non-item target exists', () => {
     for (const [alias, key] of Object.entries(aliases)) {
       expect(alias, alias).toBe(normalizeAlias(alias));
-      if (!key.startsWith('item:')) expect(known.has(key), `${alias} → ${key}`).toBe(true);
+      if (!key.startsWith('item:') && !key.startsWith('note:')) expect(known.has(key), `${alias} → ${key}`).toBe(true);
     }
   });
 
