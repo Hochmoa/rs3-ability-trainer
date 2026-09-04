@@ -3,7 +3,7 @@
  * The trainer assumes level 99 in every combat skill and ignores armour / jewellery damage bonuses (b = 0):
  * the numbers are meant for kill times and DPS comparisons between rotations, not for exact max hits.
  */
-import { OverloadChoice, Style, Weapon } from '../core/models';
+import { CombatSkill, OverloadChoice, Style, Weapon } from '../core/models';
 
 /** f(level) = 145·ln(1 + 0.6·level/145) / ln(1.6) – the level curve since the Combat Style Modernisation */
 export function levelCurve(level: number): number {
@@ -34,6 +34,26 @@ export const OVERLOADS: Record<OverloadChoice, { pct: number; flat: number; name
 export function boostedLevel(choice: OverloadChoice | undefined, base = BASE_LEVEL): number {
   const o = OVERLOADS[choice ?? 'none'];
   return base + Math.floor(base * o.pct) + o.flat;
+}
+
+/** skills an overload boosts (Constitution and Prayer are not combat-boosted by overloads) */
+export const OVERLOAD_SKILLS: CombatSkill[] = ['attack', 'strength', 'ranged', 'magic', 'necromancy', 'defence'];
+
+/** every skill's level with the overload applied */
+export function boostedLevels(levels: Record<CombatSkill, number>, choice: OverloadChoice | undefined): Record<CombatSkill, number> {
+  const out = { ...levels };
+  for (const k of OVERLOAD_SKILLS) out[k] = boostedLevel(choice, levels[k]);
+  return out;
+}
+
+/** the skill whose level enters the ability damage of a style (wiki: Strength for melee) */
+export function damageSkillOf(style: Style | null | undefined): CombatSkill {
+  switch (style) {
+    case 'Ranged': return 'ranged';
+    case 'Magic': return 'magic';
+    case 'Necromancy': return 'necromancy';
+    default: return 'strength';
+  }
 }
 
 /**

@@ -1,5 +1,5 @@
 /** What the engine needs to know about the player's equipment, perks, relics and unlocks. */
-import { Familiar, Spellbook, Style } from '../core/models';
+import { CombatSkill, DEFAULT_LEVELS, Familiar, Spellbook, Style } from '../core/models';
 import { ChannelSpec, StackId } from './rules-model';
 import type { EngineEntity } from './trainer-engine';
 
@@ -129,6 +129,8 @@ export interface ResolvedLoadout {
   abilityDamage: number;
   /** combat level the ability damage was computed with: 99, or 116 / 118 / 120 under an overload / supreme / elder overload */
   combatLevel: number;
+  /** every combat skill's level with the overload applied (base: Loadout.levels) */
+  levels: Record<CombatSkill, number>;
   /** extra critical strike chance (Biting 2% per rank) */
   critChanceAdd: number;
   /** Precise: minimum hit +1.5% of the max per rank (not DoTs, except Bloat's initial hit) */
@@ -220,6 +222,7 @@ export function defaultResolvedLoadout(): ResolvedLoadout {
     eofSpec: null,
     abilityDamage: 0,
     combatLevel: 99,
+    levels: { ...DEFAULT_LEVELS },
     critChanceAdd: 0,
     preciseRank: 0,
     equilibriumRank: 0,

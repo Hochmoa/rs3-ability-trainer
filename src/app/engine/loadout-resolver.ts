@@ -2,8 +2,8 @@
  * Turns a saved Loadout (worn items, perks on them, relics) into the numbers the engine uses.
  * Effect kinds are the ones written in public/data/set-effects.json and perks.json.
  */
-import { EquipSlot, Familiar, GearItem, Gizmo, ItemRef, Loadout, Perk, SetEffect, Style, WEAPON_SETS, Weapon, WeaponSpec, loadoutWield } from '../core/models';
-import { KWUARM_PER_POTENCY, WEAPON_POISON_CHANCE, abilityDamageOf, boostedLevel, poisonPct } from './damage';
+import { EquipSlot, Familiar, GearItem, Gizmo, ItemRef, Loadout, Perk, SetEffect, Style, WEAPON_SETS, Weapon, WeaponSpec, loadoutWield, loadoutLevels } from '../core/models';
+import { KWUARM_PER_POTENCY, WEAPON_POISON_CHANCE, abilityDamageOf, boostedLevels, damageSkillOf, poisonPct } from './damage';
 import { ruleFor } from './rules';
 import { FORTIFIED_BONES_BONUS } from './rules-necromancy';
 import { ResolvedLoadout, defaultResolvedLoadout } from './loadout-resolved';
@@ -171,8 +171,10 @@ export function resolveLoadout(l: Loadout, data: LoadoutData): ResolvedLoadout {
   r.hasDefender = off?.role === 'defender';
   r.hasConduit = main?.role === 'siphon' && off?.role === 'conduit';
   r.weaponType = main ? weaponType(main) : null;
-  // overload: the wiki's ability damage formula takes the boosted level (elder overload: 99 → 120)
-  r.combatLevel = boostedLevel(l.overload);
+  // levels: the loadout's base levels under the overload; the ability damage takes the wielded style's damage skill
+  // (Strength / Ranged / Magic / Necromancy) – elder overload at 99 → 120, at 120 → 145
+  r.levels = boostedLevels(loadoutLevels(l), l.overload);
+  r.combatLevel = r.levels[damageSkillOf(r.style)];
   r.abilityDamage = abilityDamageOf(two ? null : main, off, two, r.combatLevel);
   const specId = main?.spec ?? (off?.spec ?? null);
   if (specId) {

@@ -494,9 +494,32 @@ export function sameRef(a: ItemRef | null | undefined, b: ItemRef | null | undef
 }
 
 /** Everything outside the rotation: worn equipment, backpack, prayer book, relics. */
+/** the combat skills whose levels enter damage, accuracy, life points and prayer */
+export type CombatSkill = 'attack' | 'strength' | 'ranged' | 'magic' | 'necromancy' | 'defence' | 'constitution' | 'prayer';
+export const COMBAT_SKILLS: CombatSkill[] = ['attack', 'strength', 'ranged', 'magic', 'necromancy', 'defence', 'constitution', 'prayer'];
+export const SKILL_NAMES: Record<CombatSkill, string> = {
+  attack: 'Attack', strength: 'Strength', ranged: 'Ranged', magic: 'Magic', necromancy: 'Necromancy', defence: 'Defence', constitution: 'Constitution', prayer: 'Prayer',
+};
+/** level caps (Necromancy goes to 120) */
+export const SKILL_MAX: Record<CombatSkill, number> = { attack: 99, strength: 99, ranged: 99, magic: 99, necromancy: 120, defence: 99, constitution: 99, prayer: 99 };
+/** a maxed account – the default for every loadout */
+export const DEFAULT_LEVELS: Record<CombatSkill, number> = { ...SKILL_MAX };
+
+/** the loadout's base levels (unboosted), missing ones at the cap, clamped to 1..cap */
+export function loadoutLevels(l: { levels?: Partial<Record<CombatSkill, number>> }): Record<CombatSkill, number> {
+  const out = { ...DEFAULT_LEVELS };
+  for (const k of COMBAT_SKILLS) {
+    const v = l.levels?.[k];
+    if (typeof v === 'number' && Number.isFinite(v)) out[k] = Math.max(1, Math.min(SKILL_MAX[k], Math.round(v)));
+  }
+  return out;
+}
+
 export interface Loadout {
   id: string;
   name: string;
+  /** base combat levels (unboosted); missing = the cap. Overloads boost them (engine/damage.ts boostedLevels) */
+  levels?: Partial<Record<CombatSkill, number>>;
   /** PvME boss preset this came from (presets.json id) */
   presetId?: string;
   /** start of a training session, 0..100 */

@@ -3,7 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { DataService, GearView } from '../../core/data.service';
 import { GearResult, GearState, addItem, equip, moveItem, removeItem, removeWorn, unequip, updateRef } from '../../core/equipment';
-import { EquipSlot, Gizmo, ItemRef, KwuarmPotency, Loadout as LoadoutModel, OVERLOAD_CHOICES, OverloadChoice, Perk, RELICS, SLOT_NAMES, Style, WEAPON_POISON_NAMES, WeaponPoisonTier, WeaponSpec, newLoadout } from '../../core/models';
+import { EquipSlot, Gizmo, ItemRef, KwuarmPotency, Loadout as LoadoutModel, OVERLOAD_CHOICES, OverloadChoice, Perk, RELICS, SLOT_NAMES, Style, WEAPON_POISON_NAMES, WeaponPoisonTier, WeaponSpec, newLoadout, COMBAT_SKILLS, CombatSkill, SKILL_MAX, SKILL_NAMES, loadoutLevels } from '../../core/models';
 import { OVERLOADS, boostedLevel, poisonPct } from '../../engine/damage';
 import { isObscureGear, isObscurePerk, isObscureSpec, isObscureWeapon } from '../../core/obscure';
 import { StorageService } from '../../core/storage.service';
@@ -541,6 +541,16 @@ export class Loadout {
   readonly WEAPON_POISON_NAMES = WEAPON_POISON_NAMES;
   readonly boostedLevel = boostedLevel;
   readonly poisonPct = poisonPct;
+
+  readonly COMBAT_SKILLS = COMBAT_SKILLS;
+  readonly SKILL_NAMES = SKILL_NAMES;
+  readonly SKILL_MAX = SKILL_MAX;
+  readonly levels = computed(() => loadoutLevels(this.l()));
+
+  setLevel(skill: CombatSkill, v: unknown): void {
+    const n = Math.max(1, Math.min(SKILL_MAX[skill], Math.round(Number(v) || SKILL_MAX[skill])));
+    this.patch({ levels: { ...loadoutLevels(this.l()), [skill]: n } });
+  }
 
   setOverload(v: unknown): void {
     this.patch({ overload: OVERLOAD_CHOICES.includes(v as OverloadChoice) ? (v as OverloadChoice) : 'none' });

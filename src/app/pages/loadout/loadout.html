@@ -163,6 +163,16 @@
         <option [ngValue]="3">Spirit Pact III – 60 s</option>
       </select>
     </label>
+    <h3>Combat levels</h3>
+    <div class="levels">
+      @for (k of COMBAT_SKILLS; track k) {
+        <label class="level">
+          <span>{{ SKILL_NAMES[k] }}</span>
+          <input type="number" min="1" [max]="SKILL_MAX[k]" [ngModel]="levels()[k]" (ngModelChange)="setLevel(k, $event)" />
+        </label>
+      }
+    </div>
+    <small class="muted">Base levels without boosts; the overload below raises Attack, Strength, Ranged, Magic, Necromancy and Defence on top. Ability damage takes the wielded style's skill.</small>
     <h3>Consumables in effect</h3>
     <label>
       <span>Overload</span>
