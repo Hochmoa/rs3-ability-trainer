@@ -372,8 +372,14 @@ h3 {
     display: flex;
     gap: 6px;
 
-    select:first-child {
-      flex: 1;
+    /* the perk keeps the width, the rank is a fixed short box – a 100 % select would squash the perk otherwise */
+    select {
+      flex: 1 1 60%;
+      min-width: 0;
+      width: auto;
+    }
+    select + select {
+      flex: 0 0 110px;
     }
   }
 }
