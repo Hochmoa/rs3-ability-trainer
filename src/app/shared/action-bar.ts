@@ -1,6 +1,8 @@
 import { CdkDrag, CdkDragDrop, CdkDropList } from '@angular/cdk/drag-drop';
-import { Component, input, output } from '@angular/core';
-import { Entity } from '../core/data.service';
+import { Component, inject, input, output } from '@angular/core';
+import { DataService, Entity } from '../core/data.service';
+import { ItemRef, entityKey } from '../core/models';
+import { GearDragService } from './gear-drag';
 import { UsableReason } from '../engine/trainer-engine';
 import { EntityTip } from './tooltip';
 
@@ -46,8 +48,10 @@ export interface SlotView {
         @for (s of slots(); track $index) {
           <div
             class="slot"
-            [class]="'slot' + (s.entity ? ' ' + s.entity.kind : ' empty') + (s.expected ? ' expected' : '') + (s.queued ? ' queued' : '') + (s.active ? ' active' : '') + (s.usable && s.usable !== 'ok' ? ' unusable ' + s.usable : '') + (s.flash ? ' flash-' + s.flash : '') + (s.pressed ? ' pressed' : '')"
+            [class]="'slot' + (s.entity ? ' ' + s.entity.kind : ' empty') + (s.expected ? ' expected' : '') + (s.queued ? ' queued' : '') + (s.active ? ' active' : '') + (s.usable && s.usable !== 'ok' ? ' unusable ' + s.usable : '') + (s.flash ? ' flash-' + s.flash : '') + (s.pressed ? ' pressed' : '') + (gearDrag.hover() === gearDropId($index) ? ' gear-hover' : '')"
             [entityTip]="s.morph?.entity ?? s.entity"
+            [attr.data-gear-drop]="droppable() && gearDrag.drag() && gearDropAccepts(gearDrag.drag()!) ? gearDropId($index) : null"
+            (gear-drop)="onGearDrop($event, $index)"
             cdkDropList
             cdkDropListSortingDisabled
             [cdkDropListDisabled]="!droppable()"
@@ -188,6 +192,7 @@ export interface SlotView {
     .editable .slot.empty {
       border-style: dashed;
     }
+    .slot.gear-hover,
     .slot.cdk-drop-list-dragging,
     .slot.cdk-drop-list-receiving {
       border-color: var(--gold);
@@ -404,6 +409,25 @@ export class ActionBar {
   readonly slotMove = output<{ slot: number; dir: -1 | 1 }>();
   readonly slotClear = output<number>();
   readonly ceil = Math.ceil;
+  readonly gearDrag = inject(GearDragService);
+  private readonly data = inject(DataService);
+
+  /** `data-gear-drop` id of a slot: a potion / weapon dragged out of the backpack lands here */
+  gearDropId(slot: number): string {
+    return 'bar:' + this.position() + ':' + slot;
+  }
+
+  /** only potions and weapons go on a bar; armour does not */
+  gearDropAccepts(d: { ref: ItemRef }): boolean {
+    return d.ref.kind === 'special' || d.ref.kind === 'weapon';
+  }
+
+  onGearDrop(ev: Event, slot: number): void {
+    const d = (ev as CustomEvent<{ ref: ItemRef }>).detail;
+    if (!d || !this.gearDropAccepts(d) || d.ref.kind === 'gear') return;
+    const entity = this.data.get(entityKey(d.ref.kind, d.ref.id));
+    if (entity) this.slotDrop.emit({ slot, entity });
+  }
 
   /**
    * Inline styles of the yellow Revolution frame(s): one box over the first N slots of a wide bar, one per row of a

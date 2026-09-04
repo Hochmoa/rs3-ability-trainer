@@ -226,7 +226,7 @@
   @if (unreachable().length) {
     <div class="panel warning missing">
       <div class="missing-text">
-        Not on any keybound bar slot – drag them onto a slot of the bars below (or use the <a routerLink="/bars">Action bars</a> page). Icons on the bars can be dragged to another slot too. Slots without a key are bound on <a routerLink="/keybinds">Keybinds</a>.
+        Not on any keybound bar slot – drag them onto a slot of the bars below (or use the <a routerLink="/bars">Action bars</a> page); potions and weapons can also go into the backpack. Icons on the bars can be dragged to another slot too. Slots without a key are bound on <a routerLink="/keybinds">Keybinds</a>.
       </div>
       <div class="missing-list" cdkDropList id="unreachable" cdkDropListSortingDisabled [cdkDropListEnterPredicate]="never">
         @for (e of unreachable(); track e.key) {
@@ -270,7 +270,6 @@
               <p class="finish-counts">
                 <span class="good">Perfect {{ counts().perfect }}</span>
                 <span class="warn">Late {{ counts().late }}</span>
-                <span class="bad">Too early {{ counts().early }}</span>
                 <span class="bad">Wrong {{ counts().wrong }}</span>
                 <span class="warn">Missed {{ counts().missed }}</span>
                 @if (damage() > 0) { <span class="muted">{{ damage() | number: '1.0-0' }} damage · {{ dps() | number: '1.0-0' }} DPS</span> }
@@ -330,24 +329,24 @@
       }
     </div>
 
-    <div class="feedback" [class]="'feedback ' + (feedback()?.cls ?? '')">
+    <div class="feedback" [class]="'feedback ' + (feedback()?.cls ?? '')" [title]="feedback()?.text ?? ''">
       {{ feedback()?.text ?? (canStart() ? 'Press Start, then press the keys of the highlighted slots. Weapon switches, prayers and potions have no cooldown.' : '') }}
     </div>
 
-    @if (history().length) {
-      <!-- what the server made of every press, in order – compare with the rotation strip above -->
-      <div class="history" title="Every processed input in order. Green = expected step on time, yellow = late or queued, red = wrong or refused, blue = Revolution, grey = prayer / weapon switch outside the rotation. The number is the rotation step it completed.">
-        <span class="bar-label">Pressed</span>
-        <div class="history-strip" #historyStrip>
-          @for (h of history(); track h.id) {
-            <div [class]="'hist ' + h.kind + (h.key.startsWith('special:') || h.key.startsWith('weapon:') ? ' item' : '')" [title]="h.text">
-              @if (h.icon) { <img [src]="h.icon" [alt]="h.name" /> } @else { <span class="hist-name">{{ h.name }}</span> }
-              @if (h.step !== undefined) { <span class="step">{{ h.step + 1 }}</span> }
-            </div>
-          }
-        </div>
+    <!-- what the server made of every press, in order – compare with the rotation strip above; always rendered so nothing below moves -->
+    <div class="history" title="Every processed input in order. Green = expected step on time, yellow = late or queued, red = wrong or refused, blue = Revolution, grey = prayer / weapon switch outside the rotation. The number is the rotation step it completed.">
+      <span class="bar-label">Pressed</span>
+      <div class="history-strip" #historyStrip>
+        @for (h of history(); track h.id) {
+          <div [class]="'hist ' + h.kind + (h.key.startsWith('special:') || h.key.startsWith('weapon:') ? ' item' : '')" [title]="h.text">
+            @if (h.icon) { <img [src]="h.icon" [alt]="h.name" /> } @else { <span class="hist-name">{{ h.name }}</span> }
+            @if (h.step !== undefined) { <span class="step">{{ h.step + 1 }}</span> }
+          </div>
+        } @empty {
+          <span class="muted none">–</span>
+        }
       </div>
-    }
+    </div>
 
     <div class="bars">
       <div class="bar-row">
@@ -369,7 +368,7 @@
             <span class="value">{{ c.phase * 100 | number: '1.0-0' }}% · {{ c.hitsDone }}/{{ c.hits }} hits · {{ c.remainingS | number: '1.1-1' }} s</span>
           </div>
         </div>
-      } @else if (running() && rotationHasChannel()) {
+      } @else if (rotationHasChannel()) {
         <div class="bar-row">
           <span class="bar-label">Channel</span>
           <div class="bar channel"><span class="value muted">–</span></div>
@@ -396,41 +395,58 @@
       }
     </div>
 
-    <div class="status-row">
-      <div class="status-bars">
-        <div class="status-bar">
+    <!-- HUD: buffs, target debuffs, prayers, carried weapons and the incoming attack – fixed height, so the bars below never move -->
+    <div class="hud">
+      <div class="hud-rows">
+        <div class="hud-row">
           <span class="label">Buffs</span>
-          @for (b of selfBuffs(); track b.id) {
-            <div class="status buff" [class.stacking]="b.stacks" [title]="b.name + (b.stacks ? ' ' + b.stacks + (b.max ? '/' + b.max : '') + (b.remainingS === null ? ' (no timer – until consumed)' : '') : '')">
-              @if (b.icon) { <img [src]="b.icon" [alt]="b.name" /> } @else { <span class="fallback">{{ b.name.slice(0, 2) }}</span> }
-              @if (b.stacks) { <span class="stacks">{{ b.stacks }}</span> }
-              @if (b.remainingS !== null) { <span class="timer">{{ b.remainingS | number: '1.0-0' }}</span> }
-            </div>
-          } @empty {
-            <span class="muted none">–</span>
-          }
-        </div>
-        <div class="status-bar">
-          <span class="label">Target</span>
-          @for (b of targetDebuffs(); track b.id) {
-            <div class="status debuff" [title]="b.name">
-              @if (b.icon) { <img [src]="b.icon" [alt]="b.name" /> } @else { <span class="fallback">{{ b.name.slice(0, 2) }}</span> }
-              @if (b.remainingS !== null) { <span class="timer">{{ b.remainingS | number: '1.0-0' }}</span> }
-            </div>
-          } @empty {
-            <span class="muted none">–</span>
-          }
-        </div>
-      </div>
-      <div class="status-bar prayers">
-        <span class="label">Prayers</span>
-        @for (p of activePrayers(); track p.key) {
-          <div class="status prayer" [title]="p.name" [entityTip]="p">
-            <img [src]="p.icon" [alt]="p.name" />
+          <div class="icons">
+            @for (b of selfBuffs(); track b.id) {
+              <div class="status buff" [class.stacking]="b.stacks" [title]="b.name + (b.stacks ? ' ' + b.stacks + (b.max ? '/' + b.max : '') + (b.remainingS === null ? ' (no timer – until consumed)' : '') : '')">
+                @if (b.icon) { <img [src]="b.icon" [alt]="b.name" /> } @else { <span class="fallback">{{ b.name.slice(0, 2) }}</span> }
+                @if (b.stacks) { <span class="stacks">{{ b.stacks }}</span> }
+                @if (b.remainingS !== null) { <span class="timer">{{ b.remainingS | number: '1.0-0' }}</span> }
+              </div>
+            } @empty {
+              <span class="muted none">–</span>
+            }
           </div>
-        } @empty {
-          <span class="muted none">none</span>
-        }
+        </div>
+        <div class="hud-row">
+          <span class="label">Target</span>
+          <div class="icons">
+            @for (b of targetDebuffs(); track b.id) {
+              <div class="status debuff" [title]="b.name">
+                @if (b.icon) { <img [src]="b.icon" [alt]="b.name" /> } @else { <span class="fallback">{{ b.name.slice(0, 2) }}</span> }
+                @if (b.remainingS !== null) { <span class="timer">{{ b.remainingS | number: '1.0-0' }}</span> }
+              </div>
+            } @empty {
+              <span class="muted none">–</span>
+            }
+          </div>
+        </div>
+        <div class="hud-row">
+          <span class="label">Prayers</span>
+          <div class="icons">
+            @for (p of activePrayers(); track p.key) {
+              <div class="status prayer" [title]="p.name" [entityTip]="p">
+                <img [src]="p.icon" [alt]="p.name" />
+              </div>
+            } @empty {
+              <span class="muted none">none</span>
+            }
+          </div>
+          @if (carriedWeapons().length) {
+            <div class="weapons" title="carried weapons – the lit one is wielded">
+              @for (w of carriedWeapons(); track w.entity.id) {
+                <div class="weapon" [class.active]="wielded().includes(w.entity.id)" [title]="w.entity.name" [entityTip]="w.entity">
+                  <img [src]="w.entity.icon" [alt]="w.entity.name" />
+                  <span class="key">{{ w.key || '–' }}</span>
+                </div>
+              }
+            </div>
+          }
+        </div>
       </div>
       @if (enemy().enabled) {
         <div class="incoming" [class.covered]="incoming()?.covered" [class.danger]="incoming() && !incoming()!.covered && !incoming()!.hidden && incoming()!.ticksLeft <= 1">
@@ -462,14 +478,6 @@
           </div>
         </div>
       }
-      <div class="weapons">
-        @for (w of carriedWeapons(); track w.entity.id) {
-          <div class="weapon" [class.active]="wielded().includes(w.entity.id)" [title]="w.entity.name" [entityTip]="w.entity">
-            <img [src]="w.entity.icon" [alt]="w.entity.name" />
-            <span class="key">{{ w.key || '–' }}</span>
-          </div>
-        }
-      </div>
     </div>
 
     <div class="action-bars" [class.editing]="editLayout() && !running()">
@@ -507,7 +515,6 @@
     <div class="counts">
       <span class="good">Perfect {{ counts().perfect }}</span>
       <span class="warn">Late {{ counts().late }}</span>
-      <span class="bad">Too early {{ counts().early }}</span>
       <span class="bad">Wrong {{ counts().wrong }}</span>
       <span class="warn">Missed {{ counts().missed }}</span>
       @if (revolution()) { <span class="muted" title="abilities Revolution cast on its own">Auto {{ counts().auto }}</span> }
@@ -533,8 +540,8 @@
    </div>
    <aside class="gear-side">
     <div class="gear-head"><b>Equipment &amp; backpack</b> <a routerLink="/loadout">edit</a></div>
-    <gear-panel [equipment]="gearState().equipment" [inventory]="gearState().inventory" [live]="true" [usable]="gearUsable()" [keyOf]="gearKey" (action)="onGear($event)" />
-    <p class="muted small">{{ running() ? 'Click a weapon to wield it, a potion to drink it, armour to wear it; click a worn item to take it off. Changes are not saved to the loadout.' : 'While training: click to switch weapons, drink potions and swap armour. Set effects follow what you wear.' }}</p>
+    <gear-panel [equipment]="gearState().equipment" [inventory]="gearState().inventory" [live]="true" [cdkDrops]="!running()" [dragOut]="!running()" [usable]="gearUsable()" [keyOf]="gearKey" (action)="onGear($event)" (cdkDrop)="dropIntoInventory($event.index, $event.data)" />
+    <p class="muted small">{{ running() ? 'Click a weapon to wield it, a potion to drink it, armour to wear it; click a worn item to take it off. Changes are not saved to the loadout.' : 'While training: click to switch weapons, drink potions and swap armour. Set effects follow what you wear. Drag a potion or weapon from the backpack onto a bar slot, or a missing one into the backpack.' }}</p>
    </aside>
   </div>
 
@@ -559,7 +566,7 @@
       }
       <table>
         <thead>
-          <tr><th>#</th><th>Step</th><th>Result</th><th>Offset</th><th>Adrenaline</th><th>Too early</th><th>Wrong</th></tr>
+          <tr><th>#</th><th>Step</th><th>Result</th><th>Offset</th><th>Adrenaline</th><th>Wrong</th></tr>
         </thead>
         <tbody>
           @for (r of results(); track $index) {
@@ -571,7 +578,6 @@
               </td>
               <td>{{ r.outcome === 'perfect' ? (r.offsetMs ? '-' + r.offsetMs + ' ms' : '–') : r.outcome === 'late' ? '+' + r.offsetMs + ' ms' : '' }}</td>
               <td>{{ r.adrenaline | number: '1.0-0' }}%</td>
-              <td>{{ r.tooEarly || '' }}</td>
               <td>{{ r.wrong || '' }}</td>
             </tr>
           }

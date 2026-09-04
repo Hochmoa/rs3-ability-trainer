@@ -1,3 +1,4 @@
+import { CdkDragDrop, CdkDropList } from '@angular/cdk/drag-drop';
 import { Component, computed, inject, input, output } from '@angular/core';
 import { DataService, GearView } from '../core/data.service';
 import { EquipSlot, Equipment, GEAR_SLOTS, GearSlot, INVENTORY_SIZE, ItemRef, SLOT_NAMES } from '../core/models';
@@ -42,7 +43,7 @@ interface Cell {
  */
 @Component({
   selector: 'gear-panel',
-  imports: [GearTip],
+  imports: [GearTip, CdkDropList],
   template: `
     <div class="gear" [class.live]="live()" [class.editable]="editable()">
       <div class="equipment" role="group" aria-label="Worn equipment">
@@ -86,6 +87,10 @@ interface Cell {
             [gearTip]="v"
             [attr.data-gear-drop]="canDropInv() ? 'inv:' + $index : null"
             [id]="'inv-' + $index"
+            cdkDropList
+            cdkDropListSortingDisabled
+            [cdkDropListDisabled]="!cdkDrops()"
+            (cdkDropListDropped)="onCdkDrop($event, $index)"
             (gear-drop)="onDropInv($event, $index)"
             (click)="clickInv($index)"
             (contextmenu)="menuInv($event, $index)"
@@ -270,6 +275,11 @@ interface Cell {
       opacity: 0.9;
     }
     /* the cell under the pointer: this is where the drop lands */
+    .cell.inv.cdk-drop-list-receiving,
+    .cell.inv.cdk-drop-list-dragging {
+      border-color: var(--gold);
+      background: rgba(201, 162, 39, 0.15);
+    }
     .cell.hover {
       border-color: #ffe27a;
       background: rgba(255, 226, 122, 0.35);
@@ -364,11 +374,17 @@ export class GearPanel {
   readonly inventory = input.required<(ItemRef | null)[]>();
   readonly editable = input(false);
   readonly live = input(false);
+  /** backpack cells take CDK drops from the page (the "missing abilities" list, bar slots) – emitted as `cdkDrop` */
+  readonly cdkDrops = input(false);
+  /** items can be dragged out of the panel onto `data-gear-drop` targets elsewhere on the page (bar slots) even when not editable */
+  readonly dragOut = input(false);
   /** live mode: whether an inventory item can be used right now (potions not on cooldown …); missing = all */
   readonly usable = input<((ref: ItemRef) => boolean) | null>(null);
   /** live mode: key label shown on carried weapons */
   readonly keyOf = input<(ref: ItemRef) => string>(() => '');
   readonly action = output<GearAction>();
+  /** a CDK drag (data of the dragged item) was dropped on backpack cell `index` */
+  readonly cdkDrop = output<{ index: number; data: unknown }>();
 
   readonly SLOT_NAMES = SLOT_NAMES;
 
@@ -403,8 +419,12 @@ export class GearPanel {
 
   /** pointerdown on a worn / carried item: starts the pointer drag (editable panels only) */
   startDrag(ev: PointerEvent, ref: ItemRef, from: GearSource, view: GearView): void {
-    if (!this.editable()) return;
+    if (!this.editable() && !this.dragOut()) return;
     this.gearDrag.start(ev, this.dragOf(ref, from), view);
+  }
+
+  onCdkDrop(event: CdkDragDrop<unknown>, index: number): void {
+    this.cdkDrop.emit({ index, data: event.item.data });
   }
 
   /** a slot accepts an item of its own kind only (the game refuses the rest) */

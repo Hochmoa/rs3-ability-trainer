@@ -6,7 +6,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DataService, Entity, SPEC_KEY } from '../../core/data.service';
 import { applyWield, equip, unequip } from '../../core/equipment';
 import { keybindFromEvent, keybindKey, keybindLabel } from '../../core/keybind.util';
-import { ActionBarSetup, AttackPattern, BAR_POSITIONS, BAR_SLOTS, BarShape, barLayout, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, EquipSlot, ItemRef, Loadout, PrayerStats, Prebuild, REVOLUTION_MAX_SLOTS, REVOLUTION_MIN_SLOTS, RevolutionSettings, Rotation, STYLES4, Settings, StepResult, Style, Style4, WeaponSpec, emptyPrebuild, entityKey, isStyle4, loadoutWeapons, loadoutWield, parseEntityKey, prebuildIsEmpty, visiblePresets, RotationStep } from '../../core/models';
+import { ActionBarSetup, AttackPattern, BAR_POSITIONS, INVENTORY_SIZE, BAR_SLOTS, BarShape, barLayout, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, EquipSlot, ItemRef, Loadout, PrayerStats, Prebuild, REVOLUTION_MAX_SLOTS, REVOLUTION_MIN_SLOTS, RevolutionSettings, Rotation, STYLES4, Settings, StepResult, Style, Style4, WeaponSpec, emptyPrebuild, entityKey, isStyle4, loadoutWeapons, loadoutWield, parseEntityKey, prebuildIsEmpty, visiblePresets, RotationStep } from '../../core/models';
 import { StorageService } from '../../core/storage.service';
 import { resolveLoadout } from '../../engine/loadout-resolver';
 import { BUFF_BY_ID, ruleFor, stackMax, stackName } from '../../engine/rules';
@@ -514,6 +514,32 @@ export class Train implements OnDestroy {
       s.positions[pos] = id;
     }
     return s.presets.find((p) => p.id === id)?.slots ?? null;
+  }
+
+  /** a potion / weapon (missing list or bar slot) was dropped on backpack cell `index` of the active loadout */
+  dropIntoInventory(index: number, data: unknown): void {
+    if (this.running() || !data || typeof data !== 'object') return;
+    const entity = ('entity' in data ? (data as { entity: Entity }).entity : data) as Entity;
+    if (entity.kind !== 'special' && entity.kind !== 'weapon') {
+      this.toast.show('Only potions and weapons go into the backpack; abilities and prayers belong on a bar.', 'warn');
+      return;
+    }
+    const l = structuredClone(this.storage.loadout());
+    const inv = [...l.inventory];
+    while (inv.length < INVENTORY_SIZE) inv.push(null);
+    const ref: ItemRef = { kind: entity.kind, id: entity.id };
+    if (inv.some((r) => r?.kind === ref.kind && r.id === ref.id)) {
+      this.toast.show(entity.name + ' is already in the backpack.');
+      return;
+    }
+    if (inv[index]) {
+      const free = inv.findIndex((r) => !r);
+      if (free < 0) return this.toast.show('The backpack is full.', 'warn');
+      inv[free] = inv[index];
+    }
+    inv[index] = ref;
+    void this.storage.saveLoadout({ ...l, inventory: inv });
+    this.toast.show(entity.name + ' put into the backpack of "' + l.name + '"');
   }
 
   /** a missing ability was dropped onto a slot of the bar at `pos` – or (`from`) the icon of another slot: the two swap */
@@ -1081,10 +1107,7 @@ export class Train implements OnDestroy {
         this.flash('wrong', ev.key, now, 300);
         break;
       case 'too-early':
-        this.counts.update((c) => ({ ...c, early: c.early + 1 }));
-        this.feedback.set({ text: 'Too early – ' + ev.ticksEarly + (ev.ticksEarly === 1 ? ' tick' : ' ticks') + ' before the last cooldown tick (queueing is off)', cls: 'bad' });
-        this.log(ev.key, 'wrong', this.feedback()?.text ?? '');
-        this.flash('wrong', ev.key, now, 250);
+        // queueing off: players spam the key during the global cooldown – that is normal play, not a mistake
         break;
       case 'wrong':
         this.counts.update((c) => ({ ...c, wrong: c.wrong + 1 }));
