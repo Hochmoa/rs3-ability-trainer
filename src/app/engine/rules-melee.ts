@@ -175,7 +175,7 @@ export const MELEE_RULES: AbilityRule[] = [
     ability: 'overpower',
     hits: [3],
     cooldownRules: [{ ticks: 15, when: { buff: 'berserk' } }],
-    notes: ['60% adrenaline. While Berserk is active the cooldown is 15 ticks instead of 50 (a running cooldown is not reset) (' + W + 'Berserk )', 'Igneous Kal-Ket / Kal-Zuk: two hits of 280–340%, both landing 3 ticks after the cast (' + W + 'Igneous_Kal-Zuk )'],
+    notes: ['60% adrenaline. While Berserk is active the cooldown is 15 ticks instead of 50 (a running cooldown is not reset) (' + W + 'Berserk )', 'Igneous Kal-Ket / Kal-Zuk: two hits of 310–370%, both landing 3 ticks after the cast (' + W + 'Igneous_Kal-Zuk )'],
   },
   {
     ability: 'pulverise',

@@ -415,7 +415,14 @@
         "text": "DoT abilities build Essence Corruption (max 100, 30 s). 1+: DoT abilities 30% chance to deal all hitsplats immediately and remove their cooldown. 10+: magic damage +(stacks × 3 + Magic level). 25+: basic abilities give +1% adrenaline per tick over 3.6 s (+6%).",
         "effect": {
           "kind": "essence-corruption",
+          "abilities": ["combust", "corruption-blast"],
+          "maxStacks": 100,
+          "durationTicks": 50,
           "instantDotChance": 0.3,
+          "damageAt10": {
+            "perStack": 3,
+            "magicLevel": 99
+          },
           "adrenalineAt25": {
             "perTick": 1,
             "ticks": 6
@@ -428,6 +435,7 @@
         "text": "Damage over time abilities deal 30% increased damage.",
         "effect": {
           "kind": "dot-damage",
+          "abilities": ["combust", "corruption-blast"],
           "mult": 1.3
         }
       }
@@ -717,10 +725,11 @@
     "slot": "hands",
     "class": "damage",
     "source": "https://runescape.wiki/w/Cinderbane_gloves",
-    "text": "12.5% chance per hit to apply tier 2 poison; re-applying deals an extra poison hit and refreshes.",
+    "text": "12.5% chance per hit to apply tier 2 poison (25% of ability damage × 0.65–1.3 every 10 s); re-applying deals an extra poison hit at once and refreshes it. Other poison sources (+1 tier) are not modelled.",
     "effect": {
       "kind": "poison",
-      "chance": 0.125
+      "chance": 0.125,
+      "tier": 2
     }
   },
   {
@@ -761,13 +770,13 @@
     "style": null,
     "slot": "ring",
     "class": "adrenaline",
-    "source": "https://runescape.wiki/w/Passive_effect/Other_equipment/Ring",
-    "text": "10% chance to negate the adrenaline cost of threshold abilities; 40% chance to save 25% of a special attack's cost.",
+    "source": "https://runescape.wiki/w/Asylum_surgeon's_ring",
+    "text": "10% chance that an ability costs 15% less adrenaline (additive: 25% → 10%); 30 s internal cooldown. Since 2 March 2026 (before: 10% chance to negate a threshold's cost).",
     "effect": {
       "kind": "asylum",
-      "thresholdFreeChance": 0.1,
-      "specSaveChance": 0.4,
-      "specSave": 0.25
+      "chance": 0.1,
+      "costReduce": 15,
+      "cooldownTicks": 50
     }
   },
   {
@@ -883,10 +892,16 @@
     "slot": "pocket",
     "class": "damage",
     "source": "https://runescape.wiki/w/Scripture_of_Jas",
-    "text": "6.6% chance: releases 20% of tracked damage after 17 ticks (cap 30,000); 15 s cooldown.",
+    "text": "6.6% chance on a damaging hit: 20% of the damage dealt in the next 17 ticks is dealt again on tick 18 (cap 30,000, cannot crit); 15 s cooldown (no proc for 7 ticks after the release).",
     "effect": {
       "kind": "proc-damage",
-      "chance": 0.066
+      "chance": 0.066,
+      "cooldownTicks": 25,
+      "echo": {
+        "windowTicks": 17,
+        "share": 0.2,
+        "cap": 30000
+      }
     }
   },
   {
@@ -897,10 +912,19 @@
     "slot": "pocket",
     "class": "damage",
     "source": "https://runescape.wiki/w/Scripture_of_Wen",
-    "text": "6.6% chance: 5 beam hits then a 240–400% shatter (3×3); 19-tick lockout.",
+    "text": "6.6% chance on a damaging hit: 5 beam hits of 2.4–4% on ticks 2–6 after the proc, a 240–400% shatter (3×3) with the fifth; no proc for 19 ticks after the shatter.",
     "effect": {
       "kind": "proc-damage",
-      "chance": 0.066
+      "chance": 0.066,
+      "cooldownTicks": 26,
+      "hits": [
+        { "offset": 2, "min": 2.4, "max": 4 },
+        { "offset": 3, "min": 2.4, "max": 4 },
+        { "offset": 4, "min": 2.4, "max": 4 },
+        { "offset": 5, "min": 2.4, "max": 4 },
+        { "offset": 6, "min": 2.4, "max": 4 },
+        { "offset": 6, "min": 240, "max": 400 }
+      ]
     }
   },
   {
@@ -924,8 +948,8 @@
     "style": "Melee",
     "slot": "weapon-passive",
     "class": "cooldown",
-    "source": "https://runescape.wiki/w/Dark_Shard_of_Leng",
-    "text": "2% chance on hit: Frostblades for 9 s, flat damage on all melee ability hits equal to 24% of ability damage.",
+    "source": "https://runescape.wiki/w/Dark_Sliver_of_Leng",
+    "text": "2% chance on a melee hit: Frostblades for 9 s (15 ticks), flat damage on all melee ability hits equal to 24% of ability damage.",
     "effect": {
       "kind": "proc-buff",
       "chance": 0.02,

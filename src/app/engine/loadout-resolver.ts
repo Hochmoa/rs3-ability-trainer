@@ -162,10 +162,12 @@ export function resolveLoadout(l: Loadout, data: LoadoutData): ResolvedLoadout {
   // armour set thresholds (every set with worn pieces)
   for (const [setId, pieces] of wn.sets) {
     const set = data.setEffectById.get(setId);
+    const superiorOnly = wn.gear.filter((g) => g.item.set === setId).every((g) => g.item.id.startsWith('superior-'));
     for (const t of set?.thresholds ?? []) {
       if (pieces >= t.pieces) {
-        r.items.add(set!.id + ':' + t.pieces);
-        applyEffect(r, t.effect, pieces, set!.style);
+        const id = set!.id + ':' + t.pieces;
+        r.items.add(id);
+        if (!applyEffect(r, id, t.effect, pieces, set!.style, { superiorOnly })) r.ignoredEffects.push({ id, kind: t.effect.kind });
       }
     }
   }
@@ -179,10 +181,29 @@ export function resolveLoadout(l: Loadout, data: LoadoutData): ResolvedLoadout {
     const item = data.setEffectById.get(id);
     if (!item?.effect) continue;
     r.items.add(id);
-    applyEffect(r, item.effect, 1, item.style);
+    if (!applyEffect(r, id, item.effect, 1, item.style, {})) r.ignoredEffects.push({ id, kind: item.effect.kind });
   }
   return r;
 }
+
+/**
+ * Effect kinds of set-effects.json the simulation deliberately ignores, with the reason. gear.spec.ts checks that every
+ * kind in the data is either applied by applyEffect() or listed here, so a new kind cannot go unnoticed.
+ */
+export const NOT_SIMULATED_EFFECT_KINDS: Record<string, string> = {
+  'bolt-proc': 'enchanted bolt effects need ammunition modelling (Sirenic / Elite sirenic)',
+  'damage-delay': 'incoming damage is not simulated (Trimmed masterwork)',
+  'strength-bonus': 'ability damage ignores armour and strength bonuses (Achto)',
+  'defensive-cooldown-reset-on-hit': 'incoming damage is not simulated (Achto)',
+  'damage-taken': 'incoming damage is not simulated (Cryptbloom)',
+  'proc': 'Croesus Deathspores / Fungal Shield depend on position and life points (Cryptbloom)',
+  'death-mark': 'Death Mark executes below 20% life points – boss immunities are not modelled (Deathdealer)',
+  'cooldown-chance': 'numbers are not documented on the wiki (Warpriest of Armadyl / Bandos)',
+  'crit-proc': 'numbers are not documented on the wiki (Warpriest of Tuska)',
+  'adrenaline-on-kill': 'the session ends with the kill (Ring of death)',
+  'prayer': 'healing and damage taken are not simulated (Amulet of souls)',
+  'spec-adrenaline': 'special attack side effects are not modelled – specs.json (Ek-ZekKil)',
+};
 
 /** Armour sets worn with how many pieces (for the loadout page). */
 export function wornSets(l: Loadout, data: LoadoutData): { set: SetEffect; pieces: number }[] {
@@ -247,7 +268,11 @@ function applyPerk(r: ResolvedLoadout, perk: Perk, rank: number): void {
   }
 }
 
-function applyEffect(r: ResolvedLoadout, effect: Record<string, unknown> & { kind: string }, pieces: number, style: Style | null): void {
+/**
+ * Applies one set-threshold / item effect from set-effects.json. Returns false for a kind the simulation does not
+ * model (NOT_SIMULATED_EFFECT_KINDS); kinds that rules handle through `when: { item: id }` conditions return true.
+ */
+function applyEffect(r: ResolvedLoadout, id: string, effect: Record<string, unknown> & { kind: string }, pieces: number, style: Style | null, opts: { superiorOnly?: boolean }): boolean {
   const e = effect as Record<string, any>;
   switch (e['kind']) {
     case 'max-adrenaline':
@@ -267,10 +292,35 @@ function applyEffect(r: ResolvedLoadout, effect: Record<string, unknown> & { kin
       for (const b of ['sunshine', 'greater-sunshine']) r.buffCritAdd[b] = { add: (r.buffCritAdd[b]?.add ?? 0) + Number(e['perPiece']) * Math.min(pieces, 5), style: 'Magic' };
       break;
     case 'crit-chance':
+      if (e['requiresWeapon'] && r.weaponType !== e['requiresWeapon']) break; // stalker's ring: bow only
       r.critChanceAdd += e['add'] !== undefined ? Number(e['add']) : Number(e['perPiece']) * Math.min(pieces, 5);
       break;
     case 'crit-damage':
       r.critDamageAdd += Number(e['add']);
+      break;
+    case 'channel-crit':
+      r.channelCritPerHit = { add: Number(e['perHit']), style };
+      break;
+    case 'crit-vs-bleeding':
+      r.critVsBleeding += Number(e['add']);
+      break;
+    case 'adrenaline-per-bleed':
+      r.adrenalinePerBleed += Number(e['perBleed']);
+      break;
+    case 'damage':
+      r.damageMult *= opts.superiorOnly && e['superiorMult'] !== undefined ? Number(e['superiorMult']) : Number(e['mult']);
+      break;
+    case 'dot-damage':
+      for (const a of (e['abilities'] as string[]) ?? []) r.dotDamageMult[a] = (r.dotDamageMult[a] ?? 1) * Number(e['mult']);
+      break;
+    case 'proc-buff':
+      r.hitProcs.push({ id, chance: Number(e['chance']), cooldownTicks: Number(e['cooldownTicks'] ?? 0), style: style ?? undefined, buff: { id: e['buff'], durationTicks: Number(e['durationTicks']) } });
+      break;
+    case 'proc-damage':
+      r.hitProcs.push({ id, chance: Number(e['chance']), cooldownTicks: Number(e['cooldownTicks'] ?? 0), style: style ?? undefined, hits: e['hits'], echo: e['echo'] });
+      break;
+    case 'poison':
+      r.poison = { chance: Number(e['chance']), pct: 20 + 5 * (Number(e['tier'] ?? 1) - 1) }; // tier 1 = 20% of the ability damage, +5% per tier
       break;
     case 'adrenaline-after-ultimate':
       r.adrenalineAfterUltimate = { style: e['style'] ?? style ?? 'Melee', amount: Number(e['amount']), overTicks: Number(e['overTicks']), instantIfActive: Number(e['instantIfActive']) };
@@ -308,18 +358,28 @@ function applyEffect(r: ResolvedLoadout, effect: Record<string, unknown> & { kin
       r.specCostMult = Number(e['specCostMult']);
       break;
     case 'asylum':
-      r.thresholdFreeChance = Number(e['thresholdFreeChance']);
+      r.costReduction = { chance: Number(e['chance']), amount: Number(e['costReduce']), cooldownTicks: Number(e['cooldownTicks'] ?? 0) };
       break;
     case 'stack-cap':
       r.stackCaps[e['stack'] as keyof typeof r.stackCaps] = Number(e['cap']);
       break;
     case 'replaces-ability':
     case 'snipe-cdr':
+    case 'snipe-mobile': // movement while sniping (channel movableWith); the +25% hit chance is not simulated
     case 'buff-on-cast':
     case 'buff-on-hit':
     case 'instant-dot-window':
+    case 'death-spark': // rules-necromancy.ts: the basic attack builds and spends the stacks
+    case 'soul-reave':
+    case 'necrosis-chance': // rules-global.ts: occultist's ring / Zorgoth's soul ring
+    case 'soul-chance':
+    case 'essence-corruption': // rules-global.ts / rules-magic.ts / rules-buffs.ts on the "song-of-destruction:1" item id
       break; // handled by rule conditions on the item id
+    case 'includes': // Igneous Kal-Zuk: the included items were added by resolveLoadout
+    case 'eof': // worn() picked the stored special attack
+      break;
     default:
-      break; // damage-only / defensive: stored for later
+      return false;
   }
+  return true;
 }

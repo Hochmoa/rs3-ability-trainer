@@ -2,7 +2,7 @@ import { COMMAND_READY_AFTER, CONJURE_BASE_TICKS } from './rules-necromancy';
 import { AbilityType, EnemyConfig, EntityKind, PrayerStats, Prebuild, SPEC_KEY, StepResult, Style, Style4, isStyle4 } from '../core/models';
 import { ResolvedLoadout, defaultResolvedLoadout } from './loadout-resolved';
 import { PROTECTION, PrayerBook, SOUL_SPLIT, bookOf, togglePrayer } from './prayer-rules';
-import { BASE_CRIT_CHANCE, BUFF_DAMAGE_MULT, BUFF_FLAT_ADD, BUFF_TYPE_DAMAGE_MULT, RAGE_MAX, RAGE_PER_STACK, SPIRIT_ATTACKS, TARGET_DAMAGE_ADD, TARGET_DAMAGE_MULT, critMultiplier } from './damage';
+import { BASE_CRIT_CHANCE, BUFF_DAMAGE_MULT, BUFF_FLAT_ADD, BUFF_TYPE_DAMAGE_MULT, POISON_EVERY_TICKS, POISON_ROLL, RAGE_MAX, RAGE_PER_STACK, SPIRIT_ATTACKS, TARGET_DAMAGE_ADD, TARGET_DAMAGE_MULT, critMultiplier } from './damage';
 import { MORPH_TARGETS } from './morphs';
 import { BUFF_BY_ID, MODELLED_WIKI_BUFFS, GLOBALS, ruleFor } from './rules';
 import { AbilityRule, ChannelSpec, Condition, Effect, GlobalRule, Requirement, StackId } from './rules-model';
@@ -220,6 +220,8 @@ interface ScheduledHit {
   spirit?: string;
   /** critical strike chance from buffs the cast consumed (Concentrated Blast stacks) */
   critAdd: number;
+  /** an item proc's hit (Scripture of Wen): no rule or global effects, no further procs */
+  proc?: boolean;
 }
 
 interface SequenceState {
@@ -279,6 +281,12 @@ export class TrainerEngine {
   private lastTick = 0;
   private lastAttackTick = -1000;
   private relentlessLockUntil = -1;
+  /** asylum surgeon's ring: no second cost reduction before this tick */
+  private costReductionLockUntil = -1;
+  /** item proc id → no second proc before this tick */
+  private procLockUntil = new Map<string, number>();
+  /** Scripture of Jas windows: damage dealt until `untilTick`, `share` of it dealt one tick later */
+  private echoes: { key: string; untilTick: number; share: number; cap: number; dealt: number }[] = [];
   /** tick of the last input that counted (cast or off-GCD activation) – reference for "+" / "2t" companions */
   private lastInputTick: number | null = null;
   private attackHistory: Style4[] = [];
@@ -339,6 +347,9 @@ export class TrainerEngine {
     this.lastTick = 0;
     this.lastAttackTick = -1000;
     this.relentlessLockUntil = -1;
+    this.costReductionLockUntil = -1;
+    this.procLockUntil.clear();
+    this.echoes = [];
     this.lastInputTick = null;
     this.activePrayers = new Set();
     this.prayerStats = { ticks: 0, soulSplitTicks: 0, attacks: 0, prayed: 0, hits: 0 };
@@ -982,7 +993,11 @@ export class TrainerEngine {
         paid = 0;
         this.relentlessLockUntil = tick + 50;
       }
-      if (this.isThreshold(entity, rule) && this.loadout.thresholdFreeChance > 0 && this.random() < this.loadout.thresholdFreeChance) paid = 0;
+      const red = this.loadout.costReduction; // asylum surgeon's ring: 10% chance of −15%, 30 s internal cooldown
+      if (red && paid > 0 && tick >= this.costReductionLockUntil && this.random() < red.chance) {
+        paid = Math.max(0, paid - red.amount);
+        this.costReductionLockUntil = tick + red.cooldownTicks;
+      }
       delta -= paid;
       if (entity.abilityType === 'Ultimate' && rule?.cost?.ultimate !== false && !spec) {
         delta += this.loadout.ultimateRefund;
@@ -1006,6 +1021,8 @@ export class TrainerEngine {
           gain += this.loadout.basicGainAdd;
           if (this.loadout.impatientRank > 0 && this.random() < 0.09 * this.loadout.impatientRank) gain += 3;
           if (this.isBasicAttack(entity) && this.loadout.invigoratingRank > 0) gain *= 1 + 0.05 * this.loadout.invigoratingRank;
+          // Jaws of the Abyss: damaging melee basics +2% per bleed on the target
+          if (entity.style === 'Melee' && this.loadout.adrenalinePerBleed && this.isDamaging(acting, rule)) gain += this.loadout.adrenalinePerBleed * this.bleedsOnTarget();
         }
         for (const g of globals) {
           if (g.gainAdd) gain += g.gainAdd;
@@ -1033,6 +1050,11 @@ export class TrainerEngine {
     const channelSpecEarly = this.loadout.channelOverrides[entity.id] ?? rule?.channel ?? acting.channel;
     const asDot = !!channelSpecEarly?.asDotWhen && this.conditionMet(channelSpecEarly.asDotWhen, tick, 0);
     const bleedEarly = rule?.bleedWhen?.find((b) => this.conditionMet(b.when, tick, 0))?.bleed ?? rule?.bleed;
+    if (bleedEarly?.noCooldown) {
+      // Essence Corruption: a DoT dealt at once starts no cooldown
+      this.readyTick.delete(acting.key);
+      if (shared) this.readyTick.delete('shared:' + shared);
+    }
     let castMult = 1;
     for (const g of globals) if (g.damageMult && (!g.consumes || this.hasBuff(g.consumes))) castMult *= g.damageMult.mult;
     const castMultFirstOnly = globals.some((g) => g.damageMult?.firstHitOnly);
@@ -1199,9 +1221,12 @@ export class TrainerEngine {
   }
 
   private onHit(h: ScheduledHit): void {
-    const globals = this.matchingGlobals(h.entity);
+    const globals = h.proc ? [] : this.matchingGlobals(h.entity);
     let critAdd = this.loadout.critChanceAdd;
     for (const [id, c] of Object.entries(this.loadout.buffCritAdd)) if ((!c.style || c.style === h.entity.style) && this.hasBuff(id)) critAdd += c.add;
+    const chCrit = this.loadout.channelCritPerHit; // channeller's ring: +4% per channel hit, the first included
+    if (chCrit && h.channel && (!chCrit.style || chCrit.style === h.entity.style)) critAdd += chCrit.add * (h.index + 1);
+    if (this.loadout.critVsBleeding && this.bleedsOnTarget() > 0) critAdd += this.loadout.critVsBleeding; // champion's ring
     for (const b of this.buffs) {
       const def = BUFF_BY_ID.get(b.id);
       if (def?.critChancePerStack) critAdd += def.critChancePerStack * b.stacks;
@@ -1225,6 +1250,41 @@ export class TrainerEngine {
     }
     const perTick = this.loadout.channelAdrenalinePerTick[h.entity.id];
     if (perTick && h.channel) this.addAdrenaline(perTick);
+    if (h.damage && !h.dot && !h.spirit && !h.proc) this.rollHitProcs(h);
+  }
+
+  /** bleeds on the target (Dismember, Slaughter, Massacre) – Jaws of the Abyss and the champion's ring count them */
+  private bleedsOnTarget(): number {
+    return this.buffs.filter((b) => BUFF_BY_ID.get(b.id)?.bleed).length;
+  }
+
+  /** Item procs on a player hit: Scripture of Ful / Wen / Jas, Dark Sliver of Leng, cinderbane poison. */
+  private rollHitProcs(h: ScheduledHit): void {
+    const l = this.loadout;
+    for (const p of l.hitProcs) {
+      if (p.style && p.style !== h.entity.style) continue;
+      if ((this.procLockUntil.get(p.id) ?? -1) > h.tick) continue;
+      if (this.random() >= p.chance) continue;
+      this.procLockUntil.set(p.id, h.tick + p.cooldownTicks);
+      const key = 'proc:' + p.id;
+      if (p.buff) this.applyBuff(p.buff.id, h.tick, key, p.buff.durationTicks);
+      for (const x of p.hits ?? []) {
+        this.scheduled.push({ key, entity: h.entity, rule: undefined, tick: h.tick + x.offset, index: 0, total: 1, channel: null, guaranteedCrit: false, damage: { min: x.min, max: x.max }, mult: 1, flat: 0, castMult: 1, flags: new Set(), critAdd: 0, proc: true });
+      }
+      if (p.echo) this.echoes.push({ key, untilTick: h.tick + p.echo.windowTicks, share: p.echo.share, cap: p.echo.cap, dealt: 0 });
+    }
+    if (l.poison && this.random() < l.poison.chance) {
+      if (this.hasBuff('poisoned')) this.poisonHit(h.tick); // re-applying poison deals an extra poison hit at once
+      this.applyBuff('poisoned', h.tick, 'proc:poison');
+    }
+  }
+
+  /** one poison hit: pct% of the ability damage × 0.65–1.3 (typeless damage over time) */
+  private poisonHit(tick: number): void {
+    const p = this.loadout.poison;
+    if (!p) return;
+    const amount = (p.pct / 100) * this.loadout.abilityDamage * (POISON_ROLL.min + this.random() * (POISON_ROLL.max - POISON_ROLL.min));
+    this.applyDamage('proc:poison', Math.floor(amount), false, true, tick);
   }
 
   /** Puts the pre-built state in place at tick 0 (see Prebuild). */
@@ -1274,6 +1334,13 @@ export class TrainerEngine {
       }
     }
     let amount = ((min + this.random() * Math.max(0, max - min)) / 100 + h.flat) * l.abilityDamage;
+    if (!h.spirit) {
+      // flat damage from held stacks (Essence Corruption 10+: 3 × stacks + Magic level on magic hits)
+      for (const b of this.buffs) {
+        const d = BUFF_BY_ID.get(b.id)?.damageAddPerStack;
+        if (d && b.stacks >= d.minStacks && (!d.style || d.style === h.entity.style)) amount += d.add + d.perStack * b.stacks;
+      }
+    }
     if (h.spirit) {
       const sp = this.spirits.get(h.spirit);
       amount *= l.conjureDamageMult;
@@ -1291,10 +1358,12 @@ export class TrainerEngine {
       amount *= critMult;
     }
     const style = h.entity.style;
-    for (const m of BUFF_TYPE_DAMAGE_MULT) if (m.style === style && m.type === h.entity.abilityType && this.hasBuff(m.buff)) amount *= m.mult;
+    if (!h.proc) for (const m of BUFF_TYPE_DAMAGE_MULT) if (m.style === style && m.type === h.entity.abilityType && this.hasBuff(m.buff)) amount *= m.mult;
     amount *= h.mult;
-    if (h.entity.abilityType === 'Ultimate' && !h.dot) amount *= l.ultimateDamageMult;
+    if (h.entity.abilityType === 'Ultimate' && !h.dot && !h.proc) amount *= l.ultimateDamageMult;
     amount *= h.castMult;
+    if (h.dot) amount *= l.dotDamageMult[h.entity.id] ?? 1; // Song of Destruction (2): Combust / Corruption Blast × 1.3
+    if (!h.spirit) amount *= l.damageMult; // Void knight +5% / +7%
     for (const m of TARGET_DAMAGE_MULT) if ((!m.dotsOnly || h.dot) && this.hasBuff(m.buff)) amount *= m.mult;
     amount += this.targetDamageAdd(amount);
     for (const d of rules) {
@@ -1350,6 +1419,7 @@ export class TrainerEngine {
     this.damageDealt += amount;
     this.hitCount++;
     this.events.push({ kind: 'hit', key, amount, crit, dot, tick });
+    for (const e of this.echoes) if (tick <= e.untilTick) e.dealt += amount; // Scripture of Jas tracks everything in its window
     if (this.targetHp > 0) {
       this.targetHp = Math.max(0, this.targetHp - amount);
       if (this.targetHp === 0 && this.killedTick === null) {
@@ -1409,6 +1479,11 @@ export class TrainerEngine {
       case 'stack': {
         const cap = eff.cap ?? this.stackCap(eff.stack);
         this.setStacks(eff.stack, this.stack(eff.stack) + eff.amount, tick, entity.key, cap);
+        const def = BUFF_BY_ID.get(eff.stack);
+        if (def?.stacks?.refreshOnGain && def.durationTicks !== null) {
+          const b = this.buff(eff.stack);
+          if (b) b.endTick = tick + def.durationTicks; // Essence Corruption: 30 s from the last stack
+        }
         break;
       }
       case 'stack-set':
@@ -1652,6 +1727,12 @@ export class TrainerEngine {
       const def = BUFF_BY_ID.get(b.id);
       if (def?.adrenalinePerTick && (!def.adrenalinePerTickStyle || this.loadout.style === def.adrenalinePerTickStyle)) this.addAdrenaline(def.adrenalinePerTick);
     }
+    // poison (cinderbane gloves): a hit every 10 s from the application
+    const poisoned = this.buff('poisoned');
+    if (poisoned && tick > poisoned.startTick && (tick - poisoned.startTick) % POISON_EVERY_TICKS === 0) this.poisonHit(tick);
+    // Scripture of Jas: 20% of the tracked damage one tick after the window
+    for (const e of this.echoes) if (tick === e.untilTick + 1) this.applyDamage(e.key, Math.min(e.cap, Math.floor(e.share * e.dealt)), false, false, tick);
+    this.echoes = this.echoes.filter((e) => tick <= e.untilTick);
     this.buffs = this.buffs.filter((b) => b.endTick === null || b.endTick > tick);
     // conjured spirits attack on their own (Necromancy Spirit damage, no crits)
     for (const [name, s] of this.spirits) {

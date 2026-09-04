@@ -42,8 +42,12 @@ export interface BuffDef {
   durationTicks: number | null;
   /** wiki buff id, for the icon from buffs.json */
   wikiId?: number;
-  /** stacking counter shown on the icon; `max` is the cap (loadout items may raise it) */
-  stacks?: { max: number };
+  /** stacking counter shown on the icon; `max` is the cap (loadout items may raise it); refreshOnGain: a timed stack restarts its timer whenever a stack is added (Essence Corruption) */
+  stacks?: { max: number; refreshOnGain?: boolean };
+  /** the debuff is a bleed on the target (Jaws of the Abyss, Champion's ring count them) */
+  bleed?: boolean;
+  /** flat damage added to every hit of `style` while at least `minStacks` are held: add + perStack × stacks (Essence Corruption 10+: 3 × stacks + Magic level) */
+  damageAddPerStack?: { minStacks: number; perStack: number; add: number; style?: Style };
   /** adrenaline granted every tick while active (Meteor Strike) */
   adrenalinePerTick?: number;
   /** ... only while a weapon of this style is wielded */
@@ -106,7 +110,7 @@ export type Effect =
   /** add stacks to a stacking buff; `cap` overrides the definition's max (Berserk: Bloodlust 8) */
   | { kind: 'stack'; stack: StackId; amount: number; cap?: number; when?: Condition }
   /** set the counter; 0 removes a timer-less stacking buff */
-  | { kind: 'stack-set'; stack: StackId; amount: number }
+  | { kind: 'stack-set'; stack: StackId; amount: number; when?: Condition }
   /** take stacks away (only when at least `min` are held); `then` runs after a successful consume */
   | { kind: 'consume-stack'; stack: StackId; amount: number | 'all'; min?: number; when?: Condition; then?: Effect[] }
   /** `untilSpirit`: the buff lives exactly as long as that conjured spirit (Haunted while the commanded ghost hits) */
@@ -178,6 +182,8 @@ export interface BleedSpec {
   factors?: number[];
   /** roll of the DoT hits when it differs from the ability's (Massacre: flat 100% after a 110–130% opener) */
   damage?: { min: number; max: number };
+  /** the cast starts no cooldown (Essence Corruption: a DoT dealt at once has its cooldown removed) */
+  noCooldown?: boolean;
 }
 
 export interface ChannelSpec {

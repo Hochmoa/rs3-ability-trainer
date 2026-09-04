@@ -1,5 +1,5 @@
 /** Necromancy ability interactions – docs/research/necromancy.md */
-import { AbilityRule } from './rules-model';
+import { AbilityRule, Effect } from './rules-model';
 
 const W = 'https://runescape.wiki/w/';
 
@@ -7,6 +7,13 @@ const W = 'https://runescape.wiki/w/';
 export const CONJURE_BASE_TICKS = 70;
 /** a spirit can be commanded 6 ticks after the conjure cast */
 export const COMMAND_READY_AFTER = 6;
+
+/** Omni guard: for 30 s after Death Essence, Touch of Death / Finger of Death / Death Skulls ready Death Spark at once */
+const READY_DEATH_SPARK: Effect = { kind: 'stack-set', stack: 'death-spark', amount: 5, when: { item: 'omni-guard', buff: 'death-essence' } };
+const DEATH_ESSENCE_NOTE = 'Omni guard: for 30 s after Death Essence this ability readies Death Spark at once (' + W + 'Death_Spark_(status) )';
+/** Devourer's Guard: for 30 s after Soul Crush, Soul Sap / Soul Strike / Volley of Souls / Spectral Scythe ready Soul Reave at once */
+const READY_SOUL_REAVE: Effect = { kind: 'stack-set', stack: 'soul-reave', amount: 4, when: { item: 'devourer-s-guard', buff: 'soul-crush' } };
+const SOUL_CRUSH_NOTE = "Devourer's Guard: for 30 s after Soul Crush this ability readies Soul Reave at once (" + W + 'Soul_Reave )';
 
 function conjure(spirit: string, name: string, extra: string[] = []): AbilityRule {
   return {
@@ -25,25 +32,47 @@ export const NECROMANCY_RULES: AbilityRule[] = [
   {
     ability: 'necromancy',
     hits: [0],
-    notes: ['Basic attack: +9% adrenaline; under Living Death it also grants 2 Necrosis (' + W + 'Necromancy_(ability) )'],
-    onCast: [{ kind: 'stack', stack: 'necrosis', amount: 2, when: { buff: 'living-death' } }],
+    notes: [
+      'Basic attack: +9% adrenaline; under Living Death it also grants 2 Necrosis (' + W + 'Necromancy_(ability) )',
+      'Omni guard: every basic attack adds a Death Spark stack; at 5 the next basic attack deals double damage and spends them (' + W + 'Death_Spark_(status) )',
+      "Devourer's Guard: every basic attack adds a Soul Reave stack; at 4 the next basic attack grants a Residual Soul and spends them (" + W + 'Soul_Reave )',
+    ],
+    damageRules: [{ when: { flag: 'death-spark' }, mult: 2 }],
+    onCast: [
+      { kind: 'stack', stack: 'necrosis', amount: 2, when: { buff: 'living-death' } },
+      {
+        kind: 'choose',
+        when: { item: 'omni-guard', stackMin: { stack: 'death-spark', min: 5 } },
+        then: [{ kind: 'stack-set', stack: 'death-spark', amount: 0 }, { kind: 'flag', flag: 'death-spark', value: true }],
+        otherwise: [{ kind: 'stack', stack: 'death-spark', amount: 1, when: { item: 'omni-guard' } }],
+      },
+      {
+        kind: 'choose',
+        when: { item: 'devourer-s-guard', stackMin: { stack: 'soul-reave', min: 4 } },
+        then: [{ kind: 'stack-set', stack: 'soul-reave', amount: 0 }, { kind: 'flag', flag: 'soul-reave', value: true }],
+        otherwise: [{ kind: 'stack', stack: 'soul-reave', amount: 1, when: { item: 'devourer-s-guard' } }],
+      },
+    ],
+    onHit: [{ kind: 'stack', stack: 'residual-souls', amount: 1, when: { flag: 'soul-reave' } }],
   },
   {
     ability: 'touch-of-death',
-    notes: ['Grants 4 Necrosis (cap 12) (' + W + 'Touch_of_Death )', 'Under Living Death +6% extra adrenaline (9% + 6%) and its cooldown was reset by the Living Death cast (' + W + 'Living_Death )'],
-    onCast: [{ kind: 'stack', stack: 'necrosis', amount: 4 }, { kind: 'adrenaline', amount: 6, when: { buff: 'living-death' } }],
+    notes: ['Grants 4 Necrosis (cap 12) (' + W + 'Touch_of_Death )', 'Under Living Death +6% extra adrenaline (9% + 6%) and its cooldown was reset by the Living Death cast (' + W + 'Living_Death )', DEATH_ESSENCE_NOTE],
+    onCast: [{ kind: 'stack', stack: 'necrosis', amount: 4 }, { kind: 'adrenaline', amount: 6, when: { buff: 'living-death' } }, READY_DEATH_SPARK],
   },
   {
     ability: 'soul-sap',
     requires: [{ text: 'needs a conduit (necromancy off-hand)', equipment: 'conduit' }],
-    notes: ['Needs a conduit. Grants 1 Residual Soul per target hit (cap 3, 5 with the soulbound lantern) (' + W + 'Soul_Sap )'],
+    notes: ['Needs a conduit. Grants 1 Residual Soul per target hit (cap 3, 5 with the soulbound lantern) (' + W + 'Soul_Sap )', SOUL_CRUSH_NOTE],
+    onCast: [READY_SOUL_REAVE],
     onHit: [{ kind: 'stack', stack: 'residual-souls', amount: 1 }],
   },
   {
     ability: 'finger-of-death',
     cost: { perStack: { stack: 'necrosis', per: 10, maxStacks: 6, base: 60 } },
     damageRules: [{ when: { buff: 'living-death' }, mult: 1.5 }],
-    notes: ['Costs 60% adrenaline minus 10% per Necrosis stack, consuming up to 6 stacks (free at 6) (' + W + 'Finger_of_Death )', 'Under Living Death 1.5x damage (' + W + 'Living_Death )'],
+    notes: ['Costs 60% adrenaline minus 10% per Necrosis stack, consuming up to 6 stacks (free at 6) (' + W + 'Finger_of_Death )', 'Under Living Death 1.5x damage (' + W + 'Living_Death )', DEATH_ESSENCE_NOTE],
+    onCast: [READY_DEATH_SPARK],
   },
   conjure('skeleton-warrior', 'Skeleton Warrior'),
   {
@@ -98,8 +127,8 @@ export const NECROMANCY_RULES: AbilityRule[] = [
   {
     ability: 'soul-strike',
     requires: [{ text: 'needs 1 Residual Soul', stackMin: { stack: 'residual-souls', min: 1 } }],
-    notes: ['Consumes 1 Residual Soul; stuns and binds the target for 5 ticks (' + W + 'Soul_Strike )'],
-    onCast: [{ kind: 'consume-stack', stack: 'residual-souls', amount: 1 }],
+    notes: ['Consumes 1 Residual Soul; stuns and binds the target for 5 ticks (' + W + 'Soul_Strike )', SOUL_CRUSH_NOTE],
+    onCast: [{ kind: 'consume-stack', stack: 'residual-souls', amount: 1 }, READY_SOUL_REAVE],
     onHit: [{ kind: 'buff', id: 'stunned', durationTicks: 5 }, { kind: 'buff', id: 'bound', durationTicks: 5 }],
   },
   {
@@ -110,15 +139,17 @@ export const NECROMANCY_RULES: AbilityRule[] = [
     notes: [
       'Three casts in one slot: cast 1 (10%) starts the 25-tick cooldown and opens cast 2 (−20%) for 25 ticks, cast 2 opens cast 3 (−30%); cast 3 or an expired window resets to cast 1 (' + W + 'Spectral_Scythe )',
       'Casts 1 and 2 have a 25% chance per target to grant a Residual Soul; cast 3 deals up to 2x on low-health targets (' + W + 'Spectral_Scythe )',
+      SOUL_CRUSH_NOTE,
     ],
+    onCast: [READY_SOUL_REAVE],
     onHit: [{ kind: 'stack', stack: 'residual-souls', amount: 1, when: { chance: 0.25, notFlag: 'last-stage' } }],
   },
   {
     ability: 'volley-of-souls',
     hitsPerStack: 'residual-souls',
     requires: [{ text: 'needs 2 Residual Souls', stackMin: { stack: 'residual-souls', min: 2 } }],
-    notes: ['Needs at least 2 Residual Souls and consumes all of them: one hit of 135–165% per soul (' + W + 'Volley_of_Souls )'],
-    onCast: [{ kind: 'consume-stack', stack: 'residual-souls', amount: 'all' }],
+    notes: ['Needs at least 2 Residual Souls and consumes all of them: one hit of 135–165% per soul (' + W + 'Volley_of_Souls )', SOUL_CRUSH_NOTE],
+    onCast: [{ kind: 'consume-stack', stack: 'residual-souls', amount: 'all' }, READY_SOUL_REAVE],
   },
   {
     ability: 'blood-siphon',
@@ -133,8 +164,9 @@ export const NECROMANCY_RULES: AbilityRule[] = [
     notes: [
       '60% adrenaline, initial hit plus 4 bounces every 2 ticks (6 with Igneous Kal-Mor / Kal-Zuk) (' + W + 'Death_Skulls )',
       'While Living Death is active the cooldown is 17 ticks instead of 100, and the Living Death cast resets it (' + W + 'Living_Death )',
-      'Omni guard: readies Death Spark for 30 s after Death Essence (' + W + 'Death_Spark_(status) )',
+      DEATH_ESSENCE_NOTE,
     ],
+    onCast: [READY_DEATH_SPARK],
   },
   // ---------------------------------------------------------------- incantations (durations from the wiki, Sept 2026)
   {
