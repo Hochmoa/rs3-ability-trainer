@@ -68,9 +68,18 @@ export const MAGIC_RULES: AbilityRule[] = [
       { when: { buff: 'kerapac-window' }, bleed: { hits: 10, everyTicks: 0, startTicks: 0 } },
       { when: ESSENCE_DUMP, bleed: { hits: 10, everyTicks: 0, startTicks: 0, noCooldown: true } },
     ],
-    damageRules: [{ when: { flag: 'instant' }, mult: 1.25 }],
-    notes: ['Burn: 10 hits every 3 ticks; re-applying refreshes it; removed by Freedom (' + W + 'Combust )', "Kerapac's wrist wraps: within 6 s after Dragon Breath all ten hits land at once at +25% (" + W + "Kerapac's_wrist_wraps )", ESSENCE_NOTE],
-    onCast: [{ kind: 'buff', id: 'combust', refresh: true }, { kind: 'choose', when: { buff: 'kerapac-window' }, then: [{ kind: 'remove-buff', id: 'kerapac-window' }, { kind: 'flag', flag: 'instant', value: true }] }],
+    damageRules: [{ when: { flag: 'instant' }, mult: 1.25 }, { when: { flag: 'conflagrate' }, mult: 1.4 }],
+    notes: [
+      'Burn: 10 hits every 3 ticks; re-applying refreshes it; removed by Freedom (' + W + 'Combust )',
+      "Kerapac's wrist wraps: within 6 s after Dragon Breath all ten hits land at once at +25% (" + W + "Kerapac's_wrist_wraps )",
+      'Conflagrate (Roar of Awakening special Soulfire): the next Combust within 25 ticks deals +40% and consumes it (' + W + 'Soulfire )',
+      ESSENCE_NOTE,
+    ],
+    onCast: [
+      { kind: 'buff', id: 'combust', refresh: true },
+      { kind: 'choose', when: { buff: 'kerapac-window' }, then: [{ kind: 'remove-buff', id: 'kerapac-window' }, { kind: 'flag', flag: 'instant', value: true }] },
+      { kind: 'choose', when: { buff: 'conflagrate' }, then: [{ kind: 'remove-buff', id: 'conflagrate' }, { kind: 'flag', flag: 'conflagrate', value: true }] },
+    ],
   },
   {
     ability: 'chain',

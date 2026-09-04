@@ -133,6 +133,30 @@ export const GLOBAL_RULES: GlobalRule[] = [
     gainMult: 2,
   },
   {
+    id: 'gravitate-stacks',
+    notes: ['Gravitate (Annihilation special): every melee ability hit adds 1 stack, max 20, +1% melee damage per stack (bleeds not boosted) (' + W + 'Gravitate )'],
+    when: { style: 'Melee', buff: 'gravitate', gcd: true },
+    onHit: [{ kind: 'stack', stack: 'gravitate', amount: 1 }],
+  },
+  {
+    id: 'gravitate-auto-attack',
+    notes: ['Gravitate: an auto-attack hit adds 2 stacks (' + W + 'Gravitate )'],
+    when: { abilities: ['attack'], buff: 'gravitate' },
+    onHit: [{ kind: 'stack', stack: 'gravitate', amount: 1 }],
+  },
+  {
+    id: 'primordial-ice-shard-of-leng',
+    notes: ['Dark Shard of Leng: every attack cast has a 10% chance to add a Primordial Ice stack (max 10); melee bleeds cannot (' + W + 'Primordial_Ice )'],
+    when: { style: 'Melee', gcd: true, item: 'dark-shard-of-leng' },
+    onCast: [{ kind: 'stack', stack: 'primordial-ice', amount: 1, when: { chance: 0.1 } }],
+  },
+  {
+    id: 'primordial-ice-dark-ice-shard',
+    notes: ['Dark ice shard: every attack cast has a 5% chance to add a Primordial Ice stack (max 10) (' + W + 'Primordial_Ice )'],
+    when: { style: 'Melee', gcd: true, item: 'dark-ice-shard' },
+    onCast: [{ kind: 'stack', stack: 'primordial-ice', amount: 1, when: { chance: 0.05 } }],
+  },
+  {
     id: 'rampage-no-gain',
     notes: ['Dragon battleaxe Rampage: abilities generate no adrenaline while it is active (' + W + 'Rampage )'],
     when: { generating: true, buff: 'rampage' },

@@ -453,6 +453,7 @@ function applyEffect(r: ResolvedLoadout, id: string, effect: Record<string, unkn
     case 'instant-dot-window':
     case 'death-spark': // rules-necromancy.ts: the basic attack builds and spends the stacks
     case 'soul-reave':
+    case 'primordial-ice': // rules-global.ts: dark ice shard stacks on the item id
     case 'necrosis-chance': // rules-global.ts: occultist's ring / Zorgoth's soul ring
     case 'soul-chance':
     case 'essence-corruption': // rules-global.ts / rules-magic.ts / rules-buffs.ts on the "song-of-destruction:1" item id

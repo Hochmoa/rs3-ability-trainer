@@ -406,3 +406,28 @@ interface WeaponSpecialAttack {
 7. **Soulbound lantern (or)** is mis-categorised as having a special attack; it has none.
 8. `json.buffs[].id = -1` when the buff page has no id (Dark Burn); `Flamebound Rival` has two icon files (`Flamebound Rival.png`, `Flamebound Rival (buff).png`).
 9. The bucket keeps the removed Igneous Cleave row; always filter on `Category:Removed content` / `json.removal`.
+
+---
+
+## 5. Implementation notes (engine, September 2026)
+
+Specs carry interaction rules like abilities: `src/app/engine/rules-specs.ts` (`SPEC_RULES`, keyed by the specs.json id, exported through `rules.ts` as `specRuleFor()`). `TrainerEngine.ruleOf()` returns the spec rule for `spec:<id>` steps and, for the *Weapon Special Attack* / *Essence of Finality* slots, the spec rule merged with the slot's own requirements. `rules-lint.spec.ts` checks that every spec in specs.json has exactly one rule. The scenarios live in `src/app/engine/specs.spec.ts` (one per spec, ability damage 1000, mid rolls).
+
+Primitives added for the specs (all optional fields, documented in `rules-model.ts` / `damage.ts`):
+
+| Primitive | Used by |
+|---|---|
+| `AbilityRule.damageAddPerStack` – every hit's roll += stacks at the cast × (min…max) % | Death Grasp (+40 % per Necrosis), Soul Crush (+135–165 % per Residual Soul), Icy Tempest (+18–22 % per Primordial Ice) |
+| `AbilityRule.hitCrit` – per-hit crit chance / damage bonus | The Final Flurry |
+| `BuffDef.critProc` – a critical strike of the style fires an extra hit a tick later, never chaining | Instability (Lightning Surge 70–90 %) |
+| `BuffDef.damageMultPerStack` – style damage × (1 + per × stacks), not bleeds | Gravitate |
+| `BUFF_DAMAGE_MULT[].unlessBuff` – another buff takes priority | Blackhole 1.25x yields to Berserk; Rampage 1.2x multiplies with both |
+| `GlobalRule.when.item` / `when.stackMin` | Primordial Ice generation (Dark Shard of Leng 10 %, dark ice shard 5 %, gated on the wielded weapon), Gravitate stacks |
+| `CostRule.perStack` on a spec: only the cost drops, the requirement stays | Icy Tempest (−12 per stack, free from 3) |
+| new stacks `gravitate` (max 20, 50-tick timer) and `primordial-ice` (max 10) | Gravitate, Icy Tempest |
+
+Slot mechanics verified by `specs.spec.ts`: cost = requirement (Ring of vigour ×0.9 on both), no ultimate refund, the weapon spec and its EoF copy share one cooldown (both act through the same `spec:<id>` entity), the EoF slot is greyed out (`wrong-weapon`) with a weapon of another style and morphs to the stored spec otherwise, the generic slot morphs to the wielded weapon's spec, pressing either slot satisfies a `spec:<id>` rotation step, Quick Smash is off the GCD from both.
+
+Assumptions where the wiki gives no tick timing: From the Shadows' wight hits at +1, +5, +9, +13, +17; Shadowfall's third hit one tick after the two arrows; Igneous Showdown's four hits in one tick (wiki); Crystal Rain's arrows 2–5 one tick after arrow 1 with a 4 % chance each to land on a 1x1 target; Vine Call's vine and Blackhole's periodic damage treated as bleeds (no crits, no Berserk / Blackhole multiplier).
+
+Not simulable in the trainer (no target level / life-point pool / damage taken / prayer points / ammunition / secondary targets): hit-chance bonuses, heals (Healing Blade, Balanced / Restorative Shot), prayer restores (Favour of the War God, Healing Blade), Reap's kill adrenaline, Soulshot's target-Magic scaling, god-arrow bonus damage, Deep Burn's Dark Burn damage (0 – no damage taken), Perfect Equilibrium's passive hit (Balance by Force only applies its buff), Lesser Purifying Light (extra targets only), Miasmic Barrage's attack-rate debuff, Locate / chinchompa AoE, reflect / damage-reduction buffs (Mirrorback, Power of Darkness / Light, Spear Wall) beyond showing the buff, Ashen Vow on other abilities, Song of Destruction's Essence Corruption on Soulfire.
