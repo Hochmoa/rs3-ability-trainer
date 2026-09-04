@@ -1,5 +1,5 @@
 import { COMMAND_READY_AFTER, CONJURE_BASE_TICKS } from './rules-necromancy';
-import { AbilityType, EnemyConfig, EntityKind, PrayerStats, Prebuild, SPEC_KEY, StepResult, Style, Style4, isStyle4 } from '../core/models';
+import { AbilityType, CombatMode, EnemyConfig, EntityKind, PrayerStats, Prebuild, RevolutionSettings, SPEC_KEY, StepResult, Style, Style4, isStyle4 } from '../core/models';
 import { ResolvedLoadout, defaultResolvedLoadout } from './loadout-resolved';
 import { PROTECTION, PrayerBook, SOUL_SPLIT, bookOf, togglePrayer } from './prayer-rules';
 import { BASE_CRIT_CHANCE, BUFF_DAMAGE_MULT, BUFF_FLAT_ADD, BUFF_TYPE_DAMAGE_MULT, RAGE_MAX, RAGE_PER_STACK, SPIRIT_ATTACKS, TARGET_DAMAGE_ADD, TARGET_DAMAGE_MULT, critMultiplier } from './damage';
@@ -53,7 +53,26 @@ export interface EngineConfig {
   prayerBook?: PrayerBook;
   /** simulated enemy; only used when enabled */
   enemy?: EnemyConfig;
+  /** in-game "Combat Mode"; 'revolution' needs `revolution` (missing = full manual) */
+  combatMode?: CombatMode;
+  /** Revolution options + the main bar it scans (docs/research/revolution.md) */
+  revolution?: RevolutionConfig;
 }
+
+/**
+ * Revolution: on every tick with a free GCD (and no manual input pending, no channel running) the engine casts the leftmost
+ * usable ability of the first `slots` slots of the main bar. Only GCD abilities of the enabled types fire; special attacks,
+ * Regenerate, off-GCD abilities, prayers, potions and weapon switches never do.
+ */
+export interface RevolutionConfig extends RevolutionSettings {
+  /** ordered slot keys of the main bar ("ability:sever"), null = empty slot; missing = nothing to fire */
+  bar?: (string | null)[];
+  /** the main bar is bound per weapon style: re-read it after a weapon switch (missing = `bar` for every style) */
+  resolveBar?: (style: Style | null) => (string | null)[];
+}
+
+/** abilities Revolution never triggers although they are GCD abilities (wiki patch notes) */
+export const REVOLUTION_NEVER = new Set(['weapon-special-attack', 'essence-of-finality', 'regenerate']);
 
 export type UsableReason = 'ok' | 'weapon' | 'book' | 'adrenaline' | 'cooldown' | 'requirement';
 
@@ -179,6 +198,8 @@ export type EngineEvent =
   | { kind: 'hit'; key: string; amount: number; crit: boolean; dot: boolean; tick: number }
   /** the target's life points reached 0 */
   | { kind: 'killed'; tick: number }
+  /** Revolution cast `key` on its own; `matched` = it was the expected step (a 'fired' result with auto: true follows) */
+  | { kind: 'auto'; key: string; tick: number; matched: boolean; expected: string }
   | { kind: 'finished' };
 
 interface PendingInput {
@@ -193,6 +214,8 @@ interface Pending {
   arrival: number;
   bypassed?: Pending;
   notified?: boolean;
+  /** chosen by Revolution, not pressed */
+  auto?: boolean;
 }
 
 interface ScheduledHit {
@@ -830,6 +853,11 @@ export class TrainerEngine {
   private castPending(): void {
     const p = this.pending!;
     const entity = this.catalog.get(p.key)!;
+    // a Revolution choice that became unusable in the meantime is dropped; the bar is scanned again next tick
+    if (p.auto && (this.weaponFailure(entity) || this.blocker(entity, p.tick))) {
+      this.pending = null;
+      return;
+    }
     // the weapon may have changed since the press: the queued ability just fails, like in the game
     const wf = this.weaponFailure(entity);
     if (wf) {
@@ -854,7 +882,11 @@ export class TrainerEngine {
     this.lastInputTick = p.tick;
     this.activate(entity, p.tick, { offGcd: false, noGain: false });
 
+    const matched = !!expected && entity.key === expected.key;
+    if (p.auto) this.events.push({ kind: 'auto', key: entity.key, tick: p.tick, matched, expected: expected?.key ?? '' });
     if (!expected || entity.key !== expected.key) {
+      // Revolution's own choice is not a player mistake: no wrong counter, the rotation keeps waiting for the expected step
+      if (p.auto) return;
       this.wrong++;
       this.events.push({ kind: 'wrong-fired', key: entity.key, expected: expected?.key ?? '', tick: p.tick });
       return;
@@ -891,6 +923,7 @@ export class TrainerEngine {
       firedAtTick: p.tick,
       adrenaline: this.adrenaline,
     };
+    if (p.auto) result.auto = true;
     this.results.push(result);
     this.events.push({ kind: 'fired', result });
     this.done.add(expectedIndex);
@@ -1703,6 +1736,66 @@ export class TrainerEngine {
     } else if (this.activePrayers.has(SOUL_SPLIT)) {
       this.prayerStats.soulSplitTicks++;
     }
+    if (this.state === 'running') this.revolutionTick(tick);
+  }
+
+  // ---------------------------------------------------------------- Revolution (docs/research/revolution.md)
+
+  /** Revolution is on and has a bar to scan. */
+  get revolutionOn(): boolean {
+    return this.config.combatMode === 'revolution' && !!this.config.revolution;
+  }
+
+  /** the main bar Revolution scans for the wielded weapon (first `slots` entries matter) */
+  revolutionBar(): (string | null)[] {
+    const r = this.config.revolution;
+    if (!r) return [];
+    const bar = r.resolveBar?.(this.style) ?? r.bar ?? [];
+    return bar.slice(0, Math.max(0, Math.min(bar.length, Math.round(r.slots))));
+  }
+
+  /** Is this entity one Revolution may fire (GCD ability of an enabled type, never a special attack / Regenerate)? */
+  revolutionTriggers(e: EngineEntity): boolean {
+    const r = this.config.revolution;
+    if (!r || e.kind !== 'ability' || !this.isGcdStep(e) || REVOLUTION_NEVER.has(e.id)) return false;
+    switch (e.abilityType) {
+      case 'Basic':
+      case 'Incantation':
+        return r.basics;
+      case 'Enhanced':
+        return r.enhanced;
+      case 'Threshold':
+        return r.thresholds;
+      case 'Ultimate':
+        return r.ultimates;
+      default:
+        return false;
+    }
+  }
+
+  /** Leftmost slot of the Revolution range whose shown ability can cast at `tick`, or null. */
+  revolutionChoice(tick: number): string | null {
+    for (const slot of this.revolutionBar()) {
+      if (!slot) continue;
+      const key = this.morphOf(slot, tick)?.key ?? slot; // the slot fires what it shows (Command X, Slaughter ...)
+      const e = this.catalog.get(key);
+      if (!e || !this.revolutionTriggers(e) || this.weaponFailure(e) || this.blocker(e, tick)) continue;
+      return key;
+    }
+    return null;
+  }
+
+  /**
+   * Runs after the inputs of `tick` were handled: with a free GCD, nothing pending (manual input wins) and no channel running,
+   * the leftmost usable ability is cast on this tick through the normal cast path.
+   */
+  private revolutionTick(tick: number): void {
+    if (!this.revolutionOn || this.pending) return;
+    const gcdEnd = this.gcdEndTick;
+    if (gcdEnd !== null && tick < gcdEnd) return;
+    if (this.channel && !this.channel.cancelled && tick < this.channel.endTick) return;
+    const key = this.revolutionChoice(tick);
+    if (key) this.pending = { key, tick, arrival: this.tickTime(tick), auto: true };
   }
 
   private advanceIndex(): void {

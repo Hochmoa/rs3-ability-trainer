@@ -47,6 +47,7 @@
             <table>
               <tr><td>Ping</td><td>{{ s.settings.pingMs }} ms ± {{ s.settings.jitterMs }}</td></tr>
               <tr><td>Ability queueing</td><td>{{ s.settings.abilityQueueing ? 'on' : 'off' }}</td></tr>
+              <tr><td>Combat mode</td><td>{{ combatModeText(s.settings) }}</td></tr>
               <tr><td>Loop rotation</td><td>{{ s.settings.loop ? 'yes' : 'no' }}</td></tr>
               <tr><td>100% adrenaline at start</td><td>{{ s.settings.fullAdrenaline ? 'yes' : 'no' }}</td></tr>
               <tr><td>Recharge adrenaline</td><td>{{ s.settings.rechargeAdrenaline ? 'yes' : 'no' }}</td></tr>

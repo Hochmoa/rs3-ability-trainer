@@ -37,6 +37,37 @@
         }
       </select>
     </label>
+    <label title="In-game Combat Mode. Revolution: the leftmost usable ability inside the yellow box of the main bar fires on its own whenever the global cooldown is free; your presses take priority.">
+      Mode
+      <select [ngModel]="storage.settings().combatMode" (ngModelChange)="setSetting('combatMode', $event)" [disabled]="running()">
+        <option value="manual">Full manual</option>
+        <option value="revolution">Revolution</option>
+      </select>
+    </label>
+    @if (revolution()) {
+      <span class="revo-opts">
+        <label title="Revolution size: how many slots of the main bar are used automatically (1-14)">
+          Slots
+          <input type="number" [min]="REVOLUTION_MIN_SLOTS" [max]="REVOLUTION_MAX_SLOTS" [ngModel]="storage.settings().revolution.slots" (ngModelChange)="setRevolution('slots', numberOf($event, REVOLUTION_MIN_SLOTS, REVOLUTION_MAX_SLOTS))" [disabled]="running()" />
+        </label>
+        <label class="check" title="Automatically trigger Basic abilities (and Necromancy incantations)">
+          <input type="checkbox" [checked]="storage.settings().revolution.basics" (change)="setRevolution('basics', !storage.settings().revolution.basics)" [disabled]="running()" />
+          Basic
+        </label>
+        <label class="check" title="Automatically trigger Enhanced abilities">
+          <input type="checkbox" [checked]="storage.settings().revolution.enhanced" (change)="setRevolution('enhanced', !storage.settings().revolution.enhanced)" [disabled]="running()" />
+          Enhanced
+        </label>
+        <label class="check" title="Automatically trigger Threshold abilities (Revolution+)">
+          <input type="checkbox" [checked]="storage.settings().revolution.thresholds" (change)="setRevolution('thresholds', !storage.settings().revolution.thresholds)" [disabled]="running()" />
+          Threshold
+        </label>
+        <label class="check" title="Automatically trigger Ultimate abilities (Revolution++)">
+          <input type="checkbox" [checked]="storage.settings().revolution.ultimates" (change)="setRevolution('ultimates', !storage.settings().revolution.ultimates)" [disabled]="running()" />
+          Ultimate
+        </label>
+      </span>
+    }
     @if (!running()) {
       <button class="btn btn-primary" (click)="start()" [disabled]="!canStart()">Start</button>
       <button class="btn" [class.active]="editLayout()" (click)="editLayout.set(!editLayout())" title="Arrange the action bars: move with the arrows, toggle half width, rearrange slots">{{ editLayout() ? 'Done' : 'Layout' }}</button>
@@ -412,6 +443,7 @@
             [compact]="b.shape === 'compact'"
             [droppable]="!running()"
             [editable]="editLayout() && !running()"
+            [revolutionSlots]="revolutionSlots()"
             (slotClick)="slotClick(b.position, $event)"
             (slotDrop)="dropOnSlot(b.position, $event.slot, $event.entity)"
             (slotMove)="moveSlot(b.position, $event.slot, $event.dir)"
@@ -430,6 +462,7 @@
       <span class="bad">Too early {{ counts().early }}</span>
       <span class="bad">Wrong {{ counts().wrong }}</span>
       <span class="warn">Missed {{ counts().missed }}</span>
+      @if (revolution()) { <span class="muted" title="abilities Revolution cast on its own">Auto {{ counts().auto }}</span> }
       <span class="muted">Damage {{ damage() | number: '1.0-0' }}</span>
       <span class="muted">DPS {{ dps() | number: '1.0-0' }}</span>
       @if (killedAtMs(); as ms) { <span class="good">Kill {{ (ms / 1000) | number: '1.1-1' }} s</span> }
@@ -483,7 +516,7 @@
           @for (r of results(); track $index) {
             <tr>
               <td>{{ r.step + 1 }}</td>
-              <td>{{ r.name }}</td>
+              <td>{{ r.name }}@if (r.auto) { <small class="muted" title="cast by Revolution"> - auto</small> }</td>
               <td [class]="r.outcome === 'perfect' || r.outcome === 'done' ? 'good' : 'warn'">
                 {{ r.outcome === 'late' ? 'late ' + r.lateTicks + (r.lateTicks === 1 ? ' tick' : ' ticks') : r.outcome }}
               </td>

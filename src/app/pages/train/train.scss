@@ -21,6 +21,20 @@
     cursor: pointer;
     white-space: nowrap;
   }
+
+  /* Revolution size + type toggles, framed like the yellow box on the bar */
+  .revo-opts {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 2px 8px;
+    border: 1px solid rgba(242, 210, 27, 0.6);
+    border-radius: 4px;
+
+    input[type='number'] {
+      width: 52px;
+    }
+  }
 }
 
 .empty {

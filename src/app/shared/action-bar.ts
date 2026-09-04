@@ -79,6 +79,10 @@ export interface SlotView {
             }
           </div>
         }
+        <!-- Revolution range: the game's yellow frame around the first N slots of the main bar -->
+        @for (box of revolutionBoxes(); track $index) {
+          <div class="revolution" [style]="box" title="Revolution: the leftmost usable ability in this box fires on its own"></div>
+        }
       </div>
       <div class="label">
         <span class="pos">{{ position() === 0 ? 'M' : position() }}</span>
@@ -139,11 +143,20 @@ export interface SlotView {
       color: var(--gold);
     }
     .slots {
+      position: relative;
       display: grid;
       grid-template-columns: repeat(14, 1fr);
       gap: 2px;
       flex: 1;
       min-width: 0;
+    }
+    .revolution {
+      position: absolute;
+      border: 2px solid #f2d21b;
+      border-radius: 4px;
+      box-shadow: 0 0 5px rgba(242, 210, 27, 0.55), inset 0 0 3px rgba(242, 210, 27, 0.35);
+      pointer-events: none;
+      z-index: 3;
     }
     .bar.compact .slots {
       grid-template-columns: repeat(7, 1fr);
@@ -312,11 +325,32 @@ export class ActionBar {
   readonly droppable = input<boolean>(false);
   /** slots show ‹ › × buttons */
   readonly editable = input<boolean>(false);
+  /** Revolution range: the first N slots get the yellow frame (main bar only, 0 = none) */
+  readonly revolutionSlots = input<number>(0);
   readonly slotClick = output<number>();
   readonly slotDrop = output<{ slot: number; entity: Entity }>();
   readonly slotMove = output<{ slot: number; dir: -1 | 1 }>();
   readonly slotClear = output<number>();
   readonly ceil = Math.ceil;
+
+  /**
+   * Inline styles of the yellow Revolution frame(s): one box over the first N slots of a wide bar, one per row of a
+   * compact bar (7 + rest). Sized from the grid geometry (14 or 7 columns, 2px gaps), 2px outside the slots.
+   */
+  revolutionBoxes(): string[] {
+    const n = this.position() === 0 ? Math.max(0, Math.min(14, Math.floor(this.revolutionSlots() || 0))) : 0;
+    if (!n) return [];
+    const per = this.compact() ? 7 : 14;
+    const out: string[] = [];
+    for (let row = 0; row * per < n; row++) {
+      const cols = Math.min(per, n - row * per);
+      const width = 'calc((100% - ' + (per - 1) * 2 + 'px) * ' + cols + ' / ' + per + ' + ' + ((cols - 1) * 2 + 4) + 'px)';
+      const height = this.compact() ? 'calc((100% - 2px) / 2 + 4px)' : 'calc(100% + 4px)';
+      const top = this.compact() ? 'calc(' + row + ' * ((100% - 2px) / 2 + 2px) - 2px)' : '-2px';
+      out.push('left:-2px;top:' + top + ';width:' + width + ';height:' + height);
+    }
+    return out;
+  }
 
   overlay(phase: number): string {
     const deg = Math.round(phase * 360);

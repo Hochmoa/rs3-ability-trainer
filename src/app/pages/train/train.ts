@@ -6,7 +6,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DataService, Entity, SPEC_KEY } from '../../core/data.service';
 import { applyWield, equip, unequip } from '../../core/equipment';
 import { keybindFromEvent, keybindKey, keybindLabel } from '../../core/keybind.util';
-import { AttackPattern, BAR_POSITIONS, BarShape, barLayout, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, EquipSlot, ItemRef, Loadout, PrayerStats, Prebuild, Rotation, STYLES4, Settings, StepResult, Style4, WeaponSpec, emptyPrebuild, entityKey, isStyle4, loadoutWeapons, loadoutWield, parseEntityKey, prebuildIsEmpty, visiblePresets, RotationStep } from '../../core/models';
+import { AttackPattern, BAR_POSITIONS, BAR_SLOTS, BarShape, barLayout, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, EquipSlot, ItemRef, Loadout, PrayerStats, Prebuild, REVOLUTION_MAX_SLOTS, REVOLUTION_MIN_SLOTS, RevolutionSettings, Rotation, STYLES4, Settings, StepResult, Style, Style4, WeaponSpec, emptyPrebuild, entityKey, isStyle4, loadoutWeapons, loadoutWield, parseEntityKey, prebuildIsEmpty, visiblePresets, RotationStep } from '../../core/models';
 import { StorageService } from '../../core/storage.service';
 import { resolveLoadout } from '../../engine/loadout-resolver';
 import { BUFF_BY_ID, ruleFor, stackMax, stackName } from '../../engine/rules';
@@ -98,6 +98,12 @@ export class Train implements OnDestroy {
 
   readonly TICK_MS = TICK_MS;
   readonly GCD_MS = TICK_MS * GCD_TICKS;
+  readonly REVOLUTION_MIN_SLOTS = REVOLUTION_MIN_SLOTS;
+  readonly REVOLUTION_MAX_SLOTS = REVOLUTION_MAX_SLOTS;
+  /** Revolution combat mode is selected (docs/research/revolution.md) */
+  readonly revolution = computed(() => this.storage.settings().combatMode === 'revolution');
+  /** slots of the main bar inside the yellow Revolution box (0 = full manual) */
+  readonly revolutionSlots = computed(() => (this.revolution() ? this.storage.settings().revolution.slots : 0));
   readonly STYLES4 = STYLES4;
   readonly ENEMY_PRESETS = ENEMY_PRESETS;
   readonly PATTERNS: { id: AttackPattern; label: string }[] = [
@@ -359,7 +365,7 @@ export class Train implements OnDestroy {
   readonly feedback = signal<Feedback | null>(null);
   /** a channel was cut by the cast reported next – appended to that cast's feedback line */
   private cancelNote: string | null = null;
-  readonly counts = signal({ perfect: 0, late: 0, early: 0, wrong: 0, missed: 0 });
+  readonly counts = signal({ perfect: 0, late: 0, early: 0, wrong: 0, missed: 0, auto: 0 });
   readonly results = signal<StepResult[]>([]);
   readonly expectedKey = signal<string | null>(null);
   readonly queuedKey = signal<string | null>(null);
@@ -661,6 +667,8 @@ export class Train implements OnDestroy {
         return (this.live() ?? l).inventory.some((r) => r?.kind === kind && r.id === id);
       },
       prayerBook: this.prayerBook(),
+      // Revolution scans the main bar of the wielded style (position 0, first N slots)
+      revolution: this.revolution() ? { ...this.storage.settings().revolution, bar: this.mainBarKeys(this.startStyle()), resolveBar: (st: Style | null) => this.mainBarKeys(st && isStyle4(st) ? st : this.startStyle()) } : undefined,
       enemy: enemy.enabled ? { ...enemy, styles: [...enemy.styles] } : undefined,
       targetLifePoints: enemy.lifePoints > 0 ? enemy.lifePoints : undefined,
       prebuild: this.prebuildEmpty() ? undefined : this.prebuild(),
@@ -684,7 +692,7 @@ export class Train implements OnDestroy {
     this.morphs.set(new Map());
     this.startedAt = Date.now();
     this.results.set([]);
-    this.counts.set({ perfect: 0, late: 0, early: 0, wrong: 0, missed: 0 });
+    this.counts.set({ perfect: 0, late: 0, early: 0, wrong: 0, missed: 0, auto: 0 });
     this.doneSteps.set(new Set());
     this.buffs.set([]);
     this.cooldowns.set({});
@@ -692,7 +700,8 @@ export class Train implements OnDestroy {
     this.channel.set(null);
     this.maxAdrenaline.set(this.engine.maxAdrenaline);
     const first = this.slots().find((s) => s.kind === 'current');
-    this.feedback.set({ text: 'Press ' + first?.key + ' (' + first?.entity.name + ') to start.', cls: 'info' });
+    if (this.revolution()) this.feedback.set({ text: 'Revolution is on – the yellow slots of the main bar fire on their own; press what the rotation needs beyond that.', cls: 'info' });
+    else this.feedback.set({ text: 'Press ' + first?.key + ' (' + first?.entity.name + ') to start.', cls: 'info' });
     this.finished.set(false);
     this.running.set(true);
     this.index.set(0);
@@ -704,6 +713,15 @@ export class Train implements OnDestroy {
     this.expectedKey.set(this.engine.currentStep?.key ?? null);
     this.raf = requestAnimationFrame(this.frame);
     this.fallback = window.setInterval(() => this.tick(performance.now()), 100);
+  }
+
+  /** slot keys of the main bar (position 0) for `style`, null = empty slot – what Revolution scans */
+  private mainBarKeys(style: Style4): (string | null)[] {
+    const s = this.storage.actionBars();
+    const id = visiblePresets(s, style)[0];
+    const preset = id === null ? null : s.presets.find((p) => p.id === id) ?? null;
+    const slots = preset?.slots ?? Array<RotationStep | null>(BAR_SLOTS).fill(null);
+    return slots.map((step) => (step && step.kind !== 'note' ? entityKey(step.kind, step.id) : null));
   }
 
   stop(): void {
@@ -930,7 +948,11 @@ export class Train implements OnDestroy {
         const r = ev.result;
         this.results.update((list) => [...list, r]);
         this.doneSteps.update((s) => new Set(s).add(r.step));
-        if (r.outcome === 'perfect') {
+        if (r.auto) {
+          // Revolution completed the step on its own – counted like a press, but flagged as automatic
+          this.counts.update((c) => (r.outcome === 'late' ? { ...c, late: c.late + 1 } : { ...c, perfect: c.perfect + 1 }));
+          this.feedback.set({ text: 'Revolution: ' + r.name + (r.outcome === 'late' ? ' – late by ' + r.lateTicks + (r.lateTicks === 1 ? ' tick' : ' ticks') + ' (nothing was usable earlier)' : ' – automatic'), cls: r.outcome === 'late' ? 'warn' : 'good' });
+        } else if (r.outcome === 'perfect') {
           this.counts.update((c) => ({ ...c, perfect: c.perfect + 1 }));
           this.feedback.set({ text: r.name + ' – perfect' + (r.offsetMs ? ' (' + r.offsetMs + ' ms early)' : ''), cls: 'good' });
         } else if (r.outcome === 'late') {
@@ -948,6 +970,15 @@ export class Train implements OnDestroy {
         this.flash('fired', r.key, now, 200);
         break;
       }
+      case 'auto':
+        // Revolution's own cast: never a mistake; a matching step gets its 'fired' result right after this event
+        this.counts.update((c) => ({ ...c, auto: c.auto + 1 }));
+        if (!ev.matched) {
+          this.feedback.set({ text: 'Revolution cast ' + this.name(ev.key) + (ev.expected ? ' – the rotation still waits for ' + this.name(ev.expected) : ''), cls: 'info' });
+          this.appendCancelNote();
+          this.flash('fired', ev.key, now, 200);
+        }
+        break;
       case 'wrong-fired':
         this.counts.update((c) => ({ ...c, wrong: c.wrong + 1 }));
         this.feedback.set({ text: this.name(ev.key) + (this.data.get(ev.key)?.kind === 'ability' ? ' cast' : ' activated') + ' instead of ' + this.name(ev.expected) + ' – try again', cls: 'bad' });
@@ -1070,6 +1101,11 @@ export class Train implements OnDestroy {
 
   setSetting<K extends keyof Settings>(key: K, value: Settings[K]): void {
     void this.storage.saveSettings({ ...this.storage.settings(), [key]: value });
+  }
+
+  /** Revolution size / type toggles */
+  setRevolution<K extends keyof RevolutionSettings>(key: K, value: RevolutionSettings[K]): void {
+    this.setSetting('revolution', { ...this.storage.settings().revolution, [key]: value });
   }
 
   setEnemy<K extends keyof EnemyConfig>(key: K, value: EnemyConfig[K]): void {

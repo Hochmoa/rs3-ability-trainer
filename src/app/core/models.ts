@@ -188,7 +188,32 @@ export interface Settings {
   hideObscureEquipment: boolean;
   /** catalogs: hide abilities and prayers that are never used in current PvM (core/obscure.ts) */
   hideObscureAbilities: boolean;
+  /** in-game "Combat Mode": Full manual, or Revolution (the main bar fires on its own – docs/research/revolution.md) */
+  combatMode: CombatMode;
+  /** Revolution options ("Revolution size" + the "Automatically trigger …" toggles) */
+  revolution: RevolutionSettings;
 }
+
+export type CombatMode = 'manual' | 'revolution';
+
+/** in-game "Revolution size": "Set how many slots on the main action bar are automatically used in revolution combat. (1-14)" */
+export const REVOLUTION_MIN_SLOTS = 1;
+export const REVOLUTION_MAX_SLOTS = 14;
+
+export interface RevolutionSettings {
+  /** first N slots of the main bar (1..14) */
+  slots: number;
+  /** "Automatically trigger Basic abilities" (Necromancy incantations follow this toggle too) */
+  basics: boolean;
+  /** "Automatically trigger Enhanced abilities" */
+  enhanced: boolean;
+  /** "Automatically trigger Threshold abilities" (Revolution+) */
+  thresholds: boolean;
+  /** "Automatically trigger Ultimate abilities" (Revolution++) */
+  ultimates: boolean;
+}
+
+export const DEFAULT_REVOLUTION: RevolutionSettings = { slots: 9, basics: true, enhanced: true, thresholds: false, ultimates: false };
 
 /** Everything the Setups page shares and "Load this setup" replaces: all local data except the rotations. */
 export interface SetupBundle {
@@ -217,6 +242,8 @@ export const DEFAULT_SETTINGS: Settings = {
   rechargeAdrenaline: false,
   hideObscureEquipment: true,
   hideObscureAbilities: true,
+  combatMode: 'manual',
+  revolution: { ...DEFAULT_REVOLUTION },
 };
 
 // ---------------------------------------------------------------- equipment data (public/data/*.json)
@@ -738,6 +765,8 @@ export interface StepResult {
   firedAtTick: number;
   /** adrenaline after this step */
   adrenaline: number;
+  /** the step was completed by Revolution, not by a press (docs/research/revolution.md) */
+  auto?: boolean;
 }
 
 export interface Session {

@@ -90,8 +90,17 @@ export class Setups {
 
   // ---------------------------------------------------------------- display helpers
 
+  /** "Full manual" / "Revolution, 9 slots, basic + enhanced" (shared settings may predate the combat mode) */
+  combatModeText(s: Partial<Settings>): string {
+    if (s.combatMode !== 'revolution') return 'Full manual';
+    const r = s.revolution;
+    const types = [r?.basics && 'basic', r?.enhanced && 'enhanced', r?.thresholds && 'threshold', r?.ultimates && 'ultimate'].filter((x): x is string => !!x);
+    return 'Revolution, ' + (r?.slots ?? '?') + ' slots' + (types.length ? ', ' + types.join(' + ') : '');
+  }
+
   settingsSummary(s: Settings): string {
     const parts = ['ping ' + s.pingMs + ' ms ± ' + s.jitterMs, 'queueing ' + (s.abilityQueueing ? 'on' : 'off')];
+    if (s.combatMode === 'revolution') parts.push(this.combatModeText(s));
     if (s.loop) parts.push('loop');
     if (s.fullAdrenaline) parts.push('100% adrenaline');
     if (s.rechargeAdrenaline) parts.push('recharge');
