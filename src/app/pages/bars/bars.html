@@ -97,7 +97,7 @@
               <div class="group-head"><span>{{ g.label }}</span><span class="count">{{ g.entities.length }}</span></div>
             }
             @for (e of g.entities; track e.key) {
-              <button class="cell" (pointerdown)="startDrag($event, e, null)" (click)="add(e)" [entityTip]="e">
+              <button class="cell" [class.other-book]="otherBook(e)" (pointerdown)="startDrag($event, e, null)" (click)="add(e)" [entityTip]="e">
                 <ability-icon [ability]="e" [px]="48" />
                 <span class="cell-name">{{ e.name }}</span>
                 <span class="cell-type">{{ subtitle(e) }}</span>

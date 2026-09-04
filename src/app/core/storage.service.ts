@@ -401,6 +401,7 @@ function normaliseLoadout(l: Partial<Loadout>): Loadout {
   out.relics = [...(l.relics ?? [])];
   out.switches = [...(l.switches ?? [])];
   out.prayerBook = l.prayerBook === 'Prayers' ? 'Prayers' : 'Curses';
+  out.spellbook = l.spellbook === 'ancient' || l.spellbook === 'lunar' ? l.spellbook : 'standard';
   out.weaponGizmos = (l.weaponGizmos ?? base.weaponGizmos).map((g) => ({ ancient: !!g.ancient, perks: [...(g.perks ?? [])] }));
   out.armourGizmos = (l.armourGizmos ?? base.armourGizmos).map((g) => ({ ancient: !!g.ancient, perks: [...(g.perks ?? [])] }));
   while (out.weaponGizmos.length < 2) out.weaponGizmos.push({ ancient: false, perks: [] });

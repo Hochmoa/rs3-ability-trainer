@@ -4,12 +4,13 @@ import { ResolvedLoadout, defaultResolvedLoadout } from './loadout-resolved';
 import { PROTECTION, PrayerBook, SOUL_SPLIT, bookOf, togglePrayer } from './prayer-rules';
 import { BASE_CRIT_CHANCE, BUFF_DAMAGE_MULT, BUFF_FLAT_ADD, BUFF_TYPE_DAMAGE_MULT, RAGE_MAX, RAGE_PER_STACK, SPIRIT_ATTACKS, TARGET_DAMAGE_ADD, TARGET_DAMAGE_MULT, critMultiplier } from './damage';
 import { MORPH_TARGETS } from './morphs';
-import { BUFF_BY_ID, MODELLED_WIKI_BUFFS, GLOBALS, ruleFor } from './rules';
+import { BUFF_BY_ID, MODELLED_WIKI_BUFFS, GLOBALS, ruleFor, spellBookOf, spellRuleFor } from './rules';
+import { boneShieldTier } from './rules-necromancy';
 import { AbilityRule, ChannelSpec, Condition, Effect, GlobalRule, Requirement, StackId } from './rules-model';
 
 /** does any of these effects (also inside choose / consume-stack) apply a buff or conjure? */
 function appliesBuff(effects: Effect[] | undefined): boolean {
-  return (effects ?? []).some((e) => e.kind === 'buff' || e.kind === 'conjure' || (e.kind === 'choose' && (appliesBuff(e.then) || appliesBuff(e.otherwise))) || (e.kind === 'consume-stack' && appliesBuff(e.then)));
+  return (effects ?? []).some((e) => e.kind === 'buff' || e.kind === 'toggle-buff' || e.kind === 'conjure' || (e.kind === 'choose' && (appliesBuff(e.then) || appliesBuff(e.otherwise))) || (e.kind === 'consume-stack' && appliesBuff(e.then)));
 }
 
 /** One RS3 game tick / server cycle. */
@@ -189,8 +190,8 @@ export type EngineEvent =
   | { kind: 'prayer'; id: string; on: boolean; replaced: string[] }
   /** prayer of the other book – ignored */
   | { kind: 'wrong-book'; id: string; book: PrayerBook }
-  /** enemy attack landed */
-  | { kind: 'attack'; style: Style4; tick: number; prayed: boolean; needed: string }
+  /** enemy attack landed; `absorbed` = buff that blocked it (Disruption Shield, Barricade, Resonance, Divert), `reflected` = Vengeance went off */
+  | { kind: 'attack'; style: Style4; tick: number; prayed: boolean; needed: string; absorbed?: string; reflected?: boolean }
   /** an ability with a running buff was pressed again and released it (Reprisal) */
   | { kind: 'recast'; key: string; tick: number }
   | { kind: 'missed'; keys: string[] }
@@ -278,7 +279,7 @@ export class TrainerEngine {
   wield: Wield = { mainHand: null, offHand: null, twoHand: null };
   /** ids of the active prayers (e.g. "soul-split") */
   activePrayers = new Set<string>();
-  prayerStats: PrayerStats = { ticks: 0, soulSplitTicks: 0, attacks: 0, prayed: 0, hits: 0 };
+  prayerStats: PrayerStats = { ticks: 0, soulSplitTicks: 0, attacks: 0, prayed: 0, hits: 0, absorbed: 0 };
   nextAttack: IncomingAttack | null = null;
   /** life points left on the target (0 when unlimited) */
   targetHp = 0;
@@ -364,7 +365,7 @@ export class TrainerEngine {
     this.relentlessLockUntil = -1;
     this.lastInputTick = null;
     this.activePrayers = new Set();
-    this.prayerStats = { ticks: 0, soulSplitTicks: 0, attacks: 0, prayed: 0, hits: 0 };
+    this.prayerStats = { ticks: 0, soulSplitTicks: 0, attacks: 0, prayed: 0, hits: 0, absorbed: 0 };
     this.attackHistory = [];
     this.cycleIndex = 0;
     this.nextAttack = null;
@@ -612,6 +613,10 @@ export class TrainerEngine {
     if (e.kind === 'prayer') {
       const book = bookOf(prayerId(key));
       return book && book !== this.prayerBook ? 'book' : 'ok';
+    }
+    if (e.kind === 'spell') {
+      const book = spellBookOf(e.id);
+      if (book && book !== this.loadout.spellbook) return 'book';
     }
     if (this.weaponFailure(e)) return 'weapon';
     const b = this.blocker(e, tick);
@@ -1053,7 +1058,7 @@ export class TrainerEngine {
     }
 
     // buffs: rules first, wiki data as fallback
-    const appliesBuff = (e: Effect) => e.kind === 'buff' || e.kind === 'choose' || e.kind === 'conjure' || e.kind === 'stack' || e.kind === 'stack-set';
+    const appliesBuff = (e: Effect) => e.kind === 'buff' || e.kind === 'toggle-buff' || e.kind === 'remove-buff' || e.kind === 'choose' || e.kind === 'conjure' || e.kind === 'stack' || e.kind === 'stack-set';
     const ruleAppliesBuffs = !!rule?.buffs || !!rule?.onCast?.some(appliesBuff) || !!rule?.onHit?.some(appliesBuff) || !!rule?.hitBuffs;
     if (rule?.buffs) {
       for (const id of rule.buffs) this.applyBuff(id, tick, entity.key);
@@ -1194,7 +1199,7 @@ export class TrainerEngine {
 
   /** Abilities that hit the target (for hit effects) unless the rule/data says otherwise. */
   private isDamaging(acting: EngineEntity, rule: AbilityRule | undefined): boolean {
-    if (acting.kind === 'prayer' || acting.kind === 'special' || acting.kind === 'action' || acting.kind === 'weapon') return false;
+    if (acting.kind === 'prayer' || acting.kind === 'special' || acting.kind === 'action' || acting.kind === 'weapon' || acting.kind === 'spell') return false;
     if (rule?.offGcd) return false;
     if (rule?.onHit || rule?.hitBuffs) return true;
     // self-buff abilities (Berserk, Sunshine ...) have wiki buffs and no hit line; keep them hit-less. A wiki link to a
@@ -1493,6 +1498,14 @@ export class TrainerEngine {
       case 'remove-buff':
         this.removeBuff(eff.id);
         break;
+      case 'toggle-buff':
+        if (this.hasBuff(eff.id)) {
+          this.removeBuff(eff.id);
+        } else {
+          for (const id of eff.excludes ?? []) this.removeBuff(id);
+          this.applyBuff(eff.id, tick, entity.key);
+        }
+        break;
       case 'cooldown-reset':
         for (const id of eff.abilities) {
           this.readyTick.delete('ability:' + id);
@@ -1582,12 +1595,15 @@ export class TrainerEngine {
     if (r.adrenalineMin !== undefined && this.adrenaline < r.adrenalineMin) return false;
     if (r.notStunImmune && this.buffs.some((b) => BUFF_BY_ID.get(b.id)?.stunImmune)) return false;
     if (r.style && this.loadout.style !== r.style) return false;
+    if (r.spellbook && this.loadout.spellbook !== r.spellbook) return false;
     if (r.equipment) {
       const l = this.loadout;
+      // an active bone shield stands in for a shield – except for the offensive shield abilities (Bash, Revenge)
+      const bone = !r.offensive && this.boneShieldTier > 0;
       switch (r.equipment) {
         case '2h': if (!l.has2h) return false; break;
-        case 'shield': if (!l.hasShield) return false; break;
-        case 'defender-or-shield': if (!l.hasShield && !l.hasDefender) return false; break;
+        case 'shield': if (!l.hasShield && !bone) return false; break;
+        case 'defender-or-shield': if (!l.hasShield && !l.hasDefender && !bone) return false; break;
         case 'conduit': if (!l.hasConduit) return false; break;
         case 'spec-weapon': if (!l.weaponSpec) return false; break;
         case 'eof': if (!l.eofSpec || (l.style && l.eofSpec.style && l.eofSpec.style !== l.style)) return false; break;
@@ -1602,7 +1618,7 @@ export class TrainerEngine {
     let duration: number | null = durationOverride !== undefined ? durationOverride : def ? def.durationTicks : 3;
     if (durationOverride === undefined && def?.durationByShieldTier) {
       const t = def.durationByShieldTier;
-      const tier = this.loadout.shieldTier;
+      const tier = this.shieldTier;
       duration = t.base + (tier > 0 ? (t.bonusIfAny ?? 0) + Math.floor(tier / 10) * t.perTen : 0);
     }
     if (duration !== null) {
@@ -1727,11 +1743,23 @@ export class TrainerEngine {
       const needed = this.protectionFor(style);
       const prayed = this.activePrayers.has(needed);
       this.prayerStats.attacks++;
-      if (prayed) this.prayerStats.prayed++;
-      else this.prayerStats.hits++;
-      const guardian = this.spirits.get('phantom-guardian');
-      if (guardian && tick - guardian.sinceTick > 5) this.setStacks('valour', this.stack('valour') + 1, tick, 'spirit:phantom-guardian');
-      this.events.push({ kind: 'attack', style, tick, prayed, needed });
+      // Barricade blocks everything while it runs; Disruption Shield, Resonance and Divert block one hit and are used up
+      const absorbed = this.absorbAttack();
+      let reflected = false;
+      if (absorbed) {
+        this.prayerStats.absorbed = (this.prayerStats.absorbed ?? 0) + 1;
+      } else {
+        if (prayed) this.prayerStats.prayed++;
+        else this.prayerStats.hits++;
+        // Vengeance goes off on the first hit that lands (a blocked hit does not trigger it)
+        if (this.hasBuff('vengeance')) {
+          this.removeBuff('vengeance');
+          reflected = true;
+        }
+        const guardian = this.spirits.get('phantom-guardian');
+        if (guardian && tick - guardian.sinceTick > 5) this.setStacks('valour', this.stack('valour') + 1, tick, 'spirit:phantom-guardian');
+      }
+      this.events.push({ kind: 'attack', style, tick, prayed, needed, absorbed: absorbed ?? undefined, reflected });
       this.scheduleAttack(tick + Math.max(1, this.config.enemy!.intervalTicks));
     } else if (this.activePrayers.has(SOUL_SPLIT)) {
       this.prayerStats.soulSplitTicks++;
@@ -1822,7 +1850,38 @@ export class TrainerEngine {
   // ---------------------------------------------------------------- helpers
 
   ruleOf(e: EngineEntity): AbilityRule | undefined {
-    return e.kind === 'ability' ? ruleFor(e.id) : undefined;
+    return e.kind === 'ability' ? ruleFor(e.id) : e.kind === 'spell' ? spellRuleFor(e.id) : undefined;
+  }
+
+  /** Tier of an active bone shield (Lesser 25% / Greater 50% of the Necromancy level, plus Zemouregal's nexus); 0 without one. */
+  get boneShieldTier(): number {
+    for (const b of this.buffs) {
+      const share = BUFF_BY_ID.get(b.id)?.shieldTierShare;
+      if (share) return boneShieldTier(share, this.loadout.boneShieldLevelBonus);
+    }
+    return 0;
+  }
+
+  /** Shield tier the defensive abilities use: the worn shield (defender half), else an active bone shield. */
+  get shieldTier(): number {
+    const l = this.loadout;
+    if (l.hasShield || l.hasDefender) return l.shieldTier;
+    return this.boneShieldTier;
+  }
+
+  /** Which buff blocks the attack landing now: Barricade (kept), else Disruption Shield, Resonance or Divert (used up). Null = the hit lands. */
+  private absorbAttack(): string | null {
+    const all = this.buffs.find((b) => BUFF_BY_ID.get(b.id)?.absorbs === 'all');
+    if (all) return all.id;
+    // Disruption Shield takes priority over Resonance / Divert
+    const order = ['disruption-shield', ...this.buffs.map((b) => b.id)];
+    for (const id of order) {
+      if (this.hasBuff(id) && BUFF_BY_ID.get(id)?.absorbs === 'next') {
+        this.removeBuff(id);
+        return id;
+      }
+    }
+    return null;
   }
 
   /** Weapon Special Attack / Essence of Finality steps act as the wielded weapon's spec; spec steps act as themselves. */

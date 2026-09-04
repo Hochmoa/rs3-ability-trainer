@@ -2,7 +2,7 @@
  * Data model for ability interactions. The engine evaluates these at fixed hook points; it never
  * knows an ability by name. Every rule carries the wiki source for the tooltip.
  */
-import { AbilityType, Style } from '../core/models';
+import { AbilityType, Spellbook, Style } from '../core/models';
 
 /**
  * Stacking buffs ("stacks"): counters like Bloodlust or Necrosis. They are ordinary buffs whose
@@ -64,6 +64,12 @@ export interface BuffDef {
   locksAbilities?: boolean;
   /** duration from the shield tier (defenders count half): base + bonusIfAny + ⌊tier / 10⌋ · perTen (Barricade 8 + ⌊t/10⌋, Debilitate 13 / 14 + ⌊t/10⌋) */
   durationByShieldTier?: { base: number; perTen: number; bonusIfAny?: number };
+  /** no timer: stays until it blocks / reflects a hit or is toggled off (Disruption Shield, Vengeance, bone shields, auto-cast selections) */
+  untilConsumed?: boolean;
+  /** bone shield: counts as a shield of tier ⌊share × Necromancy level⌋ (+ nexus bonus) for shield requirements and durations */
+  shieldTierShare?: number;
+  /** blocks incoming attacks: 'next' = one hit and the buff is consumed (Disruption Shield, Resonance, Divert), 'all' = every hit while active (Barricade) */
+  absorbs?: 'next' | 'all';
   /** icon path override (else the wiki buff icon, else the source ability's icon) */
   icon?: string;
   /** effect description for the tooltip */
@@ -125,7 +131,9 @@ export type Effect =
   | { kind: 'flag'; flag: string; value: boolean }
   | { kind: 'conjure'; spirit: string; durationTicks: number }
   | { kind: 'dismiss'; spirit: string; reconjureAfterTicks?: number }
-  | { kind: 'choose'; when: Condition; then: Effect[]; otherwise?: Effect[] };
+  | { kind: 'choose'; when: Condition; then: Effect[]; otherwise?: Effect[] }
+  /** toggle: active → removed, else applied and every buff in `excludes` removed (bone shields, auto-cast spell selection) */
+  | { kind: 'toggle-buff'; id: string; excludes?: string[] };
 
 export interface Requirement {
   /** human text, e.g. "needs 2 Residual Souls" */
@@ -143,8 +151,12 @@ export interface Requirement {
   adrenalineBelow?: number;
   adrenalineMin?: number;
   equipment?: '2h' | 'shield' | 'defender-or-shield' | 'conduit' | 'spec-weapon' | 'eof';
+  /** offensive shield ability (Bash, Revenge): an active bone shield does not satisfy the shield requirement */
+  offensive?: boolean;
   style?: Style;
   notStunImmune?: boolean;
+  /** spell of this book: the loadout's spellbook must match */
+  spellbook?: Spellbook;
 }
 
 export interface CostRule {

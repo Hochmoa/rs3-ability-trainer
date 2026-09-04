@@ -4,14 +4,16 @@
  */
 import { describe, expect, it } from 'vitest';
 import ABILITIES from '../../../public/data/abilities.json';
-import { Ability } from '../core/models';
+import SPELLS from '../../../public/data/spells.json';
+import { Ability, Spell } from '../core/models';
 import { BUFF_DAMAGE_MULT, TARGET_DAMAGE_MULT } from './damage';
 import { MORPH_TARGETS } from './morphs';
-import { ABILITY_RULES, BUFF_BY_ID, GLOBALS } from './rules';
+import { ABILITY_RULES, BUFF_BY_ID, GLOBALS, SPELL_RULES } from './rules';
 import { AbilityRule, Condition, Effect, Requirement } from './rules-model';
 
 const DATA = ABILITIES as unknown as Ability[];
 const ABILITY_IDS = new Set(DATA.map((a) => a.id));
+const SPELL_DATA = SPELLS as unknown as Spell[];
 
 function buffsInCondition(c: Condition | undefined, out: Set<string>): void {
   if (!c) return;
@@ -26,6 +28,10 @@ function buffsInEffects(effects: Effect[] | undefined, out: Set<string>): void {
       case 'buff':
       case 'remove-buff':
         out.add(e.id);
+        break;
+      case 'toggle-buff':
+        out.add(e.id);
+        for (const id of e.excludes ?? []) out.add(id);
         break;
       case 'extend-buff':
         out.add(e.buff);
@@ -64,9 +70,17 @@ describe('rule set invariants', () => {
     expect(unknown).toEqual([]);
   });
 
+  it('every spell rule belongs to a spell in spells.json, every spell has a rule that names its spellbook', () => {
+    const byId = new Map(SPELL_DATA.map((s) => [s.id, s]));
+    const unknown = SPELL_RULES.map((r) => r.ability).filter((id) => !byId.has(id));
+    expect(unknown).toEqual([]);
+    const wrongBook = SPELL_DATA.filter((s) => SPELL_RULES.find((r) => r.ability === s.id)?.requires?.find((q) => q.spellbook)?.spellbook !== s.book).map((s) => s.id);
+    expect(wrongBook).toEqual([]);
+  });
+
   it('every buff a rule, global rule or damage table refers to is defined', () => {
     const missing = new Set<string>();
-    for (const r of ABILITY_RULES) for (const id of buffsInRule(r)) if (!id.includes(':') && !BUFF_BY_ID.has(id)) missing.add(r.ability + ' → ' + id);
+    for (const r of [...ABILITY_RULES, ...SPELL_RULES]) for (const id of buffsInRule(r)) if (!id.includes(':') && !BUFF_BY_ID.has(id)) missing.add(r.ability + ' → ' + id);
     for (const g of GLOBALS) {
       const out = new Set<string>();
       buffsInEffects(g.onCast, out);
@@ -80,8 +94,8 @@ describe('rule set invariants', () => {
     expect([...missing]).toEqual([]);
   });
 
-  it('every buff definition has a duration, or is a stack / spirit that ends on its own', () => {
-    const odd = [...BUFF_BY_ID.values()].filter((b) => b.durationTicks === null && !b.stacks && !b.id.startsWith('spirit-')).map((b) => b.id);
+  it('every buff definition has a duration, or is a stack / spirit / until-consumed effect that ends on its own', () => {
+    const odd = [...BUFF_BY_ID.values()].filter((b) => b.durationTicks === null && !b.stacks && !b.untilConsumed && !b.id.startsWith('spirit-')).map((b) => b.id);
     expect(odd).toEqual([]);
   });
 

@@ -493,6 +493,10 @@ export class Loadout {
     this.patch({ prayerBook: v === 'Prayers' ? 'Prayers' : 'Curses' });
   }
 
+  setSpellbook(v: string): void {
+    this.patch({ spellbook: v === 'ancient' || v === 'lunar' ? v : 'standard' });
+  }
+
   hasRelic(id: string): boolean {
     return this.l().relics.includes(id);
   }

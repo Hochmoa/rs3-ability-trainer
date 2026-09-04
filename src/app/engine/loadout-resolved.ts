@@ -1,5 +1,5 @@
 /** What the engine needs to know about the player's equipment, perks, relics and unlocks. */
-import { Style } from '../core/models';
+import { Spellbook, Style } from '../core/models';
 import { ChannelSpec, StackId } from './rules-model';
 import type { EngineEntity } from './trainer-engine';
 
@@ -65,6 +65,12 @@ export interface ResolvedLoadout {
   hasDefender: boolean;
   /** necromancy siphon + conduit */
   hasConduit: boolean;
+  /** a nexus (Deathwarden, Zemouregal's, the Devourer's) in the ammunition slot – the rune store of the bone shields */
+  hasNexus: boolean;
+  /** Zemouregal's nexus (Fortified Bones): levels added to an active bone shield */
+  boneShieldLevelBonus: number;
+  /** active spellbook – spells of another book cannot be cast */
+  spellbook: Spellbook;
   weaponType: 'bow' | 'crossbow' | 'other' | null;
   /** special attack of the wielded weapon, as an entity */
   weaponSpec: EngineEntity | null;
@@ -116,6 +122,9 @@ export function defaultResolvedLoadout(): ResolvedLoadout {
     shieldTier: 0,
     hasDefender: false,
     hasConduit: false,
+    hasNexus: false,
+    boneShieldLevelBonus: 0,
+    spellbook: 'standard',
     weaponType: null,
     weaponSpec: null,
     eofSpec: null,

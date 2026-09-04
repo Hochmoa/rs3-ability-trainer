@@ -5,6 +5,7 @@
 import { EquipSlot, GearItem, Gizmo, ItemRef, Loadout, Perk, SetEffect, Style, WEAPON_SETS, Weapon, WeaponSpec, loadoutWield } from '../core/models';
 import { abilityDamageOf } from './damage';
 import { ruleFor } from './rules';
+import { FORTIFIED_BONES_BONUS } from './rules-necromancy';
 import { ResolvedLoadout, defaultResolvedLoadout } from './loadout-resolved';
 import type { EngineEntity } from './trainer-engine';
 
@@ -139,6 +140,13 @@ export function resolveLoadout(l: Loadout, data: LoadoutData): ResolvedLoadout {
     if (spec) r.eofSpec = data.specEntity(spec);
   }
   if (off?.name === 'Soulbound lantern' || off?.name.startsWith('Soulbound lantern')) r.stackCaps['residual-souls'] = 5;
+  r.spellbook = l.spellbook ?? 'standard';
+  // nexus in the ammunition slot: rune store of the bone shields; Zemouregal's adds 15 levels (Fortified Bones)
+  for (const g of wn.gear) {
+    if (g.slot !== 'ammo' || !g.item.id.includes('nexus')) continue;
+    r.hasNexus = true;
+    if (g.item.id === 'zemouregal-s-nexus') r.boneShieldLevelBonus = FORTIFIED_BONES_BONUS;
+  }
 
   // relics
   if (l.relics.includes('fury-of-the-small')) r.basicGainAdd += 1;

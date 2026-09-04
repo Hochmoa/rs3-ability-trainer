@@ -12,8 +12,8 @@ export const DEFCON_RULES: AbilityRule[] = [
   },
   {
     ability: 'bash',
-    requires: [{ text: 'needs a shield or defender', equipment: 'defender-or-shield' }],
-    notes: ['Needs a shield or defender (' + W + 'Bash )'],
+    requires: [{ text: 'needs a shield or defender (a bone shield does not count)', equipment: 'defender-or-shield', offensive: true }],
+    notes: ['Needs a shield or defender; classed as offensive, so a Bone Shield does not enable it (' + W + 'Bash )'],
   },
   {
     ability: 'provoke',
@@ -55,8 +55,8 @@ export const DEFCON_RULES: AbilityRule[] = [
   {
     ability: 'revenge',
     cost: THRESHOLD,
-    requires: [{ text: 'needs a shield or defender', equipment: 'defender-or-shield' }],
-    notes: ['Threshold, shield/defender: +5% damage per attack received (max 10 stacks) for 32 ticks (' + W + 'Revenge )'],
+    requires: [{ text: 'needs a shield or defender (a bone shield does not count)', equipment: 'defender-or-shield', offensive: true }],
+    notes: ['Threshold, shield/defender: +5% damage per attack received (max 10 stacks) for 32 ticks; classed as offensive, so a Bone Shield does not enable it (' + W + 'Revenge )'],
     onCast: [{ kind: 'buff', id: 'revenge' }],
   },
   {

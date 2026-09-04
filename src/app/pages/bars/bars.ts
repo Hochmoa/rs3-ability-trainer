@@ -4,14 +4,14 @@ import { RouterLink } from '@angular/router';
 import { groupCatalog } from '../../core/catalog-groups';
 import { DataService, Entity } from '../../core/data.service';
 import { keybindLabel } from '../../core/keybind.util';
-import { ActionBarSetup, BAR_POSITION_NAMES, RotationStep, STYLES, STYLES4, Style4, WEAPON_TYPES, WeaponType } from '../../core/models';
+import { ActionBarSetup, BAR_POSITION_NAMES, RotationStep, SPELLBOOKS, SPELLBOOK_NAMES, STYLES, STYLES4, Style4, WEAPON_TYPES, WeaponType } from '../../core/models';
 import { isObscureEntity } from '../../core/obscure';
 import { StorageService } from '../../core/storage.service';
 import { AbilityIcon } from '../../shared/ability-icon';
 import { EntityTip } from '../../shared/tooltip';
 import { DialogService } from '../../shared/dialog';
 
-const TABS = [...STYLES, 'Prayers', 'Curses', 'Special', 'Weapons'] as const;
+const TABS = [...STYLES, 'Prayers', 'Curses', 'Spells', 'Special', 'Weapons'] as const;
 type Tab = (typeof TABS)[number];
 const TYPE_ORDER: Record<string, number> = { Basic: 0, Enhanced: 1, Threshold: 2, Ultimate: 3, Incantation: 4, Special: 5 };
 
@@ -88,7 +88,8 @@ export class Bars {
     const hide = this.hideObscure();
     const byId = this.data.weaponById();
     const all = this.data.entities().filter((e) => !hide || !isObscureEntity(e, byId));
-    const list = q ? all.filter((e) => e.name.toLowerCase().includes(q)) : all.filter((e) => e.group === this.tab());
+    const tab = this.tab();
+    const list = q ? all.filter((e) => e.name.toLowerCase().includes(q)) : all.filter((e) => (tab === 'Spells' ? e.kind === 'spell' : e.group === tab));
     return [...list].sort((a, b) => {
       if (a.kind !== b.kind) return a.kind.localeCompare(b.kind);
       if (a.ability && b.ability) {
@@ -96,12 +97,18 @@ export class Bars {
         return t || a.ability.level - b.ability.level || a.name.localeCompare(b.name);
       }
       if (a.prayer && b.prayer) return a.prayer.level - b.prayer.level || a.name.localeCompare(b.name);
+      if (a.spell && b.spell) return SPELLBOOKS.indexOf(a.spell.book) - SPELLBOOKS.indexOf(b.spell.book) || a.spell.level - b.spell.level || a.name.localeCompare(b.name);
       return a.name.localeCompare(b.name);
     });
   });
 
   /** the catalog with a header per ability type (Basic → Enhanced → Threshold → Ultimate …), like the ability book */
   readonly catalogGroups = computed(() => groupCatalog(this.catalog()));
+
+  /** spells of a book other than the loadout's are shown greyed – they cannot be cast while training */
+  otherBook(e: Entity): boolean {
+    return !!e.spell && e.spell.book !== (this.storage.loadout().spellbook ?? 'standard');
+  }
 
   /** which positions / bindings show a preset – for the list */
   usage(presetId: number): string {
@@ -275,6 +282,7 @@ export class Bars {
     if (e.prayer) return 'level ' + e.prayer.level;
     if (e.special) return '+' + (e.special.adrenaline || e.special.adrenalineOverTime) + '% adrenaline';
     if (e.weapon) return 'weapon switch';
+    if (e.spell) return SPELLBOOK_NAMES[e.spell.book] + ' · level ' + e.spell.level + (e.spell.gcd ? '' : ' · no GCD');
     return '';
   }
 }
