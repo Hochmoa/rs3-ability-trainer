@@ -24,6 +24,7 @@
 <div class="tabs">
   <button class="tab" [class.active]="tab() === 'users'" (click)="tab.set('users')">Users</button>
   <button class="tab" [class.active]="tab() === 'feedback'" (click)="tab.set('feedback')">Feedback ({{ feedback().length }})</button>
+  <button class="tab" [class.active]="tab() === 'errors'" (click)="tab.set('errors')">Errors ({{ errorStats().groups }})</button>
 </div>
 
 @if (tab() === 'users') {
@@ -138,6 +139,57 @@
             }
           </tbody>
         </table>
+      </div>
+    }
+  </div>
+} @else if (tab() === 'errors') {
+  <div class="panel">
+    <div class="err-toolbar">
+      <input type="search" placeholder="Search message, page, user, build…" [ngModel]="errorSearch()" (ngModelChange)="errorSearch.set($event)" />
+      <span class="muted small">{{ errorStats().total }} reports · {{ errorStats().groups }} distinct · {{ errorStats().today }} in the last 24 h · newest 1000 loaded</span>
+      <span class="spacer"></span>
+      <button class="btn btn-sm" (click)="testError()" title="Throws an error in this browser – it should show up here after a reload">Throw test error</button>
+      @if (isAdmin() && errors().length) {
+        <button class="btn btn-sm danger" (click)="clearErrors()">Clear all</button>
+      }
+    </div>
+    @if (!errorGroups().length) {
+      <p class="muted">No front-end errors reported{{ errorSearch() ? ' for this search' : '' }}.</p>
+    }
+    @for (g of errorGroups(); track g.fingerprint) {
+      <div class="err" [class.open]="openError() === g.fingerprint">
+        <div class="err-head" (click)="toggleError(g.fingerprint)">
+          <span class="count" [title]="g.count + ' reports'">{{ g.count }}×</span>
+          <span class="source">{{ g.source }}</span>
+          <b class="msg">{{ g.message }}</b>
+          <span class="spacer"></span>
+          <span class="muted small when">last {{ g.last | date: 'yyyy-MM-dd HH:mm' }}</span>
+        </div>
+        <div class="err-meta muted small">
+          <span>first {{ g.first | date: 'yyyy-MM-dd HH:mm' }}</span>
+          <span>· users: {{ joined(g.users) }}</span>
+          @if (g.pages.size) { <span>· pages: {{ joined(g.pages) }}</span> }
+          @if (g.builds.size) { <span>· builds: {{ joined(g.builds) }}</span> }
+          <span class="spacer"></span>
+          @if (isAdmin()) {
+            <button class="btn btn-sm danger" (click)="deleteErrorGroup(g); $event.stopPropagation()">Delete</button>
+          }
+        </div>
+        @if (openError() === g.fingerprint) {
+          <div class="err-body">
+            @for (r of g.rows; track r.id) {
+              <div class="report">
+                <div class="muted small">
+                  {{ r.created_at | date: 'yyyy-MM-dd HH:mm:ss' }} · {{ r.display_name ?? (r.user_id ? r.user_id.slice(0, 8) : 'anonymous') }}
+                  @if (r.page) { · {{ r.page }} } @if (r.build) { · {{ r.build }} }
+                  @if (r.extra?.['viewport']) { · {{ r.extra?.['viewport'] }} }
+                </div>
+                @if (r.stack) { <pre>{{ r.stack }}</pre> } @else { <pre class="muted">{{ r.message }}</pre> }
+                @if (r.user_agent) { <div class="muted tiny">{{ r.user_agent }}</div> }
+              </div>
+            }
+          </div>
+        }
       </div>
     }
   </div>

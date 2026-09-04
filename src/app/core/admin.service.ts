@@ -30,6 +30,22 @@ export interface AdminRotation {
   updated_at: string;
 }
 
+/** a row of client_errors (0009_client_errors.sql) */
+export interface ErrorRow {
+  id: string;
+  created_at: string;
+  user_id: string | null;
+  display_name: string | null;
+  source: string;
+  message: string;
+  stack: string | null;
+  fingerprint: string;
+  page: string | null;
+  build: string | null;
+  user_agent: string | null;
+  extra: Record<string, unknown> | null;
+}
+
 export interface FeedbackRow {
   id: string;
   created_at: string;
@@ -109,6 +125,25 @@ export class AdminService {
 
   async deleteFeedback(id: string): Promise<void> {
     const { error } = await this.client.from('feedback').delete().eq('id', id);
+    if (error) throw error;
+  }
+
+  /** newest 1000 front-end error reports (staff) */
+  async listErrors(): Promise<ErrorRow[]> {
+    const { data, error } = await this.client.from('client_errors').select('*').order('created_at', { ascending: false }).limit(1000);
+    if (error) throw error;
+    return (data ?? []) as ErrorRow[];
+  }
+
+  /** delete every report of one fingerprint (admin) */
+  async deleteErrorGroup(fingerprint: string): Promise<void> {
+    const { error } = await this.client.from('client_errors').delete().eq('fingerprint', fingerprint);
+    if (error) throw error;
+  }
+
+  /** delete all reports (admin) */
+  async clearErrors(): Promise<void> {
+    const { error } = await this.client.from('client_errors').delete().gte('created_at', '1970-01-01');
     if (error) throw error;
   }
 }

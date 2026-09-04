@@ -2,7 +2,7 @@ import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CanActivateFn, Router } from '@angular/router';
-import { AdminRotation, AdminService, AdminUser, FeedbackRow } from '../../core/admin.service';
+import { AdminRotation, AdminService, AdminUser, ErrorRow, FeedbackRow } from '../../core/admin.service';
 import { DISPLAY_NAME_RE, Role, SupabaseService, errorText } from '../../core/supabase.service';
 import { DialogService } from '../../shared/dialog';
 import { ToastService } from '../../shared/toast';
@@ -34,7 +34,38 @@ export class Admin {
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
   readonly search = signal('');
-  readonly tab = signal<'users' | 'feedback'>('users');
+  readonly tab = signal<'users' | 'feedback' | 'errors'>('users');
+  readonly errors = signal<ErrorRow[]>([]);
+  readonly errorSearch = signal('');
+  /** fingerprint whose reports are expanded */
+  readonly openError = signal<string | null>(null);
+  /** one group per fingerprint, newest first */
+  readonly errorGroups = computed<ErrorGroup[]>(() => {
+    const q = this.errorSearch().trim().toLowerCase();
+    const groups = new Map<string, ErrorGroup>();
+    for (const r of this.errors()) {
+      let g = groups.get(r.fingerprint);
+      if (!g) {
+        g = { fingerprint: r.fingerprint, message: r.message, source: r.source, count: 0, first: r.created_at, last: r.created_at, users: new Set(), pages: new Set(), builds: new Set(), rows: [] };
+        groups.set(r.fingerprint, g);
+      }
+      g.count++;
+      if (r.created_at < g.first) g.first = r.created_at;
+      if (r.created_at > g.last) g.last = r.created_at;
+      g.users.add(r.display_name ?? (r.user_id ? r.user_id.slice(0, 8) : 'anonymous'));
+      if (r.page) g.pages.add(r.page);
+      if (r.build) g.builds.add(r.build.split(' ')[0]);
+      if (g.rows.length < 20) g.rows.push(r);
+    }
+    let list = [...groups.values()].sort((a, b) => (a.last < b.last ? 1 : -1));
+    if (q) list = list.filter((g) => g.message.toLowerCase().includes(q) || [...g.pages].some((p) => p.toLowerCase().includes(q)) || [...g.users].some((u) => u.toLowerCase().includes(q)) || [...g.builds].some((b) => b.includes(q)));
+    return list;
+  });
+  readonly errorStats = computed(() => {
+    const e = this.errors();
+    const day = Date.now() - 24 * 3600 * 1000;
+    return { total: e.length, groups: new Set(e.map((r) => r.fingerprint)).size, today: e.filter((r) => new Date(r.created_at).getTime() > day).length };
+  });
   /** user whose rotations are expanded */
   readonly openUser = signal<string | null>(null);
   readonly rotations = signal<AdminRotation[]>([]);
@@ -71,7 +102,10 @@ export class Admin {
     this.error.set(null);
     try {
       this.users.set(await this.admin.listUsers());
-      if (this.supabase.isStaff()) this.feedback.set(await this.admin.listFeedback());
+      if (this.supabase.isStaff()) {
+        this.feedback.set(await this.admin.listFeedback());
+        this.errors.set(await this.admin.listErrors());
+      }
     } catch (e) {
       this.error.set(errorText(e));
     }
@@ -188,6 +222,47 @@ export class Admin {
     await this.rotationAction(() => this.admin.deleteRotation(r.id), 'Rotation deleted');
   }
 
+  toggleError(fingerprint: string): void {
+    this.openError.set(this.openError() === fingerprint ? null : fingerprint);
+  }
+
+  joined(set: Set<string>, max = 4): string {
+    const list = [...set];
+    return list.slice(0, max).join(', ') + (list.length > max ? ' +' + (list.length - max) : '');
+  }
+
+  async deleteErrorGroup(g: ErrorGroup): Promise<void> {
+    const ok = await this.dialogs.confirm('Delete all ' + g.count + ' reports of this error?', { title: 'Delete error reports', ok: 'Delete', danger: true });
+    if (!ok) return;
+    try {
+      await this.admin.deleteErrorGroup(g.fingerprint);
+      this.errors.update((list) => list.filter((x) => x.fingerprint !== g.fingerprint));
+      this.toasts.show('Error reports deleted');
+    } catch (e) {
+      await this.dialogs.alert(errorText(e), 'That did not work');
+    }
+  }
+
+  async clearErrors(): Promise<void> {
+    const ok = await this.dialogs.confirm('Delete every front-end error report?', { title: 'Clear error reports', ok: 'Delete all', danger: true });
+    if (!ok) return;
+    try {
+      await this.admin.clearErrors();
+      this.errors.set([]);
+      this.toasts.show('All error reports deleted');
+    } catch (e) {
+      await this.dialogs.alert(errorText(e), 'That did not work');
+    }
+  }
+
+  /** throws on purpose, so the pipeline can be checked end to end from the panel */
+  testError(): void {
+    setTimeout(() => {
+      throw new Error('Test error from the admin panel (' + new Date().toISOString() + ')');
+    });
+    this.toasts.show('Test error thrown – reload in a moment to see it');
+  }
+
   async deleteFeedback(f: FeedbackRow): Promise<void> {
     const ok = await this.dialogs.confirm('Delete this feedback entry?', { title: 'Delete feedback', ok: 'Delete', danger: true });
     if (!ok) return;
@@ -199,4 +274,19 @@ export class Admin {
       await this.dialogs.alert(errorText(e), 'That did not work');
     }
   }
+}
+
+/** reports of one fingerprint, as shown on the Errors tab */
+export interface ErrorGroup {
+  fingerprint: string;
+  message: string;
+  source: string;
+  count: number;
+  first: string;
+  last: string;
+  users: Set<string>;
+  pages: Set<string>;
+  builds: Set<string>;
+  /** newest reports (up to 20) */
+  rows: ErrorRow[];
 }
