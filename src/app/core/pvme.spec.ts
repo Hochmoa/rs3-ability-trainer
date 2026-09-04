@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import ABILITIES from '../../../public/data/abilities.json';
 import ALIASES_JSON from '../../../public/data/pvme-aliases.json';
+import FAMILIARS from '../../../public/data/familiars.json';
 import PRAYERS from '../../../public/data/prayers.json';
 import SPECIALS from '../../../public/data/specials.json';
 import SPECS from '../../../public/data/specs.json';
@@ -194,6 +195,7 @@ describe('pvme-aliases.json', () => {
     ...(ABILITIES as { id: string }[]).map((a) => 'ability:' + a.id),
     ...(PRAYERS as { id: string }[]).map((p) => 'prayer:' + p.id),
     ...(SPECIALS as { id: string }[]).map((s) => 'special:' + s.id),
+    ...(FAMILIARS as { scroll?: { id: string } }[]).filter((f) => f.scroll).map((f) => 'special:' + f.scroll!.id), // familiar scrolls are specials too
     ...(SPECS as { id: string }[]).map((s) => 'spec:' + s.id),
     ...(SPELLS as { id: string }[]).map((s) => 'spell:' + s.id),
     ...(WEAPONS as { id: string }[]).map((w) => 'gear:' + w.id),

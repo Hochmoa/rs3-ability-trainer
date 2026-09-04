@@ -130,6 +130,22 @@
       </select>
       <small class="muted">Spells of the other books cannot be cast while training.</small>
     </label>
+    <h3>Familiar</h3>
+    <label>
+      <span>Combat familiar out during the session</span>
+      <select [ngModel]="l().familiar ?? ''" (ngModelChange)="setFamiliar($event)">
+        <option value="">none</option>
+        @for (f of data.familiars(); track f.id) {
+          <option [value]="f.id">{{ f.name }} (level {{ f.level }}) – {{ f.attack.style }}, hits up to {{ f.attack.damageMax }} every {{ seconds(f.attack.everyTicks) }} s</option>
+        }
+      </select>
+      @if (familiar(); as f) {
+        <small class="muted">{{ f.passive }}</small>
+        <small class="muted"><b>{{ f.scroll.name }}</b> ({{ f.scroll.specialPoints }} special move points{{ f.scroll.cooldownTicks ? ', ' + seconds(f.scroll.cooldownTicks) + ' s cooldown' : '' }}): {{ f.scroll.description }} Put the scroll on an action bar to use it while training; the familiar has 60 special move points and regains 15 every 30 s.</small>
+      } @else {
+        <small class="muted">The familiar attacks on its own (like conjured spirits) and makes its scroll usable from the action bars.</small>
+      }
+    </label>
     <h3>Archaeology relics</h3>
     @for (r of RELICS; track r.id) {
       <label class="check">

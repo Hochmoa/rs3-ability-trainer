@@ -3,7 +3,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { forkJoin } from 'rxjs';
 import { ruleFor } from '../engine/rules';
 import { EngineBuff, EngineEntity } from '../engine/trainer-engine';
-import { ACTIONS, Ability, Action, Buff, EntityKind, EquipSlot, GearItem, ItemRef, Perk, Prayer, RotationStep, SPEC_KEY, SPELLBOOK_NAMES, SetEffect, Special, Spell, Style, Weapon, WeaponSpec, entityKey, weaponSlot } from './models';
+import { ACTIONS, Ability, Action, Buff, EntityKind, EquipSlot, Familiar, GearItem, ItemRef, Perk, Prayer, RotationStep, SPEC_KEY, SPELLBOOK_NAMES, SetEffect, Special, Spell, Style, Weapon, WeaponSpec, entityKey, scrollSpecial, weaponSlot } from './models';
 
 /** Anything that can sit in a rotation / get a keybind, in one shape for lists and tooltips. */
 export interface Entity {
@@ -56,7 +56,10 @@ export class DataService {
   readonly abilities = signal<Ability[]>([]);
   readonly buffs = signal<Buff[]>([]);
   readonly prayers = signal<Prayer[]>([]);
+  /** potions and bombs (specials.json) plus the familiar scrolls (familiars.json, kind "scroll") */
   readonly specials = signal<Special[]>([]);
+  /** combat familiars (familiars.json) */
+  readonly familiars = signal<Familiar[]>([]);
   /** combat spells of the three spellbooks (spells.json) */
   readonly spells = signal<Spell[]>([]);
   readonly weapons = signal<Weapon[]>([]);
@@ -76,6 +79,7 @@ export class DataService {
   readonly setEffectById = computed(() => new Map(this.setEffects().map((s) => [s.id, s])));
   readonly gearById = computed(() => new Map(this.gear().map((g) => [g.id, g])));
   readonly specialById = computed(() => new Map(this.specials().map((s) => [s.id, s])));
+  readonly familiarById = computed(() => new Map(this.familiars().map((f) => [f.id, f])));
   readonly spellById = computed(() => new Map(this.spells().map((s) => [s.id, s])));
   readonly entities = computed<Entity[]>(() => [
     ...this.abilities().map<Entity>((a) => ({ key: entityKey('ability', a.id), kind: 'ability', id: a.id, name: a.name, icon: a.icon, group: a.style, ability: a })),
@@ -101,12 +105,14 @@ export class DataService {
       setEffects: this.http.get<SetEffect[]>('data/set-effects.json'),
       aliases: this.http.get<Record<string, string>>('data/pvme-aliases.json'),
       gear: this.http.get<GearItem[]>('data/gear.json'),
+      familiars: this.http.get<Familiar[]>('data/familiars.json'),
     }).subscribe({
       next: (d) => {
         this.abilities.set(d.abilities);
         this.buffs.set(d.buffs);
         this.prayers.set(d.prayers);
-        this.specials.set(d.specials);
+        this.specials.set([...d.specials, ...d.familiars.map(scrollSpecial)]);
+        this.familiars.set(d.familiars);
         this.spells.set(d.spells);
         this.weapons.set(d.weapons);
         this.specs.set(d.specs);
@@ -212,6 +218,7 @@ export class DataService {
       return steps;
     }
     if (key === 'action:weapon-special-attack') return [{ kind: 'ability', id: 'weapon-special-attack' }];
+    if (key.startsWith('note:')) return [{ kind: 'note', id: '', note: key.slice(5) }]; // familiar pouches: "summon Ripper Demon"
     const e = this.byKey().get(key);
     return e ? [{ kind: e.kind, id: e.id }] : null;
   }
@@ -292,6 +299,7 @@ export class DataService {
       sharedCooldown: s.sharedCooldown || undefined,
       adrenalineOverTime: s.adrenalineOverTime > 0 ? { amount: s.adrenalineOverTime, ticks: s.overTimeTicks } : undefined,
       buffs: s.debuff ? [{ id: e.key, name: s.debuff.name, kind: 'Debuff', on: 'target', icon: s.debuff.icon, durationTicks: s.debuff.durationTicks }] : [],
+      scroll: s.kind === 'scroll' && s.familiar ? { familiar: s.familiar, specialPoints: s.specialPoints ?? 0 } : undefined,
     };
   }
 

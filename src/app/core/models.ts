@@ -63,8 +63,12 @@ export interface Prayer {
 export interface Special {
   id: string;
   name: string;
-  /** potion = drunk, bomb = thrown at the target, device = deployed on the ground (Dominion mine) */
-  kind: 'potion' | 'bomb' | 'device';
+  /** potion = drunk, bomb = thrown at the target, device = deployed on the ground (Dominion mine), scroll = a familiar's special move (familiars.json), usable while that familiar is out; costs special move points, no GCD */
+  kind: 'potion' | 'bomb' | 'device' | 'scroll';
+  /** scrolls: familiars.json id of the familiar that performs the move */
+  familiar?: string;
+  /** scrolls: special move points the move costs (a familiar has 60, regains 15 every 30 s) */
+  specialPoints?: number;
   /** bombs: debuff put on the target */
   debuff?: { name: string; durationTicks: number; icon: string | null };
   adrenaline: number;
@@ -78,6 +82,40 @@ export interface Special {
 }
 
 export type EntityKind = 'ability' | 'prayer' | 'special' | 'weapon' | 'spec' | 'action' | 'spell';
+
+/**
+ * A combat familiar (public/data/familiars.json, tools/fetch-familiars.py): attacks on its own every `everyTicks`
+ * ticks for a flat roll of life points (the wiki max hit; the minimum is assumed to be half of it), never critically
+ * strikes and ignores the player's ability damage. Its scroll is a "special:<scroll id>" entity.
+ */
+export interface Familiar {
+  id: string;
+  name: string;
+  /** Summoning level */
+  level: number;
+  icon: string;
+  attack: { everyTicks: number; firstTick: number; style: Style; damageMin: number; damageMax: number };
+  /** passive as text (accuracy boosts, tanking ... are listed only) */
+  passive: string;
+  /** Kal'gerion demon: +1% critical strike chance while it is out */
+  critChanceAdd: number;
+  /** Ripper Demon: hits × (1 + this × missing life point share of the target) */
+  damagePerMissingLp: number;
+  scroll: { id: string; name: string; icon: string; specialPoints: number; cooldownTicks: number; description: string };
+}
+
+/** special move points of every familiar: the bar holds 60 and regains 15 every 30 seconds (runescape.wiki/w/Special_move_points) */
+export const FAMILIAR_SPECIAL_MAX = 60;
+export const FAMILIAR_SPECIAL_REGEN = { amount: 15, everyTicks: 50 };
+
+/** The scroll of a familiar as a "special" entity (specials.json shape) – it sits next to the potions in catalogs and bars. */
+export function scrollSpecial(f: Familiar): Special {
+  return {
+    id: f.scroll.id, name: f.scroll.name, kind: 'scroll', familiar: f.id, specialPoints: f.scroll.specialPoints,
+    adrenaline: 0, adrenalineOverTime: 0, overTimeTicks: 0, cooldownTicks: f.scroll.cooldownTicks, sharedCooldown: '', level: f.level,
+    description: f.scroll.description, icon: f.scroll.icon,
+  };
+}
 
 /** The three spellbooks; a loadout has one active (docs/research/spells.md). */
 export type Spellbook = 'standard' | 'ancient' | 'lunar';
@@ -491,7 +529,7 @@ export interface Loadout {
   weaponGizmos: Gizmo[];
   /** legacy: body + legs gizmos – now stored on the ItemRef */
   armourGizmos: Gizmo[];
-  /** Archaeology relics: fury-of-the-small, conservation-of-energy, heightened-senses, persistent-rage */
+  /** Archaeology relics (RELICS ids) */
   relics: string[];
   /** Necromancy talent Spirit Pact tier 0..3 */
   spiritPact: 0 | 1 | 2 | 3;
@@ -501,6 +539,8 @@ export interface Loadout {
   weaponPoison?: WeaponPoisonTier;
   /** Kwuarm incense sticks potency 0..4: +2.5% poison damage per level */
   kwuarmPotency?: KwuarmPotency;
+  /** combat familiar out during the session (familiars.json id); null = none */
+  familiar?: string | null;
 }
 
 export type OverloadChoice = 'none' | 'overload' | 'supreme' | 'elder';
@@ -514,6 +554,8 @@ export const RELICS: { id: string; name: string; text: string }[] = [
   { id: 'conservation-of-energy', name: 'Conservation of Energy', text: 'Regain 10% adrenaline after an ultimate (stacks with Ring of vigour).' },
   { id: 'heightened-senses', name: 'Heightened Senses', text: 'Maximum adrenaline +10%.' },
   { id: 'persistent-rage', name: 'Persistent Rage', text: 'Out of combat adrenaline builds up instead of draining (no effect in the trainer).' },
+  { id: 'berserker-s-fury', name: "Berserker's Fury", text: 'Up to +5.5% damage the lower your life points are (not bleeds). Life points are not simulated – listed only.' },
+  { id: 'shadow-s-grace', name: "Shadow's Grace", text: 'Surge, Escape, Dive, Bladed Dive and Barge cooldowns −50% (does not stack with the Mobile perk).' },
 ];
 
 export function newLoadout(name = 'Default'): Loadout {
@@ -540,6 +582,7 @@ export function newLoadout(name = 'Default'): Loadout {
     overload: 'elder',
     weaponPoison: 4,
     kwuarmPotency: 0,
+    familiar: null,
   };
 }
 

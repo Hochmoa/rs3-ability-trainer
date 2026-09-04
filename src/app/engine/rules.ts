@@ -2,6 +2,7 @@
 import { Spellbook } from '../core/models';
 import { BUFFS as BASE_BUFFS } from './rules-buffs';
 import { DEFCON_RULES } from './rules-defcon';
+import { FAMILIAR_BUFFS, SCROLL_RULES, scrollRuleFor } from './rules-familiars';
 import { GLOBAL_RULES } from './rules-global';
 import { MAGIC_RULES } from './rules-magic';
 import { MELEE_RULES } from './rules-melee';
@@ -18,7 +19,7 @@ export const RULE_BY_ABILITY = new Map(ABILITY_RULES.map((r) => [r.ability, r]))
 export const SPEC_RULE_BY_ID = new Map(SPEC_RULES.map((r) => [r.ability, r]));
 export const GLOBALS: GlobalRule[] = GLOBAL_RULES;
 /** every status effect the rules know: the shared list plus the ones defined next to their rules */
-export const BUFFS: BuffDef[] = [...BASE_BUFFS, ...NECROMANCY_BUFFS, ...SPELL_BUFFS, ...CONSUMABLE_BUFFS];
+export const BUFFS: BuffDef[] = [...BASE_BUFFS, ...NECROMANCY_BUFFS, ...SPELL_BUFFS, ...CONSUMABLE_BUFFS, ...FAMILIAR_BUFFS];
 export const BUFF_BY_ID = new Map(BUFFS.map((b) => [b.id, b]));
 /** spell rules ("spell:<id>" entities), keyed by spell id – kept apart from the ability rules */
 export const RULE_BY_SPELL = new Map(SPELL_RULES.map((r) => [r.ability, r]));
@@ -28,6 +29,8 @@ export const RULE_BY_ACTION = new Map(ACTION_RULES.map((r) => [r.ability, r]));
 export { SPELL_RULES };
 export { SPEC_RULES };
 export { SPECIAL_RULES, ACTION_RULES };
+/** familiar scroll rules ("special:<scroll id>" entities of kind scroll), keyed by scroll id */
+export { SCROLL_RULES, scrollRuleFor };
 
 export function ruleFor(abilityId: string): AbilityRule | undefined {
   return RULE_BY_ABILITY.get(abilityId);

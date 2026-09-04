@@ -13,7 +13,7 @@ import SPECS from '../../../public/data/specs.json';
 import WEAPONS from '../../../public/data/weapons.json';
 import { Ability, EquipSlot, GearItem, ItemRef, Loadout, Perk, SetEffect, Weapon, WeaponSpec, newLoadout, weaponSlot } from '../core/models';
 import { ResolvedLoadout } from './loadout-resolved';
-import { LoadoutData, NOT_SIMULATED_EFFECT_KINDS, resolveLoadout } from './loadout-resolver';
+import { LoadoutData, NOT_SIMULATED_EFFECT_KINDS, SHADOWS_GRACE_ABILITIES, resolveLoadout } from './loadout-resolver';
 import { EngineConfig, EngineEntity, TICK_MS, TrainerEngine } from './trainer-engine';
 
 const ABILITY_DATA = ABILITIES as unknown as Ability[];
@@ -47,6 +47,10 @@ interface Wear {
   gear?: string[];
   /** passives without a gear.json item (totems, talents, unlocks) – the loadout's legacy item list */
   items?: string[];
+  /** Archaeology relics (RELICS ids) */
+  relics?: string[];
+  /** perks on the first weapon's gizmo */
+  weaponPerks?: { perk: string; rank: number }[];
 }
 
 function wear(w: Wear): Loadout {
@@ -76,6 +80,13 @@ function wear(w: Wear): Loadout {
     eq[g.slot as EquipSlot] = { kind: 'gear', id };
   }
   l.items = [...(w.items ?? [])];
+  l.relics = [...(w.relics ?? [])];
+  if (w.weaponPerks?.length) {
+    const first = w.weapons?.[0];
+    const wp = first ? DATA.weaponById.get(first) : undefined;
+    if (!wp) throw new Error('weaponPerks need a weapon');
+    eq[weaponSlot(wp)] = { kind: 'weapon', id: wp.id, gizmos: [{ ancient: false, perks: [...w.weaponPerks] }] };
+  }
   return l;
 }
 
@@ -554,5 +565,39 @@ describe('gear: every effect kind in set-effects.json is applied or documented a
     const stale = Object.keys(NOT_SIMULATED_EFFECT_KINDS).filter((k) => !ignored.has(k));
     expect(stale, 'allow-listed kinds that are applied after all (or no longer in the data)').toEqual([]);
     expect(kinds.size).toBeGreaterThan(20);
+  });
+});
+
+describe('Archaeology relics (runescape.wiki/w/Relic_powers)', () => {
+  it('Fury of the Small +1 on basics, Conservation of Energy +10 after ultimates, Heightened Senses +10 max adrenaline', () => {
+    const r = resolve({ relics: ['fury-of-the-small', 'conservation-of-energy', 'heightened-senses'] });
+    expect(r.basicGainAdd).toBe(1);
+    expect(r.ultimateRefund).toBe(10);
+    expect(r.maxAdrenaline).toBe(110);
+  });
+
+  it('Conservation of Energy stacks with the Ring of vigour (20 after an ultimate)', () => {
+    expect(resolve({ gear: ['ring-of-vigour'], relics: ['conservation-of-energy'] }).ultimateRefund).toBe(20);
+  });
+
+  it("Shadow's Grace halves the Surge / Escape / Dive / Bladed Dive / Barge cooldowns and does not stack with Mobile", () => {
+    const r = resolve({ relics: ['shadow-s-grace'] });
+    for (const a of SHADOWS_GRACE_ABILITIES) expect(r.cooldownMult[a]).toBe(0.5);
+    expect(r.cooldownMult['anticipation']).toBeUndefined();
+    const both = resolve({ weapons: ['masterwork-staff'], weaponPerks: [{ perk: 'mobile', rank: 1 }], relics: ['shadow-s-grace'] });
+    for (const a of SHADOWS_GRACE_ABILITIES) expect(both.cooldownMult[a]).toBe(0.5);
+  });
+
+  it("Persistent Rage (out of combat) and Berserker's Fury (life points) change nothing in the simulation", () => {
+    const base = resolve({});
+    const r = resolve({ relics: ['persistent-rage', 'berserker-s-fury'] });
+    expect({ ...r, items: [...r.items] }).toEqual({ ...base, items: [...base.items] });
+  });
+
+  it('a loadout saved without relics or familiar resolves like an empty one', () => {
+    const l = wear({});
+    delete (l as Partial<Loadout>).relics;
+    delete (l as Partial<Loadout>).familiar;
+    expect(resolveLoadout(l, DATA).familiar).toBeNull();
   });
 });

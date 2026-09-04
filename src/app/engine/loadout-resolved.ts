@@ -1,5 +1,5 @@
 /** What the engine needs to know about the player's equipment, perks, relics and unlocks. */
-import { Spellbook, Style } from '../core/models';
+import { Familiar, Spellbook, Style } from '../core/models';
 import { ChannelSpec, StackId } from './rules-model';
 import type { EngineEntity } from './trainer-engine';
 
@@ -142,6 +142,8 @@ export interface ResolvedLoadout {
   ruthlessRank: number;
   /** damage multiplier against a target type (Undead / Dragon / Demon Slayer perks 1.07; applies to DoTs too) – EngineConfig.targetType picks one */
   targetTypeDamageMult: Partial<Record<'undead' | 'dragon' | 'demon', number>>;
+  /** combat familiar out during the session: attacks on its own, its scroll is usable (familiars.json) */
+  familiar: Familiar | null;
 }
 
 export function defaultResolvedLoadout(): ResolvedLoadout {
@@ -209,5 +211,6 @@ export function defaultResolvedLoadout(): ResolvedLoadout {
     flanking: null,
     ruthlessRank: 0,
     targetTypeDamageMult: {},
+    familiar: null,
   };
 }

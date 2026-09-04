@@ -149,6 +149,7 @@ export class Train implements OnDestroy {
     perkById: this.data.perkById(),
     setEffectById: this.data.setEffectById(),
     gearById: this.data.gearById(),
+    familiarById: this.data.familiarById(),
     specEntity: (s: WeaponSpec) => this.data.specEntity(s),
   }));
   // ---------------------------------------------------------------- pre-build
@@ -294,7 +295,8 @@ export class Train implements OnDestroy {
     const out = new Set<string>();
     const inv = this.storage.loadout().inventory;
     for (const e of this.stepEntities()) {
-      if (e?.special && !inv.some((r) => r?.kind === 'special' && r.id === e.id)) out.add(e.name + ': not in your backpack (Loadout page)');
+      if (e?.special?.kind === 'scroll' && this.storage.loadout().familiar !== e.special.familiar) out.add(e.name + ': needs the ' + (this.data.familiarById().get(e.special.familiar ?? '')?.name ?? e.special.familiar) + ' familiar (Loadout page)');
+      else if (e?.special && !inv.some((r) => r?.kind === 'special' && r.id === e.id)) out.add(e.name + ': not in your backpack (Loadout page)');
       if (!e?.ability) continue;
       const rule = ruleFor(e.ability.id);
       for (const r of rule?.requires ?? []) {
@@ -755,6 +757,8 @@ export class Train implements OnDestroy {
     for (const id of Object.keys(setup.actionKeybinds ?? {})) add('action:' + id);
     for (const id of loadoutWeapons(this.storage.loadout())) add('weapon:' + id);
     for (const r of this.storage.loadout().inventory) if (r?.kind === 'special') add('special:' + r.id);
+    const familiar = this.storage.loadout().familiar ? this.data.familiarById().get(this.storage.loadout().familiar!) : undefined;
+    if (familiar) add('special:' + familiar.scroll.id);
     for (const s of steps) catalog.set(s.key, s);
     const enemy = this.enemy();
     const l = structuredClone(this.storage.loadout());
@@ -1188,7 +1192,7 @@ export class Train implements OnDestroy {
         break;
       case 'hit': {
         const id = ++this.hitId;
-        const name = ev.key.startsWith('spirit:') ? ev.key.slice(7).replace(/-/g, ' ') : this.name(ev.key);
+        const name = ev.key.startsWith('spirit:') ? ev.key.slice(7).replace(/-/g, ' ') : ev.key.startsWith('familiar:') ? this.data.familiarById().get(ev.key.slice(9))?.name ?? ev.key.slice(9) : this.name(ev.key);
         this.hitsplats.update((l) => [...l.slice(-7), { id, amount: ev.amount, crit: ev.crit, dot: ev.dot, name }]);
         window.setTimeout(() => this.hitsplats.update((l) => l.filter((h) => h.id !== id)), 1800);
         break;

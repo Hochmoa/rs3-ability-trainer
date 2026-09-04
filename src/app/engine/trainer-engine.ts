@@ -1,10 +1,10 @@
 import { COMMAND_READY_AFTER, CONJURE_BASE_TICKS } from './rules-necromancy';
-import { AbilityType, CombatMode, EnemyConfig, EntityKind, PrayerStats, Prebuild, RevolutionSettings, SPEC_KEY, StepResult, Style, Style4, isStyle4 } from '../core/models';
+import { AbilityType, CombatMode, EnemyConfig, EntityKind, FAMILIAR_SPECIAL_MAX, FAMILIAR_SPECIAL_REGEN, Familiar, PrayerStats, Prebuild, RevolutionSettings, SPEC_KEY, StepResult, Style, Style4, isStyle4 } from '../core/models';
 import { ResolvedLoadout, defaultResolvedLoadout } from './loadout-resolved';
 import { PROTECTION, PrayerBook, SOUL_SPLIT, bookOf, togglePrayer } from './prayer-rules';
 import { BASE_CRIT_CHANCE, BUFF_DAMAGE_MULT, BUFF_FLAT_ADD, BUFF_TYPE_DAMAGE_MULT, POISON_EVERY_TICKS, POISON_ROLL, RAGE_MAX, RAGE_PER_STACK, SPIRIT_ATTACKS, TARGET_DAMAGE_ADD, TARGET_DAMAGE_MULT, critMultiplier } from './damage';
 import { MORPH_TARGETS } from './morphs';
-import { BUFF_BY_ID, MODELLED_WIKI_BUFFS, GLOBALS, actionRuleFor, ruleFor, specRuleFor, specialRuleFor, spellBookOf, spellRuleFor } from './rules';
+import { BUFF_BY_ID, MODELLED_WIKI_BUFFS, GLOBALS, actionRuleFor, ruleFor, scrollRuleFor, specRuleFor, specialRuleFor, spellBookOf, spellRuleFor } from './rules';
 import { boneShieldTier } from './rules-necromancy';
 import { AbilityRule, ChannelSpec, Condition, Effect, GlobalRule, Requirement, StackId } from './rules-model';
 
@@ -154,6 +154,8 @@ export interface EngineEntity {
   durationTicks?: number;
   /** weapon-switch entities: the item that goes into the hand */
   weapon?: { id: string; slot: 'main' | 'off' | '2h'; style: Style };
+  /** familiar scroll (special of kind "scroll"): needs this familiar out (ResolvedLoadout.familiar) and costs special move points */
+  scroll?: { familiar: string; specialPoints: number };
   /** rotation steps only: PvME "+" (0) / "2t" (2) – expected this many ticks after the previous input's tick */
   offsetTicks?: number;
   /** rotation steps only: free text from an imported rotation, skipped automatically */
@@ -299,6 +301,8 @@ export class TrainerEngine {
   results: StepResult[] = [];
   buffs: ActiveBuff[] = [];
   spirits = new Map<string, Spirit>();
+  /** special move points of the familiar (0..60, +15 every 30 s); scrolls spend them */
+  familiarSpecial = FAMILIAR_SPECIAL_MAX;
   /** buffs that start a few ticks after their cast (Death's Swiftness, Sunshine) */
   private deferred: { tick: number; apply: () => void }[] = [];
   /** flags set by the cast being activated (consume-stack → flag) */
@@ -395,6 +399,7 @@ export class TrainerEngine {
     this.buffs = [];
     this.deferred = [];
     this.spirits.clear();
+    this.familiarSpecial = FAMILIAR_SPECIAL_MAX;
     this.channel = null;
     this.inflight = [];
     this.pending = null;
@@ -819,11 +824,17 @@ export class TrainerEngine {
 
   /** Why an entity cannot cast at `tick` (cooldown, adrenaline, rule requirement), or null. */
   private blocker(entity: EngineEntity, tick: number): EngineEvent | null {
-    if (entity.kind === 'special' && this.config.hasItem && !this.config.hasItem(entity.key)) return { kind: 'requirement', key: entity.key, text: 'not in your inventory' };
+    if (entity.scroll) {
+      const fam = this.loadout.familiar;
+      if (!fam || fam.id !== entity.scroll.familiar) return { kind: 'requirement', key: entity.key, text: 'needs the ' + entity.scroll.familiar.replace(/-/g, ' ') + ' familiar (Loadout page)' };
+    } else if (entity.kind === 'special' && this.config.hasItem && !this.config.hasItem(entity.key)) {
+      return { kind: 'requirement', key: entity.key, text: 'not in your inventory' };
+    }
     const lock = this.buffs.find((b) => BUFF_BY_ID.get(b.id)?.locksAbilities);
     if (lock && entity.kind !== 'prayer') return { kind: 'requirement', key: entity.key, text: 'no abilities while ' + lock.name + ' stuns you' };
     const cd = this.cooldownLeft(entity.key, tick);
     if (cd > 0) return { kind: 'on-cooldown', key: entity.key, readyInTicks: cd };
+    if (entity.scroll && this.familiarSpecial < entity.scroll.specialPoints) return { kind: 'requirement', key: entity.key, text: 'needs ' + entity.scroll.specialPoints + ' special move points (' + this.familiarSpecial + ' left)' };
     const req = this.requirementFailure(entity, tick);
     if (req) return { kind: 'requirement', key: entity.key, text: req };
     const { need } = this.costOf(entity);
@@ -1126,6 +1137,7 @@ export class TrainerEngine {
       }
     }
     this.addAdrenaline(delta);
+    if (entity.scroll) this.familiarSpecial = Math.max(0, this.familiarSpecial - entity.scroll.specialPoints);
     if (acting.adrenalineOverTime && acting.adrenalineOverTime.ticks > 0) {
       this.overTime.push({ key: acting.key, perTick: acting.adrenalineOverTime.amount / acting.adrenalineOverTime.ticks, untilTick: tick + acting.adrenalineOverTime.ticks });
     }
@@ -1590,6 +1602,25 @@ export class TrainerEngine {
     this.applyDamage('perk:aftershock', Math.floor(a.perRank * a.rank * roll * this.loadout.abilityDamage + 1e-6), false, false, tick);
   }
 
+  /**
+   * One familiar hit: a flat roll between the data's min and max life points (no ability damage, no crit, no style buffs);
+   * Death From Above turns the next hit into 200–320% of the max hit; the Ripper Demon deals up to +5% the lower the
+   * target's life points; target debuffs (Vulnerability, Haunted) apply like to every other hit.
+   */
+  private familiarAttack(fam: Familiar, tick: number): void {
+    const a = fam.attack;
+    let amount = a.damageMin + this.random() * (a.damageMax - a.damageMin);
+    if (this.hasBuff('death-from-above')) {
+      this.removeBuff('death-from-above');
+      amount = a.damageMax * (2 + this.random() * 1.2);
+    }
+    const lp = this.config.targetLifePoints;
+    if (fam.damagePerMissingLp && lp) amount *= 1 + fam.damagePerMissingLp * Math.max(0, 1 - this.targetHp / lp);
+    for (const m of TARGET_DAMAGE_MULT) if (!m.dotsOnly && this.hasBuff(m.buff)) amount *= m.mult;
+    amount += this.targetDamageAdd(amount);
+    this.applyDamage('familiar:' + fam.id, Math.floor(amount + 1e-6), false, false, tick);
+  }
+
   private applyDamage(key: string, amount: number, crit: boolean, dot: boolean, tick: number): void {
     if (amount <= 0) return;
     this.damageDealt += amount;
@@ -1959,6 +1990,12 @@ export class TrainerEngine {
         this.buffs = this.buffs.filter((b) => b.spirit !== name);
       }
     }
+    // the familiar (Loadout page) attacks on its own and regains special move points
+    const fam = this.loadout.familiar;
+    if (fam) {
+      if (tick > 0 && tick % FAMILIAR_SPECIAL_REGEN.everyTicks === 0) this.familiarSpecial = Math.min(FAMILIAR_SPECIAL_MAX, this.familiarSpecial + FAMILIAR_SPECIAL_REGEN.amount);
+      if (tick >= fam.attack.firstTick && (tick - fam.attack.firstTick) % fam.attack.everyTicks === 0) this.familiarAttack(fam, tick);
+    }
     for (const [group, s] of [...this.sequences]) {
       if (s.untilTick < tick) this.sequences.delete(group);
     }
@@ -2082,7 +2119,7 @@ export class TrainerEngine {
   ruleOf(e: EngineEntity): AbilityRule | undefined {
     if (e.kind === 'spec') return specRuleFor(e.id);
     if (e.kind === 'spell') return spellRuleFor(e.id);
-    if (e.kind === 'special') return specialRuleFor(e.id);
+    if (e.kind === 'special') return e.scroll ? scrollRuleFor(e.id) : specialRuleFor(e.id);
     if (e.kind === 'action') return actionRuleFor(e.id);
     if (e.kind !== 'ability') return undefined;
     const rule = ruleFor(e.id);

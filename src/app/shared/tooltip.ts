@@ -505,5 +505,6 @@ function splitNotes(notes: string[] | undefined): Note[] {
 function specialKind(s: Special): string {
   if (s.kind === 'bomb') return 'Bomb';
   if (s.kind === 'device') return 'Device';
+  if (s.kind === 'scroll') return 'Familiar scroll · ' + s.specialPoints + ' special move points';
   return s.adrenaline || s.adrenalineOverTime ? 'Adrenaline potion' : s.id.startsWith('powerburst') ? 'Powerburst' : 'Potion';
 }

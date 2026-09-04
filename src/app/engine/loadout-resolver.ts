@@ -2,7 +2,7 @@
  * Turns a saved Loadout (worn items, perks on them, relics) into the numbers the engine uses.
  * Effect kinds are the ones written in public/data/set-effects.json and perks.json.
  */
-import { EquipSlot, GearItem, Gizmo, ItemRef, Loadout, Perk, SetEffect, Style, WEAPON_SETS, Weapon, WeaponSpec, loadoutWield } from '../core/models';
+import { EquipSlot, Familiar, GearItem, Gizmo, ItemRef, Loadout, Perk, SetEffect, Style, WEAPON_SETS, Weapon, WeaponSpec, loadoutWield } from '../core/models';
 import { KWUARM_PER_POTENCY, WEAPON_POISON_CHANCE, abilityDamageOf, boostedLevel, poisonPct } from './damage';
 import { ruleFor } from './rules';
 import { FORTIFIED_BONES_BONUS } from './rules-necromancy';
@@ -16,6 +16,8 @@ export interface LoadoutData {
   setEffectById: Map<string, SetEffect>;
   /** gear.json (armour, jewellery ...); missing = only weapons are known */
   gearById?: Map<string, GearItem>;
+  /** familiars.json; missing = the loadout's familiar is ignored */
+  familiarById?: Map<string, Familiar>;
   specEntity: (spec: WeaponSpec) => EngineEntity;
 }
 
@@ -183,12 +185,20 @@ export function resolveLoadout(l: Loadout, data: LoadoutData): ResolvedLoadout {
     if (g.item.id === 'zemouregal-s-nexus') r.boneShieldLevelBonus = FORTIFIED_BONES_BONUS;
   }
 
-  // relics
-  if (l.relics.includes('fury-of-the-small')) r.basicGainAdd += 1;
-  if (l.relics.includes('conservation-of-energy')) r.ultimateRefund += 10;
-  if (l.relics.includes('heightened-senses')) r.maxAdrenaline += 10;
+  // relics (runescape.wiki/w/Relic_powers). Persistent Rage (out-of-combat adrenaline) and Berserker's Fury (up to +5.5%
+  // damage the lower the life points – life points are not simulated) change nothing here; Shadow's Grace comes after the perks.
+  const relics = l.relics ?? [];
+  if (relics.includes('fury-of-the-small')) r.basicGainAdd += 1;
+  if (relics.includes('conservation-of-energy')) r.ultimateRefund += 10;
+  if (relics.includes('heightened-senses')) r.maxAdrenaline += 10;
   // Spirit Pact
   r.conjureDurationAdd += [0, 10, 20, 30][l.spiritPact] ?? 0;
+  // familiar: attacks on its own (engine), Kal'gerion demon +1% critical strike chance
+  const fam = l.familiar ? data.familiarById?.get(l.familiar) ?? null : null;
+  if (fam) {
+    r.familiar = fam;
+    r.critChanceAdd += fam.critChanceAdd ?? 0;
+  }
 
   // perks: highest rank per perk counts
   const ranks = new Map<string, number>();
@@ -203,6 +213,8 @@ export function resolveLoadout(l: Loadout, data: LoadoutData): ResolvedLoadout {
   }
   // Equilibrium / Eruptive raise the ability damage stat itself (wiki: "anything calculated from the ability damage stat")
   if (r.abilityDamageMult !== 1) r.abilityDamage = Math.floor(r.abilityDamage * r.abilityDamageMult + 1e-6);
+  // Shadow's Grace: "Reduces the cooldown of Surge, Escape, Bladed Dive, Dive and Barge by 50%. It does not stack with the perk" (Mobile)
+  if (relics.includes('shadow-s-grace')) for (const a of SHADOWS_GRACE_ABILITIES) r.cooldownMult[a] = Math.min(r.cooldownMult[a] ?? 1, 0.5);
 
   // armour set thresholds (every set with worn pieces)
   for (const [setId, pieces] of wn.sets) {
@@ -258,6 +270,9 @@ export const NOT_SIMULATED_EFFECT_KINDS: Record<string, string> = {
   'prayer': 'healing and damage taken are not simulated (Amulet of souls)',
   'spec-adrenaline': 'special attack side effects are not modelled – specs.json (Ek-ZekKil)',
 };
+
+/** abilities whose cooldown Shadow's Grace halves (runescape.wiki/w/Shadow's_Grace) */
+export const SHADOWS_GRACE_ABILITIES = ['surge', 'escape', 'dive', 'bladed-dive', 'barge', 'greater-barge'];
 
 /** Armour sets worn with how many pieces (for the loadout page). */
 export function wornSets(l: Loadout, data: LoadoutData): { set: SetEffect; pieces: number }[] {
