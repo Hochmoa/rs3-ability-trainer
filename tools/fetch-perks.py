@@ -11,28 +11,31 @@ from fetch_wiki import ASSETS, DATA, download, embedded_in, file_of, image_urls,
 REMOVED = {"Antitheism", "Profane", "Inaccurate", "Junk Food", "Undead Bait", "Demon Bait", "Dragon Bait", "Cautious",
            "Mediocrity", "Fatiguing", "Committed", "Butterfingers", "Blunted", "Cheapskate", "Confused"}
 
-# simulator parameters for the combat perks (numbers from the research file; wiki URL = the perk page)
+# simulator parameters for the combat perks (numbers from docs/research/perks.md; wiki URL = the perk page).
+# perks.json was last hand-edited to match this table (2026-09-04) - rerun the script to regenerate it from the wiki.
 COMBAT = {
-    "Impatient": {"class": "adrenaline", "chancePerRank": 0.09, "bonus": 3, "twoSlot": False},
+    "Impatient": {"class": "adrenaline", "chancePerRank": 0.09, "bonus": 3, "twoSlot": False, "level20Mult": 1.1},
     "Invigorating": {"class": "adrenaline", "basicAttackMultPerRank": 0.05},
-    "Relentless": {"class": "adrenaline", "noCostChancePerRank": 0.01, "lockoutTicks": 50},
+    "Relentless": {"class": "adrenaline", "noCostChancePerRank": 0.01, "lockoutTicks": 50, "level20Mult": 1.1},
     "Planted Feet": {"class": "cooldown", "abilities": ["sunshine", "death-s-swiftness"], "durationTicks": 63, "removesDot": True},
     "Mobile": {"class": "cooldown", "abilities": ["surge", "escape", "dive", "bladed-dive", "barge", "greater-barge"], "cooldownMult": 0.5},
     "Preparation": {"class": "cooldown", "abilities": ["preparation"], "durationPerRank": 0.15, "cooldownPerRank": 0.15},
     "Turtling": {"class": "cooldown", "abilities": ["barricade"], "durationPerRank": 0.10, "cooldownPerRank": 0.10},
-    "Devoted": {"class": "cooldown", "chancePerRank": 0.03, "buff": "devotion", "durationTicks": 5},
-    "Enhanced Devoted": {"class": "cooldown", "chancePerRank": 0.045, "buff": "devotion", "durationTicks": 5, "twoSlot": True},
+    "Devoted": {"class": "cooldown", "chancePerRank": 0.03, "buff": "devotion", "durationTicks": 5, "level20Mult": 1.1},
+    "Enhanced Devoted": {"class": "cooldown", "chancePerRank": 0.045, "buff": "devotion", "durationTicks": 5, "twoSlot": True, "level20Mult": 1.1},
     "Brief Respite": {"class": "cooldown", "abilities": ["rejuvenate", "guthix-s-blessing", "ice-asylum"], "cooldownPerRank": -0.05},
-    "Bulwark": {"class": "cooldown", "abilities": ["debilitate"], "durationPerRank": 0.06, "noDamage": True},
-    "Crystal Shield": {"class": "cooldown", "chance": 0.10, "cooldownTicks": 100},
-    "Clear Headed": {"class": "cooldown", "abilities": ["anticipation"], "extraTicksPerRank": 1.67, "removesDamageReduction": True},
+    "Bulwark": {"class": "cooldown", "abilities": ["debilitate"], "durationPerRank": 0.06, "noDamage": True, "minTicksPerRank": 1},
+    "Crystal Shield": {"class": "cooldown", "chance": 0.10, "cooldownTicks": 100, "level20Mult": 1.1},
+    # wiki table: +2 / +3 / +5 / +6 ticks per rank, added after Reflexes halves the duration
+    "Clear Headed": {"class": "cooldown", "abilities": ["anticipation"], "extraTicks": [2, 3, 5, 6], "removesDamageReduction": True},
     "Reflexes": {"class": "cooldown", "abilities": ["anticipation"], "durationMult": 0.5, "cooldownMult": 0.5},
     "Precise": {"class": "damage", "minDamagePerRank": 0.015},
     "Eruptive": {"class": "damage", "abilityDamagePerRank": 0.005},
     "Equilibrium": {"class": "damage", "abilityDamageBase": 0.06, "abilityDamagePerRank": 0.02, "noCrit": True},
-    "Aftershock": {"class": "damage", "damagePerRank": 0.40, "threshold": 50000},
-    "Biting": {"class": "damage", "critChancePerRank": 0.02},
-    "Crackling": {"class": "damage", "damagePerRank": 0.50, "cooldownTicks": 100},
+    # explosion = rank x 40% x (60..99% in 1% steps) of the ability damage (wiki table: rank 1 24-39.6%), at most every 6 s
+    "Aftershock": {"class": "damage", "damagePerRank": 0.40, "threshold": 50000, "minIntervalTicks": 10, "rollMin": 0.6, "rollMax": 0.99},
+    "Biting": {"class": "damage", "critChancePerRank": 0.02, "level20Mult": 1.1},
+    "Crackling": {"class": "damage", "damagePerRank": 0.50, "cooldownTicks": 100, "ignoresStyleBuffs": True},
     "Ultimatums": {"class": "damage", "ultimateBase": 0.03, "ultimatePerRank": 0.01},
     "Lunging": {"class": "damage", "abilities": ["combust", "dismember"], "base": 0.10, "perRank": 0.03},
     "Caroming": {"class": "damage", "ricochetPerRank": 0.04, "chainBase": 0.05, "chainPerRank": 0.05},
@@ -43,9 +46,10 @@ COMBAT = {
     "Dragon Slayer": {"class": "damage", "bonus": 0.07},
     "Demon Slayer": {"class": "damage", "bonus": 0.07},
     "Energising": {"class": "damage", "accuracyBase": 50, "accuracyPerRank": 25},
-    "Spendthrift": {"class": "damage", "chancePerRank": 0.01, "damagePerRank": 0.01},
+    "Spendthrift": {"class": "damage", "chancePerRank": 0.01, "damagePerRank": 0.01, "level20Mult": 1.1},
     "Shield Bashing": {"class": "damage", "abilities": ["debilitate"], "perRank": 0.15},
-    "Absorbative": {"class": "defensive"}, "Lucky": {"class": "defensive"}, "Venomblood": {"class": "defensive"},
+    "Absorbative": {"class": "defensive", "chance": 0.20, "reductionPerRank": 0.05, "level20Mult": 1.1},
+    "Lucky": {"class": "defensive", "chancePerRank": 0.005, "level20Mult": 1.1}, "Venomblood": {"class": "defensive"},
 }
 GIZMO = {"Weapon": ["weapon"], "Armour": ["armour"], "Tool": ["tool"], "Ancient weapon": ["ancient-weapon"],
          "Ancient armour": ["ancient-armour"], "Ancient tool": ["ancient-tool"]}

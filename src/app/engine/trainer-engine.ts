@@ -53,6 +53,10 @@ export interface EngineConfig {
   prayerBook?: PrayerBook;
   /** simulated enemy; only used when enabled */
   enemy?: EnemyConfig;
+  /** the target is not facing the player (Flanking perk applies) */
+  targetFacingAway?: boolean;
+  /** what the target is (Undead / Dragon / Demon Slayer perks apply) */
+  targetType?: 'undead' | 'dragon' | 'demon';
 }
 
 export type UsableReason = 'ok' | 'weapon' | 'book' | 'adrenaline' | 'cooldown' | 'requirement';
@@ -279,6 +283,11 @@ export class TrainerEngine {
   private lastTick = 0;
   private lastAttackTick = -1000;
   private relentlessLockUntil = -1;
+  /** Aftershock: damage dealt since the last explosion, and the tick from which the next one may fire */
+  private aftershockStored = 0;
+  private aftershockReadyTick = 0;
+  /** Crackling: the first attack from this tick on zaps */
+  private cracklingReadyTick = 0;
   /** tick of the last input that counted (cast or off-GCD activation) – reference for "+" / "2t" companions */
   private lastInputTick: number | null = null;
   private attackHistory: Style4[] = [];
@@ -333,6 +342,9 @@ export class TrainerEngine {
     this.readyTick.clear();
     this.chargeReady.clear();
     this.sequences.clear();
+    this.aftershockStored = 0;
+    this.aftershockReadyTick = 0;
+    this.cracklingReadyTick = 0;
     this.reconjureReady.clear();
     this.scheduled = [];
     this.overTime = [];
@@ -1157,6 +1169,8 @@ export class TrainerEngine {
     this.config.loadout = this.config.resolveWield(this.wield);
     this.config.loadout.startAdrenaline = start;
     this.adrenaline = Math.min(this.adrenaline, this.maxAdrenaline);
+    // "switching to a different weapon without the perk resets the stored damage to zero" (Aftershock)
+    if (!this.config.loadout.aftershock) this.aftershockStored = 0;
   }
 
   /** Abilities that hit the target (for hit effects) unless the rule/data says otherwise. */
@@ -1211,7 +1225,9 @@ export class TrainerEngine {
       critAdd += c.add;
     }
     critAdd += h.critAdd + (h.rule?.crit?.chanceAdd ?? 0);
-    const crit = !h.dot && !h.spirit && !h.rule?.crit?.never && (h.guaranteedCrit || critAdd >= 1 || this.random() < BASE_CRIT_CHANCE + critAdd);
+    // Equilibrium: "prevents critically striking" – even guaranteed crits (Smoke Tendrils) are ordinary hits
+    const crit = !this.loadout.critDisabled && !h.dot && !h.spirit && !h.rule?.crit?.never && (h.guaranteedCrit || critAdd >= 1 || this.random() < BASE_CRIT_CHANCE + critAdd);
+    if (!h.dot && !h.spirit) this.crackle(h.tick);
     const outerFlags = this.castFlags;
     this.castFlags = h.flags; // the hit's own effects see the flags of its cast
     for (const eff of h.rule?.onHit ?? []) this.applyEffect(eff, h.tick, h.entity, h.index);
@@ -1266,14 +1282,20 @@ export class TrainerEngine {
     let { min, max } = h.damage!;
     const rules = (h.rule?.damageRules ?? []).filter((d) => this.conditionMet(d.when, h.tick, h.index, h.flags));
     for (const d of rules) if (d.damage) ({ min, max } = d.damage);
-    if (!h.dot) {
-      if (l.preciseRank) min = Math.min(max, min + 0.015 * l.preciseRank * max);
-      if (l.equilibriumRank) {
-        min = Math.min(max, min + 0.03 * l.equilibriumRank * max);
-        max = max * (1 - 0.01 * l.equilibriumRank);
-      }
-    }
+    // Precise: "Increases your minimum damage by 1.5% per rank of your maximum damage." Not DoTs – except Bloat, whose
+    // DoT is a share of its (Precise-rolled) initial hit. Equilibrium / Eruptive live in the ability damage stat (resolver).
+    if (l.preciseRank && (!h.dot || h.entity.id === 'bloat')) min = Math.min(max, min + 0.015 * l.preciseRank * max);
     let amount = ((min + this.random() * Math.max(0, max - min)) / 100 + h.flat) * l.abilityDamage;
+    // Lunging (Combust / Dismember, every bleed hit), Shield Bashing / Bulwark (Debilitate)
+    const perAbility = l.damageMultPerAbility[h.entity.id];
+    if (perAbility !== undefined) amount *= perAbility;
+    // Flanking: "+40% more damage per rank to targets that are not facing you"
+    if (l.flanking && this.config.targetFacingAway && l.flanking.abilities.includes(h.entity.id)) amount *= 1 + l.flanking.perRank * l.flanking.rank;
+    // Spendthrift: "1% chance per rank to deal 1% extra damage per rank" – not bleeds
+    if (l.spendthriftRank && !h.dot && !h.spirit && this.random() < 0.01 * l.spendthriftRank) amount *= 1 + 0.01 * l.spendthriftRank;
+    // Undead / Dragon / Demon Slayer: +7% against that type, bleeds included
+    const typeMult = this.config.targetType ? l.targetTypeDamageMult[this.config.targetType] : undefined;
+    if (typeMult !== undefined) amount *= typeMult;
     if (h.spirit) {
       const sp = this.spirits.get(h.spirit);
       amount *= l.conjureDamageMult;
@@ -1345,11 +1367,43 @@ export class TrainerEngine {
     return flat;
   }
 
+  /**
+   * Crackling: "Periodically zaps your combat target for 50% per rank of your weapon's damage" – a fixed share of the
+   * ability damage on the first attack after the 1-minute cooldown ("triggers on the next attack after the cooldown ends").
+   * No crit, no Precise, no style buffs ("Other damage modifiers are ignored, including Berserk, Death's Swiftness, and Sunshine").
+   */
+  private crackle(tick: number): void {
+    const c = this.loadout.crackling;
+    if (!c || tick < this.cracklingReadyTick) return;
+    this.cracklingReadyTick = tick + c.cooldownTicks;
+    this.applyDamage('perk:crackling', Math.floor(c.perRank * c.rank * this.loadout.abilityDamage + 1e-6), false, false, tick);
+  }
+
+  /**
+   * Aftershock: "After dealing 50,000 damage, create an explosion centered on your current target, dealing up to 40% per
+   * rank weapon damage" – an auto-attack style hit of rank × 40% × (60–99% in 1% steps) of the ability damage (wiki table:
+   * rank 1 24–39.6%), "at most every 6 seconds; if the damage requirement is met again shortly after its previous activation,
+   * the next activation will be delayed". No crit, no Precise. The explosion's own damage is not counted again.
+   */
+  private aftershock(tick: number): void {
+    const a = this.loadout.aftershock;
+    if (!a || this.aftershockStored < a.threshold || tick < this.aftershockReadyTick) return;
+    this.aftershockStored -= a.threshold;
+    this.aftershockReadyTick = tick + a.minIntervalTicks;
+    const steps = Math.round((a.rollMax - a.rollMin) * 100) + 1;
+    const roll = a.rollMin + Math.min(steps - 1, Math.floor(this.random() * steps)) / 100;
+    this.applyDamage('perk:aftershock', Math.floor(a.perRank * a.rank * roll * this.loadout.abilityDamage + 1e-6), false, false, tick);
+  }
+
   private applyDamage(key: string, amount: number, crit: boolean, dot: boolean, tick: number): void {
     if (amount <= 0) return;
     this.damageDealt += amount;
     this.hitCount++;
     this.events.push({ kind: 'hit', key, amount, crit, dot, tick });
+    if (this.loadout.aftershock && key !== 'perk:aftershock') {
+      this.aftershockStored += amount;
+      this.aftershock(tick);
+    }
     if (this.targetHp > 0) {
       this.targetHp = Math.max(0, this.targetHp - amount);
       if (this.targetHp === 0 && this.killedTick === null) {
@@ -1573,8 +1627,11 @@ export class TrainerEngine {
       duration = t.base + (tier > 0 ? (t.bonusIfAny ?? 0) + Math.floor(tier / 10) * t.perTen : 0);
     }
     if (duration !== null) {
-      duration += this.loadout.buffDurationAdd[id] ?? 0;
+      // multiplier first, then the flat ticks: "The additional time from Clear Headed is added after the duration is halved by Reflexes"
       duration = Math.floor(duration * (this.loadout.buffDurationMult[id] ?? 1) + 1e-6);
+      const extra = this.loadout.buffDurationExtra[id];
+      if (extra) duration += Math.max(extra.minTicks, Math.floor(duration * extra.share + 1e-6)); // Bulwark: tB = t + max(R, ⌊t × 0.06R⌋)
+      duration += this.loadout.buffDurationAdd[id] ?? 0;
     }
     const cap = def?.stacks ? this.stackCap(id as StackId) : Infinity;
     const existing = this.buff(id);

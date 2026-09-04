@@ -74,10 +74,33 @@ export interface ResolvedLoadout {
   abilityDamage: number;
   /** extra critical strike chance (Biting 2% per rank) */
   critChanceAdd: number;
-  /** Precise: minimum hit +1.5% of the max per rank */
+  /** Precise: minimum hit +1.5% of the max per rank (not DoTs, except Bloat's initial hit) */
   preciseRank: number;
-  /** Equilibrium: minimum hit +3% per rank, maximum −1% per rank */
+  /** Equilibrium (2024 version): ability damage +6% +2% per rank, no critical strikes – see abilityDamageMult / critDisabled */
   equilibriumRank: number;
+  /**
+   * Multiplier of the ability damage stat itself (Equilibrium 1.08–1.14, Eruptive 1.005 per rank). Applied to `abilityDamage`
+   * at the end of `resolveLoadout`, so it reaches everything rolled from it: DoTs, conjures, Aftershock, Crackling.
+   */
+  abilityDamageMult: number;
+  /** Equilibrium: nothing can critically strike */
+  critDisabled: boolean;
+  /** ability id → damage multiplier of every hit incl. DoTs (Lunging: Combust / Dismember ×1.13–1.22; Shield Bashing: Debilitate ×1.15–1.6; Bulwark: Debilitate ×0) */
+  damageMultPerAbility: Record<string, number>;
+  /** buff id → extra duration after the multiplier: max(minTicks, ⌊duration × share⌋) (Bulwark: Debilitate +6% per rank, at least 1 tick per rank) */
+  buffDurationExtra: Record<string, { share: number; minTicks: number }>;
+  /** Aftershock: every `threshold` damage dealt an explosion of rank × perRank × ⌊rollMin..rollMax⌋ of the ability damage, at most every `minIntervalTicks` */
+  aftershock: { rank: number; perRank: number; threshold: number; minIntervalTicks: number; rollMin: number; rollMax: number } | null;
+  /** Crackling: a zap of rank × perRank of the ability damage on the first attack after every `cooldownTicks` */
+  crackling: { rank: number; perRank: number; cooldownTicks: number } | null;
+  /** Spendthrift: rank % chance of +rank % damage on a non-DoT hit */
+  spendthriftRank: number;
+  /** Flanking: the listed abilities deal +40% per rank when the target is not facing the player (EngineConfig.targetFacingAway) */
+  flanking: { rank: number; perRank: number; abilities: string[] } | null;
+  /** Ruthless: +0.5% per rank per stack, 5 stacks, refreshed on kills – needs kills, only reported (see docs/research/perks.md) */
+  ruthlessRank: number;
+  /** damage multiplier against a target type (Undead / Dragon / Demon Slayer perks 1.07; applies to DoTs too) – EngineConfig.targetType picks one */
+  targetTypeDamageMult: Partial<Record<'undead' | 'dragon' | 'demon', number>>;
 }
 
 export function defaultResolvedLoadout(): ResolvedLoadout {
@@ -123,5 +146,15 @@ export function defaultResolvedLoadout(): ResolvedLoadout {
     critChanceAdd: 0,
     preciseRank: 0,
     equilibriumRank: 0,
+    abilityDamageMult: 1,
+    critDisabled: false,
+    damageMultPerAbility: {},
+    buffDurationExtra: {},
+    aftershock: null,
+    crackling: null,
+    spendthriftRank: 0,
+    flanking: null,
+    ruthlessRank: 0,
+    targetTypeDamageMult: {},
   };
 }
