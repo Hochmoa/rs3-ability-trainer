@@ -200,7 +200,7 @@ interface Note {
             @if (a.durationTicks) { <tr><th>Duration</th><td>{{ seconds(a.durationTicks) }}</td></tr> }
             @if (!a.triggersGcd) { <tr><th>GCD</th><td class="warn">does not trigger the global cooldown</td></tr> }
           </table>
-          <p class="desc">{{ a.description }}</p>
+          <p class="desc">{{ describe(a.description) }}</p>
           @if (notes(a.id).length) {
             <div class="rules">
               <div class="rules-title">Interactions</div>
@@ -218,7 +218,7 @@ interface Note {
                 <div class="buff">
                   @if (b.iconSelf || b.iconTarget) { <img [src]="b.iconSelf || b.iconTarget" [alt]="b.name" /> }
                   <div>
-                    <b>{{ b.name }}</b> <span class="muted">{{ b.kind }}{{ b.duration ? ' · ' + firstLine(b.duration) : '' }}</span>
+                    <b class="buff-name">{{ b.name }}</b><span class="muted">{{ b.kind }}{{ b.duration ? ' · ' + firstLine(b.duration) : '' }}</span>
                     @if (b.effects) { <div class="effects">{{ b.effects }}</div> }
                   </div>
                 </div>
@@ -372,6 +372,9 @@ interface Note {
       height: 22px;
       flex: none;
     }
+    .buff-name {
+      margin-right: 10px;
+    }
     .effects {
       white-space: pre-wrap;
       color: var(--muted);
@@ -421,8 +424,15 @@ export class EntityTooltip {
     return g.perks.map((p) => (this.data.perkById().get(p.perk)?.name ?? p.perk) + ' ' + p.rank).join(', ');
   }
 
+  /** the wiki text without its "(With <item> equipped)" variants – the INTERACTIONS block below says the same, shorter */
+  describe(text: string | null | undefined): string {
+    if (!text) return '';
+    const i = text.search(/^\s*\(With /m);
+    return (i >= 0 ? text.slice(0, i) : text).trim();
+  }
+
   subtitle(e: Entity): string {
-    if (e.ability) return (e.ability.basicAttack ? 'Auto-attack' : e.ability.type) + ' · ' + e.ability.style + ' · level ' + e.ability.level + (e.ability.members ? '' : ' · free to play');
+    if (e.ability) return (e.ability.basicAttack ? 'Auto-attack' : e.ability.type) + ' · ' + e.ability.style;
     if (e.prayer) return (e.prayer.book === 'Curses' ? 'Ancient curse' : 'Prayer') + ' · level ' + e.prayer.level;
     if (e.special) return 'Adrenaline potion';
     if (e.weapon) return 'Weapon switch · ' + e.weapon.style;

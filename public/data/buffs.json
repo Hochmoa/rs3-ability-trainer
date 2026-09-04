@@ -202,10 +202,10 @@
   "desc": "Death Spark\n- At 5 stacks your Basic Attack is empowered and deals 2x damage.",
   "iconSelf": "assets/status/death-spark-status-max-stacks.png",
   "iconTarget": null,
-  "duration": "|effects = While Death Spark is ready, the Necromancy basic attack is empowered and deals double damage, consuming Death Spark.",
+  "duration": null,
   "durationTicks": null,
   "trigger": "* Activating Necromancy basic attack while wielding the Omni guard grants one stack.\n* At 5 stacks Death Spark is readied.\n* Activating the Death Essence special attack readies Death Spark.\n* For 30 seconds after activating Death Essence, Touch of Death, Finger of Death and Death Skulls immediately ready Death Spark.",
-  "effects": ""
+  "effects": "While Death Spark is ready, the Necromancy basic attack is empowered and deals double damage, consuming Death Spark."
  },
  {
   "id": 19251,
@@ -917,10 +917,10 @@
   "desc": "Soul Reave\n- At 4 stacks your Basic Attack is empowered and generates 1 Residual Soul.",
   "iconSelf": "assets/status/soul-reave-max-stacks.png",
   "iconTarget": null,
-  "duration": "|effects = While Soul Reave is ready, the Necromancy basic attack is empowered and will generate 1 Residual Soul, consuming Soul Reave.",
+  "duration": null,
   "durationTicks": null,
   "trigger": "* Activating Necromancy basic attack while wielding the Devourer's Guard grants one stack.\n* At 4 stacks Soul Reave is readied.\n* Activating the Soul Crush special attack readies Soul Reave.\n* For 30 seconds after activating Soul Crush, Soul Sap, Soul Strike, Volley of Souls, and Spectral Scythe immediately ready Soul Reave.",
-  "effects": ""
+  "effects": "While Soul Reave is ready, the Necromancy basic attack is empowered and will generate 1 Residual Soul, consuming Soul Reave."
  },
  {
   "id": 39622,

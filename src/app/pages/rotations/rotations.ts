@@ -1,3 +1,4 @@
+import { CdkDrag, CdkDragDrop, CdkDropList, moveItemInArray } from '@angular/cdk/drag-drop';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -21,7 +22,7 @@ const TYPE_ORDER: Record<string, number> = { Basic: 0, Enhanced: 1, Threshold: 2
 
 @Component({
   selector: 'app-rotations',
-  imports: [AbilityIcon, FormsModule, RouterLink, EntityTip],
+  imports: [AbilityIcon, FormsModule, RouterLink, EntityTip, CdkDropList, CdkDrag],
   templateUrl: './rotations.html',
   styleUrl: './rotations.scss',
 })
@@ -175,6 +176,17 @@ export class Rotations {
 
   removeStep(i: number): void {
     this.editing.update((r) => (r ? { ...r, steps: r.steps.filter((_, k) => k !== i) } : r));
+  }
+
+  /** a tile was dragged to another place */
+  reorder(ev: CdkDragDrop<unknown>): void {
+    if (ev.previousIndex === ev.currentIndex) return;
+    this.editing.update((r) => {
+      if (!r) return r;
+      const steps = [...r.steps];
+      moveItemInArray(steps, ev.previousIndex, ev.currentIndex);
+      return { ...r, steps };
+    });
   }
 
   move(i: number, dir: -1 | 1): void {
