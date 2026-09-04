@@ -63,7 +63,8 @@ export interface Prayer {
 export interface Special {
   id: string;
   name: string;
-  kind: 'potion' | 'bomb';
+  /** potion = drunk, bomb = thrown at the target, device = deployed on the ground (Dominion mine) */
+  kind: 'potion' | 'bomb' | 'device';
   /** bombs: debuff put on the target */
   debuff?: { name: string; durationTicks: number; icon: string | null };
   adrenaline: number;
@@ -131,6 +132,7 @@ export interface Action {
 
 export const ACTIONS: Action[] = [
   { id: 'target-cycle', name: 'Target cycle', description: 'Switches to the next target (client keybind). Instant, no cooldown, no tick.', icon: 'assets/actions/target-cycle.png' },
+  { id: 'combat-dummy', name: 'Combat dummy MKII', description: 'Deploys a combat dummy for 60 seconds (100 ticks): hitting it builds adrenaline, modelled as +10% per tick like the "recharge adrenaline" option. Instant, no GCD.', icon: 'assets/actions/combat-dummy.png' },
 ];
 /** pressing the "Weapon Special Attack" slot counts for whichever spec the rotation expects with the wielded weapon */
 export const SPEC_KEY = 'ability:weapon-special-attack';
@@ -493,7 +495,19 @@ export interface Loadout {
   relics: string[];
   /** Necromancy talent Spirit Pact tier 0..3 */
   spiritPact: 0 | 1 | 2 | 3;
+  /** overload in effect for the whole session (36 min per flask): boosts every combat level, so the ability damage – engine/damage.ts OVERLOADS */
+  overload?: OverloadChoice;
+  /** weapon poison applied to the weapons: 0 none, 1 weapon poison, 2 (+), 3 (++), 4 (+++) – engine/damage.ts */
+  weaponPoison?: WeaponPoisonTier;
+  /** Kwuarm incense sticks potency 0..4: +2.5% poison damage per level */
+  kwuarmPotency?: KwuarmPotency;
 }
+
+export type OverloadChoice = 'none' | 'overload' | 'supreme' | 'elder';
+export const OVERLOAD_CHOICES: OverloadChoice[] = ['none', 'overload', 'supreme', 'elder'];
+export type WeaponPoisonTier = 0 | 1 | 2 | 3 | 4;
+export const WEAPON_POISON_NAMES: Record<WeaponPoisonTier, string> = { 0: 'none', 1: 'Weapon poison', 2: 'Weapon poison+', 3: 'Weapon poison++', 4: 'Weapon poison+++' };
+export type KwuarmPotency = 0 | 1 | 2 | 3 | 4;
 
 export const RELICS: { id: string; name: string; text: string }[] = [
   { id: 'fury-of-the-small', name: 'Fury of the Small', text: 'Basic abilities generate +1% adrenaline.' },
@@ -523,6 +537,9 @@ export function newLoadout(name = 'Default'): Loadout {
     armourGizmos: [{ ancient: false, perks: [] }, { ancient: false, perks: [] }],
     relics: [],
     spiritPact: 0,
+    overload: 'elder',
+    weaponPoison: 4,
+    kwuarmPotency: 0,
   };
 }
 

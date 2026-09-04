@@ -10,6 +10,7 @@ import { NECROMANCY_BUFFS, NECROMANCY_RULES } from './rules-necromancy';
 import { RANGED_RULES } from './rules-ranged';
 import { SPELL_BUFFS, SPELL_RULES } from './rules-spells';
 import { SPEC_RULES } from './rules-specs';
+import { ACTION_RULES, CONSUMABLE_BUFFS, SPECIAL_RULES } from './rules-consumables';
 
 export const ABILITY_RULES: AbilityRule[] = [...MELEE_RULES, ...RANGED_RULES, ...MAGIC_RULES, ...NECROMANCY_RULES, ...DEFCON_RULES];
 export const RULE_BY_ABILITY = new Map(ABILITY_RULES.map((r) => [r.ability, r]));
@@ -17,15 +18,27 @@ export const RULE_BY_ABILITY = new Map(ABILITY_RULES.map((r) => [r.ability, r]))
 export const SPEC_RULE_BY_ID = new Map(SPEC_RULES.map((r) => [r.ability, r]));
 export const GLOBALS: GlobalRule[] = GLOBAL_RULES;
 /** every status effect the rules know: the shared list plus the ones defined next to their rules */
-export const BUFFS: BuffDef[] = [...BASE_BUFFS, ...NECROMANCY_BUFFS, ...SPELL_BUFFS];
+export const BUFFS: BuffDef[] = [...BASE_BUFFS, ...NECROMANCY_BUFFS, ...SPELL_BUFFS, ...CONSUMABLE_BUFFS];
 export const BUFF_BY_ID = new Map(BUFFS.map((b) => [b.id, b]));
 /** spell rules ("spell:<id>" entities), keyed by spell id – kept apart from the ability rules */
 export const RULE_BY_SPELL = new Map(SPELL_RULES.map((r) => [r.ability, r]));
+/** potions / bombs / devices ("special:<id>", specials.json id) and client actions ("action:<id>") – rules-consumables.ts */
+export const RULE_BY_SPECIAL = new Map(SPECIAL_RULES.map((r) => [r.ability, r]));
+export const RULE_BY_ACTION = new Map(ACTION_RULES.map((r) => [r.ability, r]));
 export { SPELL_RULES };
 export { SPEC_RULES };
+export { SPECIAL_RULES, ACTION_RULES };
 
 export function ruleFor(abilityId: string): AbilityRule | undefined {
   return RULE_BY_ABILITY.get(abilityId);
+}
+
+export function specialRuleFor(specialId: string): AbilityRule | undefined {
+  return RULE_BY_SPECIAL.get(specialId);
+}
+
+export function actionRuleFor(actionId: string): AbilityRule | undefined {
+  return RULE_BY_ACTION.get(actionId);
 }
 
 export function spellRuleFor(spellId: string): AbilityRule | undefined {

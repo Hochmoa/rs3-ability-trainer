@@ -79,7 +79,11 @@ export const MELEE_RULES: AbilityRule[] = [
     moves: true,
     offGcd: true,
     sharedCooldown: 'dive',
-    notes: ['Ignores the global cooldown, generates no adrenaline; shares its 34-tick cooldown with Bladed Dive (' + W + 'Dive )'],
+    cooldownRules: [{ ticks: 2, when: { buff: 'powerburst-of-acceleration' } }],
+    notes: [
+      'Ignores the global cooldown, generates no adrenaline; shares its 34-tick cooldown with Bladed Dive (' + W + 'Dive )',
+      'Powerburst of acceleration resets it and sets its cooldown to 2 ticks for 10 ticks (' + W + 'Powerburst_of_acceleration )',
+    ],
   },
   {
     ability: 'bladed-dive',
@@ -87,7 +91,13 @@ export const MELEE_RULES: AbilityRule[] = [
     offGcdNoGain: true,
     sharedCooldown: 'dive',
     adrenaline: 9,
-    notes: ['Can be cast during the global cooldown, but then deals no damage and gives no adrenaline; does not generate Bloodlust (' + W + 'Bladed_Dive )', 'Shares its cooldown with Dive; the cooldown resets if a damaged enemy dies within 10 ticks (' + W + 'Bladed_Dive )'],
+    cooldownRules: [{ ticks: 2, when: { buff: 'powerburst-of-acceleration' } }],
+    damageRules: [{ when: { buff: 'powerburst-of-acceleration' }, mult: 0 }],
+    notes: [
+      'Can be cast during the global cooldown, but then deals no damage and gives no adrenaline; does not generate Bloodlust (' + W + 'Bladed_Dive )',
+      'Shares its cooldown with Dive; the cooldown resets if a damaged enemy dies within 10 ticks (' + W + 'Bladed_Dive )',
+      'Powerburst of acceleration resets it and sets its cooldown to 2 ticks for 10 ticks, but it deals no damage meanwhile (' + W + 'Powerburst_of_acceleration )',
+    ],
   },
   {
     ability: 'assault',

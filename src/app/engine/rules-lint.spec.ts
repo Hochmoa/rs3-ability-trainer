@@ -9,15 +9,19 @@ import { Ability, Spell } from '../core/models';
 import { BUFF_DAMAGE_MULT, TARGET_DAMAGE_MULT } from './damage';
 import { MORPH_TARGETS } from './morphs';
 import SPECS from '../../../public/data/specs.json';
-import { ABILITY_RULES, BUFF_BY_ID, GLOBALS, SPEC_RULES, SPELL_RULES } from './rules';
+import SPECIALS from '../../../public/data/specials.json';
+import { ACTIONS } from '../core/models';
+import { ABILITY_RULES, ACTION_RULES, BUFF_BY_ID, GLOBALS, SPECIAL_RULES, SPEC_RULES, SPELL_RULES } from './rules';
 import { AbilityRule, Condition, Effect, Requirement } from './rules-model';
 
 const DATA = ABILITIES as unknown as Ability[];
 const ABILITY_IDS = new Set(DATA.map((a) => a.id));
 const SPELL_DATA = SPELLS as unknown as Spell[];
 const SPEC_IDS = new Set((SPECS as { id: string }[]).map((s) => s.id));
-/** ability rules and weapon special attack rules share the invariants below */
-const ALL_RULES = [...ABILITY_RULES, ...SPEC_RULES, ...SPELL_RULES];
+const SPECIAL_IDS = new Set((SPECIALS as { id: string }[]).map((s) => s.id));
+const ACTION_IDS = new Set(ACTIONS.map((a) => a.id));
+/** ability rules, weapon special attack, spell, consumable and client action rules share the invariants below */
+const ALL_RULES = [...ABILITY_RULES, ...SPEC_RULES, ...SPELL_RULES, ...SPECIAL_RULES, ...ACTION_RULES];
 
 function buffsInCondition(c: Condition | undefined, out: Set<string>): void {
   if (!c) return;
@@ -89,6 +93,16 @@ describe('rule set invariants', () => {
     const missing = [...SPEC_IDS].filter((id) => !ruled.has(id));
     expect(missing).toEqual([]);
     const dupes = SPEC_RULES.map((r) => r.ability).filter((id, i, all) => all.indexOf(id) !== i);
+    expect(dupes).toEqual([]);
+  });
+
+  it('every consumable rule belongs to a special in specials.json, every action rule to a client action, and every special that does more than give adrenaline has a rule', () => {
+    expect(SPECIAL_RULES.map((r) => r.ability).filter((id) => !SPECIAL_IDS.has(id))).toEqual([]);
+    expect(ACTION_RULES.map((r) => r.ability).filter((id) => !ACTION_IDS.has(id))).toEqual([]);
+    const ruled = new Set(SPECIAL_RULES.map((r) => r.ability));
+    const plain = (SPECIALS as { id: string; adrenaline: number; adrenalineOverTime: number; debuff?: unknown }[]).filter((s) => !s.adrenaline && !s.adrenalineOverTime && !s.debuff);
+    expect(plain.map((s) => s.id).filter((id) => !ruled.has(id))).toEqual([]);
+    const dupes = [...SPECIAL_RULES, ...ACTION_RULES].map((r) => r.ability).filter((id, i, all) => all.indexOf(id) !== i);
     expect(dupes).toEqual([]);
   });
 

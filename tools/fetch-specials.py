@@ -16,6 +16,23 @@ COOLDOWN_TICKS = 200  # 120 s shared cooldown
 BOMBS = [
     ("Vulnerability bomb", "Vulnerability bomb", "Vulnerability", 100,
      "Throws a 3x3 bomb: the target takes 10% more damage from all sources for 60 seconds. Off the global cooldown, no cooldown."),
+    ("Sticky bomb", "Sticky bomb", "Bound", 10,
+     "Throws a 3x3 bomb that binds monsters in it for 6 seconds (10 ticks). No damage. Off the global cooldown, no cooldown."),
+]
+# status icons the bombs' debuffs use: wiki file -> assets/status file
+STATUS_ICONS = {"Vulnerability": ("Vulnerability (target status).png", "vulnerability-target-status.png"),
+                "Bound": ("Bound (status).png", "bound-target-status.png")}
+# everything else (engine rules in src/app/engine/rules-consumables.ts): name, wiki item, kind, cooldown ticks, shared group, herblore level, notes
+OTHER = [
+    ("Powerburst of vitality", "Powerburst of vitality (4)", "potion", 200, "powerburst", 105,
+     "Doubles current and maximum life points for 6 seconds (10 ticks); afterwards the maximum returns and the current life points are capped by it. "
+     "Off the global cooldown. Shares the 120 s powerburst cooldown with every other powerburst."),
+    ("Powerburst of acceleration", "Powerburst of acceleration (4)", "potion", 200, "powerburst", 111,
+     "Resets the cooldowns of Surge, Dive and Bladed Dive and sets them to 1.2 s (2 ticks) for 6 seconds (10 ticks); Bladed Dive deals no damage meanwhile. "
+     "Off the global cooldown. Shares the 120 s powerburst cooldown with every other powerburst."),
+    ("Dominion mine", "Dominion mine", "device", 100, "", 0,
+     "Deployed mine: about 5 seconds later it deals 20% of the target's maximum life points (cap 10,000) to a monster of combat level 138 or less. "
+     "Two mines per minute. Off the global cooldown."),
 ]
 
 
@@ -52,14 +69,22 @@ def main():
         files[name] = icon_file or (item + ".png")
         out.append({
             "id": slug(name), "name": name, "kind": "bomb", "adrenaline": 0, "adrenalineOverTime": 0, "overTimeTicks": 0,
-            "cooldownTicks": 0, "sharedCooldown": "", "level": 103, "description": notes,
-            "debuff": {"name": debuff, "durationTicks": dur, "icon": "assets/status/vulnerability-target-status.png"},
+            "cooldownTicks": 0, "sharedCooldown": "", "level": 103 if debuff == "Vulnerability" else 101, "description": notes,
+            "debuff": {"name": debuff, "durationTicks": dur, "icon": "assets/status/" + STATUS_ICONS[debuff][1]},
             "icon": "assets/specials/" + slug(name) + ".png",
         })
-    urls = image_urls(list(files.values()) + ["Vulnerability (target status).png"])
-    vurl = urls.get("Vulnerability (target status).png")
-    if vurl:
-        download(vurl, ASSETS / "status" / "vulnerability-target-status.png")
+    for name, item, kind, cd, shared, lvl, notes in OTHER:
+        files[name] = item + ".png"
+        out.append({
+            "id": slug(name), "name": name, "kind": kind, "adrenaline": 0, "adrenalineOverTime": 0, "overTimeTicks": 0,
+            "cooldownTicks": cd, "sharedCooldown": shared, "level": lvl, "description": notes,
+            "icon": "assets/specials/" + slug(name) + ".png",
+        })
+    urls = image_urls(list(files.values()) + [f for f, _ in STATUS_ICONS.values()])
+    for wiki_file, target in STATUS_ICONS.values():
+        surl = urls.get(wiki_file)
+        if surl:
+            download(surl, ASSETS / "status" / target)
     for s in out:
         url = urls.get(files[s["name"]])
         if url:

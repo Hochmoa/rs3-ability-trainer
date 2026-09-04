@@ -3,7 +3,7 @@
  * Effect kinds are the ones written in public/data/set-effects.json and perks.json.
  */
 import { EquipSlot, GearItem, Gizmo, ItemRef, Loadout, Perk, SetEffect, Style, WEAPON_SETS, Weapon, WeaponSpec, loadoutWield } from '../core/models';
-import { abilityDamageOf } from './damage';
+import { KWUARM_PER_POTENCY, WEAPON_POISON_CHANCE, abilityDamageOf, boostedLevel, poisonPct } from './damage';
 import { ruleFor } from './rules';
 import { FORTIFIED_BONES_BONUS } from './rules-necromancy';
 import { ResolvedLoadout, defaultResolvedLoadout } from './loadout-resolved';
@@ -162,7 +162,9 @@ export function resolveLoadout(l: Loadout, data: LoadoutData): ResolvedLoadout {
   r.hasDefender = off?.role === 'defender';
   r.hasConduit = main?.role === 'siphon' && off?.role === 'conduit';
   r.weaponType = main ? weaponType(main) : null;
-  r.abilityDamage = abilityDamageOf(two ? null : main, off, two);
+  // overload: the wiki's ability damage formula takes the boosted level (elder overload: 99 → 120)
+  r.combatLevel = boostedLevel(l.overload);
+  r.abilityDamage = abilityDamageOf(two ? null : main, off, two, r.combatLevel);
   const specId = main?.spec ?? (off?.spec ?? null);
   if (specId) {
     const spec = data.specById.get(specId);
@@ -226,6 +228,15 @@ export function resolveLoadout(l: Loadout, data: LoadoutData): ResolvedLoadout {
     r.items.add(id);
     if (!applyEffect(r, id, item.effect, 1, item.style, {})) r.ignoredEffects.push({ id, kind: item.effect.kind });
   }
+  // weapon poison on top of the gear's poison (cinderbane gloves): the gloves raise another source by one tier, both roll their 1/8
+  const wp = l.weaponPoison ?? 0;
+  if (wp > 0) {
+    const tier = r.poison ? wp + 1 : wp;
+    const chance = r.poison ? 1 - (1 - r.poison.chance) * (1 - WEAPON_POISON_CHANCE) : WEAPON_POISON_CHANCE;
+    r.poison = { chance, pct: poisonPct(tier) };
+  }
+  // Kwuarm incense sticks: +2.5% poison damage per potency level
+  if (r.poison && l.kwuarmPotency) r.poison = { ...r.poison, pct: r.poison.pct * (1 + KWUARM_PER_POTENCY * Math.min(4, l.kwuarmPotency)) };
   return r;
 }
 
@@ -402,7 +413,7 @@ function applyEffect(r: ResolvedLoadout, id: string, effect: Record<string, unkn
       r.hitProcs.push({ id, chance: Number(e['chance']), cooldownTicks: Number(e['cooldownTicks'] ?? 0), style: style ?? undefined, hits: e['hits'], echo: e['echo'] });
       break;
     case 'poison':
-      r.poison = { chance: Number(e['chance']), pct: 20 + 5 * (Number(e['tier'] ?? 1) - 1) }; // tier 1 = 20% of the ability damage, +5% per tier
+      r.poison = { chance: Number(e['chance']), pct: poisonPct(Number(e['tier'] ?? 1)) }; // tier 1 = 20% of the ability damage, +5% per tier
       break;
     case 'adrenaline-after-ultimate':
       r.adrenalineAfterUltimate = { style: e['style'] ?? style ?? 'Melee', amount: Number(e['amount']), overTicks: Number(e['overTicks']), instantIfActive: Number(e['instantIfActive']) };

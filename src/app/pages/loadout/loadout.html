@@ -147,6 +147,35 @@
         <option [ngValue]="3">Spirit Pact III – 60 s</option>
       </select>
     </label>
+    <h3>Consumables in effect</h3>
+    <label>
+      <span>Overload</span>
+      <select [ngModel]="l().overload ?? 'elder'" (ngModelChange)="setOverload($event)">
+        @for (o of OVERLOAD_CHOICES; track o) {
+          <option [ngValue]="o">{{ OVERLOADS[o].name }}{{ o === 'none' ? ' – level 99' : ' – level ' + boostedLevel(o) }}</option>
+        }
+      </select>
+      <small class="muted">Boosts every combat level for the whole session, so the ability damage rises with it (36 min per flask; the elder overload salve boosts the same). PvME rotations do not press it.</small>
+    </label>
+    <label>
+      <span>Weapon poison</span>
+      <select [ngModel]="l().weaponPoison ?? 4" (ngModelChange)="setWeaponPoison($event)">
+        @for (t of WEAPON_POISON_TIERS; track t) {
+          <option [ngValue]="t">{{ WEAPON_POISON_NAMES[t] }}{{ t ? ' – 1/8 per hit, ' + poisonPct(t) + '% of the ability damage every 10 s' : '' }}</option>
+        }
+      </select>
+      <small class="muted">Every hit has a 1/8 chance to poison the target; cinderbane gloves raise the tier by one and roll their own 1/8.</small>
+    </label>
+    <label>
+      <span>Kwuarm incense sticks</span>
+      <select [ngModel]="l().kwuarmPotency ?? 0" (ngModelChange)="setKwuarmPotency($event)">
+        <option [ngValue]="0">none</option>
+        <option [ngValue]="1">potency 1 – +2.5% poison damage</option>
+        <option [ngValue]="2">potency 2 – +5% poison damage</option>
+        <option [ngValue]="3">potency 3 – +7.5% poison damage</option>
+        <option [ngValue]="4">potency 4 – +10% poison damage</option>
+      </select>
+    </label>
   </div>
 </div>
 

@@ -24,7 +24,11 @@ export const MAGIC_RULES: AbilityRule[] = [
     ability: 'surge',
     moves: true,
     offGcd: true,
-    notes: ['Ignores the global cooldown, no adrenaline; shares a cooldown with Escape only in PvP (' + W + 'Surge )'],
+    cooldownRules: [{ ticks: 2, when: { buff: 'powerburst-of-acceleration' } }],
+    notes: [
+      'Ignores the global cooldown, no adrenaline; shares a cooldown with Escape only in PvP (' + W + 'Surge )',
+      'Powerburst of acceleration resets it and sets its cooldown to 2 ticks for 10 ticks (' + W + 'Powerburst_of_acceleration )',
+    ],
   },
   {
     ability: 'runic-charge',

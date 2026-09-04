@@ -72,6 +72,8 @@ export interface BuffDef {
   thresholdNeed?: number;
   /** no ability can be used while active (Transfigure's self-stun) */
   locksAbilities?: boolean;
+  /** current and maximum life points × this while active (Powerburst of vitality 2); the trainer has no life point pool yet, the engine only exposes the factor */
+  maxLifePointsMult?: number;
   /** duration from the shield tier (defenders count half): base + bonusIfAny + ⌊tier / 10⌋ · perTen (Barricade 8 + ⌊t/10⌋, Debilitate 13 / 14 + ⌊t/10⌋) */
   durationByShieldTier?: { base: number; perTen: number; bonusIfAny?: number };
   /** no timer: stays until it blocks / reflects a hit or is toggled off (Disruption Shield, Vengeance, bone shields, auto-cast selections) */
@@ -273,6 +275,8 @@ export interface AbilityRule {
   stages?: { cost: number; damage?: { min: number; max: number } }[];
   /** the hits are the conjured spirit's (Command Skeleton Warrior): no crit, Rage builds and applies, robes bonus */
   spiritHit?: string;
+  /** one typeless hit of `share` × the target's maximum life points, capped, `delayTicks` after the cast (Dominion mine: 20%, cap 10,000, ~5 s); without a known target maximum the cap is dealt */
+  targetLpHit?: { share: number; cap: number; delayTicks: number };
   /** bleed / burn: `hits` damage-over-time hits every `everyTicks` (first after `startTicks`, default everyTicks); no crits, no style buffs */
   bleed?: BleedSpec;
   /** a bleed that depends on the state at the cast (Sunshine's periodic damage unless Planted Feet, Combust instant with Kerapac's wraps); first match wins, else `bleed` */

@@ -3,16 +3,49 @@
  * The trainer assumes level 99 in every combat skill and ignores armour / jewellery damage bonuses (b = 0):
  * the numbers are meant for kill times and DPS comparisons between rotations, not for exact max hits.
  */
-import { Style, Weapon } from '../core/models';
+import { OverloadChoice, Style, Weapon } from '../core/models';
 
 /** f(level) = 145·ln(1 + 0.6·level/145) / ln(1.6) – the level curve since the Combat Style Modernisation */
 export function levelCurve(level: number): number {
   return (145 * Math.log(1 + (0.6 * level) / 145)) / Math.log(1.6);
 }
 
-/** ⌊2.5·f(level)⌋ – the skill part of the main-hand / two-hand ability damage (264 at level 99) */
+/** ⌊2.5·f(level)⌋ – the skill part of the main-hand / two-hand ability damage (264 at level 99, 310 at 120) */
 export function levelPart(level = 99): number {
   return Math.floor(2.5 * levelCurve(level));
+}
+
+/** the trainer's base level in every combat skill */
+export const BASE_LEVEL = 99;
+
+/**
+ * Overloads boost every combat level by ⌊level × pct⌋ + flat for the whole session (36 min per flask, reapplied every 15 s):
+ * Overload 15% + 3, Supreme 16% + 4, Elder 17% + 5 (the salve boosts the same) – https://runescape.wiki/w/Elder_overload_potion.
+ * The wiki's ability damage formula uses "the level including boosts", so at 99 an elder overload means level 120.
+ */
+export const OVERLOADS: Record<OverloadChoice, { pct: number; flat: number; name: string }> = {
+  none: { pct: 0, flat: 0, name: 'none' },
+  overload: { pct: 0.15, flat: 3, name: 'Overload (+15% + 3)' },
+  supreme: { pct: 0.16, flat: 4, name: 'Supreme overload (+16% + 4)' },
+  elder: { pct: 0.17, flat: 5, name: 'Elder overload (+17% + 5)' },
+};
+
+/** combat level under an overload: 99 → 116 / 118 / 120 */
+export function boostedLevel(choice: OverloadChoice | undefined, base = BASE_LEVEL): number {
+  const o = OVERLOADS[choice ?? 'none'];
+  return base + Math.floor(base * o.pct) + o.flat;
+}
+
+/**
+ * Weapon poison – https://runescape.wiki/w/Weapon_poison%2B%2B%2B and https://runescape.wiki/w/Poison: every tier has a 1/8
+ * chance per hit to poison; tier 1 (weapon poison) hits for 20% of the ability damage, +5% per tier (+ 25%, ++ 30%, +++ 35%),
+ * × 0.65–1.3 every 17 ticks. Cinderbane gloves add one tier to another poison source (+++ → 40%).
+ * Kwuarm incense sticks: +2.5% poison damage per potency level, max +10% – https://runescape.wiki/w/Kwuarm_incense_sticks
+ */
+export const WEAPON_POISON_CHANCE = 0.125;
+export const KWUARM_PER_POTENCY = 0.025;
+export function poisonPct(tier: number): number {
+  return 20 + 5 * (tier - 1);
 }
 
 /**

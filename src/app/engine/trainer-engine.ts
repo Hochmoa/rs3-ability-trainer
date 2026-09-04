@@ -4,7 +4,7 @@ import { ResolvedLoadout, defaultResolvedLoadout } from './loadout-resolved';
 import { PROTECTION, PrayerBook, SOUL_SPLIT, bookOf, togglePrayer } from './prayer-rules';
 import { BASE_CRIT_CHANCE, BUFF_DAMAGE_MULT, BUFF_FLAT_ADD, BUFF_TYPE_DAMAGE_MULT, POISON_EVERY_TICKS, POISON_ROLL, RAGE_MAX, RAGE_PER_STACK, SPIRIT_ATTACKS, TARGET_DAMAGE_ADD, TARGET_DAMAGE_MULT, critMultiplier } from './damage';
 import { MORPH_TARGETS } from './morphs';
-import { BUFF_BY_ID, MODELLED_WIKI_BUFFS, GLOBALS, ruleFor, specRuleFor, spellBookOf, spellRuleFor } from './rules';
+import { BUFF_BY_ID, MODELLED_WIKI_BUFFS, GLOBALS, actionRuleFor, ruleFor, specRuleFor, specialRuleFor, spellBookOf, spellRuleFor } from './rules';
 import { boneShieldTier } from './rules-necromancy';
 import { AbilityRule, ChannelSpec, Condition, Effect, GlobalRule, Requirement, StackId } from './rules-model';
 
@@ -362,6 +362,13 @@ export class TrainerEngine {
 
   get maxAdrenaline(): number {
     return this.loadout.maxAdrenaline;
+  }
+
+  /** factor on the player's current and maximum life points from active buffs (Powerburst of vitality 2); the trainer has no life point pool yet */
+  get maxLifePointsMult(): number {
+    let mult = 1;
+    for (const b of this.buffs) mult *= BUFF_BY_ID.get(b.id)?.maxLifePointsMult ?? 1;
+    return mult;
   }
 
   get prayerBook(): PrayerBook {
@@ -1028,9 +1035,8 @@ export class TrainerEngine {
       this.switchWeapon(entity.weapon);
       return;
     }
-    if (entity.kind === 'action') return; // target cycle etc.: nothing to simulate
-
     const rule = this.ruleOf(entity);
+    if (entity.kind === 'action' && !rule) return; // target cycle etc.: nothing to simulate (the combat dummy has a rule)
     // Volley of Souls: one hit per stack held before the cast effects consume them
     const stacksBefore = rule?.hitsPerStack ? this.stack(rule.hitsPerStack) : 0;
     // Death Grasp / Soul Crush / Icy Tempest: the per-stack damage is read before the cost or the cast effects consume the stacks
@@ -1164,6 +1170,21 @@ export class TrainerEngine {
     for (const g of globals) {
       for (const eff of g.onCast ?? []) this.applyEffect(eff, tick, entity, 0);
       if (g.consumes && !g.discount && this.hasBuff(g.consumes)) this.removeBuff(g.consumes);
+    }
+    // Dominion mine: a share of the target's maximum life points (capped) a few ticks later; Vulnerability applies
+    if (rule?.targetLpHit) {
+      const t = rule.targetLpHit;
+      const at = tick + t.delayTicks;
+      const key = entity.key;
+      this.deferred.push({
+        tick: at,
+        apply: () => {
+          const max = this.config.targetLifePoints;
+          let amount = max ? Math.min(t.cap, Math.floor(t.share * max)) : t.cap;
+          for (const m of TARGET_DAMAGE_MULT) if (!m.dotsOnly && this.hasBuff(m.buff)) amount *= m.mult;
+          this.applyDamage(key, Math.floor(amount), false, false, at);
+        },
+      });
     }
     const flags = this.castFlags;
 
@@ -1706,6 +1727,9 @@ export class TrainerEngine {
         for (const id of eff.abilities) {
           this.readyTick.delete('ability:' + id);
           this.chargeReady.delete('ability:' + id);
+          // a shared cooldown group (Dive / Bladed Dive) is reset with the ability
+          const shared = ruleFor(id)?.sharedCooldown ?? this.catalog.get('ability:' + id)?.sharedCooldown;
+          if (shared) this.readyTick.delete('shared:' + shared);
         }
         break;
       case 'cooldown-reduce': {
@@ -2058,6 +2082,8 @@ export class TrainerEngine {
   ruleOf(e: EngineEntity): AbilityRule | undefined {
     if (e.kind === 'spec') return specRuleFor(e.id);
     if (e.kind === 'spell') return spellRuleFor(e.id);
+    if (e.kind === 'special') return specialRuleFor(e.id);
+    if (e.kind === 'action') return actionRuleFor(e.id);
     if (e.kind !== 'ability') return undefined;
     const rule = ruleFor(e.id);
     const spec = this.specFor(e);

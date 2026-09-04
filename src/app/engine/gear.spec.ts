@@ -51,6 +51,9 @@ interface Wear {
 
 function wear(w: Wear): Loadout {
   const l = newLoadout('gear');
+  // level 99, no weapon poison: the loadout's default elder overload / weapon poison+++ are tested in consumables.spec.ts
+  l.overload = 'none';
+  l.weaponPoison = 0;
   const eq = l.equipment as Record<string, ItemRef>;
   for (const id of w.weapons ?? []) {
     const wp = DATA.weaponById.get(id);

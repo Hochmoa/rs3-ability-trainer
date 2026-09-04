@@ -3,7 +3,8 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { DataService, GearView } from '../../core/data.service';
 import { GearResult, GearState, addItem, equip, moveItem, removeItem, removeWorn, unequip, updateRef } from '../../core/equipment';
-import { EquipSlot, Gizmo, ItemRef, Loadout as LoadoutModel, Perk, RELICS, SLOT_NAMES, Style, WeaponSpec, newLoadout } from '../../core/models';
+import { EquipSlot, Gizmo, ItemRef, KwuarmPotency, Loadout as LoadoutModel, OVERLOAD_CHOICES, OverloadChoice, Perk, RELICS, SLOT_NAMES, Style, WEAPON_POISON_NAMES, WeaponPoisonTier, WeaponSpec, newLoadout } from '../../core/models';
+import { OVERLOADS, boostedLevel, poisonPct } from '../../engine/damage';
 import { isObscureGear, isObscurePerk, isObscureSpec, isObscureWeapon } from '../../core/obscure';
 import { StorageService } from '../../core/storage.service';
 import { LoadoutData, NOT_SIMULATED_EFFECT_KINDS, loadoutWarnings, mainStyle, resolveLoadout, wornPassives, wornSets } from '../../engine/loadout-resolver';
@@ -517,6 +518,27 @@ export class Loadout {
 
   setSpiritPact(v: unknown): void {
     this.patch({ spiritPact: Math.max(0, Math.min(3, Math.round(Number(v) || 0))) as 0 | 1 | 2 | 3 });
+  }
+
+  // ---------------------------------------------------------------- consumables in effect (engine/damage.ts)
+
+  readonly OVERLOAD_CHOICES = OVERLOAD_CHOICES;
+  readonly OVERLOADS = OVERLOADS;
+  readonly WEAPON_POISON_TIERS: WeaponPoisonTier[] = [0, 1, 2, 3, 4];
+  readonly WEAPON_POISON_NAMES = WEAPON_POISON_NAMES;
+  readonly boostedLevel = boostedLevel;
+  readonly poisonPct = poisonPct;
+
+  setOverload(v: unknown): void {
+    this.patch({ overload: OVERLOAD_CHOICES.includes(v as OverloadChoice) ? (v as OverloadChoice) : 'none' });
+  }
+
+  setWeaponPoison(v: unknown): void {
+    this.patch({ weaponPoison: Math.max(0, Math.min(4, Math.round(Number(v) || 0))) as WeaponPoisonTier });
+  }
+
+  setKwuarmPotency(v: unknown): void {
+    this.patch({ kwuarmPotency: Math.max(0, Math.min(4, Math.round(Number(v) || 0))) as KwuarmPotency });
   }
 
   freeSlots(): number {
