@@ -140,11 +140,12 @@ describe('ability queueing OFF', () => {
     expect(e.results[1]).toMatchObject({ outcome: 'late', tooEarly: 1 });
   });
 
-  it('ignores a wrong ability pressed during the GCD', () => {
+  it('ignores any ability pressed during the GCD – spam, not a mistake', () => {
     const e = afterFirstFire();
     e.press('c', 1300);
     e.update(1800); // processed on tick 3
-    expect(e.events[0]).toMatchObject({ kind: 'wrong', key: 'c', expected: 'b' });
+    expect(e.events[0]).toMatchObject({ kind: 'too-early', key: 'c' });
+    expect(e.events.some((x) => x.kind === 'wrong')).toBe(false);
     expect(e.castTick).toBe(1);
   });
 

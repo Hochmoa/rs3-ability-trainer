@@ -774,13 +774,10 @@ export class TrainerEngine {
       return;
     }
     if (!this.config.abilityQueueing) {
-      if (input.key === expected) {
-        this.tooEarly++;
-        this.events.push({ kind: 'too-early', key: input.key, ticksEarly: gcdEnd - tickP });
-      } else {
-        this.wrong++;
-        this.events.push({ kind: 'wrong', key: input.key, expected });
-      }
+      // queueing off: the game ignores every press inside the global cooldown, whatever the key – players spam
+      // the next ability until it goes off, so this is neither a cast nor a mistake
+      if (input.key === expected) this.tooEarly++;
+      this.events.push({ kind: 'too-early', key: input.key, ticksEarly: gcdEnd - tickP });
       return;
     }
     if (this.pending?.key === input.key) {
