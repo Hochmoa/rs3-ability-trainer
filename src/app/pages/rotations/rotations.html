@@ -43,10 +43,9 @@
         } @else if (entity(s); as e) {
           <div class="tile" [class]="'tile ' + e.kind + (s.sameTick && !(e.ability?.triggersGcd || e.spec) ? ' same' : '')" cdkDrag>
             <span class="num">{{ $index + 1 }}</span>
-            <span class="icon" [entityTip]="e"><ability-icon [ability]="e" [px]="44" [keyLabel]="keyOf(e)" /></span>
+            <span class="icon" [entityTip]="e" [tipHint]="s.hint"><ability-icon [ability]="e" [px]="44" [keyLabel]="keyOf(e)" /></span>
             @if (s.offsetTicks !== undefined && s.offsetTicks > 0) { <span class="tag">+{{ s.offsetTicks }}t</span> }
             @else if (s.sameTick && !(e.ability?.triggersGcd || e.spec)) { <span class="tag">same tick</span> }
-            @if (s.hint) { <span class="tag hint" [title]="s.hint">{{ s.hint }}</span> }
             <span class="tile-actions">
               @if (e.kind !== 'ability' && e.kind !== 'spec') {
                 <button class="act" [class.on]="s.sameTick" (click)="toggleSameTick($index)" [title]="s.sameTick ? 'Same tick as the previous input – click: any time before the next ability' : 'Any time before the next ability – click: same tick as the previous input (PvME +)'">{{ s.sameTick ? '+' : '·' }}</button>

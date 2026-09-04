@@ -6,6 +6,8 @@ import { TICK_MS } from '../engine/trainer-engine';
 
 interface TipState {
   entity?: Entity;
+  /** the rotation step's imported note ("Bloodlust", "asap") – shown under the name */
+  hint?: string;
   /** an equipment item (gear panel) instead of an entity */
   gear?: GearView;
   x: number;
@@ -105,6 +107,8 @@ abstract class TipBase {
 @Directive({ selector: '[entityTip]' })
 export class EntityTip extends TipBase {
   readonly entityTip = input.required<Entity | string | null | undefined>();
+  /** rotation-step note to show in the tooltip (not on the icon itself) */
+  readonly tipHint = input<string | null | undefined>(null);
   private data = inject(DataService);
   private el = inject(ElementRef<HTMLElement>);
 
@@ -116,7 +120,7 @@ export class EntityTip extends TipBase {
 
   protected stateAt(x: number, y: number): TipState | null {
     const entity = this.resolve();
-    return entity ? { entity, x, y } : null;
+    return entity ? { entity, hint: this.tipHint() ?? undefined, x, y } : null;
   }
 
   @HostListener('focus')
@@ -124,7 +128,7 @@ export class EntityTip extends TipBase {
     if (Date.now() - this.lastTouch < TOUCH_SHADOW_MS) return; // a tap focuses the slot – no tooltip for that
     const entity = this.resolve();
     const r = this.el.nativeElement.getBoundingClientRect();
-    if (entity) this.tips.state.set({ entity, x: r.right, y: r.top });
+    if (entity) this.tips.state.set({ entity, hint: this.tipHint() ?? undefined, x: r.right, y: r.top });
   }
 
   @HostListener('blur')
@@ -195,6 +199,7 @@ interface Note {
           <div>
             <div class="name">{{ e.name }}</div>
             <div class="sub">{{ subtitle(e) }}</div>
+            @if (s.hint) { <div class="step-hint">{{ s.hint }}</div> }
           </div>
         </div>
         @if (e.ability; as a) {
@@ -325,6 +330,12 @@ interface Note {
     .sub {
       color: var(--muted);
       font-size: 12px;
+    }
+    /* the rotation step's note from the PvME import */
+    .step-hint {
+      margin-top: 3px;
+      font-size: 12px;
+      color: var(--gold);
     }
     /* Invention perks: the first thing after the name, so a hover answers "what is on this item" at once */
     .perks {

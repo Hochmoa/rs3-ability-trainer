@@ -343,7 +343,7 @@
             <span class="name muted">{{ s.phase ? 'phase' : 'note' }}</span>
           </div>
         } @else {
-          <div class="slot" [class]="'slot ' + s.kind + ' ' + s.entity.kind" [entityTip]="s.entity">
+          <div class="slot" [class]="'slot ' + s.kind + ' ' + s.entity.kind" [entityTip]="s.entity" [tipHint]="s.hint">
             <ability-icon
               [ability]="s.entity"
               [keyLabel]="s.key"
@@ -357,9 +357,6 @@
               <span class="tag">+{{ s.offsetTicks }}t</span>
             } @else if (s.sameTick && !(s.entity.ability?.triggersGcd || s.entity.spec)) {
               <span class="tag">same tick</span>
-            }
-            @if (s.hint) {
-              <span class="tag hint">{{ s.hint }}</span>
             }
             @if (channelling() === s.entity.key) {
               <span class="tag">channelling</span>
