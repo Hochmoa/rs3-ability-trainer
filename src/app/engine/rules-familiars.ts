@@ -4,7 +4,7 @@
  * special move points instead of adrenaline and needs its familiar out (Loadout.familiar). `ability` is the scroll id.
  *
  * The familiar's own attacks are timed by the engine from familiars.json (like conjured spirits); only the scroll
- * effects live here. Healing, stuns and accuracy are not simulated – those scrolls just spend their points.
+ * effects live here. Healing and stuns are not simulated (nihil accuracy: loadout-resolver.ts) – those scrolls just spend their points.
  */
 import { AbilityRule, BuffDef } from './rules-model';
 

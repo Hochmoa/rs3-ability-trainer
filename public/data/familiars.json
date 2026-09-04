@@ -83,7 +83,7 @@
    "damageMin": 384,
    "damageMax": 768
   },
-  "passive": "+5% melee accuracy (accuracy is not simulated).",
+  "passive": "+5% melee accuracy.",
   "critChanceAdd": 0,
   "damagePerMissingLp": 0,
   "scroll": {
@@ -107,7 +107,7 @@
    "damageMin": 384,
    "damageMax": 768
   },
-  "passive": "+5% necromancy accuracy (accuracy is not simulated).",
+  "passive": "+5% necromancy accuracy.",
   "critChanceAdd": 0,
   "damagePerMissingLp": 0,
   "scroll": {
@@ -131,7 +131,7 @@
    "damageMin": 384,
    "damageMax": 768
   },
-  "passive": "+5% magic accuracy (accuracy is not simulated).",
+  "passive": "+5% magic accuracy.",
   "critChanceAdd": 0,
   "damagePerMissingLp": 0,
   "scroll": {
@@ -155,7 +155,7 @@
    "damageMin": 384,
    "damageMax": 768
   },
-  "passive": "+5% ranged accuracy (accuracy is not simulated).",
+  "passive": "+5% ranged accuracy.",
   "critChanceAdd": 0,
   "damagePerMissingLp": 0,
   "scroll": {

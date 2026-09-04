@@ -70,7 +70,7 @@ function ability(id: string): EngineEntity {
 function make(ids: string[], loadout: ResolvedLoadout, cfg: Partial<EngineConfig> = {}): { e: TrainerEngine; rnd: { v: number } } {
   const steps = ids.map(ability);
   const catalog = new Map(steps.map((x) => [x.key, x]));
-  const e = new TrainerEngine(steps, catalog, { pingMs: 0, jitterMs: 0, abilityQueueing: true, loop: true, fullAdrenaline: true, ...cfg, loadout: { ...loadout, abilityDamage: 1000 } });
+  const e = new TrainerEngine(steps, catalog, { pingMs: 0, jitterMs: 0, abilityQueueing: true, loop: true, fullAdrenaline: true, hitChanceDisabled: true, ...cfg, loadout: { ...loadout, abilityDamage: 1000 } });
   const rnd = { v: 0.5 };
   e.random = () => rnd.v;
   e.start(0);

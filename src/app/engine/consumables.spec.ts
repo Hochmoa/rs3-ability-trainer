@@ -62,7 +62,7 @@ function action(id: string): EngineEntity {
 /** engine over the steps (all of them in the catalog); ability damage 1000, melee 2h unless the loadout says otherwise */
 function make(steps: EngineEntity[], loadout: Partial<ResolvedLoadout> = {}, cfg: Partial<EngineConfig> = {}, random = 0.5): TrainerEngine {
   const l: ResolvedLoadout = { ...defaultResolvedLoadout(), style: 'Melee', has2h: true, abilityDamage: 1000, ...loadout, items: new Set(loadout.items ?? []) };
-  const e = new TrainerEngine(steps, new Map(steps.map((s) => [s.key, s])), { pingMs: 0, jitterMs: 0, abilityQueueing: true, loop: true, fullAdrenaline: true, ...cfg, loadout: l });
+  const e = new TrainerEngine(steps, new Map(steps.map((s) => [s.key, s])), { pingMs: 0, jitterMs: 0, abilityQueueing: true, loop: true, fullAdrenaline: true, hitChanceDisabled: true, ...cfg, loadout: l });
   e.random = () => random;
   e.start(0);
   return e;

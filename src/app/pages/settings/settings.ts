@@ -1,6 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Settings as SettingsModel } from '../../core/models';
+import { HIT_CHANCE_MODES, Settings as SettingsModel } from '../../core/models';
 import { StorageService } from '../../core/storage.service';
 import { DialogService } from '../../shared/dialog';
 
@@ -25,6 +25,17 @@ import { DialogService } from '../../shared/dialog';
           <span>Hit delay (ticks)</span>
           <input type="number" min="0" max="5" step="1" [ngModel]="s().hitDelayTicks" (ngModelChange)="set('hitDelayTicks', $event)" />
           <small>Ticks between a cast and its damage landing on the target, like the hitsplat in game. Default 2. Abilities with their own timing (Snipe, Backhand, channels, bleeds, conjures) are not shifted.</small>
+        </label>
+        <label>
+          <span>Hit chance</span>
+          <select [ngModel]="s().hitChance ?? 'scaled'" (ngModelChange)="set('hitChance', $event)">
+            @for (m of HIT_CHANCE_MODES; track m.id) { <option [ngValue]="m.id">{{ m.label }}</option> }
+          </select>
+          <small>
+            Your accuracy (weapon tier, level, prayers, gear) against the target's affinity, Defence level and armour from the enemy panel on the Train page.
+            <b>Scaled damage:</b> the game's PvM rule since March 2024 – every hit deals hit chance × its damage, only under 1% everything misses.
+            <b>Roll to hit:</b> every hit lands in full or misses (the PvP rule). <b>Off:</b> every hit lands. A custom target has affinity 100 and no armour, so nothing changes until a boss preset is picked.
+          </small>
         </label>
         <label class="check">
           <input type="checkbox" [ngModel]="s().abilityQueueing" (ngModelChange)="set('abilityQueueing', $event)" />
@@ -83,6 +94,7 @@ export class Settings {
   private dialogs = inject(DialogService);
   readonly storage = inject(StorageService);
   readonly s = this.storage.settings;
+  readonly HIT_CHANCE_MODES = HIT_CHANCE_MODES;
 
   set<K extends keyof SettingsModel>(key: K, value: SettingsModel[K]): void {
     const next = { ...this.s(), [key]: value };

@@ -649,6 +649,22 @@
       }
     }
 
+    .affinity {
+      display: flex;
+      gap: 8px;
+
+      label {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        font-weight: 400;
+      }
+
+      input {
+        width: 54px;
+      }
+    }
+
     .note {
       flex-basis: 100%;
       margin: 0;
@@ -1162,6 +1178,12 @@
     color: #ff9a6a;
     font-size: 13px;
     font-weight: 600;
+  }
+
+  &.miss {
+    color: #9ab8ff;
+    font-size: 13px;
+    letter-spacing: 1px;
   }
 }
 

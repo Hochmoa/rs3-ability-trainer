@@ -14,7 +14,7 @@ function resolved(l: Loadout): ResolvedLoadout {
   return r;
 }
 
-const off: EngineConfig = { pingMs: 0, jitterMs: 0, abilityQueueing: false, loop: false, loadout: defaultResolvedLoadout() };
+const off: EngineConfig = { pingMs: 0, jitterMs: 0, abilityQueueing: false, loop: false, loadout: defaultResolvedLoadout(), hitChanceDisabled: true };
 const on: EngineConfig = { ...off, abilityQueueing: true };
 
 function ability(key: string, extra: Partial<EngineEntity> = {}): EngineEntity {

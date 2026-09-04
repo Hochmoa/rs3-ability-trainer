@@ -13,7 +13,7 @@ function engine(steps: EngineEntity[], extra: EngineEntity[] = []): TrainerEngin
   const loadout = defaultResolvedLoadout();
   loadout.style = 'Necromancy';
   loadout.hasConduit = true;
-  const e = new TrainerEngine(steps, catalog, { pingMs: 0, jitterMs: 0, abilityQueueing: false, loop: false, loadout, fullAdrenaline: true });
+  const e = new TrainerEngine(steps, catalog, { pingMs: 0, jitterMs: 0, abilityQueueing: false, loop: false, loadout, fullAdrenaline: true, hitChanceDisabled: true });
   e.random = () => 0.99;
   return e;
 }
