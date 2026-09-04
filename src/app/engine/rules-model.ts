@@ -62,10 +62,6 @@ export interface BuffDef {
   damageMultPerStack?: { style: Style; per: number };
   /** every critical strike of `style` fires an extra hit `delayTicks` later, keyed "<hit key>:<suffix>" (Instability's Lightning Surge); the extra hit never chains */
   critProc?: { style: Style; damage: { min: number; max: number }; delayTicks: number; suffix: string };
-  /** non-bleed damage of `style` Ã— (1 + per Ã— stacks held) (Gravitate: +1% melee damage per stack) */
-  damageMultPerStack?: { style: Style; per: number };
-  /** every critical strike of `style` fires an extra hit `delayTicks` later, keyed "<hit key>:<suffix>" (Instability's Lightning Surge); the extra hit never chains */
-  critProc?: { style: Style; damage: { min: number; max: number }; delayTicks: number; suffix: string };
   /** stun and bind immunity while active (Anticipation, Freedom, Transfigure's second phase) */
   stunImmune?: boolean;
   /** threshold abilities need this much adrenaline while active (Limitless 15) */
