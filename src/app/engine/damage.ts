@@ -38,9 +38,11 @@ export function critMultiplier(level = 99): number {
 /** base critical strike chance of every hit */
 export const BASE_CRIT_CHANCE = 0.1;
 
-/** self buffs that multiply the damage of one style (bleeds / burns excluded where the wiki says so) */
-export const BUFF_DAMAGE_MULT: { buff: string; style: Style; mult: number; dots: boolean }[] = [
+/** self buffs that multiply the damage of one style (bleeds / burns excluded where the wiki says so); `unlessBuff`: another buff takes priority (Blackhole yields to Berserk) */
+export const BUFF_DAMAGE_MULT: { buff: string; style: Style; mult: number; dots: boolean; unlessBuff?: string }[] = [
   { buff: 'berserk', style: 'Melee', mult: 1.75, dots: false },
+  { buff: 'blackhole', style: 'Melee', mult: 1.25, dots: false, unlessBuff: 'berserk' },
+  { buff: 'rampage', style: 'Melee', mult: 1.2, dots: false },
   { buff: 'enduring-ruin', style: 'Melee', mult: 1.1, dots: false },
   { buff: 'sunshine', style: 'Magic', mult: 1.5, dots: false },
   { buff: 'greater-sunshine', style: 'Magic', mult: 1.5, dots: false },

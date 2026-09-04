@@ -4,8 +4,25 @@ import { ResolvedLoadout, defaultResolvedLoadout } from './loadout-resolved';
 import { PROTECTION, PrayerBook, SOUL_SPLIT, bookOf, togglePrayer } from './prayer-rules';
 import { BASE_CRIT_CHANCE, BUFF_DAMAGE_MULT, BUFF_FLAT_ADD, BUFF_TYPE_DAMAGE_MULT, RAGE_MAX, RAGE_PER_STACK, SPIRIT_ATTACKS, TARGET_DAMAGE_ADD, TARGET_DAMAGE_MULT, critMultiplier } from './damage';
 import { MORPH_TARGETS } from './morphs';
-import { BUFF_BY_ID, MODELLED_WIKI_BUFFS, GLOBALS, ruleFor } from './rules';
+import { BUFF_BY_ID, MODELLED_WIKI_BUFFS, GLOBALS, ruleFor, specRuleFor } from './rules';
 import { AbilityRule, ChannelSpec, Condition, Effect, GlobalRule, Requirement, StackId } from './rules-model';
+
+/** the Essence of Finality slot: fires the special stored in the amulet with a weapon of the same style */
+export const EOF_KEY = 'ability:essence-of-finality';
+
+/** rules of the two special-attack slots merged with the rule of the spec they fire (slot requirements + spec behaviour) */
+const WRAPPER_RULES = new Map<string, AbilityRule>();
+function wrapperRule(slot: AbilityRule | undefined, specId: string): AbilityRule | undefined {
+  const spec = specRuleFor(specId);
+  if (!spec || !slot) return spec ?? slot;
+  const k = slot.ability + '|' + specId;
+  let merged = WRAPPER_RULES.get(k);
+  if (!merged) {
+    merged = { ...spec, ability: slot.ability, notes: [...slot.notes, ...spec.notes], requires: [...(slot.requires ?? []), ...(spec.requires ?? [])] };
+    WRAPPER_RULES.set(k, merged);
+  }
+  return merged;
+}
 
 /** does any of these effects (also inside choose / consume-stack) apply a buff or conjure? */
 function appliesBuff(effects: Effect[] | undefined): boolean {
@@ -438,6 +455,11 @@ export class TrainerEngine {
   morphOf(key: string, tick: number): { key: string; stage: number } | null {
     const e = this.catalog.get(key);
     if (!e || e.kind !== 'ability') return null;
+    // the special-attack slots show the wielded / stored weapon's special, like the ability name changes in game
+    if (e.id === 'weapon-special-attack' || e.id === 'essence-of-finality') {
+      const spec = e.id === 'weapon-special-attack' ? this.loadout.weaponSpec : this.eofSpecReady();
+      return spec ? { key: spec.key, stage: 1 } : null;
+    }
     const rule = ruleFor(e.id);
     if (rule?.stages && rule.sequence) {
       const stage = this.sequenceStep(rule.sequence.group, tick);
@@ -483,7 +505,7 @@ export class TrainerEngine {
 
   /** Ticks until `key` is off its own / shared cooldown at `tick` (0 = ready). */
   cooldownLeft(key: string, tick: number): number {
-    const e = this.catalog.get(key);
+    const e = this.entityOf(key);
     if (!e) return 0;
     const rule = this.ruleOf(e);
     const acting = this.specFor(e) ?? e;
@@ -508,7 +530,7 @@ export class TrainerEngine {
 
   /** Length of the cooldown a slot sweep should show for `key` (its own cooldown, or the conjure-to-command wait). */
   cooldownTotalTicks(key: string): number {
-    const e = this.catalog.get(key);
+    const e = this.entityOf(key);
     if (!e) return 0;
     const rule = this.ruleOf(e);
     const own = rule?.cooldownTicks ?? (this.specFor(e) ?? e).cooldownTicks ?? 0;
@@ -529,8 +551,11 @@ export class TrainerEngine {
     const rule = this.ruleOf(e);
     const spec = this.specFor(e);
     if (spec) {
-      const c = Math.round((spec.adrenaline < 0 ? -spec.adrenaline : 0) * this.loadout.specCostMult);
-      return { need: c, cost: c };
+      // requirement = cost, Ring of vigour ×0.9 on both; Icy Tempest: the cost drops per Primordial Ice stack, the requirement stays
+      const base = spec.adrenaline < 0 ? -spec.adrenaline : 0;
+      const p = rule?.cost?.perStack;
+      const cost = p ? Math.max(0, p.base - p.per * Math.min(this.stack(p.stack), p.maxStacks)) : base;
+      return { need: Math.round(base * this.loadout.specCostMult), cost: Math.round(cost * this.loadout.specCostMult) };
     }
     if (this.isThreshold(e, rule)) {
       let need = 50;
@@ -574,8 +599,10 @@ export class TrainerEngine {
 
   /** Why the wielded weapon cannot use this entity: wrong style, or a spec the weapon does not have. */
   weaponFailure(e: EngineEntity): 'weapon' | 'spec' | null {
-    if (e.kind === 'spec') return this.loadout.weaponSpec?.id === e.id ? null : 'spec';
+    if (e.kind === 'spec') return this.loadout.weaponSpec?.id === e.id || this.eofSpecReady()?.id === e.id ? null : 'spec';
     if (e.kind !== 'ability') return null;
+    // the stored special needs a wielded weapon of its own style – greyed out like in the game
+    if (e.id === 'essence-of-finality' && this.loadout.eofSpec && !this.eofSpecReady()) return 'weapon';
     // utility abilities off the GCD (Surge, Escape, Dive) work with any weapon; only real casts need the style
     if (this.isGcdStep(e) && e.style && isStyle4(e.style) && this.style !== e.style) return 'weapon';
     if (e.id === 'weapon-special-attack' && !this.loadout.weaponSpec) return 'spec';
@@ -584,7 +611,7 @@ export class TrainerEngine {
 
   /** Why an entity could not be used at `tick` (for the greyed-out bars), weapon first like in the game. */
   usable(key: string, tick: number): UsableReason {
-    const e = this.catalog.get(key);
+    const e = this.entityOf(key);
     if (!e) return 'ok';
     if (e.kind === 'prayer') {
       const book = bookOf(prayerId(key));
@@ -631,17 +658,18 @@ export class TrainerEngine {
   }
 
   private handle(input: PendingInput): void {
-    if (input.key === SPEC_KEY) {
-      // the generic special-attack slot fires the wielded weapon's spec; a rotation step written as that spec counts
-      const wielded = this.loadout.weaponSpec?.id;
-      const spec = wielded ? this.steps.find((s, i) => i >= this.index && !this.done.has(i) && s.kind === 'spec' && s.id === wielded) : undefined;
+    const slot = input.key === SPEC_KEY || input.key === EOF_KEY;
+    if (slot) {
+      // the special-attack / Essence of Finality slot fires the wielded / stored weapon's spec; a rotation step written as that spec counts
+      const fired = input.key === SPEC_KEY ? this.loadout.weaponSpec?.id : this.eofSpecReady()?.id;
+      const spec = fired ? this.steps.find((s, i) => i >= this.index && !this.done.has(i) && s.kind === 'spec' && s.id === fired) : undefined;
       if (spec) input = { ...input, key: spec.key };
     }
     let entity = this.catalog.get(input.key);
     if (!entity) return;
     const tickP = this.tickOf(input.arrival);
-    // the slot fires what it shows: Command X while the spirit lives, Slaughter after Dismember
-    const morph = this.morphOf(input.key, tickP);
+    // the slot fires what it shows: Command X while the spirit lives, Slaughter after Dismember (the special-attack slots act through specFor)
+    const morph = slot ? null : this.morphOf(input.key, tickP);
     if (morph && morph.key !== input.key) {
       const target = this.catalog.get(morph.key);
       if (target) {
@@ -936,6 +964,8 @@ export class TrainerEngine {
     const rule = this.ruleOf(entity);
     // Volley of Souls: one hit per stack held before the cast effects consume them
     const stacksBefore = rule?.hitsPerStack ? this.stack(rule.hitsPerStack) : 0;
+    // Death Grasp / Soul Crush / Icy Tempest: the per-stack damage is read before the cost or the cast effects consume the stacks
+    const addStacks = rule?.damageAddPerStack ? this.stack(rule.damageAddPerStack.stack) : 0;
     const spec = this.specFor(entity);
     const acting = spec ?? entity; // weapon special attacks act with the spec's numbers
     const globals = this.matchingGlobals(entity);
@@ -1088,6 +1118,8 @@ export class TrainerEngine {
     const hitDamage = (i: number) => {
       const h = rule?.hitDamage?.[i];
       let d = h ? { min: h.min, max: h.max } : damage;
+      const add = rule?.damageAddPerStack;
+      if (d && add && addStacks > 0) d = { min: d.min + add.min * addStacks, max: d.max + add.max * addStacks };
       const m = channel?.damageMult;
       if (d && m !== undefined) d = { min: d.min * m, max: d.max * m };
       const ramp = channel?.damageRamp;
@@ -1102,13 +1134,13 @@ export class TrainerEngine {
     if (channel && asDot) {
       // Endless Assault: the channel's hits land on their normal ticks but nothing can cancel them
       channel.hits.forEach((offset, i) =>
-        this.scheduled.push({ key: entity.key, entity, rule, tick: tick + offset, index: i, total: channel.hits.length, channel: null, guaranteedCrit: !!channel.guaranteedCrit || !!rule?.guaranteedCrit, damage: hitDamage(i), mult, flat, castMult: multAt(i), flags, critAdd: consumedCritAdd }),
+        this.scheduled.push({ key: entity.key, entity: acting, rule, tick: tick + offset, index: i, total: channel.hits.length, channel: null, guaranteedCrit: !!channel.guaranteedCrit || !!rule?.guaranteedCrit, damage: hitDamage(i), mult, flat, castMult: multAt(i), flags, critAdd: consumedCritAdd }),
       );
       this.lastAttackTick = tick;
     } else if (channel) {
       this.channel = { key: entity.key, castTick: tick, endTick: tick + channel.ticks, hits: channel.hits.length, hitsDone: 0, cancelled: false, dealt: 0 };
       channel.hits.forEach((offset, i) =>
-        this.scheduled.push({ key: entity.key, entity, rule, tick: tick + offset, index: i, total: channel.hits.length, channel: this.channel, guaranteedCrit: !!channel.guaranteedCrit || !!rule?.guaranteedCrit, damage: hitDamage(i), mult, flat, castMult: multAt(i), flags, critAdd: consumedCritAdd }),
+        this.scheduled.push({ key: entity.key, entity: acting, rule, tick: tick + offset, index: i, total: channel.hits.length, channel: this.channel, guaranteedCrit: !!channel.guaranteedCrit || !!rule?.guaranteedCrit, damage: hitDamage(i), mult, flat, castMult: multAt(i), flags, critAdd: consumedCritAdd }),
       );
       this.lastAttackTick = tick;
     } else if (bleed) {
@@ -1116,17 +1148,17 @@ export class TrainerEngine {
       const per = b.damage ?? (damage && b.splitTotal ? { min: damage.min / b.hits, max: damage.max / b.hits } : damage);
       // a recast restarts the DoT: the previous cast's remaining ticks are dropped
       this.scheduled = this.scheduled.filter((h) => !(h.dot && h.key === entity.key));
-      if (b.direct) this.scheduled.push({ key: entity.key, entity, rule, tick, index: 0, total: 1, channel: null, guaranteedCrit: !!rule?.guaranteedCrit, damage, mult, flat, castMult, flags, critAdd: consumedCritAdd });
+      if (b.direct) this.scheduled.push({ key: entity.key, entity: acting, rule, tick, index: 0, total: 1, channel: null, guaranteedCrit: !!rule?.guaranteedCrit, damage, mult, flat, castMult, flags, critAdd: consumedCritAdd });
       for (let i = 0; i < b.hits; i++) {
         const f = b.factors?.[i] ?? 1;
         const offset = (b.startTicks ?? b.everyTicks) + i * b.everyTicks;
-        this.scheduled.push({ key: entity.key, entity, rule, tick: tick + offset, index: i, total: b.hits, channel: null, guaranteedCrit: false, dot: true, damage: per ? { min: per.min * f, max: per.max * f } : null, mult: dotMult, flat: 0, castMult: b.direct ? 1 : multAt(i), flags, critAdd: 0 });
+        this.scheduled.push({ key: entity.key, entity: acting, rule, tick: tick + offset, index: i, total: b.hits, channel: null, guaranteedCrit: false, dot: true, damage: per ? { min: per.min * f, max: per.max * f } : null, mult: dotMult, flat: 0, castMult: b.direct ? 1 : multAt(i), flags, critAdd: 0 });
       }
       this.lastAttackTick = tick;
     } else if (hits) {
       hits.forEach((offset, i) => {
         if (!hitWanted(i)) return;
-        this.scheduled.push({ key: entity.key, entity, rule, tick: tick + offset, index: i, total: hits.length, channel: null, guaranteedCrit: !!rule?.guaranteedCrit, damage: hitDamage(i), mult, flat, castMult, flags, spirit: rule?.spiritHit, critAdd: consumedCritAdd });
+        this.scheduled.push({ key: entity.key, entity: acting, rule, tick: tick + offset, index: i, total: hits.length, channel: null, guaranteedCrit: !!rule?.guaranteedCrit, damage: hitDamage(i), mult, flat, castMult, flags, spirit: rule?.spiritHit, critAdd: consumedCritAdd });
       });
       this.lastAttackTick = tick;
     }
@@ -1210,7 +1242,7 @@ export class TrainerEngine {
       if (b.sourceKey === h.key && b.startTick === (h.channel?.castTick ?? h.tick)) continue; // granted by this very cast
       critAdd += c.add;
     }
-    critAdd += h.critAdd + (h.rule?.crit?.chanceAdd ?? 0);
+    critAdd += h.critAdd + (h.rule?.crit?.chanceAdd ?? 0) + (h.rule?.hitCrit?.[h.index]?.chanceAdd ?? 0);
     const crit = !h.dot && !h.spirit && !h.rule?.crit?.never && (h.guaranteedCrit || critAdd >= 1 || this.random() < BASE_CRIT_CHANCE + critAdd);
     const outerFlags = this.castFlags;
     this.castFlags = h.flags; // the hit's own effects see the flags of its cast
@@ -1218,6 +1250,14 @@ export class TrainerEngine {
     this.castFlags = outerFlags;
     for (const id of h.rule?.hitBuffs ?? []) this.applyBuff(id, h.tick, h.entity.key);
     if (h.damage) this.dealHit(h, crit);
+    // Instability: a critical strike of the buff's style fires an extra hit a tick later (never from that extra hit itself)
+    if (crit && h.damage && !h.dot && !h.spirit) {
+      for (const b of this.buffs) {
+        const p = BUFF_BY_ID.get(b.id)?.critProc;
+        if (!p || p.style !== h.entity.style || h.key.endsWith(':' + p.suffix)) continue;
+        this.scheduled.push({ ...h, key: h.key + ':' + p.suffix, rule: undefined, tick: h.tick + Math.max(1, p.delayTicks), index: 0, total: 1, channel: null, guaranteedCrit: false, damage: { ...p.damage }, flat: 0, castMult: 1, critAdd: 0, flags: new Set() });
+      }
+    }
     for (const g of globals) {
       for (const eff of g.onHit ?? []) this.applyEffect(eff, h.tick, h.entity, h.index);
       if (g.hitAdrenaline) this.addAdrenaline(g.hitAdrenaline * (this.hasBuff('natural-instinct') ? 2 : 1));
@@ -1283,7 +1323,7 @@ export class TrainerEngine {
       }
     }
     if (crit) {
-      let critMult = critMultiplier() + l.critDamageAdd + (h.rule?.crit?.damageAdd ?? 0);
+      let critMult = critMultiplier() + l.critDamageAdd + (h.rule?.crit?.damageAdd ?? 0) + (h.rule?.hitCrit?.[h.index]?.damageAdd ?? 0);
       for (const b of this.buffs) {
         const add = l.buffCritDamageAdd[b.id] ?? BUFF_BY_ID.get(b.id)?.critDamageAdd;
         if (add) critMult += add;
@@ -1334,7 +1374,13 @@ export class TrainerEngine {
   /** product of the active style buffs (Berserk, Sunshine, Death's Swiftness) for a hit of `style` */
   private styleMultiplier(style: Style | undefined, dot: boolean): number {
     let mult = 1;
-    for (const m of BUFF_DAMAGE_MULT) if (m.style === style && (m.dots || !dot) && this.hasBuff(m.buff)) mult *= m.mult;
+    for (const m of BUFF_DAMAGE_MULT) if (m.style === style && (m.dots || !dot) && this.hasBuff(m.buff) && !(m.unlessBuff && this.hasBuff(m.unlessBuff))) mult *= m.mult;
+    if (!dot) {
+      for (const b of this.buffs) {
+        const p = BUFF_BY_ID.get(b.id)?.damageMultPerStack;
+        if (p && p.style === style && b.stacks > 0) mult *= 1 + p.per * b.stacks;
+      }
+    }
     return mult;
   }
 
@@ -1728,8 +1774,28 @@ export class TrainerEngine {
 
   // ---------------------------------------------------------------- helpers
 
+  /** rule of an entity: spec steps use the spec rule, the special-attack slots the spec rule merged with their own requirements */
   ruleOf(e: EngineEntity): AbilityRule | undefined {
-    return e.kind === 'ability' ? ruleFor(e.id) : undefined;
+    if (e.kind === 'spec') return specRuleFor(e.id);
+    if (e.kind !== 'ability') return undefined;
+    const rule = ruleFor(e.id);
+    const spec = this.specFor(e);
+    return spec ? wrapperRule(rule, spec.id) : rule;
+  }
+
+  /** catalog entity, or the wielded / stored special (the special-attack slots morph to it even when it is not on a bar) */
+  private entityOf(key: string): EngineEntity | undefined {
+    const e = this.catalog.get(key);
+    if (e) return e;
+    const l = this.loadout;
+    return l.weaponSpec?.key === key ? l.weaponSpec : l.eofSpec?.key === key ? l.eofSpec : undefined;
+  }
+
+  /** the special stored in the Essence of Finality when a weapon of its style is wielded (otherwise it cannot fire) */
+  eofSpecReady(): EngineEntity | null {
+    const l = this.loadout;
+    if (!l.eofSpec) return null;
+    return l.style && l.eofSpec.style && l.eofSpec.style !== l.style ? null : l.eofSpec;
   }
 
   /** Weapon Special Attack / Essence of Finality steps act as the wielded weapon's spec; spec steps act as themselves. */
@@ -1774,6 +1840,8 @@ export class TrainerEngine {
       if (w.costing && !(e.adrenaline < 0 || this.isThreshold(e, rule))) return false;
       if (w.generating && !((rule?.adrenaline ?? e.adrenaline) > 0)) return false;
       if (w.buff && !this.hasBuff(w.buff)) return false;
+      if (w.item && !this.loadout.items.has(w.item)) return false;
+      if (w.stackMin && this.stack(w.stackMin.stack) < w.stackMin.min) return false;
       return true;
     });
   }

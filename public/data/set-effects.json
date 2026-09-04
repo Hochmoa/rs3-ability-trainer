@@ -1080,5 +1080,33 @@
       "kind": "soul-chance",
       "chance": 0.05
     }
+  },
+  {
+    "id": "dark-shard-of-leng",
+    "kind": "item",
+    "name": "Dark Shard of Leng (Primordial Ice)",
+    "style": "Melee",
+    "slot": "weapon-passive",
+    "class": "damage",
+    "source": "https://runescape.wiki/w/Primordial_Ice",
+    "text": "Every attack cast has a 10% chance to add a Primordial Ice stack (max 10); Icy Tempest deals +18-22% per stack, costs 12% less per stack and consumes them.",
+    "effect": {
+      "kind": "primordial-ice",
+      "chance": 0.1
+    }
+  },
+  {
+    "id": "dark-ice-shard",
+    "kind": "item",
+    "name": "Dark ice shard (Primordial Ice)",
+    "style": "Melee",
+    "slot": "weapon-passive",
+    "class": "damage",
+    "source": "https://runescape.wiki/w/Primordial_Ice",
+    "text": "Every attack cast has a 5% chance to add a Primordial Ice stack (max 10); Icy Tempest consumes them.",
+    "effect": {
+      "kind": "primordial-ice",
+      "chance": 0.05
+    }
   }
 ]

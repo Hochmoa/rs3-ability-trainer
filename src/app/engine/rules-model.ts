@@ -20,7 +20,9 @@ export type StackId =
   | 'glacial-embrace'
   | 'essence-corruption'
   | 'concentrated-crit'
-  | 'revenge';
+  | 'revenge'
+  | 'gravitate'
+  | 'primordial-ice';
 
 /** Which stacks a style shows as resources on the training page (also with 0 stacks). */
 export const STYLE_STACKS: Record<Style, StackId[]> = {
@@ -56,6 +58,14 @@ export interface BuffDef {
   critDamageAdd?: number;
   /** swapping the main-hand weapon removes it (Concentrated Blast stacks) */
   removedOnMainHandSwap?: boolean;
+  /** non-bleed damage of `style` × (1 + per × stacks held) (Gravitate: +1% melee damage per stack) */
+  damageMultPerStack?: { style: Style; per: number };
+  /** every critical strike of `style` fires an extra hit `delayTicks` later, keyed "<hit key>:<suffix>" (Instability's Lightning Surge); the extra hit never chains */
+  critProc?: { style: Style; damage: { min: number; max: number }; delayTicks: number; suffix: string };
+  /** non-bleed damage of `style` Ã— (1 + per Ã— stacks held) (Gravitate: +1% melee damage per stack) */
+  damageMultPerStack?: { style: Style; per: number };
+  /** every critical strike of `style` fires an extra hit `delayTicks` later, keyed "<hit key>:<suffix>" (Instability's Lightning Surge); the extra hit never chains */
+  critProc?: { style: Style; damage: { min: number; max: number }; delayTicks: number; suffix: string };
   /** stun and bind immunity while active (Anticipation, Freedom, Transfigure's second phase) */
   stunImmune?: boolean;
   /** threshold abilities need this much adrenaline while active (Limitless 15) */
@@ -105,8 +115,8 @@ export interface Condition {
 export type Effect =
   /** add stacks to a stacking buff; `cap` overrides the definition's max (Berserk: Bloodlust 8) */
   | { kind: 'stack'; stack: StackId; amount: number; cap?: number; when?: Condition }
-  /** set the counter; 0 removes a timer-less stacking buff */
-  | { kind: 'stack-set'; stack: StackId; amount: number }
+  /** set the counter; 0 removes a timer-less stacking buff (Death Essence readies Death Spark only with an Omni guard in hand) */
+  | { kind: 'stack-set'; stack: StackId; amount: number; when?: Condition }
   /** take stacks away (only when at least `min` are held); `then` runs after a successful consume */
   | { kind: 'consume-stack'; stack: StackId; amount: number | 'all'; min?: number; when?: Condition; then?: Effect[] }
   /** `untilSpirit`: the buff lives exactly as long as that conjured spirit (Haunted while the commanded ghost hits) */
@@ -150,7 +160,7 @@ export interface Requirement {
 export interface CostRule {
   /** flat override of the data cost */
   cost?: number;
-  /** cost = base − per × min(stacks, maxStacks); the stacks are consumed */
+  /** cost = base − per × min(stacks, maxStacks); the stacks are consumed. On a weapon special only the cost drops, the requirement stays (Icy Tempest) */
   perStack?: { stack: StackId; per: number; maxStacks: number; base: number };
   /** buff discount: consumed by the cast */
   buffDiscount?: { buff: string; amount: number };
@@ -259,6 +269,10 @@ export interface AbilityRule {
   noDamage?: boolean;
   /** one hit of (stacks × min) … (stacks × max) % of the ability damage, capped (Shatter) */
   damagePerStack?: { stack: StackId; min: number; max: number; cap?: number };
+  /** every hit's roll += stacks held at the cast × (min … max) % (Death Grasp +40% per Necrosis, Soul Crush +135–165% per Residual Soul, Icy Tempest); read before the cast effects consume the stacks */
+  damageAddPerStack?: { stack: StackId; min: number; max: number };
+  /** per-hit critical strike bonuses, index-aligned with `hits` (The Final Flurry: +25% / +25% / +50% chance and damage) */
+  hitCrit?: ({ chanceAdd?: number; damageAdd?: number } | undefined)[];
   /** pressing again while this buff runs releases it: no cost, no cooldown, off the GCD (Reprisal) */
   recast?: { whileBuff: string };
   /** one hit per stack held (Volley of Souls) */
@@ -301,6 +315,10 @@ export interface GlobalRule {
     buff?: string;
     /** only GCD abilities */
     gcd?: boolean;
+    /** loadout item / weapon passive active (Dark Shard of Leng's Primordial Ice) */
+    item?: string;
+    /** at least this many stacks held when the cast starts */
+    stackMin?: { stack: StackId; min: number };
   };
   onCast?: Effect[];
   onHit?: Effect[];

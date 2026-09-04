@@ -7,11 +7,15 @@ import ABILITIES from '../../../public/data/abilities.json';
 import { Ability } from '../core/models';
 import { BUFF_DAMAGE_MULT, TARGET_DAMAGE_MULT } from './damage';
 import { MORPH_TARGETS } from './morphs';
-import { ABILITY_RULES, BUFF_BY_ID, GLOBALS } from './rules';
+import SPECS from '../../../public/data/specs.json';
+import { ABILITY_RULES, BUFF_BY_ID, GLOBALS, SPEC_RULES } from './rules';
 import { AbilityRule, Condition, Effect, Requirement } from './rules-model';
 
 const DATA = ABILITIES as unknown as Ability[];
 const ABILITY_IDS = new Set(DATA.map((a) => a.id));
+const SPEC_IDS = new Set((SPECS as { id: string }[]).map((s) => s.id));
+/** ability rules and weapon special attack rules share the invariants below */
+const ALL_RULES = [...ABILITY_RULES, ...SPEC_RULES];
 
 function buffsInCondition(c: Condition | undefined, out: Set<string>): void {
   if (!c) return;
@@ -64,9 +68,19 @@ describe('rule set invariants', () => {
     expect(unknown).toEqual([]);
   });
 
+  it('every spec rule belongs to a special attack in specs.json, and every special attack has a rule', () => {
+    const unknown = SPEC_RULES.map((r) => r.ability).filter((id) => !SPEC_IDS.has(id));
+    expect(unknown).toEqual([]);
+    const ruled = new Set(SPEC_RULES.map((r) => r.ability));
+    const missing = [...SPEC_IDS].filter((id) => !ruled.has(id));
+    expect(missing).toEqual([]);
+    const dupes = SPEC_RULES.map((r) => r.ability).filter((id, i, all) => all.indexOf(id) !== i);
+    expect(dupes).toEqual([]);
+  });
+
   it('every buff a rule, global rule or damage table refers to is defined', () => {
     const missing = new Set<string>();
-    for (const r of ABILITY_RULES) for (const id of buffsInRule(r)) if (!id.includes(':') && !BUFF_BY_ID.has(id)) missing.add(r.ability + ' → ' + id);
+    for (const r of ALL_RULES) for (const id of buffsInRule(r)) if (!id.includes(':') && !BUFF_BY_ID.has(id)) missing.add(r.ability + ' → ' + id);
     for (const g of GLOBALS) {
       const out = new Set<string>();
       buffsInEffects(g.onCast, out);
@@ -86,7 +100,7 @@ describe('rule set invariants', () => {
   });
 
   it('a DoT rule applies its debuff on the cast, never refreshed by its own ticks', () => {
-    const bad = ABILITY_RULES.filter((r) => r.bleed && (r.onHit ?? []).some((e) => e.kind === 'buff' && e.refresh)).map((r) => r.ability);
+    const bad = ALL_RULES.filter((r) => r.bleed && (r.onHit ?? []).some((e) => e.kind === 'buff' && e.refresh)).map((r) => r.ability);
     expect(bad).toEqual([]);
   });
 
@@ -127,12 +141,13 @@ describe('rule set invariants', () => {
         if ('when' in e && e.when?.stackMin) used.add(e.when.stackMin.stack);
       }
     };
-    for (const r of ABILITY_RULES) {
+    for (const r of ALL_RULES) {
       walk(r.onCast);
       walk(r.onHit);
       for (const q of r.requires ?? []) if (q.stackMin) used.add(q.stackMin.stack);
       if (r.cost?.perStack) used.add(r.cost.perStack.stack);
       if (r.hitsPerStack) used.add(r.hitsPerStack);
+      if (r.damageAddPerStack) used.add(r.damageAddPerStack.stack);
     }
     for (const g of GLOBALS) {
       walk(g.onCast);
