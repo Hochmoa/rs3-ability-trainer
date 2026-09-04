@@ -243,3 +243,22 @@ describe('melee: Punish and Igneous Overpower', () => {
     expect(g.castTick).toBe(1);
   });
 });
+
+describe('hit delay setting', () => {
+  it('shifts ordinary hits by the configured ticks but leaves abilities with their own timing and DoT ticks alone', () => {
+    const e = make(['punish', 'backhand', 'dismember', 'assault'], {}, { hitDelayTicks: 2 });
+    cast(e, 'punish', 1);
+    expect(hits(e, 'punish')).toEqual([]); // nothing on the cast tick
+    e.update(3 * T + 1);
+    expect(hits(e, 'punish').map((h) => h.tick)).toEqual([3]);
+    cast(e, 'backhand', 4);
+    e.update(5 * T + 1);
+    expect(hits(e, 'backhand').map((h) => h.tick)).toEqual([5]);
+    cast(e, 'dismember', 7);
+    e.update(30 * T);
+    expect(hits(e, 'dismember')[0].tick).toBe(9);
+    cast(e, 'assault', 30);
+    e.update(40 * T);
+    expect(hits(e, 'assault').map((h) => h.tick)).toEqual([31, 33, 35, 37]);
+  });
+});

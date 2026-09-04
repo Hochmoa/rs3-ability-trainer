@@ -213,6 +213,11 @@ export interface Settings {
   hideObscureEquipment: boolean;
   /** catalogs: hide abilities and prayers that are never used in current PvM (core/obscure.ts) */
   hideObscureAbilities: boolean;
+  /**
+   * ticks between a cast and its damage landing for every ordinary hit (the game shows the hitsplat a moment after the
+   * ability, ~2 ticks). Abilities with their own timing (Snipe, Backhand, channels, DoTs, conjures …) keep it.
+   */
+  hitDelayTicks: number;
   /** in-game "Combat Mode": Full manual, or Revolution (the main bar fires on its own – docs/research/revolution.md) */
   combatMode: CombatMode;
   /** Revolution options ("Revolution size" + the "Automatically trigger …" toggles) */
@@ -267,6 +272,7 @@ export const DEFAULT_SETTINGS: Settings = {
   rechargeAdrenaline: false,
   hideObscureEquipment: true,
   hideObscureAbilities: true,
+  hitDelayTicks: 2,
   combatMode: 'manual',
   revolution: { ...DEFAULT_REVOLUTION },
 };

@@ -55,6 +55,12 @@ export interface EngineConfig {
   fullAdrenaline?: boolean;
   /** +10% adrenaline at every server tick (like hitting a training dummy while resting) */
   rechargeAdrenaline?: boolean;
+  /**
+   * ticks between a cast and its damage for ordinary hits (all offsets 0): the game lands the hitsplat a moment after the
+   * ability. Rules with their own offsets (Snipe 3, Backhand 1, Death Skulls bounces …), channels, DoTs and conjured
+   * spirits are not shifted. Default 0.
+   */
+  hitDelayTicks?: number;
   /** resolved loadout for the weapons wielded at the start */
   loadout: ResolvedLoadout;
   /** weapons wielded at the start; weapon-switch steps change it */
@@ -1225,7 +1231,7 @@ export class TrainerEngine {
       const per = b.damage ?? (damage && b.splitTotal ? { min: damage.min / b.hits, max: damage.max / b.hits } : damage);
       // a recast restarts the DoT: the previous cast's remaining ticks are dropped
       this.scheduled = this.scheduled.filter((h) => !(h.dot && h.key === entity.key));
-      if (b.direct) this.scheduled.push({ key: entity.key, entity: acting, rule, tick, index: 0, total: 1, channel: null, guaranteedCrit: !!rule?.guaranteedCrit, damage, mult, flat, castMult, flags, critAdd: consumedCritAdd });
+      if (b.direct) this.scheduled.push({ key: entity.key, entity: acting, rule, tick: tick + this.hitDelay(), index: 0, total: 1, channel: null, guaranteedCrit: !!rule?.guaranteedCrit, damage, mult, flat, castMult, flags, critAdd: consumedCritAdd });
       for (let i = 0; i < b.hits; i++) {
         const f = b.factors?.[i] ?? 1;
         const offset = (b.startTicks ?? b.everyTicks) + i * b.everyTicks;
@@ -1233,13 +1239,21 @@ export class TrainerEngine {
       }
       this.lastAttackTick = tick;
     } else if (hits) {
+      // an ordinary hit (no timing of its own) lands after the configured hit delay
+      const delay = hits.every((o) => o === 0) ? this.hitDelay() : 0;
       hits.forEach((offset, i) => {
         if (!hitWanted(i)) return;
-        this.scheduled.push({ key: entity.key, entity: acting, rule, tick: tick + offset, index: i, total: hits.length, channel: null, guaranteedCrit: !!rule?.guaranteedCrit, damage: hitDamage(i), mult, flat, castMult, flags, spirit: rule?.spiritHit, critAdd: consumedCritAdd });
+        this.scheduled.push({ key: entity.key, entity: acting, rule, tick: tick + offset + delay, index: i, total: hits.length, channel: null, guaranteedCrit: !!rule?.guaranteedCrit, damage: hitDamage(i), mult, flat, castMult, flags, spirit: rule?.spiritHit, critAdd: consumedCritAdd });
       });
       this.lastAttackTick = tick;
     }
     this.processHits(tick);
+  }
+
+  /** configured delay of ordinary hits, clamped to 0..5 ticks */
+  private hitDelay(): number {
+    const d = this.config.hitDelayTicks ?? 0;
+    return Number.isFinite(d) ? Math.max(0, Math.min(5, Math.round(d))) : 0;
   }
 
   /** Puts a weapon item in hand and re-resolves the loadout (style, spec, shield, conduit ...). */

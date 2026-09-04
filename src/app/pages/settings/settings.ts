@@ -21,6 +21,11 @@ import { DialogService } from '../../shared/dialog';
           <input type="number" min="0" max="500" step="5" [ngModel]="s().jitterMs" (ngModelChange)="set('jitterMs', $event)" />
           <small>Random variation added to every press. 0 disables it.</small>
         </label>
+        <label>
+          <span>Hit delay (ticks)</span>
+          <input type="number" min="0" max="5" step="1" [ngModel]="s().hitDelayTicks" (ngModelChange)="set('hitDelayTicks', $event)" />
+          <small>Ticks between a cast and its damage landing on the target, like the hitsplat in game. Default 2. Abilities with their own timing (Snipe, Backhand, channels, bleeds, conjures) are not shifted.</small>
+        </label>
         <label class="check">
           <input type="checkbox" [ngModel]="s().abilityQueueing" (ngModelChange)="set('abilityQueueing', $event)" />
           <span>Ability queueing</span>
@@ -85,6 +90,8 @@ export class Settings {
     if (typeof next.jitterMs !== 'number' || isNaN(next.jitterMs)) next.jitterMs = 0;
     next.pingMs = Math.max(0, next.pingMs);
     next.jitterMs = Math.max(0, next.jitterMs);
+    if (typeof next.hitDelayTicks !== 'number' || isNaN(next.hitDelayTicks)) next.hitDelayTicks = 0;
+    next.hitDelayTicks = Math.max(0, Math.min(5, Math.round(next.hitDelayTicks)));
     void this.storage.saveSettings(next);
   }
 
