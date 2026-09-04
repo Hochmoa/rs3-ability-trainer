@@ -14,7 +14,8 @@
   "params": {
    "chancePerRank": 0.09,
    "bonus": 3,
-   "twoSlot": false
+   "twoSlot": false,
+   "level20Mult": 1.1
   },
   "twoSlot": false,
   "icon": "assets/perks/impatient.png"
@@ -51,7 +52,8 @@
   "class": "adrenaline",
   "params": {
    "noCostChancePerRank": 0.01,
-   "lockoutTicks": 50
+   "lockoutTicks": 50,
+   "level20Mult": 1.1
   },
   "twoSlot": false,
   "icon": "assets/perks/relentless.png"
@@ -94,7 +96,8 @@
     "debilitate"
    ],
    "durationPerRank": 0.06,
-   "noDamage": true
+   "noDamage": true,
+   "minTicksPerRank": 1
   },
   "twoSlot": false,
   "icon": "assets/perks/bulwark.png"
@@ -115,7 +118,12 @@
    "abilities": [
     "anticipation"
    ],
-   "extraTicksPerRank": 1.67,
+   "extraTicks": [
+    2,
+    3,
+    5,
+    6
+   ],
    "removesDamageReduction": true
   },
   "twoSlot": false,
@@ -134,7 +142,8 @@
   "class": "cooldown",
   "params": {
    "chance": 0.1,
-   "cooldownTicks": 100
+   "cooldownTicks": 100,
+   "level20Mult": 1.1
   },
   "twoSlot": false,
   "icon": null
@@ -153,7 +162,8 @@
   "params": {
    "chancePerRank": 0.03,
    "buff": "devotion",
-   "durationTicks": 5
+   "durationTicks": 5,
+   "level20Mult": 1.1
   },
   "twoSlot": false,
   "icon": "assets/perks/devoted.png"
@@ -173,7 +183,8 @@
    "chancePerRank": 0.045,
    "buff": "devotion",
    "durationTicks": 5,
-   "twoSlot": true
+   "twoSlot": true,
+   "level20Mult": 1.1
   },
   "twoSlot": true,
   "icon": "assets/perks/enhanced-devoted.png"
@@ -302,7 +313,10 @@
   "class": "damage",
   "params": {
    "damagePerRank": 0.4,
-   "threshold": 50000
+   "threshold": 50000,
+   "minIntervalTicks": 10,
+   "rollMin": 0.6,
+   "rollMax": 0.99
   },
   "twoSlot": false,
   "icon": "assets/perks/aftershock.png"
@@ -320,7 +334,8 @@
   "description": "+2% chance per rank to critically hit opponents.\nThis perk has an increased chance to activate on level 20 items.",
   "class": "damage",
   "params": {
-   "critChancePerRank": 0.02
+   "critChancePerRank": 0.02,
+   "level20Mult": 1.1
   },
   "twoSlot": false,
   "icon": "assets/perks/biting.png"
@@ -358,7 +373,8 @@
   "class": "damage",
   "params": {
    "damagePerRank": 0.5,
-   "cooldownTicks": 100
+   "cooldownTicks": 100,
+   "ignoresStyleBuffs": true
   },
   "twoSlot": false,
   "icon": "assets/perks/crackling.png"
@@ -589,7 +605,8 @@
   "class": "damage",
   "params": {
    "chancePerRank": 0.01,
-   "damagePerRank": 0.01
+   "damagePerRank": 0.01,
+   "level20Mult": 1.1
   },
   "twoSlot": false,
   "icon": "assets/perks/spendthrift.png"
@@ -642,7 +659,11 @@
   "level": null,
   "description": "20% chance to reduce an attack by 5% per rank.\nThis perk has an increased chance to activate on level 20 items.",
   "class": "defensive",
-  "params": {},
+  "params": {
+   "chance": 0.2,
+   "reductionPerRank": 0.05,
+   "level20Mult": 1.1
+  },
   "twoSlot": false,
   "icon": "assets/perks/absorbative.png"
  },
@@ -657,7 +678,10 @@
   "level": null,
   "description": "0.5% chance per rank when hit that the damage dealt will be reduced to 1. Does not stack with the equivalent Warpriest effect.\nThis perk has an increased chance to activate on level 20 items.",
   "class": "defensive",
-  "params": {},
+  "params": {
+   "chancePerRank": 0.005,
+   "level20Mult": 1.1
+  },
   "twoSlot": false,
   "icon": "assets/perks/lucky.png"
  },

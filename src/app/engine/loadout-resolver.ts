@@ -91,22 +91,55 @@ export function loadoutWarnings(l: Loadout, data: LoadoutData): string[] {
   const style = mainStyle(l, data);
   if (eof && style && eof.style !== style) out.push('The Essence of Finality special (' + eof.style + ') needs a weapon of the same style.');
   for (const g of wn.gizmos) checkGizmo(g.gizmo, g.type, data, out, g.label);
+  checkPerkConflicts(wn.gizmos, data, out);
   return out;
 }
 
+/** One gizmo: perk type, ancient-only perks, rank limits, two perk slots (a two-slot perk fills the gizmo), no perk twice. */
 function checkGizmo(g: Gizmo, type: 'weapon' | 'armour', data: LoadoutData, out: string[], label: string): void {
   let slots = 0;
+  const seen = new Set<string>();
   for (const p of g.perks) {
     const perk = data.perkById.get(p.perk);
-    if (!perk) continue;
+    if (!perk) {
+      out.push(label + ': unknown perk "' + p.perk + '".');
+      continue;
+    }
+    if (seen.has(perk.id)) out.push(label + ': ' + perk.name + ' is in the gizmo twice.');
+    seen.add(perk.id);
     const allowed = perk.gizmos.includes(type) || perk.gizmos.includes('ancient-' + type);
     if (!allowed) out.push(label + ': ' + perk.name + ' cannot go on a ' + type + ' gizmo.');
     if (!g.ancient && perk.gizmos.every((x) => x.startsWith('ancient-'))) out.push(label + ': ' + perk.name + ' needs an ancient gizmo.');
     const max = g.ancient ? perk.maxRankAncient : perk.maxRank;
+    if (p.rank < 1) out.push(label + ': ' + perk.name + ' rank must be at least 1.');
     if (p.rank > max) out.push(label + ': ' + perk.name + ' rank ' + p.rank + ' exceeds the maximum of ' + max + (g.ancient ? '' : ' (standard gizmo)') + '.');
     slots += perk.twoSlot ? 2 : 1;
   }
-  if (slots > 2) out.push(label + ': more than two perk slots used.');
+  if (slots > 2) out.push(label + ': more than two perk slots used' + (g.perks.some((p) => data.perkById.get(p.perk)?.twoSlot) ? ' (a two-slot perk cannot be paired with another perk)' : '') + '.');
+}
+
+/**
+ * Perks that clash across gizmos. Wiki (Perks): "These perks do not stack with themselves, and the gizmo with the highest
+ * rank will take priority." – a repeated perk is not an error, but the lower rank is wasted. Devoted / Enhanced Devoted and
+ * Efficient / Enhanced Efficient "do not stack"; Biting does nothing under Equilibrium; Shield Bashing does nothing under Bulwark.
+ */
+function checkPerkConflicts(gizmos: Worn['gizmos'], data: LoadoutData, out: string[]): void {
+  const ranks = new Map<string, number[]>();
+  for (const g of gizmos) for (const p of g.gizmo.perks) ranks.set(p.perk, [...(ranks.get(p.perk) ?? []), p.rank]);
+  for (const [id, list] of ranks) {
+    if (list.length < 2) continue;
+    const perk = data.perkById.get(id);
+    if (!perk) continue;
+    out.push(perk.name + ' is on ' + list.length + ' gizmos: perks do not stack with themselves, only rank ' + Math.max(...list) + ' counts.');
+  }
+  const has = (id: string) => ranks.has(id);
+  const pair = (a: string, b: string, text: string) => {
+    if (has(a) && has(b)) out.push(text);
+  };
+  pair('devoted', 'enhanced-devoted', 'Enhanced Devoted does not stack with Devoted – Devoted is wasted.');
+  pair('efficient', 'enhanced-efficient', 'Enhanced Efficient does not stack with Efficient on the same item.');
+  pair('biting', 'equilibrium', 'Equilibrium prevents critical strikes – Biting has no effect.');
+  pair('shield-bashing', 'bulwark', 'Bulwark makes Debilitate deal no damage – Shield Bashing has no effect.');
 }
 
 export function mainStyle(l: Loadout, data: LoadoutData): Style | null {
@@ -166,6 +199,8 @@ export function resolveLoadout(l: Loadout, data: LoadoutData): ResolvedLoadout {
     r.items.add(id);
     applyPerk(r, perk, rank);
   }
+  // Equilibrium / Eruptive raise the ability damage stat itself (wiki: "anything calculated from the ability damage stat")
+  if (r.abilityDamageMult !== 1) r.abilityDamage = Math.floor(r.abilityDamage * r.abilityDamageMult + 1e-6);
 
   // armour set thresholds (every set with worn pieces)
   for (const [setId, pieces] of wn.sets) {
@@ -214,44 +249,83 @@ function weaponType(w: Weapon): 'bow' | 'crossbow' | 'other' {
   return 'other';
 }
 
+/**
+ * One perk at its highest equipped rank (resolveLoadout already collapsed the gizmos: "perks do not stack with themselves,
+ * the gizmo with the highest rank takes priority"). Numbers come from perks.json (tools/fetch-perks.py, docs/research/perks.md);
+ * the fallbacks are the wiki values of September 2026.
+ */
 function applyPerk(r: ResolvedLoadout, perk: Perk, rank: number): void {
-  const p = perk.params as Record<string, number | string[] | boolean>;
+  const p = perk.params as Record<string, unknown>;
+  const num = (key: string, fallback: number): number => (typeof p[key] === 'number' ? (p[key] as number) : fallback);
+  const list = (key: string, fallback: string[]): string[] => (Array.isArray(p[key]) ? (p[key] as string[]) : fallback);
+  const multAbilities = (ids: string[], mult: number) => {
+    for (const a of ids) r.damageMultPerAbility[a] = (r.damageMultPerAbility[a] ?? 1) * mult;
+  };
   switch (perk.id) {
+    // ---- adrenaline
     case 'impatient': r.impatientRank = rank; break;
     case 'invigorating': r.invigoratingRank = rank; break;
     case 'relentless': r.relentlessRank = rank; break;
-    case 'planted-feet': r.items.add('planted-feet'); break;
-    case 'caroming':
-      for (const a of ['ricochet', 'greater-ricochet']) r.flatAddPerAbility[a] = (r.flatAddPerAbility[a] ?? 0) + Number(p['ricochetPerRank']) * rank;
-      break;
-    case 'ultimatums':
-      r.ultimateDamageMult *= 1 + Number(p['ultimateBase']) + Number(p['ultimatePerRank']) * rank;
-      break;
+    // ---- cooldowns / durations
+    case 'planted-feet': r.items.add('planted-feet'); break; // rules-magic / rules-ranged: Sunshine & Death's Swiftness 63 ticks, no periodic damage
     case 'mobile':
-      for (const a of (p['abilities'] as string[]) ?? []) r.cooldownMult[a] = 0.5;
+      for (const a of list('abilities', ['surge', 'escape', 'dive', 'bladed-dive', 'barge', 'greater-barge'])) r.cooldownMult[a] = num('cooldownMult', 0.5);
       break;
     case 'preparation':
-      r.buffDurationMult['preparation'] = 1 + 0.15 * rank;
-      r.cooldownMult['preparation'] = 1 + 0.15 * rank;
+      r.buffDurationMult['preparation'] = 1 + num('durationPerRank', 0.15) * rank;
+      r.cooldownMult['preparation'] = 1 + num('cooldownPerRank', 0.15) * rank;
       break;
     case 'turtling':
-      r.buffDurationMult['barricade'] = 1 + 0.1 * rank;
-      r.cooldownMult['barricade'] = 1 + 0.1 * rank;
+      r.buffDurationMult['barricade'] = 1 + num('durationPerRank', 0.1) * rank;
+      r.cooldownMult['barricade'] = 1 + num('cooldownPerRank', 0.1) * rank;
       break;
     case 'brief-respite':
-      for (const a of ['rejuvenate', 'guthix-s-blessing', 'ice-asylum']) r.cooldownMult[a] = 1 - 0.05 * rank;
+      for (const a of list('abilities', ['rejuvenate', 'guthix-s-blessing', 'ice-asylum'])) r.cooldownMult[a] = 1 + num('cooldownPerRank', -0.05) * rank;
       break;
-    case 'clear-headed': r.buffDurationAdd['anticipation'] = (r.buffDurationAdd['anticipation'] ?? 0) + Math.round(rank * 1.67); break;
+    case 'clear-headed': {
+      // wiki table: +2 / +3 / +5 / +6 ticks, added after Reflexes halved the duration
+      const table = list('extraTicks', []).map(Number);
+      const extra = table.length ? table[Math.min(rank, table.length) - 1] : Math.ceil(rank * 1.5);
+      r.buffDurationAdd['anticipation'] = (r.buffDurationAdd['anticipation'] ?? 0) + extra;
+      break;
+    }
     case 'reflexes':
-      r.buffDurationMult['anticipation'] = 0.5;
-      r.cooldownMult['anticipation'] = 0.5;
+      r.buffDurationMult['anticipation'] = num('durationMult', 0.5);
+      r.cooldownMult['anticipation'] = num('cooldownMult', 0.5);
       break;
-    case 'bulwark': r.buffDurationMult['debilitate'] = 1 + 0.06 * rank; break;
-    case 'biting': r.critChanceAdd += 0.02 * rank; break;
+    case 'bulwark':
+      // tB = t + max(R, ⌊t × 0.06 × R⌋); Debilitate deals no damage
+      r.buffDurationExtra['debilitate'] = { share: num('durationPerRank', 0.06) * rank, minTicks: num('minTicksPerRank', 1) * rank };
+      multAbilities(list('abilities', ['debilitate']), 0);
+      break;
+    // ---- damage
     case 'precise': r.preciseRank = rank; break;
-    case 'equilibrium': r.equilibriumRank = rank; break;
+    case 'equilibrium':
+      r.equilibriumRank = rank;
+      r.abilityDamageMult *= 1 + num('abilityDamageBase', 0.06) + num('abilityDamagePerRank', 0.02) * rank;
+      r.critDisabled = true;
+      break;
+    case 'eruptive': r.abilityDamageMult *= 1 + num('abilityDamagePerRank', 0.005) * rank; break;
+    case 'biting': r.critChanceAdd += num('critChancePerRank', 0.02) * rank; break;
+    case 'ultimatums': r.ultimateDamageMult *= 1 + num('ultimateBase', 0.03) + num('ultimatePerRank', 0.01) * rank; break;
+    case 'caroming':
+      // "+4% ability damage per rank, with each hit" (flat); Chain's secondary targets are not simulated (single target)
+      for (const a of ['ricochet', 'greater-ricochet']) r.flatAddPerAbility[a] = (r.flatAddPerAbility[a] ?? 0) + num('ricochetPerRank', 0.04) * rank;
+      break;
+    case 'lunging': multAbilities(list('abilities', ['combust', 'dismember']), 1 + num('base', 0.1) + num('perRank', 0.03) * rank); break;
+    case 'shield-bashing': multAbilities(list('abilities', ['debilitate']), 1 + num('perRank', 0.15) * rank); break;
+    case 'aftershock':
+      r.aftershock = { rank, perRank: num('damagePerRank', 0.4), threshold: num('threshold', 50000), minIntervalTicks: num('minIntervalTicks', 10), rollMin: num('rollMin', 0.6), rollMax: num('rollMax', 0.99) };
+      break;
+    case 'crackling': r.crackling = { rank, perRank: num('damagePerRank', 0.5), cooldownTicks: num('cooldownTicks', 100) }; break;
+    case 'spendthrift': r.spendthriftRank = rank; break;
+    case 'flanking': r.flanking = { rank, perRank: num('perRank', 0.4), abilities: list('abilities', ['soul-strike', 'backhand', 'impact', 'binding-shot']) }; break;
+    case 'ruthless': r.ruthlessRank = rank; break; // stacks need kills – reported, not simulated
+    case 'undead-slayer': r.targetTypeDamageMult.undead = (r.targetTypeDamageMult.undead ?? 1) * (1 + num('bonus', 0.07)); break;
+    case 'dragon-slayer': r.targetTypeDamageMult.dragon = (r.targetTypeDamageMult.dragon ?? 1) * (1 + num('bonus', 0.07)); break;
+    case 'demon-slayer': r.targetTypeDamageMult.demon = (r.targetTypeDamageMult.demon ?? 1) * (1 + num('bonus', 0.07)); break;
     default:
-      break; // other damage / defensive perks: stored for later
+      break; // Genocidal (Slayer task progress), Energising (accuracy), defensive perks (Devoted, Crystal Shield, Absorbative, Lucky …): no effect on the damage model
   }
 }
 
