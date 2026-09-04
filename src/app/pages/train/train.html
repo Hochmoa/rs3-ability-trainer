@@ -157,7 +157,23 @@
           <span>First attack after (ticks)</span>
           <input type="number" min="1" max="50" [ngModel]="enemy().firstAttackTicks" (ngModelChange)="setEnemy('firstAttackTicks', numberOf($event, 1, 50))" [disabled]="running()" />
         </label>
-        <p class="muted small note">Scoring: +1 for every tick with Soul Split active, +1 for every attack met with the right overhead or absorbed by Disruption Shield, Barricade, Resonance or Divert. Specials of the bosses are not simulated; the presets use the auto-attack styles and rate from the wiki.</p>
+        <div class="field" title="Affinity (base hit chance) of the target per attack style, from the wiki infobox: 90 against its weakness, 55–70 otherwise; 100 = always hit. Necromancy uses the monster's middle value.">
+          <span>Affinity (%)</span>
+          <div class="affinity">
+            @for (st of STYLES4; track st) {
+              <label><small>{{ st.slice(0, 3) }}</small><input type="number" min="0" max="100" [ngModel]="enemy().affinity[st]" (ngModelChange)="setAffinity(st, $event)" [disabled]="running()" /></label>
+            }
+          </div>
+        </div>
+        <label class="field" title="Defence level of the target (wiki infobox). Its armour rating is armour + f(Defence), f(x) = x³/1250 + 4x + 40.">
+          <span>Defence level</span>
+          <input type="number" min="1" max="10000" [ngModel]="enemy().defenceLevel" (ngModelChange)="setEnemy('defenceLevel', numberOf($event, 1, 10000))" [disabled]="running()" />
+        </label>
+        <label class="field" title="Armour value of the target (wiki infobox). Hit chance = affinity × your accuracy / (armour + f(Defence)), capped at 100%.">
+          <span>Armour</span>
+          <input type="number" min="0" max="100000" step="10" [ngModel]="enemy().armour" (ngModelChange)="setEnemy('armour', numberOf($event, 0, 100000))" [disabled]="running()" />
+        </label>
+        <p class="muted small note">Scoring: +1 for every tick with Soul Split active, +1 for every attack met with the right overhead or absorbed by Disruption Shield, Barricade, Resonance or Divert. Specials of the bosses are not simulated; the presets use the auto-attack styles, rate, affinity, Defence level and armour from the wiki. Hit chance: affinity × accuracy / armour rating (Settings: scaled damage, roll to hit, or off).</p>
       </div>
     }
   </div>
@@ -284,7 +300,7 @@
    <div class="arena-main">
     <div class="hitsplats" aria-live="off">
       @for (h of hitsplats(); track h.id) {
-        <div class="hitsplat" [class.crit]="h.crit" [class.dot]="h.dot" [title]="h.name">{{ h.amount | number: '1.0-0' }}</div>
+        <div class="hitsplat" [class.crit]="h.crit" [class.dot]="h.dot" [class.miss]="h.miss" [title]="h.name + (h.miss ? ' – missed' : '')">{{ h.miss ? 'MISS' : (h.amount | number: '1.0-0') }}</div>
       }
     </div>
     @if (finishReason(); as why) {
@@ -547,6 +563,10 @@
       @if (revolution()) { <span class="muted" title="abilities Revolution cast on its own">Auto {{ counts().auto }}</span> }
       <span class="muted">Damage {{ damage() | number: '1.0-0' }}</span>
       <span class="muted">DPS {{ dps() | number: '1.0-0' }}</span>
+      @if (hitChance() !== null) {
+        <span class="muted" title="hit chance of the wielded style against the target's affinity, Defence level and armour with the active prayers (wiki: affinity × accuracy / armour rating, capped at 100%)">Hit chance {{ hitChance()! * 100 | number: '1.0-0' }}%</span>
+        <span [class]="misses() ? 'warn' : 'muted'">Misses {{ misses() }}</span>
+      }
       @if (killedAtMs(); as ms) { <span class="good">Kill {{ (ms / 1000) | number: '1.1-1' }} s</span> }
       @if (enemy().enabled) {
         <span class="good">Prayed {{ prayerStats().prayed }}/{{ prayerStats().attacks }}</span>
@@ -580,6 +600,7 @@
       @if (damage() > 0) {
         <p class="damage-summary">
           <b>{{ damage() | number: '1.0-0' }} damage</b> in {{ hits() }} hits · {{ dps() | number: '1.0-0' }} DPS
+          @if (hitChance() !== null) { · hit chance {{ hitChance()! * 100 | number: '1.0-0' }}% · {{ misses() }} {{ misses() === 1 ? 'miss' : 'misses' }} }
           @if (killedAtMs(); as ms) { · target killed after {{ (ms / 1000) | number: '1.1-1' }} s }
           <small class="muted">(level 99, no armour bonus – see the wiki's ability damage formula)</small>
         </p>

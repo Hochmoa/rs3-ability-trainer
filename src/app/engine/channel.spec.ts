@@ -31,7 +31,7 @@ function make(ids: string[], loadout: Partial<ResolvedLoadout> = {}, cfg: Partia
   const steps = ids.map(ability);
   const catalog = new Map(steps.map((e) => [e.key, e]));
   const l = { ...defaultResolvedLoadout(), ...loadout, items: new Set(loadout.items ?? []) };
-  const e = new TrainerEngine(steps, catalog, { pingMs: 0, jitterMs: 0, abilityQueueing: true, loop: true, ...cfg, loadout: l });
+  const e = new TrainerEngine(steps, catalog, { pingMs: 0, jitterMs: 0, abilityQueueing: true, loop: true, hitChanceDisabled: true, ...cfg, loadout: l });
   e.random = () => 0.99;
   e.start(0);
   e.adrenaline = 100;

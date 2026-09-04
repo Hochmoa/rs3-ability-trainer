@@ -1,7 +1,7 @@
 import { Injectable, computed, signal } from '@angular/core';
 import { IDBPDatabase, deleteDB, openDB } from 'idb';
 import { Subject } from 'rxjs';
-import { ActionBarSetup, BarProfile, BarProfileData, DEFAULT_BAR_PROFILE_ID, DEFAULT_ENEMY, activateProfile, profileData, snapshotActiveProfile, DEFAULT_SETTINGS, EnemyConfig, Equipment, INVENTORY_SIZE, ItemRef, Keybind, LegacyLoadout, Loadout, Prebuild, Rotation, RotationStep, Session, SetupBundle, SetupMeta, Settings, defaultActionBars, migrateLegacyLoadout, newLoadout } from './models';
+import { ActionBarSetup, BarProfile, BarProfileData, DEFAULT_BAR_PROFILE_ID, DEFAULT_ENEMY, enemyWithStats, activateProfile, profileData, snapshotActiveProfile, DEFAULT_SETTINGS, EnemyConfig, Equipment, INVENTORY_SIZE, ItemRef, Keybind, LegacyLoadout, Loadout, Prebuild, Rotation, RotationStep, Session, SetupBundle, SetupMeta, Settings, defaultActionBars, migrateLegacyLoadout, newLoadout } from './models';
 
 const DB_NAME = 'rs3trainer';
 const CONSENT_KEY = 'rs3trainer.consent';
@@ -88,7 +88,7 @@ export class StorageService {
         }
       }
       const enemy = await db.get('settings', 'enemy');
-      if (enemy) this.enemy.set({ ...DEFAULT_ENEMY, ...enemy });
+      if (enemy) this.enemy.set(enemyWithStats(enemy));
       const prebuilds = await db.get('settings', 'prebuilds');
       if (prebuilds) this.prebuilds.set(prebuilds);
       const bars = await db.get('settings', 'actionbars');
@@ -172,7 +172,7 @@ export class StorageService {
     const list = (s.loadouts ?? []).map(normaliseLoadout);
     this.loadouts.set(list.length ? list : [newLoadout()]);
     this.activeLoadoutId.set(this.loadouts().some((l) => l.id === s.activeLoadoutId) ? s.activeLoadoutId : this.loadouts()[0].id);
-    if (s.enemy) this.enemy.set({ ...DEFAULT_ENEMY, ...s.enemy, styles: [...(s.enemy.styles ?? DEFAULT_ENEMY.styles)] });
+    if (s.enemy) this.enemy.set(enemyWithStats(s.enemy));
     if (this.consent()) {
       const db = await this.open();
       await db.put('settings', this.settings(), 'settings');

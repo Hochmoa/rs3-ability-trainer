@@ -3,7 +3,7 @@ import { DEFAULT_ENEMY, EnemyConfig } from '../core/models';
 import { defaultResolvedLoadout } from './loadout-resolved';
 import { EngineConfig, EngineEntity, TrainerEngine } from './trainer-engine';
 
-const base: EngineConfig = { pingMs: 0, jitterMs: 0, abilityQueueing: false, loop: false, loadout: defaultResolvedLoadout(), prayerBook: 'Curses' };
+const base: EngineConfig = { pingMs: 0, jitterMs: 0, abilityQueueing: false, loop: false, loadout: defaultResolvedLoadout(), prayerBook: 'Curses', hitChanceDisabled: true };
 
 function ability(key: string): EngineEntity {
   return { key, kind: 'ability', id: key, name: key, icon: '', gcd: true, abilityType: 'Basic', adrenaline: 9, cooldownTicks: 0, buffs: [], style: 'Defence' };

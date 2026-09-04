@@ -4,6 +4,7 @@
  */
 import { EquipSlot, Familiar, GearItem, Gizmo, ItemRef, Loadout, Perk, SetEffect, Style, WEAPON_SETS, Weapon, WeaponSpec, loadoutWield, loadoutLevels } from '../core/models';
 import { KWUARM_PER_POTENCY, WEAPON_POISON_CHANCE, abilityDamageOf, boostedLevels, damageSkillOf, poisonPct } from './damage';
+import { DEFENDER_ACCURACY_MULT, NIHIL_ACCURACY, NIHIL_ACCURACY_MULT, weaponAccuracy } from './hit-chance';
 import { ruleFor } from './rules';
 import { FORTIFIED_BONES_BONUS } from './rules-necromancy';
 import { ResolvedLoadout, defaultResolvedLoadout } from './loadout-resolved';
@@ -176,6 +177,9 @@ export function resolveLoadout(l: Loadout, data: LoadoutData): ResolvedLoadout {
   r.levels = boostedLevels(loadoutLevels(l), l.overload);
   r.combatLevel = r.levels[damageSkillOf(r.style)];
   r.abilityDamage = abilityDamageOf(two ? null : main, off, two, r.combatLevel);
+  // hit chance (engine/hit-chance.ts): the main-hand / two-hander's accuracy; an off-hand defender multiplies it by 1.03 (wiki hit chance modifiers)
+  r.weaponAccuracy = weaponAccuracy(main);
+  if (r.hasDefender) r.accuracyMult.push({ mult: DEFENDER_ACCURACY_MULT });
   const specId = main?.spec ?? (off?.spec ?? null);
   if (specId) {
     const spec = data.specById.get(specId);
@@ -207,6 +211,9 @@ export function resolveLoadout(l: Loadout, data: LoadoutData): ResolvedLoadout {
   if (fam) {
     r.familiar = fam;
     r.critChanceAdd += fam.critChanceAdd ?? 0;
+    // nihils: +5% accuracy of their style (wiki hit chance modifiers: 1.05)
+    const nihilStyle = NIHIL_ACCURACY[fam.id];
+    if (nihilStyle) r.accuracyMult.push({ style: nihilStyle, mult: NIHIL_ACCURACY_MULT });
   }
 
   // perks: highest rank per perk counts
@@ -270,7 +277,7 @@ export function resolveLoadout(l: Loadout, data: LoadoutData): ResolvedLoadout {
  */
 export const NOT_SIMULATED_EFFECT_KINDS: Record<string, string> = {
   'bolt-proc': 'the set fires Dragonstone / Onyx / Hydrix bolt effects with any bolts – those are not modelled; equipped Hydrix / Ruby bakriminel bolts (e) are (Sirenic / Elite sirenic)',
-  'armour-reduction': 'target armour only changes the hit chance, which is not simulated – there is no damage equivalent (Black stone arrows)',
+  'armour-reduction': 'the target armour it lowers builds up per hit over 12 minutes – not modelled in the hit chance (Black stone arrows)',
   'heal': "the player's life points are not simulated (scrimshaw of vampyrism)",
   'damage-delay': 'incoming damage is not simulated (Trimmed masterwork)',
   'strength-bonus': 'ability damage ignores armour and strength bonuses (Achto)',
@@ -415,6 +422,7 @@ function applyEffect(r: ResolvedLoadout, id: string, effect: Record<string, unkn
     case 'crit-chance':
       if (e['requiresWeapon'] && r.weaponType !== e['requiresWeapon']) break; // stalker's ring: bow only
       r.critChanceAdd += e['add'] !== undefined ? Number(e['add']) : Number(e['perPiece']) * Math.min(pieces, 5);
+      if (e['hitChance'] !== undefined) r.hitChanceAdd += Number(e['hitChance']); // reaver's ring: −5% hit chance
       break;
     case 'crit-damage':
       r.critDamageAdd += Number(e['add']);
@@ -487,11 +495,13 @@ function applyEffect(r: ResolvedLoadout, id: string, effect: Record<string, unkn
     case 'style-damage':
       // Ful arrows (Ranged 1.15, not DoTs), scrimshaw of the elements / cruelty (Magic / Ranged, DoTs included)
       r.styleDamageMult.push({ style: e['style'] ?? style, mult: Number(e['mult']), dots: e['dots'] !== false });
+      if (e['accuracy'] !== undefined) r.accuracyMult.push({ style: e['style'] ?? style ?? undefined, mult: 1 + Number(e['accuracy']) }); // Ful arrows: −10% accuracy
       break;
     case 'target-type-damage': {
       // Salve amulet (e) 1.2 vs undead, Jas dragonbane / demonbane arrows 1.3 – EngineConfig.targetType picks the type
       const t = e['targetType'] as keyof typeof r.targetTypeDamageMult;
       r.targetTypeDamageMult[t] = (r.targetTypeDamageMult[t] ?? 1) * Number(e['mult']);
+      if (e['hitChance'] !== undefined) r.targetTypeHitChanceAdd[t] = (r.targetTypeHitChanceAdd[t] ?? 0) + Number(e['hitChance']); // +15% / +20% hit chance against the type
       break;
     }
     case 'target-buff-damage':
@@ -513,9 +523,11 @@ function applyEffect(r: ResolvedLoadout, id: string, effect: Record<string, unkn
     case 'feasting-spores': // rules-global.ts: a stack per ranged hit, at 12 the next adrenaline-costing ability is free
     case 'icy-chill': // rules-global.ts / damage.ts: a stack per basic hit, at 10 Icy Precision (+30% enhanced / ultimate / special damage)
       break; // handled by rule conditions on the item id
+    case 'snipe-mobile': // movement while sniping (channel movableWith); Nightmare gauntlets: Snipe +25% hit chance
+      if (e['hitChance'] !== undefined) r.hitChanceAddPerAbility['snipe'] = (r.hitChanceAddPerAbility['snipe'] ?? 0) + Number(e['hitChance']);
+      break;
     case 'replaces-ability':
     case 'snipe-cdr':
-    case 'snipe-mobile': // movement while sniping (channel movableWith); the +25% hit chance is not simulated
     case 'buff-on-cast':
     case 'buff-on-hit':
     case 'instant-dot-window':

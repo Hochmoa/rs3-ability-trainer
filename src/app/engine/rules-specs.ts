@@ -4,7 +4,7 @@
  * specs.json (fetched from the wiki bucket), the rules add hit schedules, resources, buffs and debuffs.
  *
  * Fired through the "Weapon Special Attack" / "Essence of Finality" slots (the engine merges the slot's requirements
- * with the spec's rule) or as a "spec:<id>" rotation step. Not simulated anywhere: hit chance / accuracy bonuses,
+ * with the spec's rule) or as a "spec:<id>" rotation step. Not simulated anywhere: the specials' own hit chance / accuracy bonuses,
  * healing, prayer points, PvP-only effects, area damage beyond the single target, stat drains (shown as debuffs only).
  */
 import { AbilityRule } from './rules-model';

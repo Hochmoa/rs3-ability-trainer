@@ -264,8 +264,20 @@ export interface Settings {
   combatMode: CombatMode;
   /** Revolution options ("Revolution size" + the "Automatically trigger …" toggles) */
   revolution: RevolutionSettings;
+  /**
+   * hit chance against the enemy's affinity / Defence / armour (docs/research/hit-chance.md): 'scaled' = the wiki's PvM
+   * "damage potential" (every hit deals hit chance × its roll, under 1% everything misses), 'roll' = the old / PvP roll to
+   * hit (a hit lands fully or misses), 'off' = every hit lands. Missing = 'scaled'.
+   */
+  hitChance?: HitChanceMode;
 }
 
+export type HitChanceMode = 'scaled' | 'roll' | 'off';
+export const HIT_CHANCE_MODES: { id: HitChanceMode; label: string }[] = [
+  { id: 'scaled', label: 'Scaled damage (PvM, wiki)' },
+  { id: 'roll', label: 'Roll to hit (misses)' },
+  { id: 'off', label: 'Off – every hit lands' },
+];
 export type CombatMode = 'manual' | 'revolution';
 export type BoneShieldChoice = 'none' | 'lesser' | 'greater';
 /** ability id of the incantation for a choice */
@@ -321,6 +333,7 @@ export const DEFAULT_SETTINGS: Settings = {
   boneShield: 'greater',
   combatMode: 'manual',
   revolution: { ...DEFAULT_REVOLUTION },
+  hitChance: 'scaled',
 };
 
 // ---------------------------------------------------------------- equipment data (public/data/*.json)
@@ -810,6 +823,19 @@ export interface EnemyConfig {
   lifePoints: number;
   /** what the target is: Salve amulet, bane ammunition and the Slayer perks only work against their type (missing / null = none of them) */
   type?: TargetType | null;
+  /** affinity ("base hit chance") per attack style in % (wiki infobox; 100 = always hit); Necromancy uses the monster's middle value */
+  affinity: Record<Style4, number>;
+  /** Defence level of the target (wiki infobox "Defence"); its armour rating is armour + f(Defence) – engine/hit-chance.ts */
+  defenceLevel: number;
+  /** armour value of the target (wiki infobox "Armour") */
+  armour: number;
+}
+
+/** an enemy config from storage: fills the hit chance stats older configs lack (from the preset, or "always hit" for custom ones) */
+export function enemyWithStats(e: Partial<EnemyConfig>): EnemyConfig {
+  const preset = e.preset ? ENEMY_PRESETS.find((p) => p.preset === e.preset) : undefined;
+  const base = preset ?? DEFAULT_ENEMY;
+  return { ...DEFAULT_ENEMY, ...e, affinity: { ...base.affinity, ...(e.affinity ?? {}) }, defenceLevel: e.defenceLevel ?? base.defenceLevel, armour: e.armour ?? base.armour, styles: [...(e.styles ?? DEFAULT_ENEMY.styles)] };
 }
 
 /** target classes gear cares about (Undead / Dragon / Demon Slayer perks, Salve amulet, Jas dragonbane / demonbane arrows) */
@@ -828,15 +854,22 @@ export const DEFAULT_ENEMY: EnemyConfig = {
   firstAttackTicks: 8,
   lifePoints: 0,
   type: null,
+  // a custom target is hit like a training dummy: affinity 100, no armour (existing sessions keep their numbers)
+  affinity: { Melee: 100, Ranged: 100, Magic: 100, Necromancy: 100 },
+  defenceLevel: 1,
+  armour: 0,
 };
 
-/** Boss presets from runescape.wiki (auto-attack styles and rate; specials are not simulated). */
+/**
+ * Boss presets from runescape.wiki (auto-attack styles and rate; specials are not simulated). Affinity / Defence / Armour are
+ * the infobox values (normal mode); Necromancy uses the monster's middle affinity value (wiki "Hit chance") – docs/research/hit-chance.md.
+ */
 export const ENEMY_PRESETS: EnemyConfig[] = [
-  { ...DEFAULT_ENEMY, enabled: true, preset: 'nakatra', name: 'Nakatra, Devourer Eternal', styles: ['Magic', 'Ranged'], pattern: 'streak', streak: 3, intervalTicks: 5, warningTicks: 3, lifePoints: 800000 },
-  { ...DEFAULT_ENEMY, enabled: true, preset: 'zamorak', name: 'Zamorak, Lord of Chaos', styles: ['Magic', 'Ranged'], pattern: 'random', intervalTicks: 5, warningTicks: 3, lifePoints: 300000 },
-  { ...DEFAULT_ENEMY, enabled: true, preset: 'raksha', name: 'Raksha, the Shadow Colossus', styles: ['Melee', 'Ranged', 'Magic'], pattern: 'no-repeat', intervalTicks: 5, warningTicks: 3, lifePoints: 800000 },
-  { ...DEFAULT_ENEMY, enabled: true, preset: 'rasial', name: 'Rasial, the First Necromancer', styles: ['Necromancy'], pattern: 'cycle', intervalTicks: 5, warningTicks: 3, lifePoints: 900000 },
-  { ...DEFAULT_ENEMY, enabled: false, preset: 'dummy', name: 'Training dummy', styles: ['Melee'], pattern: 'cycle', intervalTicks: 5, warningTicks: 3, lifePoints: 0 },
+  { ...DEFAULT_ENEMY, enabled: true, preset: 'nakatra', name: 'Nakatra, Devourer Eternal', styles: ['Magic', 'Ranged'], pattern: 'streak', streak: 3, intervalTicks: 5, warningTicks: 3, lifePoints: 800000, affinity: { Melee: 55, Ranged: 65, Magic: 55, Necromancy: 55 }, defenceLevel: 95, armour: 2765 },
+  { ...DEFAULT_ENEMY, enabled: true, preset: 'zamorak', name: 'Zamorak, Lord of Chaos', styles: ['Magic', 'Ranged'], pattern: 'random', intervalTicks: 5, warningTicks: 3, lifePoints: 300000, affinity: { Melee: 55, Ranged: 55, Magic: 55, Necromancy: 55 }, defenceLevel: 80, armour: 1924 },
+  { ...DEFAULT_ENEMY, enabled: true, preset: 'raksha', name: 'Raksha, the Shadow Colossus', styles: ['Melee', 'Ranged', 'Magic'], pattern: 'no-repeat', intervalTicks: 5, warningTicks: 3, lifePoints: 800000, affinity: { Melee: 55, Ranged: 65, Magic: 55, Necromancy: 55 }, defenceLevel: 85, armour: 2178 },
+  { ...DEFAULT_ENEMY, enabled: true, preset: 'rasial', name: 'Rasial, the First Necromancer', styles: ['Necromancy'], pattern: 'cycle', intervalTicks: 5, warningTicks: 3, lifePoints: 900000, affinity: { Melee: 55, Ranged: 55, Magic: 55, Necromancy: 55 }, defenceLevel: 95, armour: 2458 },
+  { ...DEFAULT_ENEMY, enabled: false, preset: 'dummy', name: 'Training dummy', styles: ['Melee'], pattern: 'cycle', intervalTicks: 5, warningTicks: 3, lifePoints: 0, affinity: { Melee: 60, Ranged: 50, Magic: 70, Necromancy: 60 }, defenceLevel: 1, armour: 110 },
 ];
 
 /**
@@ -912,6 +945,6 @@ export interface Session {
   results: StepResult[];
   enemy?: EnemyConfig;
   prayerStats?: PrayerStats;
-  /** damage dealt in the session (engine/damage.ts numbers) */
-  damage?: { total: number; hits: number; dps: number; killedAtMs: number | null };
+  /** damage dealt in the session (engine/damage.ts numbers); `misses` and `hitChance` (0..1 against the enemy's stats, null = not simulated) since the hit chance model */
+  damage?: { total: number; hits: number; dps: number; killedAtMs: number | null; misses?: number; hitChance?: number | null };
 }

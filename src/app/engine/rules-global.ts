@@ -184,7 +184,7 @@ export const GLOBAL_RULES: GlobalRule[] = [
   },
   {
     id: 'icy-chill-consume',
-    notes: ['Wen arrows: at 10 Icy Chill the next Ranged enhanced / ultimate ability or special attack consumes them and grants Icy Precision for 15 ticks – +30% base damage for those abilities (the +30% hit chance is not simulated); nothing is consumed while Icy Precision runs (' + W + 'Wen_arrow )'],
+    notes: ['Wen arrows: at 10 Icy Chill the next Ranged enhanced / ultimate ability or special attack consumes them and grants Icy Precision for 15 ticks – +30% base damage for those abilities and +30% hit chance for the ones after the consuming cast; nothing is consumed while Icy Precision runs (' + W + 'Wen_arrow )'],
     when: { style: 'Ranged', types: ['Enhanced', 'Threshold', 'Ultimate', 'Special'], item: 'wen-arrow', stackMin: { stack: 'icy-chill', min: 10 }, includeSpecs: true },
     onCast: [{ kind: 'consume-stack', stack: 'icy-chill', amount: 'all', min: 10, when: { notBuff: 'icy-precision' }, then: [{ kind: 'remove-buff', id: 'icy-chill' }, { kind: 'buff', id: 'icy-precision' }] }],
   },

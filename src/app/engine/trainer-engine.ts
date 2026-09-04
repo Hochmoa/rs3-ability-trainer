@@ -3,6 +3,7 @@ import { AbilityType, CombatMode, EnemyConfig, EntityKind, FAMILIAR_SPECIAL_MAX,
 import { ResolvedLoadout, defaultResolvedLoadout } from './loadout-resolved';
 import { PROTECTION, PrayerBook, SOUL_SPLIT, bookOf, togglePrayer } from './prayer-rules';
 import { BASE_CRIT_CHANCE, BUFF_DAMAGE_MULT, BUFF_FLAT_ADD, BUFF_TYPE_DAMAGE_MULT, POISON_EVERY_TICKS, POISON_ROLL, RAGE_MAX, RAGE_PER_STACK, SPIRIT_ATTACKS, TARGET_DAMAGE_ADD, TARGET_DAMAGE_MULT, critMultiplier } from './damage';
+import { BUFF_HIT_CHANCE_ADD, HIT_CHANCE_BYPASS_DOTS, MIN_HIT_CHANCE, accuracyRating, accuracySkillOf, affinityStyleOf, armourRating, hitChance, prayerAccuracyLevels } from './hit-chance';
 import { MORPH_TARGETS } from './morphs';
 import { BUFF_BY_ID, MODELLED_WIKI_BUFFS, GLOBALS, actionRuleFor, ruleFor, scrollRuleFor, specRuleFor, specialRuleFor, spellBookOf, spellRuleFor } from './rules';
 import { boneShieldTier } from './rules-necromancy';
@@ -87,6 +88,13 @@ export interface EngineConfig {
   targetFacingAway?: boolean;
   /** what the target is (Undead / Dragon / Demon Slayer perks apply) */
   targetType?: 'undead' | 'dragon' | 'demon';
+  /** every hit lands in full – no hit chance against `enemy` (docs/research/hit-chance.md); missing = hit chance is simulated when an enemy is set */
+  hitChanceDisabled?: boolean;
+  /**
+   * 'scaled' (default): the wiki's PvM "damage potential" – a hit deals hit chance × its roll, under 1% every attack misses.
+   * 'roll': the pre-2024 / PvP model – every hit rolls against the hit chance and either lands in full or misses.
+   */
+  hitChanceModel?: 'scaled' | 'roll';
 }
 
 /**
@@ -226,8 +234,8 @@ export type EngineEvent =
   /** an ability with a running buff was pressed again and released it (Reprisal) */
   | { kind: 'recast'; key: string; tick: number }
   | { kind: 'missed'; keys: string[] }
-  /** a hit landed on the target (key = source ability / "spirit:<name>") */
-  | { kind: 'hit'; key: string; amount: number; crit: boolean; dot: boolean; tick: number }
+  /** a hit landed on the target (key = source ability / "spirit:<name>"); `miss` = it missed (amount 0, no on-hit effects) */
+  | { kind: 'hit'; key: string; amount: number; crit: boolean; dot: boolean; tick: number; miss?: boolean }
   /** the target's life points reached 0 */
   | { kind: 'killed'; tick: number }
   /** Revolution cast `key` on its own; `matched` = it was the expected step (a 'fired' result with auto: true follows) */
@@ -281,6 +289,8 @@ interface ScheduledHit {
   addAbs?: number;
   /** the hit adds no Perfect Equilibrium stack (the bonus hit itself) */
   noStack?: boolean;
+  /** tick of the cast that scheduled the hit (a bleed's later ticks follow the first one's hit roll) */
+  castTick?: number;
 }
 
 interface SequenceState {
@@ -324,6 +334,8 @@ export class TrainerEngine {
   targetHp = 0;
   damageDealt = 0;
   hitCount = 0;
+  /** player hits that missed (hit chance) */
+  missCount = 0;
   killedTick: number | null = null;
   readonly events: EngineEvent[] = [];
   random: () => number = Math.random;
@@ -418,6 +430,7 @@ export class TrainerEngine {
     this.aftershockStored = 0;
     this.aftershockReadyTick = 0;
     this.cracklingReadyTick = 0;
+    this.missCount = 0;
     this.reconjureReady.clear();
     this.scheduled = [];
     this.overTime = [];
@@ -1260,13 +1273,13 @@ export class TrainerEngine {
     if (channel && asDot) {
       // Endless Assault: the channel's hits land on their normal ticks but nothing can cancel them
       channel.hits.forEach((offset, i) =>
-        this.scheduled.push({ key: entity.key, entity: acting, rule, tick: tick + offset, index: i, total: channel.hits.length, channel: null, guaranteedCrit: !!channel.guaranteedCrit || !!rule?.guaranteedCrit, damage: hitDamage(i), mult, flat, castMult: multAt(i), flags, critAdd: consumedCritAdd }),
+        this.scheduled.push({ key: entity.key, entity: acting, rule, tick: tick + offset, index: i, total: channel.hits.length, channel: null, guaranteedCrit: !!channel.guaranteedCrit || !!rule?.guaranteedCrit, damage: hitDamage(i), mult, flat, castMult: multAt(i), flags, critAdd: consumedCritAdd, castTick: tick }),
       );
       this.lastAttackTick = tick;
     } else if (channel) {
       this.channel = { key: entity.key, castTick: tick, endTick: tick + channel.ticks, hits: channel.hits.length, hitsDone: 0, cancelled: false, dealt: 0 };
       channel.hits.forEach((offset, i) =>
-        this.scheduled.push({ key: entity.key, entity: acting, rule, tick: tick + offset, index: i, total: channel.hits.length, channel: this.channel, guaranteedCrit: !!channel.guaranteedCrit || !!rule?.guaranteedCrit, damage: hitDamage(i), mult, flat, castMult: multAt(i), flags, critAdd: consumedCritAdd }),
+        this.scheduled.push({ key: entity.key, entity: acting, rule, tick: tick + offset, index: i, total: channel.hits.length, channel: this.channel, guaranteedCrit: !!channel.guaranteedCrit || !!rule?.guaranteedCrit, damage: hitDamage(i), mult, flat, castMult: multAt(i), flags, critAdd: consumedCritAdd, castTick: tick }),
       );
       this.lastAttackTick = tick;
     } else if (bleed) {
@@ -1274,11 +1287,11 @@ export class TrainerEngine {
       const per = b.damage ?? (damage && b.splitTotal ? { min: damage.min / b.hits, max: damage.max / b.hits } : damage);
       // a recast restarts the DoT: the previous cast's remaining ticks are dropped
       this.scheduled = this.scheduled.filter((h) => !(h.dot && h.key === entity.key));
-      if (b.direct) this.scheduled.push({ key: entity.key, entity: acting, rule, tick: tick + this.hitDelay(), index: 0, total: 1, channel: null, guaranteedCrit: !!rule?.guaranteedCrit, damage, mult, flat, castMult, flags, critAdd: consumedCritAdd });
+      if (b.direct) this.scheduled.push({ key: entity.key, entity: acting, rule, tick: tick + this.hitDelay(), index: 0, total: 1, channel: null, guaranteedCrit: !!rule?.guaranteedCrit, damage, mult, flat, castMult, flags, critAdd: consumedCritAdd, castTick: tick });
       for (let i = 0; i < b.hits; i++) {
         const f = b.factors?.[i] ?? 1;
         const offset = (b.startTicks ?? b.everyTicks) + i * b.everyTicks;
-        this.scheduled.push({ key: entity.key, entity: acting, rule, tick: tick + offset, index: i, total: b.hits, channel: null, guaranteedCrit: false, dot: true, damage: per ? { min: per.min * f, max: per.max * f } : null, mult: dotMult, flat: 0, castMult: b.direct ? 1 : multAt(i), flags, critAdd: 0 });
+        this.scheduled.push({ key: entity.key, entity: acting, rule, tick: tick + offset, index: i, total: b.hits, channel: null, guaranteedCrit: false, dot: true, damage: per ? { min: per.min * f, max: per.max * f } : null, mult: dotMult, flat: 0, castMult: b.direct ? 1 : multAt(i), flags, critAdd: 0, castTick: tick });
       }
       this.lastAttackTick = tick;
     } else if (hits) {
@@ -1286,7 +1299,7 @@ export class TrainerEngine {
       const delay = hits.every((o) => o === 0) ? this.hitDelay() : 0;
       hits.forEach((offset, i) => {
         if (!hitWanted(i)) return;
-        this.scheduled.push({ key: entity.key, entity: acting, rule, tick: tick + offset + delay, index: i, total: hits.length, channel: null, guaranteedCrit: !!rule?.guaranteedCrit, damage: hitDamage(i), mult, flat, castMult, flags, spirit: rule?.spiritHit, critAdd: consumedCritAdd });
+        this.scheduled.push({ key: entity.key, entity: acting, rule, tick: tick + offset + delay, index: i, total: hits.length, channel: null, guaranteedCrit: !!rule?.guaranteedCrit, damage: hitDamage(i), mult, flat, castMult, flags, spirit: rule?.spiritHit, critAdd: consumedCritAdd, castTick: tick });
       });
       this.lastAttackTick = tick;
     }
@@ -1382,6 +1395,17 @@ export class TrainerEngine {
       critAdd += c.add;
     }
     critAdd += h.critAdd + (h.rule?.crit?.chanceAdd ?? 0) + (h.rule?.hitCrit?.[h.index]?.chanceAdd ?? 0);
+    // hit chance (docs/research/hit-chance.md) is rolled before the critical strike, so a pinned random keeps the crit roll's meaning
+    const roll = this.hitRoll(h);
+    if (roll.miss) {
+      // a miss: no damage, no on-hit effects (stacks, bleeds, procs, poison); the later ticks of a missed bleed never come.
+      // Crackling bypasses hit chance ("triggers on the next attack"), so it still fires.
+      this.missCount++;
+      this.events.push({ kind: 'hit', key: h.key, amount: 0, crit: false, dot: !!h.dot, tick: h.tick, miss: true });
+      if (h.castTick !== undefined) this.scheduled = this.scheduled.filter((x) => !(x.dot && x.key === h.key && x.castTick === h.castTick));
+      if (!h.dot && !h.spirit) this.crackle(h.tick);
+      return;
+    }
     // Equilibrium: "prevents critically striking" – even guaranteed crits (Smoke Tendrils) are ordinary hits
     const crit = !this.loadout.critDisabled && !h.dot && !h.spirit && !h.rule?.crit?.never && (h.guaranteedCrit || critAdd >= 1 || this.random() < BASE_CRIT_CHANCE + critAdd);
     if (!h.dot && !h.spirit) this.crackle(h.tick);
@@ -1390,7 +1414,7 @@ export class TrainerEngine {
     for (const eff of h.rule?.onHit ?? []) this.applyEffect(eff, h.tick, h.entity, h.index);
     this.castFlags = outerFlags;
     for (const id of h.rule?.hitBuffs ?? []) this.applyBuff(id, h.tick, h.entity.key);
-    const preCrit = h.damage ? this.dealHit(h, crit) : 0;
+    const preCrit = h.damage ? this.dealHit(h, crit, roll.scale) : 0;
     // a direct hit: not damage over time, not a conjured spirit's, not an item proc's (ammunition effects count these)
     const direct = !!h.damage && !h.dot && !h.spirit && !h.proc;
     // Instability: a critical strike of the buff's style fires an extra hit a tick later (never from that extra hit itself)
@@ -1515,8 +1539,52 @@ export class TrainerEngine {
     }
   }
 
-  /** Rolls and applies the damage of one hit (engine/damage.ts). Returns what the hit would have dealt without its critical strike (Perfect Equilibrium stores that). */
-  private dealHit(h: ScheduledHit, crit: boolean): number {
+  /**
+   * Hit chance of one scheduled hit: miss / scale of its damage (docs/research/hit-chance.md). Conjured spirits ("always deal
+   * 100% of their damage potential"), item procs, the Sunshine DoT and hits without damage bypass it; in the roll model a
+   * bleed's later ticks follow the first tick's roll.
+   */
+  private hitRoll(h: ScheduledHit): { miss: boolean; scale: number; chance: number | null } {
+    const none = { miss: false, scale: 1, chance: null };
+    if (!h.damage || h.spirit || h.proc) return none;
+    if (h.dot && HIT_CHANCE_BYPASS_DOTS.has(h.entity.id)) return none;
+    const model = this.config.hitChanceModel ?? 'scaled';
+    if (h.dot && h.index > 0 && model === 'roll') return none;
+    const chance = this.hitChanceFor(h.entity.style, h.entity.id, h.entity.abilityType, h.key, h.castTick ?? h.tick);
+    if (chance === null) return none;
+    if (chance < MIN_HIT_CHANCE) return { miss: true, scale: 0, chance };
+    if (model === 'roll') return this.random() < chance ? { miss: false, scale: 1, chance } : { miss: true, scale: 0, chance };
+    return { miss: false, scale: chance, chance };
+  }
+
+  /**
+   * Hit chance (0..1) of a hit of `style` against the configured enemy with the active prayers, buffs and gear; null = not
+   * simulated (no enemy config / hitChanceDisabled). H = min(1, affinity/100 × accuracy / armour rating + additive bonuses),
+   * accuracy = ⌊f(level + prayer levels) + weapon accuracy⌋ × multipliers (defender, nihil, Ful arrows) – engine/hit-chance.ts.
+   * `sourceKey` / `castTick` name the cast so Icy Precision skips the ability that consumed the Icy Chill stacks.
+   */
+  hitChanceFor(style: Style | null | undefined, abilityId?: string, abilityType?: AbilityType, sourceKey?: string, castTick?: number): number | null {
+    const enemy = this.config.enemy;
+    if (this.config.hitChanceDisabled || !enemy) return null;
+    const l = this.loadout;
+    const st = affinityStyleOf(style, l.style);
+    const level = l.levels[accuracySkillOf(st)] + prayerAccuracyLevels(this.activePrayers, st);
+    let accuracy = accuracyRating(level, l.weaponAccuracy);
+    for (const m of l.accuracyMult) if (!m.style || m.style === st) accuracy *= m.mult;
+    const armour = armourRating(enemy.defenceLevel ?? 1, enemy.armour ?? 0);
+    let add = l.hitChanceAdd + (abilityId ? l.hitChanceAddPerAbility[abilityId] ?? 0 : 0);
+    if (this.config.targetType) add += l.targetTypeHitChanceAdd[this.config.targetType] ?? 0;
+    for (const x of BUFF_HIT_CHANCE_ADD) {
+      if (x.style !== st || !abilityType || !x.types.includes(abilityType)) continue;
+      const b = this.buff(x.buff);
+      if (!b || (x.notGrantingCast && sourceKey !== undefined && b.sourceKey === sourceKey && b.startTick === castTick)) continue;
+      add += x.add;
+    }
+    return hitChance(enemy.affinity?.[st] ?? 100, accuracy, armour, add);
+  }
+
+  /** Rolls and applies the damage of one hit (engine/damage.ts). Returns what the hit would have dealt without its critical strike (Perfect Equilibrium stores that). `hitScale`: the hit chance the damage potential is scaled by. */
+  private dealHit(h: ScheduledHit, crit: boolean, hitScale = 1): number {
     const l = this.loadout;
     let { min, max } = h.damage!;
     const rules = (h.rule?.damageRules ?? []).filter((d) => this.conditionMet(d.when, h.tick, h.index, h.flags));
@@ -1575,6 +1643,8 @@ export class TrainerEngine {
     }
     if (!h.spirit) amount *= l.damageMult; // Void knight +5% / +7%
     for (const m of TARGET_DAMAGE_MULT) if ((!m.dotsOnly || h.dot) && this.hasBuff(m.buff)) amount *= m.mult;
+    // hit chance as a damage multiplier (wiki "damage potential"); Haunted's extra damage "is not reduced if the player has less than 100% accuracy"
+    amount *= hitScale;
     amount += this.targetDamageAdd(amount);
     for (const d of rules) {
       if (d.mult !== undefined) amount *= d.mult;

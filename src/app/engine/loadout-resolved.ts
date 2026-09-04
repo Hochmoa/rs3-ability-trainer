@@ -168,6 +168,16 @@ export interface ResolvedLoadout {
   targetBuffDamageMult: { buff: string; style?: Style; mult: number; notAbility?: string }[];
   /** Bow of the Last Guardian: the Perfect Equilibrium passive (null without the bow) */
   perfectEquilibrium: PerfectEquilibrium | null;
+  /** accuracy of the main-hand / two-handed weapon (weapons.json infobox value = ⌊2.5 × f(tier)⌋; 0 without a weapon) – engine/hit-chance.ts */
+  weaponAccuracy: number;
+  /** accuracy multipliers (defender 1.03, nihil familiar 1.05 for its style, Ful arrows 0.9 ranged); `style` missing = every style */
+  accuracyMult: { style?: Style; mult: number }[];
+  /** added to the hit chance of every hit (reaver's ring −0.05) */
+  hitChanceAdd: number;
+  /** ability id → added to its hit chance (Nightmare gauntlets: Snipe +0.25) */
+  hitChanceAddPerAbility: Record<string, number>;
+  /** added to the hit chance against a target type (Salve amulet +0.15 / (e) +0.2 vs undead, Jas dragonbane / demonbane arrows +0.2) – EngineConfig.targetType picks one */
+  targetTypeHitChanceAdd: Partial<Record<'undead' | 'dragon' | 'demon', number>>;
 }
 
 export function defaultResolvedLoadout(): ResolvedLoadout {
@@ -240,5 +250,10 @@ export function defaultResolvedLoadout(): ResolvedLoadout {
     styleDamageMult: [],
     targetBuffDamageMult: [],
     perfectEquilibrium: null,
+    weaponAccuracy: 0,
+    accuracyMult: [],
+    hitChanceAdd: 0,
+    hitChanceAddPerAbility: {},
+    targetTypeHitChanceAdd: {},
   };
 }

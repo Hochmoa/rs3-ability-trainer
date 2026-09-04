@@ -36,7 +36,7 @@ function make(ids: string[], loadout: Partial<ResolvedLoadout> = {}, cfg: Partia
   for (const id of DEFENSIVES) catalog.set('ability:' + id, ability(id));
   catalog.set('spell:disruption-shield', spell('disruption-shield'));
   const l = { ...defaultResolvedLoadout(), style: 'Necromancy' as const, hasConduit: true, spellbook: 'lunar' as const, ...loadout, items: new Set(loadout.items ?? []) };
-  const e = new TrainerEngine(steps, catalog, { pingMs: 0, jitterMs: 0, abilityQueueing: true, loop: true, fullAdrenaline: true, ...cfg, loadout: l });
+  const e = new TrainerEngine(steps, catalog, { pingMs: 0, jitterMs: 0, abilityQueueing: true, loop: true, fullAdrenaline: true, hitChanceDisabled: true, ...cfg, loadout: l });
   e.random = () => 0.5;
   e.start(0);
   return e;

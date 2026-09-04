@@ -27,7 +27,7 @@ function make(ids: string[], loadout: Partial<ResolvedLoadout> = {}, cfg: Partia
   const steps = ids.map(ability);
   const catalog = new Map(steps.map((e) => [e.key, e]));
   const l = { ...defaultResolvedLoadout(), style: 'Ranged' as const, weaponType: 'bow' as const, abilityDamage: 1000, ...loadout, items: new Set(loadout.items ?? []) };
-  const e = new TrainerEngine(steps, catalog, { pingMs: 0, jitterMs: 0, abilityQueueing: true, loop: true, fullAdrenaline: true, ...cfg, loadout: l });
+  const e = new TrainerEngine(steps, catalog, { pingMs: 0, jitterMs: 0, abilityQueueing: true, loop: true, fullAdrenaline: true, hitChanceDisabled: true, ...cfg, loadout: l });
   e.random = () => 0.5;
   e.start(0);
   return e;

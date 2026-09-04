@@ -1178,7 +1178,7 @@
     "slot": "ammo",
     "class": "damage",
     "source": "https://runescape.wiki/w/Ful_arrow",
-    "text": "All abilities deal +15% damage (Corruption Shot's damage over time excluded) at −10% accuracy (accuracy is not simulated). Needs a bow.",
+    "text": "All abilities deal +15% damage (Corruption Shot's damage over time excluded) at −10% accuracy. Needs a bow.",
     "effect": {
       "kind": "style-damage",
       "requiresWeapon": "bow",
@@ -1213,7 +1213,7 @@
     "slot": "ammo",
     "class": "damage",
     "source": "https://runescape.wiki/w/Jas_dragonbane_arrow",
-    "text": "+30% damage and +20% hit chance against dragons (set the target type on the training page; hit chance is not simulated). Needs a bow.",
+    "text": "+30% damage and +20% hit chance against dragons (set the target type on the training page). Needs a bow.",
     "effect": {
       "kind": "target-type-damage",
       "requiresWeapon": "bow",
@@ -1230,7 +1230,7 @@
     "slot": "ammo",
     "class": "damage",
     "source": "https://runescape.wiki/w/Jas_demonbane_arrow",
-    "text": "+30% damage and +20% hit chance against demons (set the target type on the training page; hit chance is not simulated). Needs a bow.",
+    "text": "+30% damage and +20% hit chance against demons (set the target type on the training page). Needs a bow.",
     "effect": {
       "kind": "target-type-damage",
       "requiresWeapon": "bow",
@@ -1297,7 +1297,7 @@
     "slot": "neck",
     "class": "damage",
     "source": "https://runescape.wiki/w/Salve_amulet",
-    "text": "+15% damage and +15% hit chance against undead with every combat style (set the target type on the training page; hit chance is not simulated).",
+    "text": "+15% damage and +15% hit chance against undead with every combat style (set the target type on the training page).",
     "effect": {
       "kind": "target-type-damage",
       "targetType": "undead",
@@ -1313,7 +1313,7 @@
     "slot": "neck",
     "class": "damage",
     "source": "https://runescape.wiki/w/Salve_amulet_(e)",
-    "text": "+20% damage and +20% hit chance against undead with every combat style (set the target type on the training page; hit chance is not simulated).",
+    "text": "+20% damage and +20% hit chance against undead with every combat style (set the target type on the training page).",
     "effect": {
       "kind": "target-type-damage",
       "targetType": "undead",

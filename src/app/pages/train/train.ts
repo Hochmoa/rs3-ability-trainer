@@ -432,8 +432,11 @@ export class Train implements OnDestroy {
   readonly dps = signal(0);
   readonly targetHp = signal(0);
   readonly killedAtMs = signal<number | null>(null);
+  /** player hits that missed, and the hit chance (0..1) of the wielded style against the enemy's stats right now (null = not simulated) */
+  readonly misses = signal(0);
+  readonly hitChance = signal<number | null>(null);
   /** floating hit numbers, newest last */
-  readonly hitsplats = signal<{ id: number; amount: number; crit: boolean; dot: boolean; name: string }[]>([]);
+  readonly hitsplats = signal<{ id: number; amount: number; crit: boolean; dot: boolean; miss: boolean; name: string }[]>([]);
   private hitId = 0;
   readonly attackLog = signal<{ style: Style4; prayed: boolean; tick: number; absorbed?: string }[]>([]);
   /** Soul Split ticks + prayed attacks, out of all ticks */
@@ -782,14 +785,19 @@ export class Train implements OnDestroy {
       prayerBook: this.prayerBook(),
       // Revolution scans the main bar of the wielded style (position 0, first N slots)
       revolution: this.revolution() ? { ...this.storage.settings().revolution, bar: this.mainBarKeys(this.startStyle()), resolveBar: (st: Style | null) => this.mainBarKeys(st && isStyle4(st) ? st : this.startStyle()) } : undefined,
-      enemy: enemy.enabled ? { ...enemy, styles: [...enemy.styles] } : undefined,
+      // the engine only attacks when the enemy is enabled; its affinity / Defence / armour count for the hit chance either way
+      enemy: { ...enemy, styles: [...enemy.styles] },
       targetLifePoints: enemy.lifePoints > 0 ? enemy.lifePoints : undefined,
       targetType: enemy.type ?? undefined,
+      hitChanceDisabled: this.storage.settings().hitChance === 'off',
+      hitChanceModel: this.storage.settings().hitChance === 'roll' ? 'roll' : 'scaled',
       prebuild: this.effectivePrebuild(),
     });
     this.damage.set(0);
     this.hits.set(0);
     this.dps.set(0);
+    this.misses.set(0);
+    this.hitChance.set(this.engine.hitChanceFor(this.resolved().style));
     this.targetHp.set(enemy.lifePoints);
     this.killedAtMs.set(null);
     this.hitsplats.set([]);
@@ -926,6 +934,9 @@ export class Train implements OnDestroy {
       this.hits.set(e.hitCount);
       this.targetHp.set(e.targetHp);
     }
+    if (e.missCount !== this.misses()) this.misses.set(e.missCount);
+    const hc = e.hitChanceFor(e.style);
+    if (hc !== this.hitChance()) this.hitChance.set(hc);
     const elapsedS = (now - e.t0) / 1000;
     if (elapsedS >= 1) this.dps.set(e.damageDealt / elapsedS);
     this.syncWield(e);
@@ -1195,7 +1206,7 @@ export class Train implements OnDestroy {
       case 'hit': {
         const id = ++this.hitId;
         const name = ev.key.startsWith('spirit:') ? ev.key.slice(7).replace(/-/g, ' ') : ev.key.startsWith('familiar:') ? this.data.familiarById().get(ev.key.slice(9))?.name ?? ev.key.slice(9) : this.name(ev.key);
-        this.hitsplats.update((l) => [...l.slice(-7), { id, amount: ev.amount, crit: ev.crit, dot: ev.dot, name }]);
+        this.hitsplats.update((l) => [...l.slice(-7), { id, amount: ev.amount, crit: ev.crit, dot: ev.dot, miss: !!ev.miss, name }]);
         window.setTimeout(() => this.hitsplats.update((l) => l.filter((h) => h.id !== id)), 1800);
         break;
       }
@@ -1251,7 +1262,7 @@ export class Train implements OnDestroy {
       results,
       enemy: this.enemy().enabled ? { ...this.enemy() } : undefined,
       prayerStats: this.enemy().enabled ? { ...this.prayerStats() } : undefined,
-      damage: { total: this.damage(), hits: this.hits(), dps: Math.round(this.dps()), killedAtMs: this.killedAtMs() },
+      damage: { total: this.damage(), hits: this.hits(), dps: Math.round(this.dps()), killedAtMs: this.killedAtMs(), misses: this.misses(), hitChance: this.hitChance() },
     });
   }
 
@@ -1281,6 +1292,11 @@ export class Train implements OnDestroy {
     const styles = this.enemy().styles.includes(style) ? this.enemy().styles.filter((s) => s !== style) : [...this.enemy().styles, style];
     if (!styles.length) return;
     this.setEnemy('styles', styles);
+  }
+
+  /** affinity of the target against one attack style (0–100 %) */
+  setAffinity(style: Style4, value: unknown): void {
+    this.setEnemy('affinity', { ...this.enemy().affinity, [style]: this.numberOf(value, 0, 100) });
   }
 
   numberOf(v: unknown, min: number, max: number): number {
