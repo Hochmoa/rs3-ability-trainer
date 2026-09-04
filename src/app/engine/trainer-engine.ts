@@ -1414,9 +1414,14 @@ export class TrainerEngine {
       const e = this.catalog.get('ability:' + id);
       if (!e) continue;
       const left = pb.remaining?.['ability:' + id];
-      const ruleBuffs = (ruleFor(id)?.onCast ?? []).filter((eff): eff is Extract<Effect, { kind: 'buff' }> => eff.kind === 'buff');
+      const ruleBuffs = (ruleFor(id)?.onCast ?? []).filter((eff): eff is Extract<Effect, { kind: 'buff' | 'toggle-buff' }> => eff.kind === 'buff' || eff.kind === 'toggle-buff');
       for (const b of e.buffs) if (!this.modelledDataBuff(b)) this.applyDataBuff(left !== undefined && b.durationTicks !== null ? { ...b, durationTicks: Math.min(left, b.durationTicks) } : b, 0, e.key);
       for (const eff of ruleBuffs) {
+        if (eff.kind === 'toggle-buff') {
+          // incantations (bone shields, auto-cast spells): nothing is up at the start, so the toggle switches it on
+          this.applyEffect(eff, 0, e, 0);
+          continue;
+        }
         const full = eff.durationTicks ?? BUFF_BY_ID.get(eff.id)?.durationTicks ?? null;
         this.applyEffect(left !== undefined && full !== null ? { ...eff, durationTicks: Math.min(left, full) } : eff, 0, e, 0);
       }

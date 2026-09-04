@@ -36,10 +36,21 @@ abstract class TipBase {
 
   protected abstract stateAt(x: number, y: number): TipState | null;
 
+  /** pointer held down on the host (a drag is starting) – nothing is shown until it is released */
+  private pointerDown = false;
+
+  @HostListener('pointerdown')
+  onPointerDown(): void {
+    this.pointerDown = true;
+    this.tips.state.set(null);
+    window.addEventListener('pointerup', () => (this.pointerDown = false), { once: true });
+    window.addEventListener('pointercancel', () => (this.pointerDown = false), { once: true });
+  }
+
   @HostListener('mouseenter', ['$event'])
   @HostListener('mousemove', ['$event'])
   show(e: MouseEvent): void {
-    if (Date.now() - this.lastTouch < TOUCH_SHADOW_MS) return;
+    if (this.pointerDown || Date.now() - this.lastTouch < TOUCH_SHADOW_MS) return;
     const s = this.stateAt(e.clientX, e.clientY);
     if (s) this.tips.state.set(s);
   }

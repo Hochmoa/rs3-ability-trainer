@@ -333,21 +333,28 @@
 }
 
 .tile.note {
-  width: 112px;
-  padding: 4px 6px 4px 8px;
+  /* as wide as the text needs, up to 280 px; longer text wraps into up to 4 lines first */
+  width: auto;
+  min-width: 96px;
+  max-width: 280px;
+  padding: 6px 10px 6px 14px;
   border-style: dashed;
   border-color: var(--muted);
   font-style: italic;
+  cursor: pointer;
 
   .note-text {
     display: -webkit-box;
-    -webkit-line-clamp: 3;
+    -webkit-line-clamp: 4;
     -webkit-box-orient: vertical;
     overflow: hidden;
-    font-size: 10px;
+    width: max-content;
+    max-width: 100%;
+    font-size: 11px;
     line-height: 1.25;
     color: var(--muted);
     text-align: center;
+    overflow-wrap: anywhere;
   }
 
   &.phase {

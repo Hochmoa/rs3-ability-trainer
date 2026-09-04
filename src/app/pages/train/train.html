@@ -82,6 +82,12 @@
       <input type="checkbox" [checked]="storage.settings().rechargeAdrenaline" (change)="setSetting('rechargeAdrenaline', !storage.settings().rechargeAdrenaline)" [disabled]="running()" />
       Recharge adrenaline (+10%/tick)
     </label>
+    <span class="radios bone-shield" title="Bone Shield incantation up from the start. It stands in for a shield: Reflect, Immortality, Rejuvenate and Preparation work with either; Debilitate, Resonance, Divert and Barricade scale with the tier – Greater (⌊50% × Necromancy⌋) is the one to use.">
+      <span class="muted">Bone Shield</span>
+      <label class="check"><input type="radio" name="boneShield" [checked]="storage.settings().boneShield === 'none'" (change)="setSetting('boneShield', 'none')" [disabled]="running()" /> none</label>
+      <label class="check"><input type="radio" name="boneShield" [checked]="storage.settings().boneShield === 'lesser'" (change)="setSetting('boneShield', 'lesser')" [disabled]="running()" /> Lesser</label>
+      <label class="check"><input type="radio" name="boneShield" [checked]="storage.settings().boneShield === 'greater'" (change)="setSetting('boneShield', 'greater')" [disabled]="running()" /> Greater</label>
+    </span>
     <span class="muted hint">
       Ping {{ storage.settings().pingMs }} ms ± {{ storage.settings().jitterMs }} · ability queueing
       {{ storage.settings().abilityQueueing ? 'on' : 'off' }}

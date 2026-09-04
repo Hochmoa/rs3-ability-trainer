@@ -144,3 +144,13 @@ describe('defence: Reprisal, Transfigure, shields', () => {
     expect(l.costOf(ability('devotion')).need).toBe(15);
   });
 });
+
+describe('defence: Bone Shield from the pre-build', () => {
+  it('a Greater Bone Shield active at the start stands in for a shield and gives Barricade its tier duration', () => {
+    const e = make(['reflect', 'barricade'], {}, { prebuild: { stacks: {}, spirits: [], abilities: ['greater-bone-shield'], prayers: [] } }, 0.5, [ability('greater-bone-shield')]);
+    expect(e.hasBuff('greater-bone-shield')).toBe(true);
+    expect(e.requirementFailure(ability('reflect'), 0)).toBeNull();
+    cast(e, 'barricade', 1);
+    expect(e.buff('barricade')?.endTick).toBe(1 + 8 + Math.floor(49 / 10)); // tier ⌊50% × 99⌋ = 49
+  });
+});

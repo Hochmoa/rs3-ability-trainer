@@ -6,7 +6,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DataService, Entity, SPEC_KEY } from '../../core/data.service';
 import { applyWield, equip, unequip } from '../../core/equipment';
 import { keybindFromEvent, keybindKey, keybindLabel } from '../../core/keybind.util';
-import { ActionBarSetup, AttackPattern, BAR_POSITIONS, INVENTORY_SIZE, BAR_SLOTS, BarShape, barLayout, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, EquipSlot, ItemRef, Loadout, PrayerStats, Prebuild, REVOLUTION_MAX_SLOTS, REVOLUTION_MIN_SLOTS, RevolutionSettings, Rotation, STYLES4, Settings, StepResult, Style, Style4, WeaponSpec, emptyPrebuild, entityKey, isStyle4, loadoutWeapons, loadoutWield, parseEntityKey, prebuildIsEmpty, visiblePresets, RotationStep } from '../../core/models';
+import { ActionBarSetup, AttackPattern, BAR_POSITIONS, BONE_SHIELD_ABILITY, INVENTORY_SIZE, BAR_SLOTS, BarShape, barLayout, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, EquipSlot, ItemRef, Loadout, PrayerStats, Prebuild, REVOLUTION_MAX_SLOTS, REVOLUTION_MIN_SLOTS, RevolutionSettings, Rotation, STYLES4, Settings, StepResult, Style, Style4, WeaponSpec, emptyPrebuild, entityKey, isStyle4, loadoutWeapons, loadoutWield, parseEntityKey, prebuildIsEmpty, visiblePresets, RotationStep } from '../../core/models';
 import { StorageService } from '../../core/storage.service';
 import { resolveLoadout } from '../../engine/loadout-resolver';
 import { BUFF_BY_ID, ruleFor, stackMax, stackName } from '../../engine/rules';
@@ -159,6 +159,14 @@ export class Train implements OnDestroy {
     return (id && this.storage.prebuilds()[id]) || emptyPrebuild();
   });
   readonly prebuildEmpty = computed(() => prebuildIsEmpty(this.prebuild()));
+  /** the pre-build plus the Bone Shield chosen in the controls (unless the pre-build already holds one) */
+  readonly effectivePrebuild = computed<Prebuild>(() => {
+    const pb = this.prebuild();
+    const choice = this.storage.settings().boneShield;
+    const hasOne = pb.abilities.some((id) => id === 'lesser-bone-shield' || id === 'greater-bone-shield');
+    if (choice === 'none' || hasOne) return pb;
+    return { ...pb, abilities: [...pb.abilities, BONE_SHIELD_ABILITY[choice]] };
+  });
   /** combat styles the rotation uses */
   readonly rotationStyles = computed(() => new Set(this.stepEntities().map((e) => e?.ability?.style).filter((s): s is NonNullable<typeof s> => !!s)));
   /** stacks worth pre-building for this rotation: the style resources with their cap under the active loadout */
@@ -274,7 +282,14 @@ export class Train implements OnDestroy {
   /** steps the active loadout cannot perform (no 2h, no shield, no spec weapon ...) */
   readonly equipmentWarnings = computed<string[]>(() => {
     if (!this.data.loaded()) return [];
-    const probe = new TrainerEngine([], new Map(), { ...this.storage.settings(), loadout: this.resolved() });
+    // the probe starts with the chosen Bone Shield up, like a real session does
+    const pb = this.effectivePrebuild();
+    const probeCatalog = new Map<string, EngineEntity>();
+    for (const id of pb.abilities) {
+      const ent = this.data.get('ability:' + id);
+      if (ent) probeCatalog.set(ent.key, this.data.toEngineEntity(ent));
+    }
+    const probe = new TrainerEngine([], probeCatalog, { ...this.storage.settings(), loadout: this.resolved(), prebuild: pb });
     probe.start(0);
     const out = new Set<string>();
     const inv = this.storage.loadout().inventory;
@@ -339,12 +354,10 @@ export class Train implements OnDestroy {
     return this.stepEntities().filter((e): e is Entity => !!e && !e.key.startsWith('note:') && !r.has(e.key) && !seen.has(e.key) && !!seen.add(e.key));
   });
   readonly canStart = computed(() => !!this.rotation() && this.stepEntities().length > 0 && this.unreachable().length === 0 && this.unknownSteps() === 0);
-  /** resources shown for this rotation (STYLE_STACKS of its styles, plus Storm Shards when used) */
+  /** resources shown for this rotation (STYLE_STACKS of its styles); Storm Shards sit on the target, so they cannot be pre-built */
   readonly styleStacks = computed<StackId[]>(() => {
     const out: StackId[] = [];
-    for (const st of this.rotationStyles()) for (const id of STYLE_STACKS[st] ?? []) if (!out.includes(id)) out.push(id);
-    const ids = new Set(this.stepEntities().map((e) => e?.ability?.id));
-    if ((ids.has('storm-shards') || ids.has('shatter')) && !out.includes('storm-shards')) out.push('storm-shards');
+    for (const st of this.rotationStyles()) for (const id of STYLE_STACKS[st] ?? []) if (!out.includes(id) && id !== 'storm-shards') out.push(id);
     return out;
   });
 
@@ -766,7 +779,7 @@ export class Train implements OnDestroy {
       revolution: this.revolution() ? { ...this.storage.settings().revolution, bar: this.mainBarKeys(this.startStyle()), resolveBar: (st: Style | null) => this.mainBarKeys(st && isStyle4(st) ? st : this.startStyle()) } : undefined,
       enemy: enemy.enabled ? { ...enemy, styles: [...enemy.styles] } : undefined,
       targetLifePoints: enemy.lifePoints > 0 ? enemy.lifePoints : undefined,
-      prebuild: this.prebuildEmpty() ? undefined : this.prebuild(),
+      prebuild: this.effectivePrebuild(),
     });
     this.damage.set(0);
     this.hits.set(0);
@@ -776,7 +789,7 @@ export class Train implements OnDestroy {
     this.hitsplats.set([]);
     // every prayer of the book is pressable even when it is on no bar (touch / click users get it via the bars only)
     for (const p of this.data.prayers()) add('prayer:' + p.id);
-    for (const id of this.prebuild().abilities) add('ability:' + id);
+    for (const id of this.effectivePrebuild().abilities) add('ability:' + id);
     this.activePrayers.set([]);
     this.prayerStats.set({ ...EMPTY_PRAYER_STATS });
     this.incoming.set(null);

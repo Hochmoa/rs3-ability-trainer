@@ -145,6 +145,16 @@ export class Rotations {
     if (text?.trim()) this.editing.update((r) => (r ? { ...r, steps: [...r.steps, { kind: 'note', id: '', note: text.trim() }] } : r));
   }
 
+  /** change the text of a note / phase step */
+  async editNote(i: number): Promise<void> {
+    const r = this.editing();
+    const step = r?.steps[i];
+    if (!r || !step || step.kind !== 'note') return;
+    const text = await this.dialogs.prompt(step.phase ? 'Phase text:' : 'Note text (shown in the queue, not an input):', { title: step.phase ? 'Edit phase' : 'Edit note', value: step.note ?? '', ok: 'Save' });
+    if (text === null || !text.trim()) return;
+    this.editing.update((cur) => (cur ? { ...cur, steps: cur.steps.map((st, k) => (k === i ? { ...st, note: text.trim() } : st)) } : cur));
+  }
+
   toggleSameTick(i: number): void {
     this.editing.update((r) => {
       if (!r) return r;

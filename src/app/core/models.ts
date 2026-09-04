@@ -218,6 +218,8 @@ export interface Settings {
    * ability, ~2 ticks). Abilities with their own timing (Snipe, Backhand, channels, DoTs, conjures …) keep it.
    */
   hitDelayTicks: number;
+  /** Bone Shield incantation active from the start: it stands in for a shield (Reflect, Barricade, Resonance …) – docs: Lesser/Greater Bone Shield on the wiki */
+  boneShield: BoneShieldChoice;
   /** in-game "Combat Mode": Full manual, or Revolution (the main bar fires on its own – docs/research/revolution.md) */
   combatMode: CombatMode;
   /** Revolution options ("Revolution size" + the "Automatically trigger …" toggles) */
@@ -225,6 +227,9 @@ export interface Settings {
 }
 
 export type CombatMode = 'manual' | 'revolution';
+export type BoneShieldChoice = 'none' | 'lesser' | 'greater';
+/** ability id of the incantation for a choice */
+export const BONE_SHIELD_ABILITY: Record<Exclude<BoneShieldChoice, 'none'>, string> = { lesser: 'lesser-bone-shield', greater: 'greater-bone-shield' };
 
 /** in-game "Revolution size": "Set how many slots on the main action bar are automatically used in revolution combat. (1-14)" */
 export const REVOLUTION_MIN_SLOTS = 1;
@@ -273,6 +278,7 @@ export const DEFAULT_SETTINGS: Settings = {
   hideObscureEquipment: true,
   hideObscureAbilities: true,
   hitDelayTicks: 2,
+  boneShield: 'greater',
   combatMode: 'manual',
   revolution: { ...DEFAULT_REVOLUTION },
 };

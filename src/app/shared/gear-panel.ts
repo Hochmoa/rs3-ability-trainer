@@ -5,6 +5,9 @@ import { EquipSlot, Equipment, GEAR_SLOTS, GearSlot, INVENTORY_SIZE, ItemRef, SL
 import { GearDragService } from './gear-drag';
 import { GearTip } from './tooltip';
 
+/** slots drawn in the panel – aura and sigil left the game, old loadouts may still carry them (ignored) */
+const PANEL_SLOTS: GearSlot[] = GEAR_SLOTS.filter((g) => g !== 'aura' && g !== 'sigil');
+
 /** Where a dragged item comes from. */
 export type GearSource = { kind: 'catalog' } | { kind: 'inv'; index: number } | { kind: 'equip'; slot: EquipSlot };
 
@@ -77,7 +80,6 @@ interface Cell {
             }
           </div>
         }
-        <span class="divider"></span>
       </div>
       <div class="inventory" role="group" aria-label="Backpack">
         @for (v of inv(); track $index) {
@@ -150,17 +152,16 @@ interface Cell {
       position: relative;
       display: grid;
       grid-template-columns: repeat(3, var(--cell));
-      grid-template-rows: repeat(5, var(--cell)) 1px var(--cell);
+      grid-template-rows: repeat(5, var(--cell));
       gap: 8px 12px;
       justify-content: center;
+      /* the game's Worn Equipment window: pocket beside the head; aura and sigil slots are gone */
       grid-template-areas:
-        '. head .'
+        '. head pocket'
         'cape neck ammo'
         'mainHand body offHand'
         '. legs .'
-        'hands feet ring'
-        'divider divider divider'
-        'pocket aura sigil';
+        'hands feet ring';
     }
     .inventory {
       display: grid;
@@ -212,8 +213,6 @@ interface Cell {
     .equip.slot-feet::before { background-image: url('/assets/slots/feet.png'); }
     .equip.slot-ring::before { background-image: url('/assets/slots/ring.png'); }
     .equip.slot-pocket::before { background-image: url('/assets/slots/pocket.png'); }
-    .equip.slot-aura::before { background-image: url('/assets/slots/aura.png'); }
-    .equip.slot-sigil::before { background-image: url('/assets/slots/sigil.png'); }
     .equip.slot-head { grid-area: head; }
     .equip.slot-cape { grid-area: cape; }
     .equip.slot-neck { grid-area: neck; }
@@ -226,13 +225,6 @@ interface Cell {
     .equip.slot-feet { grid-area: feet; }
     .equip.slot-ring { grid-area: ring; }
     .equip.slot-pocket { grid-area: pocket; }
-    .equip.slot-aura { grid-area: aura; }
-    .equip.slot-sigil { grid-area: sigil; }
-    .divider {
-      grid-area: divider;
-      height: 1px;
-      background: linear-gradient(90deg, transparent, var(--stone-light) 20%, var(--stone-light) 80%, transparent);
-    }
     /* connecting lines: centre column head..feet, outer columns cape..hands / ammo..ring, and the two cross bars */
     .line {
       display: block;
@@ -391,7 +383,7 @@ export class GearPanel {
   readonly cells = computed<Cell[]>(() => {
     const eq = this.equipment();
     const two = eq.twoHand ?? null;
-    return GEAR_SLOTS.map((gear) => {
+    return PANEL_SLOTS.map((gear) => {
       let slot: EquipSlot = gear;
       let ref = eq[gear] ?? null;
       let blocked = false;

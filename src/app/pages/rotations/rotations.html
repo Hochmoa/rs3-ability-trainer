@@ -32,11 +32,12 @@
     <div class="steps" cdkDropList cdkDropListOrientation="mixed" (cdkDropListDropped)="reorder($event)">
       @for (s of r.steps; track $index) {
         @if (s.kind === 'note') {
-          <div class="tile note" [class.phase]="s.phase" cdkDrag [title]="(s.phase ? 'Phase: ' : 'Note: ') + s.note">
+          <div class="tile note" [class.phase]="s.phase" cdkDrag [title]="(s.phase ? 'Phase: ' : 'Note: ') + s.note + ' – click to edit'" (click)="editNote($index)">
             <span class="num">{{ $index + 1 }}</span>
             <span class="note-text">{{ s.note }}</span>
             <span class="tile-actions">
-              <button class="act danger" (click)="removeStep($index)" title="Remove">×</button>
+              <button class="act" (click)="editNote($index); $event.stopPropagation()" title="Edit text">✎</button>
+              <button class="act danger" (click)="removeStep($index); $event.stopPropagation()" title="Remove">×</button>
             </span>
           </div>
         } @else if (entity(s); as e) {

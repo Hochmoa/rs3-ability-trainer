@@ -28,8 +28,6 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'ring', label: 'Ring' },
   { id: 'ammo', label: 'Ammo' },
   { id: 'pocket', label: 'Pocket' },
-  { id: 'aura', label: 'Aura' },
-  { id: 'sigil', label: 'Sigil' },
   { id: 'potions', label: 'Potions & bombs' },
 ];
 /** slots whose catalog gets a tier filter */

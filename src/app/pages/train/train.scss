@@ -1171,3 +1171,13 @@
     }
   }
 }
+
+.radios {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+
+  .check {
+    margin: 0;
+  }
+}
