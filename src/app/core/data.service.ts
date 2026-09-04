@@ -87,7 +87,7 @@ export class DataService {
     ...this.specials().map<Entity>((s) => ({ key: entityKey('special', s.id), kind: 'special', id: s.id, name: s.name, icon: s.icon, group: 'Special', special: s })),
     ...this.spells().map<Entity>((s) => ({ key: entityKey('spell', s.id), kind: 'spell', id: s.id, name: s.name, icon: s.icon, group: SPELLBOOK_NAMES[s.book], spell: s })),
     ...this.weapons().map<Entity>((w) => ({ key: entityKey('weapon', w.id), kind: 'weapon', id: w.id, name: w.name, icon: w.icon ?? '', group: 'Weapons', weapon: w })),
-    ...this.specs().map<Entity>((s) => ({ key: entityKey('spec', s.id), kind: 'spec', id: s.id, name: s.name, icon: s.weaponIcons[0] ?? 'assets/abilities/weapon-special-attack.png', group: 'Specs', spec: s })),
+    ...this.specs().map<Entity>((s) => ({ key: entityKey('spec', s.id), kind: 'spec', id: s.id, name: s.name, icon: 'assets/abilities/weapon-special-attack.png', group: 'Specs', spec: s })),
     ...ACTIONS.map<Entity>((a) => ({ key: entityKey('action', a.id), kind: 'action', id: a.id, name: a.name, icon: a.icon, group: 'Actions', action: a })),
   ]);
   readonly byKey = computed(() => new Map(this.entities().map((e) => [e.key, e])));
@@ -311,7 +311,7 @@ export class DataService {
       kind: 'spec',
       id: spec.id,
       name: spec.name,
-      icon: spec.weaponIcons[0] ?? 'assets/abilities/weapon-special-attack.png',
+      icon: 'assets/abilities/weapon-special-attack.png',
       gcd: !spec.ignoresGcd,
       style: spec.style,
       abilityType: 'Special',

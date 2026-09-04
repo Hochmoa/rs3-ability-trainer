@@ -266,6 +266,22 @@ interface Note {
             <tr><th>GCD</th><td class="warn">instant – switching gear does not use a tick</td></tr>
           </table>
           <p class="desc">Wield your {{ w.style }} weapon. Abilities of other styles are greyed out until you switch back; Defence and Constitution abilities work with any weapon.</p>
+        } @else if (e.spec; as sp) {
+          <!-- the bar shows the game's generic special-attack icon; the weapons it belongs to are listed here -->
+          <div class="spec-weapons">
+            @for (w of sp.weapons; track $index) {
+              <span class="spec-weapon">@if (sp.weaponIcons[$index]) { <img [src]="sp.weaponIcons[$index]" alt="" /> }{{ w }}</span>
+            }
+          </div>
+          <table>
+            @if (sp.adrenaline !== null) { <tr><th>Adrenaline</th><td class="bad">−{{ sp.adrenaline }}%</td></tr> }
+            @if (sp.cooldownTicks) { <tr><th>Cooldown</th><td>{{ seconds(sp.cooldownTicks) }}</td></tr> }
+            @if (sp.damageText && sp.damageText !== 'None' && sp.damageText !== 'N/A') { <tr><th>Damage</th><td>{{ sp.damageText }}</td></tr> }
+            <tr><th>Target</th><td>{{ sp.target }}{{ sp.channelled ? ' · channelled' : '' }}</td></tr>
+            <tr><th>GCD</th><td [class]="sp.ignoresGcd ? 'warn' : ''">{{ sp.ignoresGcd ? 'off the global cooldown' : 'yes' }}</td></tr>
+            @if (sp.eof.storable === true) { <tr><th>Essence of Finality</th><td>storable{{ sp.eof.notes ? ' – ' + sp.eof.notes : '' }}</td></tr> }
+          </table>
+          <p class="desc">{{ describe(sp.description) }}</p>
         } @else if (e.special; as sp) {
           <table>
             @if (sp.adrenaline || sp.adrenalineOverTime) {
@@ -330,6 +346,23 @@ interface Note {
     .sub {
       color: var(--muted);
       font-size: 12px;
+    }
+    .spec-weapons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px 10px;
+      margin: 0 0 8px;
+      font-size: 12px;
+    }
+    .spec-weapon {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+
+      img {
+        width: 18px;
+        height: 18px;
+      }
     }
     /* the rotation step's note from the PvME import */
     .step-hint {
@@ -471,6 +504,7 @@ export class EntityTooltip {
     if (e.ability) return (e.ability.basicAttack ? 'Auto-attack' : e.ability.type) + ' · ' + e.ability.style;
     if (e.prayer) return (e.prayer.book === 'Curses' ? 'Ancient curse' : 'Prayer') + ' · level ' + e.prayer.level;
     if (e.special) return specialKind(e.special);
+    if (e.spec) return 'Weapon special attack · ' + e.spec.style;
     if (e.weapon) return 'Weapon switch · ' + e.weapon.style;
     if (e.spell) return (e.spell.kind === 'autocast' ? 'Auto-cast spell · ' : 'Spell · ') + SPELLBOOK_NAMES[e.spell.book] + ' · level ' + e.spell.level;
     return '';
