@@ -30,7 +30,9 @@ interface Cell {
 }
 
 /**
- * The in-game equipment screen (worn slots in the game's layout) plus the 28-slot backpack.
+ * The in-game "Worn Equipment" screen (worn slots in the game's layout, empty slots show the game's slot
+ * silhouettes from public/assets/slots) plus the 4 x 7 backpack. Item icons are the wiki's inventory icons
+ * and are drawn at their native size (~30 px) in 44 px cells, like in the game.
  * `editable`: items can be dragged between catalog, slots and backpack and right-clicked for a menu.
  * `live`: while training – clicking an item equips / takes off / drinks it; no dragging.
  *
@@ -43,7 +45,13 @@ interface Cell {
   imports: [GearTip],
   template: `
     <div class="gear" [class.live]="live()" [class.editable]="editable()">
-      <div class="equipment">
+      <div class="equipment" role="group" aria-label="Worn equipment">
+        <!-- the thin lines joining the slots, like in the game -->
+        <span class="line v mid"></span>
+        <span class="line v left"></span>
+        <span class="line v right"></span>
+        <span class="line h top"></span>
+        <span class="line h arms"></span>
         @for (c of cells(); track c.slot) {
           <div
             class="cell equip"
@@ -65,13 +73,12 @@ interface Cell {
               </div>
             } @else if (c.ref) {
               <span class="noicon unknown" title="unknown item">?</span>
-            } @else {
-              <span class="slot-icon">{{ SLOT_ICON[c.gear] }}</span>
             }
           </div>
         }
+        <span class="divider"></span>
       </div>
-      <div class="inventory">
+      <div class="inventory" role="group" aria-label="Backpack">
         @for (v of inv(); track $index) {
           <div
             class="cell inv"
@@ -101,49 +108,107 @@ interface Cell {
   styles: `
     :host {
       display: block;
+      /* one square size everywhere (desktop + phone): a 32 px wiki icon sits centred with a small margin */
+      --cell: 44px;
+      --gap: 4px;
+      --stone: #3b362c;
+      --stone-light: #5a5344;
+      --stone-dark: #14120e;
+      --slot-bg: #0b0b0d;
+      --slot-border: #34302a;
+      --line: #3a362d;
     }
     .gear {
       display: flex;
       flex-direction: column;
+      align-items: center;
       gap: 8px;
       width: 100%;
     }
+    /* stone-framed panels like the game's interface windows */
+    .equipment,
+    .inventory {
+      box-sizing: border-box;
+      padding: 10px;
+      background:
+        radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.04), transparent 60%),
+        linear-gradient(#232019, #15130f);
+      border: 2px solid var(--stone);
+      border-radius: 5px;
+      box-shadow:
+        inset 0 0 0 1px var(--stone-dark),
+        inset 0 0 0 2px var(--stone-light),
+        inset 0 0 0 3px var(--stone-dark),
+        0 2px 6px rgba(0, 0, 0, 0.5);
+    }
     .equipment {
+      position: relative;
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 4px;
-      padding: 8px;
-      background: linear-gradient(#26241d, #16150f);
-      border: 1px solid #4a4536;
-      border-radius: 6px;
+      grid-template-columns: repeat(3, var(--cell));
+      grid-template-rows: repeat(5, var(--cell)) 1px var(--cell);
+      gap: 8px 12px;
+      justify-content: center;
       grid-template-areas:
-        'aura head pocket'
+        '. head .'
         'cape neck ammo'
         'mainHand body offHand'
-        'sigil legs .'
-        'hands feet ring';
+        '. legs .'
+        'hands feet ring'
+        'divider divider divider'
+        'pocket aura sigil';
     }
     .inventory {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 4px;
-      padding: 8px;
-      background: linear-gradient(#26241d, #16150f);
-      border: 1px solid #4a4536;
-      border-radius: 6px;
+      grid-template-columns: repeat(4, var(--cell));
+      grid-auto-rows: var(--cell);
+      gap: var(--gap);
+      justify-content: center;
     }
     .cell {
       position: relative;
-      aspect-ratio: 1;
-      min-width: 0;
-      background: #0a0a0c;
-      border: 1px solid #3a3730;
-      border-radius: 4px;
+      z-index: 1;
+      box-sizing: border-box;
+      width: var(--cell);
+      height: var(--cell);
+      background: var(--slot-bg);
+      border: 1px solid var(--slot-border);
+      border-radius: 3px;
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.8);
       display: flex;
       align-items: center;
       justify-content: center;
       overflow: hidden;
     }
+    /* empty worn slots show the game's silhouette of what goes there */
+    .equip::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: center / 32px 32px no-repeat;
+      opacity: 0;
+      transition: opacity 0.15s;
+      pointer-events: none;
+    }
+    .equip.empty::before {
+      opacity: 0.55;
+    }
+    .equip.empty:hover::before {
+      opacity: 0.8;
+    }
+    .equip.slot-head::before { background-image: url('/assets/slots/head.png'); }
+    .equip.slot-cape::before { background-image: url('/assets/slots/cape.png'); }
+    .equip.slot-neck::before { background-image: url('/assets/slots/neck.png'); }
+    .equip.slot-ammo::before { background-image: url('/assets/slots/ammo.png'); }
+    .equip.slot-mainHand::before { background-image: url('/assets/slots/mainHand.png'); }
+    .equip.slot-body::before { background-image: url('/assets/slots/body.png'); }
+    .equip.slot-offHand::before { background-image: url('/assets/slots/offHand.png'); }
+    .equip.slot-legs::before { background-image: url('/assets/slots/legs.png'); }
+    .equip.slot-hands::before { background-image: url('/assets/slots/hands.png'); }
+    .equip.slot-feet::before { background-image: url('/assets/slots/feet.png'); }
+    .equip.slot-ring::before { background-image: url('/assets/slots/ring.png'); }
+    .equip.slot-pocket::before { background-image: url('/assets/slots/pocket.png'); }
+    .equip.slot-aura::before { background-image: url('/assets/slots/aura.png'); }
+    .equip.slot-sigil::before { background-image: url('/assets/slots/sigil.png'); }
     .equip.slot-head { grid-area: head; }
     .equip.slot-cape { grid-area: cape; }
     .equip.slot-neck { grid-area: neck; }
@@ -158,7 +223,33 @@ interface Cell {
     .equip.slot-pocket { grid-area: pocket; }
     .equip.slot-aura { grid-area: aura; }
     .equip.slot-sigil { grid-area: sigil; }
-    .editable .cell.empty {
+    .divider {
+      grid-area: divider;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--stone-light) 20%, var(--stone-light) 80%, transparent);
+    }
+    /* connecting lines: centre column head..feet, outer columns cape..hands / ammo..ring, and the two cross bars */
+    .line {
+      display: block;
+      z-index: 0;
+      background: var(--line);
+      pointer-events: none;
+    }
+    .line.v {
+      width: 2px;
+      justify-self: center;
+    }
+    .line.h {
+      height: 2px;
+      align-self: center;
+    }
+    .line.mid { grid-column: 2; grid-row: 1 / 6; }
+    .line.left { grid-column: 1; grid-row: 2 / 6; }
+    .line.right { grid-column: 3; grid-row: 2 / 6; }
+    .line.top { grid-column: 1 / 4; grid-row: 2; }
+    .line.arms { grid-column: 1 / 4; grid-row: 3; }
+    /* while something is being dragged, the empty cells that can take it get a dashed border */
+    .editable .cell.empty.can-drop {
       border-style: dashed;
     }
     .cell.blocked {
@@ -169,11 +260,14 @@ interface Cell {
       border-color: var(--gold);
       box-shadow: inset 0 0 6px rgba(201, 162, 39, 0.5);
     }
-    /* every cell that could take the dragged item */
+    /* every cell that could take the dragged item (pointer drag from shared/gear-drag.ts) */
     .cell.can-drop {
-      border-color: rgba(201, 162, 39, 0.6);
-      border-style: solid;
-      background: rgba(201, 162, 39, 0.1);
+      border-color: var(--gold);
+      background: rgba(201, 162, 39, 0.15);
+      box-shadow: inset 0 0 6px rgba(201, 162, 39, 0.35);
+    }
+    .cell.can-drop::before {
+      opacity: 0.9;
     }
     /* the cell under the pointer: this is where the drop lands */
     .cell.hover {
@@ -206,16 +300,19 @@ interface Cell {
     .live .cell.empty {
       cursor: default;
     }
+    /* wiki inventory icons are ~30 px: draw them 1:1, never upscaled (blurry) */
     .item img {
-      max-width: 82%;
-      max-height: 82%;
-      object-fit: contain;
       display: block;
+      width: auto;
+      height: auto;
+      max-width: calc(var(--cell) - 6px);
+      max-height: calc(var(--cell) - 6px);
       pointer-events: none;
+      filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.8));
     }
     .live .cell.filled:hover .item img,
     .editable .cell.filled:hover .item img {
-      filter: brightness(1.25);
+      filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.8)) brightness(1.25);
     }
     .cell.unusable .item img {
       filter: grayscale(1) brightness(0.45);
@@ -224,11 +321,6 @@ interface Cell {
       font-size: 10px;
       color: var(--muted);
       text-transform: uppercase;
-    }
-    .slot-icon {
-      font-size: 14px;
-      color: #4a4536;
-      user-select: none;
     }
     .badge {
       position: absolute;
@@ -279,7 +371,6 @@ export class GearPanel {
   readonly action = output<GearAction>();
 
   readonly SLOT_NAMES = SLOT_NAMES;
-  readonly SLOT_ICON: Record<GearSlot, string> = { head: '⛑', cape: '🧥', neck: '📿', ammo: '➶', mainHand: '⚔', body: '🛡', offHand: '🛡', legs: '👖', hands: '🧤', feet: '👢', ring: '💍', pocket: '📜', aura: '✨', sigil: '◈' };
 
   readonly cells = computed<Cell[]>(() => {
     const eq = this.equipment();

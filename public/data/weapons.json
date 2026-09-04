@@ -1192,7 +1192,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/mystical-staff.png",
   "role": null
  },
  {
@@ -2204,7 +2204,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/exquisite-staff.png",
   "role": null
  },
  {
@@ -2664,7 +2664,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/challenger-staff.png",
   "role": null
  },
  {
@@ -2710,7 +2710,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/lightning-staff.png",
   "role": null
  },
  {
@@ -2756,7 +2756,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/starfury-staff.png",
   "role": null
  },
  {
@@ -3377,7 +3377,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/hoardstalker-staff.png",
   "role": null
  },
  {
@@ -3699,7 +3699,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/staff-of-devotion.png",
   "role": null
  },
  {
@@ -3722,7 +3722,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/starfire-staff.png",
   "role": null
  },
  {
@@ -4596,7 +4596,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/exquisite-wand.png",
   "role": null
  },
  {
@@ -4849,7 +4849,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/balancing-wand.png",
   "role": null
  },
  {
@@ -4895,7 +4895,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/serpentine-wand.png",
   "role": null
  },
  {
@@ -5907,7 +5907,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/exquisite-orb.png",
   "role": null
  },
  {
@@ -6183,7 +6183,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/broken-heart.png",
   "role": null
  },
  {
@@ -10185,7 +10185,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/exquisite-2h-sword.png",
   "role": null
  },
  {
@@ -10208,7 +10208,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/exquisite-spear.png",
   "role": null
  },
  {
@@ -10507,7 +10507,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/challenger-lance.png",
   "role": null
  },
  {
@@ -10645,7 +10645,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/starfury-sword.png",
   "role": null
  },
  {
@@ -10898,7 +10898,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/exquisite-halberd.png",
   "role": null
  },
  {
@@ -11473,7 +11473,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/spear-of-despite.png",
   "role": null
  },
  {
@@ -11496,7 +11496,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/starfire-sword.png",
   "role": null
  },
  {
@@ -17637,7 +17637,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/exquisite-whip.png",
   "role": null
  },
  {
@@ -18074,7 +18074,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/hoardstalker-tomahawk.png",
   "role": null
  },
  {
@@ -20880,7 +20880,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/exquisite-battleaxe.png",
   "role": null
  },
  {
@@ -20903,7 +20903,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/exquisite-claw.png",
   "role": null
  },
  {
@@ -20926,7 +20926,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/exquisite-longsword.png",
   "role": null
  },
  {
@@ -20949,7 +20949,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/exquisite-mace.png",
   "role": null
  },
  {
@@ -20972,7 +20972,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/exquisite-sword.png",
   "role": null
  },
  {
@@ -21133,7 +21133,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/ban-hammer.png",
   "role": null
  },
  {
@@ -21501,7 +21501,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/goblin-basher.png",
   "role": null
  },
  {
@@ -21662,7 +21662,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/serpentine-rapier.png",
   "role": null
  },
  {
@@ -21685,7 +21685,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/shark-fist.png",
   "role": null
  },
  {
@@ -30471,7 +30471,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/off-hand-hoardstalker-tomahawk.png",
   "role": null
  },
  {
@@ -32012,7 +32012,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/off-hand-exquisite-battleaxe.png",
   "role": null
  },
  {
@@ -32035,7 +32035,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/off-hand-exquisite-claw.png",
   "role": null
  },
  {
@@ -32058,7 +32058,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/off-hand-exquisite-longsword.png",
   "role": null
  },
  {
@@ -32081,7 +32081,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/off-hand-exquisite-mace.png",
   "role": null
  },
  {
@@ -32104,7 +32104,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/off-hand-exquisite-sword.png",
   "role": null
  },
  {
@@ -32380,7 +32380,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/off-hand-imcando-axe.png",
   "role": null
  },
  {
@@ -32403,7 +32403,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/off-hand-ardent-mace.png",
   "role": null
  },
  {
@@ -32426,7 +32426,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/off-hand-ban-hammer.png",
   "role": null
  },
  {
@@ -32472,7 +32472,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/off-hand-goblin-basher.png",
   "role": null
  },
  {
@@ -32518,7 +32518,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/off-hand-serpentine-rapier.png",
   "role": null
  },
  {
@@ -32541,7 +32541,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/off-hand-shark-fist.png",
   "role": null
  },
  {
@@ -38751,7 +38751,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/exquisite-shortbow.png",
   "role": null
  },
  {
@@ -38797,7 +38797,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/hoardstalker-longbow.png",
   "role": null
  },
  {
@@ -38935,7 +38935,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/challenger-javelin.png",
   "role": null
  },
  {
@@ -39050,7 +39050,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/starfury-bow.png",
   "role": null
  },
  {
@@ -39441,7 +39441,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/serpentine-2h-crossbow.png",
   "role": null
  },
  {
@@ -39510,7 +39510,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/cupid-bow.png",
   "role": null
  },
  {
@@ -39533,7 +39533,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/starfire-bow.png",
   "role": null
  },
  {
@@ -40338,7 +40338,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/energised-arm-cannon.png",
   "role": null
  },
  {
@@ -40982,7 +40982,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/exquisite-crossbow.png",
   "role": null
  },
  {
@@ -41856,7 +41856,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/heartseeker-crossbow.png",
   "role": null
  },
  {
@@ -41925,7 +41925,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/snowball-2006-christmas-event.png",
   "role": null
  },
  {
@@ -42707,7 +42707,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/off-hand-energised-arm-cannon.png",
   "role": null
  },
  {
@@ -43167,7 +43167,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/off-hand-exquisite-crossbow.png",
   "role": null
  },
  {
@@ -43719,7 +43719,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/off-hand-heartseeker-crossbow.png",
   "role": null
  },
  {
@@ -43742,7 +43742,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/off-hand-imcando-pistol.png",
   "role": null
  },
  {
@@ -43765,7 +43765,7 @@
   "charges": null,
   "spec": null,
   "innateMastery": false,
-  "icon": null,
+  "icon": "assets/weapons/off-hand-twang-crossbow.png",
   "role": null
  },
  {
