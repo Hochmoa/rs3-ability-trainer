@@ -113,6 +113,7 @@ describe('rule set invariants', () => {
       const out = new Set<string>();
       buffsInEffects(g.onCast, out);
       buffsInEffects(g.onHit, out);
+      buffsInEffects(g.onDirectHit, out);
       if (g.when.buff) out.add(g.when.buff);
       if (g.consumes) out.add(g.consumes);
       for (const id of out) if (!id.includes(':') && !BUFF_BY_ID.has(id)) missing.add(g.id + ' → ' + id);
@@ -165,7 +166,10 @@ describe('rule set invariants', () => {
     const walk = (effects: Effect[] | undefined) => {
       for (const e of effects ?? []) {
         if (e.kind === 'stack' || e.kind === 'stack-set') generated.add(e.stack);
-        if (e.kind === 'consume-stack') used.add(e.stack);
+        if (e.kind === 'consume-stack') {
+          used.add(e.stack);
+          walk(e.then);
+        }
         if ('when' in e && e.when?.stackMin) used.add(e.when.stackMin.stack);
       }
     };
@@ -180,6 +184,8 @@ describe('rule set invariants', () => {
     for (const g of GLOBALS) {
       walk(g.onCast);
       walk(g.onHit);
+      walk(g.onDirectHit);
+      if (g.when.stackMin) used.add(g.when.stackMin.stack);
     }
     const orphans = [...used].filter((s) => !generated.has(s));
     expect(orphans).toEqual([]);

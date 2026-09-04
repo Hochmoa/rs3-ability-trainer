@@ -156,6 +156,44 @@ export const GLOBAL_RULES: GlobalRule[] = [
     when: { style: 'Melee', gcd: true, item: 'dark-ice-shard' },
     onCast: [{ kind: 'stack', stack: 'primordial-ice', amount: 1, when: { chance: 0.05 } }],
   },
+  // ---------------------------------------------------------------- ammunition (the resolver activates arrows only with a bow, bolts only with a crossbow)
+  {
+    id: 'feasting-spores-build',
+    notes: [
+      'Deathspore arrows: every Ranged hit adds a Feasting Spores stack (special attacks and the Perfect Equilibrium hit included, damage over time not), max 12 (' + W + 'Deathspore_arrows )',
+      'At 12 the stacks are consumed: the next ability that costs adrenaline is free for 15 ticks, and no stacks build for 50 ticks (' + W + 'Deathspore_arrows )',
+    ],
+    when: { style: 'Ranged', item: 'deathspore-arrows', includeSpecs: true },
+    onDirectHit: [
+      { kind: 'stack', stack: 'feasting-spores', amount: 1, when: { notBuff: 'feasting-spores-cooldown' } },
+      { kind: 'consume-stack', stack: 'feasting-spores', amount: 'all', min: 12, then: [{ kind: 'buff', id: 'feasting-spores-ready' }, { kind: 'buff', id: 'feasting-spores-cooldown' }] },
+    ],
+  },
+  {
+    id: 'feasting-spores-free',
+    notes: ['Feasting Spores: the next ability that costs adrenaline (enhanced, threshold, ultimate, special attack – Defence / Constitution ones too) costs 0; it still needs the adrenaline (' + W + 'Deathspore_arrows )'],
+    when: { costing: true, buff: 'feasting-spores-ready', item: 'deathspore-arrows', includeSpecs: true },
+    consumes: 'feasting-spores-ready',
+    costMult: 0,
+  },
+  {
+    id: 'icy-chill-build',
+    notes: ['Wen arrows: every Ranged basic ability hit adds an Icy Chill stack (Piercing Shot 2, Ricochet 1 per arrow, Corruption Shot none), max 10, lost 30 s after the last one (' + W + 'Wen_arrow )'],
+    when: { style: 'Ranged', type: 'Basic', gcd: true, item: 'wen-arrow', excludeAbilities: ['corruption-shot'] },
+    onDirectHit: [{ kind: 'stack', stack: 'icy-chill', amount: 1 }],
+  },
+  {
+    id: 'icy-chill-consume',
+    notes: ['Wen arrows: at 10 Icy Chill the next Ranged enhanced / ultimate ability or special attack consumes them and grants Icy Precision for 15 ticks – +30% base damage for those abilities (the +30% hit chance is not simulated); nothing is consumed while Icy Precision runs (' + W + 'Wen_arrow )'],
+    when: { style: 'Ranged', types: ['Enhanced', 'Threshold', 'Ultimate', 'Special'], item: 'wen-arrow', stackMin: { stack: 'icy-chill', min: 10 }, includeSpecs: true },
+    onCast: [{ kind: 'consume-stack', stack: 'icy-chill', amount: 'all', min: 10, when: { notBuff: 'icy-precision' }, then: [{ kind: 'remove-buff', id: 'icy-chill' }, { kind: 'buff', id: 'icy-precision' }] }],
+  },
+  {
+    id: 'deathmark-basics',
+    notes: ['Deathmark (Hydrix bakriminel bolts (e) proc): basic abilities generate +1% adrenaline for 15 s (' + W + 'Hydrix_bakriminel_bolts_(e) )'],
+    when: { type: 'Basic', gcd: true, generating: true, buff: 'deathmark' },
+    gainAdd: 1,
+  },
   {
     id: 'rampage-no-gain',
     notes: ['Dragon battleaxe Rampage: abilities generate no adrenaline while it is active (' + W + 'Rampage )'],

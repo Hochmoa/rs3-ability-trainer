@@ -979,11 +979,13 @@
     "slot": "weapon-passive",
     "class": "adrenaline",
     "source": "https://runescape.wiki/w/Ashen_Vow",
-    "text": "+12% damage against the Flamebound Rival; spec Igneous Showdown generates 15% adrenaline.",
+    "text": "Melee attacks deal +12% damage against your Flamebound Rival (marked by Igneous Showdown; the 12% less damage taken from it is not simulated). Against the Rival the special hits 3 more times and refunds 15% adrenaline (30% under Natural Instinct) – rules-specs.ts.",
     "effect": {
-      "kind": "spec-adrenaline",
-      "spec": "igneous-showdown",
-      "adrenaline": 15
+      "kind": "target-buff-damage",
+      "buff": "flamebound-rival",
+      "style": "Melee",
+      "mult": 1.12,
+      "notAbility": "igneous-showdown"
     }
   },
   {
@@ -1131,6 +1133,282 @@
     "effect": {
       "kind": "primordial-ice",
       "chance": 0.05
+    }
+  },
+  {
+    "id": "bow-of-the-last-guardian",
+    "kind": "item",
+    "name": "Bow of the Last Guardian (Perfect Equilibrium)",
+    "style": "Ranged",
+    "slot": "weapon-passive",
+    "class": "damage",
+    "source": "https://runescape.wiki/w/Perfect_Equilibrium",
+    "text": "Every hit adds a stack (not bleeds, Crackling, Aftershock, Split Soul); at 8 stacks (4 during Balance by Force) a bonus hit of 12–16% ability damage plus 33–37% of the triggering hit (stored before its critical strike) lands and the stacks reset. The bonus hit can crit and counts as an arrow.",
+    "effect": {
+      "kind": "perfect-equilibrium",
+      "stacks": 8,
+      "buff": "balance-by-force",
+      "stacksWithBuff": 4,
+      "abilityDamage": { "min": 12, "max": 16 },
+      "hitShare": { "min": 33, "max": 37 }
+    }
+  },
+  {
+    "id": "deathspore-arrows",
+    "kind": "item",
+    "name": "Deathspore arrows (Feasting Spores)",
+    "style": "Ranged",
+    "slot": "ammo",
+    "class": "adrenaline",
+    "source": "https://runescape.wiki/w/Deathspore_arrows",
+    "text": "Every Ranged hit adds a Feasting Spores stack (max 12); at 12 they are consumed: the next ability that costs adrenaline is free for 9 s (the adrenaline is still required), then no stacks build for 30 s. Needs a bow.",
+    "effect": {
+      "kind": "feasting-spores",
+      "requiresWeapon": "bow",
+      "maxStacks": 12,
+      "buffTicks": 15,
+      "cooldownTicks": 50
+    }
+  },
+  {
+    "id": "ful-arrow",
+    "kind": "item",
+    "name": "Ful arrows",
+    "style": "Ranged",
+    "slot": "ammo",
+    "class": "damage",
+    "source": "https://runescape.wiki/w/Ful_arrow",
+    "text": "All abilities deal +15% damage (Corruption Shot's damage over time excluded) at −10% accuracy (accuracy is not simulated). Needs a bow.",
+    "effect": {
+      "kind": "style-damage",
+      "requiresWeapon": "bow",
+      "style": "Ranged",
+      "mult": 1.15,
+      "dots": false,
+      "accuracy": -0.1
+    }
+  },
+  {
+    "id": "wen-arrow",
+    "kind": "item",
+    "name": "Wen arrows (Icy Chill)",
+    "style": "Ranged",
+    "slot": "ammo",
+    "class": "damage",
+    "source": "https://runescape.wiki/w/Wen_arrow",
+    "text": "Every Ranged basic ability hit adds an Icy Chill stack (Piercing Shot 2, Corruption Shot none; max 10, lost after 30 s without a basic hit). At 10 the next Ranged enhanced / ultimate ability or special attack consumes them for Icy Precision: +30% base damage (and +30% hit chance, not simulated) for those abilities for 9 s. Needs a bow.",
+    "effect": {
+      "kind": "icy-chill",
+      "requiresWeapon": "bow",
+      "maxStacks": 10,
+      "buffTicks": 15,
+      "damageMult": 1.3
+    }
+  },
+  {
+    "id": "jas-dragonbane-arrow",
+    "kind": "item",
+    "name": "Jas dragonbane arrows",
+    "style": "Ranged",
+    "slot": "ammo",
+    "class": "damage",
+    "source": "https://runescape.wiki/w/Jas_dragonbane_arrow",
+    "text": "+30% damage and +20% hit chance against dragons (set the target type on the training page; hit chance is not simulated). Needs a bow.",
+    "effect": {
+      "kind": "target-type-damage",
+      "requiresWeapon": "bow",
+      "targetType": "dragon",
+      "mult": 1.3,
+      "hitChance": 0.2
+    }
+  },
+  {
+    "id": "jas-demonbane-arrow",
+    "kind": "item",
+    "name": "Jas demonbane arrows",
+    "style": "Ranged",
+    "slot": "ammo",
+    "class": "damage",
+    "source": "https://runescape.wiki/w/Jas_demonbane_arrow",
+    "text": "+30% damage and +20% hit chance against demons (set the target type on the training page; hit chance is not simulated). Needs a bow.",
+    "effect": {
+      "kind": "target-type-damage",
+      "requiresWeapon": "bow",
+      "targetType": "demon",
+      "mult": 1.3,
+      "hitChance": 0.2
+    }
+  },
+  {
+    "id": "black-stone-arrows",
+    "kind": "item",
+    "name": "Black stone arrows",
+    "style": "Ranged",
+    "slot": "ammo",
+    "class": "damage",
+    "source": "https://runescape.wiki/w/Black_stone_arrow",
+    "text": "Every hit reduces the target's base armour by 0.75% (max 22), capped at 15% (max 454), until the target dies or 12 minutes pass. Armour only changes the hit chance. Needs a bow.",
+    "effect": {
+      "kind": "armour-reduction",
+      "requiresWeapon": "bow",
+      "perHit": 0.0075,
+      "max": 0.15
+    }
+  },
+  {
+    "id": "hydrix-bakriminel-bolts-e",
+    "kind": "item",
+    "name": "Hydrix bakriminel bolts (e) (Deathmark)",
+    "style": "Ranged",
+    "slot": "ammo",
+    "class": "adrenaline",
+    "source": "https://runescape.wiki/w/Hydrix_bakriminel_bolts_(e)",
+    "text": "10% chance per hit: +10% adrenaline at once and basic abilities generate +1% adrenaline for 15 s (a new proc refreshes it). The Ranged cape perk (×1.2) and the elite Seers' Village tasks (+2%) are not modelled; Corruption Shot cannot trigger it. Needs a crossbow.",
+    "effect": {
+      "kind": "ammo-proc",
+      "requiresWeapon": "crossbow",
+      "chance": 0.1,
+      "adrenaline": 10,
+      "buff": "deathmark",
+      "durationTicks": 25
+    }
+  },
+  {
+    "id": "ruby-bakriminel-bolts-e",
+    "kind": "item",
+    "name": "Ruby bakriminel bolts (e) (Blood Forfeit)",
+    "style": "Ranged",
+    "slot": "ammo",
+    "class": "damage",
+    "source": "https://runescape.wiki/w/Ruby_bakriminel_bolts_(e)",
+    "text": "5% chance per hit: an extra hit of 25% + 100% × (current / maximum life points of the target) of the ability damage (25–125%); the 5% self-damage is not simulated, a target without life points counts as full. The Ranged cape perk (×1.2) and the elite Seers' Village tasks (+2%) are not modelled. Needs a crossbow.",
+    "effect": {
+      "kind": "ammo-proc",
+      "requiresWeapon": "crossbow",
+      "chance": 0.05,
+      "lpScaledHit": { "base": 0.25, "perLpShare": 1 }
+    }
+  },
+  {
+    "id": "salve-amulet",
+    "kind": "item",
+    "name": "Salve amulet",
+    "style": null,
+    "slot": "neck",
+    "class": "damage",
+    "source": "https://runescape.wiki/w/Salve_amulet",
+    "text": "+15% damage and +15% hit chance against undead with every combat style (set the target type on the training page; hit chance is not simulated).",
+    "effect": {
+      "kind": "target-type-damage",
+      "targetType": "undead",
+      "mult": 1.15,
+      "hitChance": 0.15
+    }
+  },
+  {
+    "id": "salve-amulet-e",
+    "kind": "item",
+    "name": "Salve amulet (e)",
+    "style": null,
+    "slot": "neck",
+    "class": "damage",
+    "source": "https://runescape.wiki/w/Salve_amulet_(e)",
+    "text": "+20% damage and +20% hit chance against undead with every combat style (set the target type on the training page; hit chance is not simulated).",
+    "effect": {
+      "kind": "target-type-damage",
+      "targetType": "undead",
+      "mult": 1.2,
+      "hitChance": 0.2
+    }
+  },
+  {
+    "id": "scrimshaw-of-the-elements",
+    "kind": "item",
+    "name": "Scrimshaw of the elements",
+    "style": "Magic",
+    "slot": "pocket",
+    "class": "damage",
+    "source": "https://runescape.wiki/w/Scrimshaw_of_the_elements",
+    "text": "+5% damage to all Magic attacks while activated (3 hours of use); assumed active.",
+    "effect": {
+      "kind": "style-damage",
+      "style": "Magic",
+      "mult": 1.05
+    }
+  },
+  {
+    "id": "superior-scrimshaw-of-the-elements",
+    "kind": "item",
+    "name": "Superior scrimshaw of the elements",
+    "style": "Magic",
+    "slot": "pocket",
+    "class": "damage",
+    "source": "https://runescape.wiki/w/Superior_scrimshaw_of_the_elements",
+    "text": "+6.66% damage to all Magic attacks while activated (4 hours of use); assumed active.",
+    "effect": {
+      "kind": "style-damage",
+      "style": "Magic",
+      "mult": 1.0666
+    }
+  },
+  {
+    "id": "scrimshaw-of-cruelty",
+    "kind": "item",
+    "name": "Scrimshaw of cruelty",
+    "style": "Ranged",
+    "slot": "pocket",
+    "class": "damage",
+    "source": "https://runescape.wiki/w/Scrimshaw_of_cruelty",
+    "text": "+5% damage to all Ranged attacks while activated (3 hours of use); assumed active.",
+    "effect": {
+      "kind": "style-damage",
+      "style": "Ranged",
+      "mult": 1.05
+    }
+  },
+  {
+    "id": "superior-scrimshaw-of-cruelty",
+    "kind": "item",
+    "name": "Superior scrimshaw of cruelty",
+    "style": "Ranged",
+    "slot": "pocket",
+    "class": "damage",
+    "source": "https://runescape.wiki/w/Superior_scrimshaw_of_cruelty",
+    "text": "+6.66% damage to all Ranged attacks while activated (4 hours of use); assumed active.",
+    "effect": {
+      "kind": "style-damage",
+      "style": "Ranged",
+      "mult": 1.0666
+    }
+  },
+  {
+    "id": "scrimshaw-of-vampyrism",
+    "kind": "item",
+    "name": "Scrimshaw of vampyrism",
+    "style": "Melee",
+    "slot": "pocket",
+    "class": "defensive",
+    "source": "https://runescape.wiki/w/Scrimshaw_of_vampyrism",
+    "text": "Heals 5% of the melee damage dealt (1 per 20), max 200 life points per hit.",
+    "effect": {
+      "kind": "heal",
+      "share": 0.05,
+      "capPerHit": 200
+    }
+  },
+  {
+    "id": "superior-scrimshaw-of-vampyrism",
+    "kind": "item",
+    "name": "Superior scrimshaw of vampyrism",
+    "style": "Melee",
+    "slot": "pocket",
+    "class": "defensive",
+    "source": "https://runescape.wiki/w/Superior_scrimshaw_of_vampyrism",
+    "text": "Heals 6.67% of the melee damage dealt (1 per 15), max 200 life points per hit.",
+    "effect": {
+      "kind": "heal",
+      "share": 0.0667,
+      "capPerHit": 200
     }
   }
 ]

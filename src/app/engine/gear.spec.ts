@@ -306,7 +306,7 @@ describe('gear: item passives resolve from set-effects.json', () => {
     expect(resolve({ items: ['malletops-totem'] }).buffDurationAdd['barricade']).toBe(3);
   });
 
-  it('weapon passives: FSOA +20% crit damage, Dark Sliver Frostblades proc on melee hits, Omni guard / Devourer / Soulbound lantern, Ek-ZekKil documented', () => {
+  it('weapon passives: FSOA +20% crit damage, Dark Sliver Frostblades proc on melee hits, Omni guard / Devourer / Soulbound lantern, Ek-ZekKil Ashen Vow', () => {
     expect(resolve({ weapons: ['fractured-staff-of-armadyl'] }).critDamageAdd).toBeCloseTo(0.2, 9);
     const sliver = resolve({ weapons: ['dark-shard-of-leng', 'dark-sliver-of-leng'] });
     expect(sliver.hitProcs).toEqual([{ id: 'dark-sliver-of-leng', chance: 0.02, cooldownTicks: 0, style: 'Melee', buff: { id: 'frostblades', durationTicks: 15 } }]);
@@ -319,7 +319,10 @@ describe('gear: item passives resolve from set-effects.json', () => {
     const dev = resolve({ weapons: ['devourer-s-guard', 'soulbound-lantern'] });
     expect(dev.items.has('devourer-s-guard')).toBe(true);
     expect(dev.weaponSpec?.id).toBe('soul-crush');
-    expect(resolve({ weapons: ['ek-zekkil'] }).ignoredEffects).toEqual([{ id: 'ek-zekkil', kind: 'spec-adrenaline' }]);
+    const ezk = resolve({ weapons: ['ek-zekkil'] });
+    expect(ezk.ignoredEffects).toEqual([]);
+    expect(ezk.items.has('ek-zekkil')).toBe(true);
+    expect(ezk.targetBuffDamageMult).toEqual([{ buff: 'flamebound-rival', style: 'Melee', mult: 1.12, notAbility: 'igneous-showdown' }]);
   });
 
   it('neck / talents: Essence of Finality stores a spec, amulet of souls is documented, Spirit Pact is read from the loadout', () => {

@@ -115,6 +115,13 @@
         <span>Life points</span>
         <input type="number" min="0" step="10000" [ngModel]="enemy().lifePoints" (ngModelChange)="setEnemy('lifePoints', numberOf($event, 0, 100000000))" [disabled]="running()" />
       </label>
+      <label class="lp" title="What the target is: Salve amulet, Jas dragonbane / demonbane arrows and the Undead / Dragon / Demon Slayer perks only work against their type.">
+        Type
+        <select [ngModel]="enemy().type ?? ''" (ngModelChange)="setEnemy('type', $event || null)" [disabled]="running()">
+          <option value="">none</option>
+          @for (t of TARGET_TYPES; track t) { <option [value]="t">{{ t }}</option> }
+        </select>
+      </label>
     </div>
     @if (enemy().enabled && enemyOpen()) {
       <div class="enemy-form">

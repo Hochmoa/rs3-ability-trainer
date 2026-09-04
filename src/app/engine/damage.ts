@@ -98,8 +98,14 @@ export const BUFF_FLAT_ADD: { buff: string; style: Style; pct: number; dots: boo
   { buff: 'frostblades', style: 'Melee', pct: 24, dots: false },
 ];
 
-/** self buffs that multiply one ability type of a style, DoTs included (Blast Infused: magic basics +8%) */
-export const BUFF_TYPE_DAMAGE_MULT: { buff: string; style: Style; type: string; mult: number }[] = [{ buff: 'blast-infused', style: 'Magic', type: 'Basic', mult: 1.08 }];
+/** self buffs that multiply one ability type of a style, DoTs included (Blast Infused: magic basics +8%; Icy Precision: ranged enhanced / threshold / ultimate / special +30%) */
+export const BUFF_TYPE_DAMAGE_MULT: { buff: string; style: Style; type: string; mult: number }[] = [
+  { buff: 'blast-infused', style: 'Magic', type: 'Basic', mult: 1.08 },
+  { buff: 'icy-precision', style: 'Ranged', type: 'Enhanced', mult: 1.3 },
+  { buff: 'icy-precision', style: 'Ranged', type: 'Threshold', mult: 1.3 },
+  { buff: 'icy-precision', style: 'Ranged', type: 'Ultimate', mult: 1.3 },
+  { buff: 'icy-precision', style: 'Ranged', type: 'Special', mult: 1.3 },
+];
 
 /** target debuffs that raise the damage it takes (dotsOnly: bleed / burn hits only – Corrupted Wounds) */
 export const TARGET_DAMAGE_MULT: { buff: string; mult: number; dotsOnly?: boolean }[] = [

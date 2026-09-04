@@ -94,6 +94,13 @@ export function loadoutWarnings(l: Loadout, data: LoadoutData): string[] {
   if (eof && style && eof.style !== style) out.push('The Essence of Finality special (' + eof.style + ') needs a weapon of the same style.');
   for (const g of wn.gizmos) checkGizmo(g.gizmo, g.type, data, out, g.label);
   checkPerkConflicts(wn.gizmos, data, out);
+  // arrows need a bow, bolts a crossbow – otherwise the ammunition's effect is off (resolveLoadout skips it)
+  const held = wn.two ?? wn.main;
+  for (const g of wn.gear) {
+    if (g.slot !== 'ammo' || !g.item.passive) continue;
+    const needs = data.setEffectById.get(g.item.passive)?.effect?.['requiresWeapon'] as string | undefined;
+    if (needs && held && weaponType(held) !== needs) out.push(g.item.name + ' only fire from a ' + needs + ' – their effect is off with ' + held.name + '.');
+  }
   return out;
 }
 
@@ -237,6 +244,9 @@ export function resolveLoadout(l: Loadout, data: LoadoutData): ResolvedLoadout {
   for (const id of items) {
     const item = data.setEffectById.get(id);
     if (!item?.effect) continue;
+    // ammunition only fires from the matching weapon: arrows from a bow, bolts from a crossbow (no weapon in hand: assumed to fit)
+    const needs = item.effect['requiresWeapon'] as string | undefined;
+    if (item.slot === 'ammo' && needs && r.weaponType && r.weaponType !== needs) continue;
     r.items.add(id);
     if (!applyEffect(r, id, item.effect, 1, item.style, {})) r.ignoredEffects.push({ id, kind: item.effect.kind });
   }
@@ -257,7 +267,9 @@ export function resolveLoadout(l: Loadout, data: LoadoutData): ResolvedLoadout {
  * kind in the data is either applied by applyEffect() or listed here, so a new kind cannot go unnoticed.
  */
 export const NOT_SIMULATED_EFFECT_KINDS: Record<string, string> = {
-  'bolt-proc': 'enchanted bolt effects need ammunition modelling (Sirenic / Elite sirenic)',
+  'bolt-proc': 'the set fires Dragonstone / Onyx / Hydrix bolt effects with any bolts – those are not modelled; equipped Hydrix / Ruby bakriminel bolts (e) are (Sirenic / Elite sirenic)',
+  'armour-reduction': 'target armour only changes the hit chance, which is not simulated – there is no damage equivalent (Black stone arrows)',
+  'heal': "the player's life points are not simulated (scrimshaw of vampyrism)",
   'damage-delay': 'incoming damage is not simulated (Trimmed masterwork)',
   'strength-bonus': 'ability damage ignores armour and strength bonuses (Achto)',
   'defensive-cooldown-reset-on-hit': 'incoming damage is not simulated (Achto)',
@@ -268,7 +280,6 @@ export const NOT_SIMULATED_EFFECT_KINDS: Record<string, string> = {
   'crit-proc': 'numbers are not documented on the wiki (Warpriest of Tuska)',
   'adrenaline-on-kill': 'the session ends with the kill (Ring of death)',
   'prayer': 'healing and damage taken are not simulated (Amulet of souls)',
-  'spec-adrenaline': 'special attack side effects are not modelled – specs.json (Ek-ZekKil)',
 };
 
 /** abilities whose cooldown Shadow's Grace halves (runescape.wiki/w/Shadow's_Grace) */
@@ -471,6 +482,35 @@ function applyEffect(r: ResolvedLoadout, id: string, effect: Record<string, unkn
     case 'stack-cap':
       r.stackCaps[e['stack'] as keyof typeof r.stackCaps] = Number(e['cap']);
       break;
+    case 'style-damage':
+      // Ful arrows (Ranged 1.15, not DoTs), scrimshaw of the elements / cruelty (Magic / Ranged, DoTs included)
+      r.styleDamageMult.push({ style: e['style'] ?? style, mult: Number(e['mult']), dots: e['dots'] !== false });
+      break;
+    case 'target-type-damage': {
+      // Salve amulet (e) 1.2 vs undead, Jas dragonbane / demonbane arrows 1.3 – EngineConfig.targetType picks the type
+      const t = e['targetType'] as keyof typeof r.targetTypeDamageMult;
+      r.targetTypeDamageMult[t] = (r.targetTypeDamageMult[t] ?? 1) * Number(e['mult']);
+      break;
+    }
+    case 'target-buff-damage':
+      // Ashen Vow: melee hits × 1.12 while the target is the Flamebound Rival (Igneous Showdown boosts its own hits through its rule)
+      r.targetBuffDamageMult.push({ buff: e['buff'], style: e['style'] ?? style ?? undefined, mult: Number(e['mult']), notAbility: e['notAbility'] });
+      break;
+    case 'ammo-proc':
+      // enchanted bakriminel bolts: Deathmark (adrenaline + buff), Blood Forfeit (extra hit scaled by the target's life points)
+      r.hitProcs.push({
+        id, chance: Number(e['chance']), cooldownTicks: 0, style: style ?? undefined,
+        adrenaline: e['adrenaline'] !== undefined ? Number(e['adrenaline']) : undefined,
+        buff: e['buff'] ? { id: e['buff'], durationTicks: Number(e['durationTicks']) } : undefined,
+        lpScaledHit: e['lpScaledHit'] ? { base: Number(e['lpScaledHit']['base']), perLpShare: Number(e['lpScaledHit']['perLpShare']) } : undefined,
+      });
+      break;
+    case 'perfect-equilibrium':
+      r.perfectEquilibrium = { stacks: Number(e['stacks']), stacksWithBuff: { buff: e['buff'], stacks: Number(e['stacksWithBuff']) }, abilityDamage: { min: Number(e['abilityDamage']['min']), max: Number(e['abilityDamage']['max']) }, hitShare: { min: Number(e['hitShare']['min']), max: Number(e['hitShare']['max']) } };
+      break;
+    case 'feasting-spores': // rules-global.ts: a stack per ranged hit, at 12 the next adrenaline-costing ability is free
+    case 'icy-chill': // rules-global.ts / damage.ts: a stack per basic hit, at 10 Icy Precision (+30% enhanced / ultimate / special damage)
+      break; // handled by rule conditions on the item id
     case 'replaces-ability':
     case 'snipe-cdr':
     case 'snipe-mobile': // movement while sniping (channel movableWith); the +25% hit chance is not simulated
