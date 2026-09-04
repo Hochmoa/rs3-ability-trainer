@@ -5,7 +5,11 @@ import { RotationStep } from './models';
  *   →  separates ticks / GCDs            +  joins same-tick actions
  *   (tc) target cycle   (auto) basic attack   (2t) or "2t x": x comes 2 ticks after the previous action
  *   <weapon> spec / eofspec  weapon special attack     :alias: / <:alias:id>  Discord emoji aliases
- * Anything that is not a known alias (phase headings, "improv", "run to the edge") becomes a note step.
+ *   gricocaroming / overpowerigneous / sunshinepf ...  perk, cape and flank variants → the base ability
+ *   bloodlust / residualsoul / flankicon ...  stack and status markers → a hint on the input they describe
+ *   aod / dummy / telos ...  targets → target cycle with the target as hint
+ *   realmmovement / timewarp / ballista ...  boss mechanics written inline → a note
+ * Anything else that is not a known alias (phase headings, "improv", "run to the edge") becomes a note step.
  */
 
 /** What an alias expands to: one or more steps (a weapon special is "switch weapon" + "spec"). */
@@ -24,6 +28,103 @@ const TICK_PREFIX = /^\(?\s*(\d+)\s*t\s*\)?\s+/i;
 const HEADING = /^(#+\s*|\*\*|__|-\s*\*\*)?\s*(phase|p\d|part|start|opening|note|notes)\b/i;
 /** parenthesised annotations that are not inputs */
 const ANNOTATION = /\(\s*(dw|2h|shield|\d+\s*hits?|0\s*tick|autocast\w*|mobile)\s*\)/gi;
+
+/**
+ * Perk / cape / flank / spell variants of an ability on PvME ("gricocaroming", "overpowerigneous", "soulstrikeflank",
+ * "sunshinepf", "tsunamiincite", "magmatempesttarget"): the loadout owns the perk, the step is the base ability.
+ * Only stripped when the remaining alias resolves. Value = hint shown on the step.
+ */
+const VARIANT_SUFFIXES: Record<string, string> = {
+  caroming: 'Caroming',
+  igneous: 'Igneous',
+  flanking: 'Flank',
+  flank: 'Flank',
+  lunging: 'Lunging',
+  energising: 'Energising',
+  clearheaded: 'Clear Headed',
+  turtling: 'Turtling',
+  mobile: 'Mobile',
+  pf: 'Planted Feet',
+  incite: 'Incite Fear',
+  target: 'target',
+};
+/** the same written in front: "igneousomnipower", "carominggrico", "flankimpact" */
+const VARIANT_PREFIXES = ['igneous', 'caroming', 'flanking', 'flank'];
+
+/** Stack / status icons: information about the neighbouring input, not an input. Value = hint text. */
+export const PVME_MARKERS: Record<string, string> = {
+  bloodlust: 'Bloodlust',
+  residualsoul: 'Residual Soul',
+  necrosis: 'Necrosis',
+  deathspark: 'Death Spark',
+  dspark: 'Death Spark',
+  essencecorruption: 'Essence Corruption',
+  primordialice: 'Primordial Ice',
+  perfectequilibrium: 'Perfect Equilibrium',
+  pe: 'Perfect Equilibrium',
+  stunicon: 'Stunned',
+  bindicon: 'Bound',
+  bindstatus: 'Bound',
+  poisonicon: 'Poisoned',
+  flankicon: 'Flank',
+  pf: 'Planted Feet',
+  singletarget: 'Single-target',
+  selftarget: 'Self-target',
+  multitarget: 'Multi-target',
+  areatarget: 'Area-target',
+};
+
+/** Bosses / NPCs used as targets ("(tc) aod", "aod omni", "click dummy"): a target cycle with the target as hint. */
+export const PVME_TARGETS: Record<string, string> = {
+  dummy: 'Combat dummy',
+  aod: 'Angel of Death',
+  amascuthead: "Amascut's head",
+  telos: 'Telos',
+  imperialwarriorakh: 'Imperial warrior akh',
+  gorillaakh: 'Gorilla akh',
+  scarabakh: 'Scarab akh',
+  tzkalzuk: 'TzKal-Zuk',
+  zuk: 'TzKal-Zuk',
+  bloodamalg: 'Blood amalgamation',
+  iceamalg: 'Ice amalgamation',
+  smokeamalg: 'Smoke amalgamation',
+  shadowamalg: 'Shadow amalgamation',
+  redgolem: 'Volcanic anima-golem',
+  redbeam: 'Red beam',
+  greenbeam: 'Green beam',
+  tumekensfragment: 'Fragment of Tumeken',
+  vorkath: 'Vorkath',
+  raksha: 'Raksha',
+  araxxi: 'Araxxi',
+  rax: 'Araxxi',
+  modestcrocodile: 'Modest crocodile demon',
+  haraken: 'Har-Aken',
+  zamorak: 'Zamorak',
+  kerapac: 'Kerapac',
+  solak: 'Solak',
+  malletops: 'Malletops',
+  vorago: 'Vorago',
+  nex: 'Nex',
+  ambassador: 'Ambassador',
+  seiryu: 'Seiryu',
+  archglacor: 'Arch-Glacor',
+  bloodreaver: 'Blood reaver',
+  legion: 'Legio',
+  hammember: 'H.A.M. member',
+};
+/** prose allowed in front of a target: "on aod", "click dummy", "tc telos" */
+const TARGET_PROSE = new Set(['on', 'onto', 'to', 'the', 'at', 'click', 'target', 'tc', 'hit', 'attack', 'switch']);
+
+/** Boss mechanics written inline ("grico + realmmovement"): a note, not an unknown token. Value = note text. */
+export const PVME_MECHANICS: Record<string, string> = {
+  realmmovement: 'Realm movement',
+  zamorakbutton: 'Realm movement',
+  timewarp: 'Time warp',
+  warptime: 'Time warp',
+  ballista: 'Ballista',
+  balista: 'Ballista',
+  warsretreatteleport: "War's Retreat teleport",
+};
 
 export function normalizeAlias(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -75,6 +176,20 @@ export function parsePvme(text: string, resolve: AliasResolver): PvmeParseResult
             first = false;
           }
           action = action.slice(lead[0].length).trim();
+          // "(tc) aod": the target belongs to the target cycle
+          const target = PVME_TARGETS[normalizeAlias(action)];
+          if (target && inputs?.length) {
+            const last = steps[steps.length - 1];
+            last.hint = joinHint(last.hint, target);
+            action = '';
+          }
+        }
+        // "→ bloodlust" / "+ pf" alone: a marker describing the previous input
+        const marker = PVME_MARKERS[normalizeAlias(action)];
+        if (action && marker) {
+          const prev = steps[steps.length - 1];
+          if (prev) prev.hint = joinHint(prev.hint, marker);
+          action = '';
         }
         if (!action) {
           if (offset !== undefined) pendingOffset = offset;
@@ -90,7 +205,7 @@ export function parsePvme(text: string, resolve: AliasResolver): PvmeParseResult
             const step: RotationStep = { ...s };
             if (sameTick || i > 0) step.sameTick = true; // the UI hides the flag on GCD casts, the engine scores companions only
             if (off !== undefined && i === 0) step.offsetTicks = off;
-            if (annotations.length && i === resolved.length - 1) step.hint = annotations.join(', ');
+            if (annotations.length && i === resolved.length - 1) step.hint = joinHint(step.hint, annotations.join(', '));
             steps.push(step);
           });
         } else {
@@ -103,22 +218,91 @@ export function parsePvme(text: string, resolve: AliasResolver): PvmeParseResult
   return { steps, unknown };
 }
 
-/** "omniguard spec" → resolve("omniguard") + resolve("spec"); "deathskulls" → resolve("deathskulls"); prose → null */
-function resolveAction(action: string, resolve: AliasResolver): RotationStep[] | null {
-  const words = action.split(/\s+/);
-  const direct = resolve(normalizeAlias(action));
+function joinHint(hint: string | undefined, text: string): string {
+  return hint ? hint + ', ' + text : text;
+}
+
+/** copy of the steps with `text` added to the hint of the last one (where annotations and trailing prose go too) */
+function withHint(steps: RotationStep[], text: string): RotationStep[] {
+  if (!text) return steps;
+  return steps.map((s, i) => (i === steps.length - 1 ? { ...s, hint: joinHint(s.hint, text) } : s));
+}
+
+function targetCycle(hint: string): RotationStep {
+  return { kind: 'action', id: 'target-cycle', hint }; // models.ts ACTIONS
+}
+
+function mechanicNote(note: string): RotationStep {
+  return { kind: 'note', id: '', note, phase: true };
+}
+
+/**
+ * An alias, or a perk / cape / flank variant of one ("gricocaroming" → greater-ricochet + hint "Caroming").
+ * The variant is only stripped when the remaining alias resolves, so unknown names stay unknown.
+ */
+export function resolveAlias(alias: string, resolve: AliasResolver): RotationStep[] | null {
+  const direct = resolve(alias);
   if (direct) return direct;
-  if (words.length >= 2) {
-    const last = normalizeAlias(words[words.length - 1]);
-    if (last === 'spec' || last === 'eofspec') {
-      const weapon = resolve(normalizeAlias(words.slice(0, -1).join(' ')));
-      if (weapon?.some((s) => s.kind === 'spec')) return weapon; // gear alias already expands to switch + its spec
-      const spec = resolve(last);
-      if (weapon || spec) return [...(weapon ?? []), ...(spec ?? [])];
+  for (const [suffix, label] of Object.entries(VARIANT_SUFFIXES)) {
+    if (alias.length > suffix.length && alias.endsWith(suffix)) {
+      const base = resolve(alias.slice(0, -suffix.length));
+      if (base) return withHint(base, label);
     }
-    // "vulnbomb thrown" / "deathskulls asap": first word is the alias, the rest is prose
-    const head = resolve(normalizeAlias(words[0]));
-    if (head) return head.map((s, i) => (i === head.length - 1 ? { ...s, hint: words.slice(1).join(' ') } : s));
   }
+  for (const prefix of VARIANT_PREFIXES) {
+    if (alias.length > prefix.length && alias.startsWith(prefix)) {
+      const base = resolve(alias.slice(prefix.length));
+      if (base) return withHint(base, VARIANT_SUFFIXES[prefix]);
+    }
+  }
+  return null;
+}
+
+/**
+ * "omniguard spec" → resolve("omniguard") + resolve("spec"); "deathskulls" → resolve("deathskulls");
+ * "bloodlust gflurry" → gflurry + hint; "aod omni" → target cycle + omni; "grico realmmovement" → grico + note; prose → null
+ */
+function resolveAction(action: string, resolve: AliasResolver): RotationStep[] | null {
+  const direct = resolveAlias(normalizeAlias(action), resolve);
+  if (direct) return direct;
+  const words = action.split(/\s+/);
+  const first = normalizeAlias(words[0]);
+  if (words.length < 2) {
+    if (PVME_TARGETS[first]) return [targetCycle(PVME_TARGETS[first])];
+    if (PVME_MECHANICS[first]) return [mechanicNote(PVME_MECHANICS[first])];
+    return null;
+  }
+  const last = normalizeAlias(words[words.length - 1]);
+  const rest = (from: number, to = words.length) => words.slice(from, to).join(' ');
+  if (last === 'spec' || last === 'eofspec') {
+    const weapon = resolveAlias(normalizeAlias(rest(0, -1)), resolve);
+    if (weapon?.some((s) => s.kind === 'spec')) return weapon; // gear alias already expands to switch + its spec
+    if (weapon?.some((s) => s.kind === 'ability' && s.id === 'essence-of-finality')) return weapon; // "eof spec"
+    const spec = resolve(last);
+    if (weapon || spec) return [...(weapon ?? []), ...(spec ?? [])];
+  }
+  // "bloodlust gflurry" / "impact flankicon": a stack marker next to the input it describes
+  if (PVME_MARKERS[first]) {
+    const r = resolveAction(rest(1), resolve);
+    if (r) return withHint(r, PVME_MARKERS[first]);
+  }
+  if (PVME_MARKERS[last]) {
+    const r = resolveAlias(normalizeAlias(rest(0, -1)), resolve); // "volleyofsouls with 3 residualsoul" keeps its prose instead
+    if (r) return withHint(r, PVME_MARKERS[last]);
+  }
+  // "aod omni": switch target, then the input; "click dummy" / "on aod" / "tc telos": just the target
+  if (PVME_TARGETS[first]) {
+    const r = resolveAction(rest(1), resolve);
+    return r ? [targetCycle(PVME_TARGETS[first]), ...r] : [targetCycle(PVME_TARGETS[first] + ' – ' + rest(1))];
+  }
+  if (PVME_TARGETS[last] && words.slice(0, -1).every((w) => TARGET_PROSE.has(w.toLowerCase()))) return [targetCycle(PVME_TARGETS[last])];
+  // "warsretreatteleport dba" / "ballista at 2.4 seconds left": the mechanic, then whatever follows it
+  if (PVME_MECHANICS[first]) {
+    const r = resolveAction(rest(1), resolve);
+    return r ? [mechanicNote(PVME_MECHANICS[first]), ...r] : [mechanicNote(PVME_MECHANICS[first] + ' ' + rest(1))];
+  }
+  // "vulnbomb thrown" / "deathskulls asap": first word is the alias, the rest is prose
+  const head = resolveAlias(first, resolve);
+  if (head) return withHint(head, rest(1));
   return null;
 }
