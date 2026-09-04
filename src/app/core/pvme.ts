@@ -300,8 +300,12 @@ function resolveAction(action: string, resolve: AliasResolver): RotationStep[] |
     const r = resolveAction(rest(1), resolve);
     return r ? [mechanicNote(PVME_MECHANICS[first]), ...r] : [mechanicNote(PVME_MECHANICS[first] + ' ' + rest(1))];
   }
-  // "vulnbomb thrown" / "deathskulls asap": first word is the alias, the rest is prose
+  // "vulnbomb thrown" / "deathskulls asap": first word is the alias, the rest is prose;
+  // "necrobasic / fingerofdeath" is PvME's "either – or": the first option is the step, the alternative is dropped
   const head = resolveAlias(first, resolve);
-  if (head) return withHint(head, rest(1));
+  if (head) {
+    const prose = rest(1);
+    return withHint(head, prose.startsWith('/') ? '' : prose);
+  }
   return null;
 }

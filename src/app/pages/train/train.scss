@@ -589,6 +589,10 @@
 .slot .tag.hint {
   color: var(--muted);
   text-transform: none;
+  max-width: 110px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .enemy {

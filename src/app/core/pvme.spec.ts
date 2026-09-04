@@ -179,6 +179,15 @@ describe('parsePvme – targets', () => {
   });
 });
 
+describe('parsePvme – alternatives', () => {
+  it('"A / B" keeps the first option as the step and drops the alternative', () => {
+    const r = parsePvme('necrobasic / fingerofdeath → soulsap → touchofdeath / necrobasic', resolve);
+    expect(ids(r.steps)).toEqual(['necromancy', 'soul-sap', 'touch-of-death']);
+    expect(r.steps.every((s) => !s.hint)).toBe(true);
+    expect(r.unknown).toEqual([]);
+  });
+});
+
 describe('parsePvme – boss mechanics', () => {
   it('inline mechanics become phase notes, not unknown tokens', () => {
     const r = parsePvme('grico + realmmovement → timewarp → warsretreatteleport dba → rapid + ballista at 2.4 seconds left', resolve);

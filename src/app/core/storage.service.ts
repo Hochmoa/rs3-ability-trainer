@@ -384,7 +384,7 @@ function cleanStep(s: RotationStep): RotationStep {
   if (s.phase) out.phase = true;
   if (s.sameTick) out.sameTick = true;
   if (s.offsetTicks !== undefined) out.offsetTicks = s.offsetTicks;
-  if (s.hint) out.hint = s.hint;
+  if (s.hint && !s.hint.startsWith('/')) out.hint = s.hint; // "/ fingerofdeath": an "either – or" alternative from older imports, not a hint
   return out;
 }
 
