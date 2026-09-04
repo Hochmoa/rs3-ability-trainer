@@ -6,7 +6,7 @@ Run after fetch-specs.py (links weapons to their special attack).  python tools/
 import json
 import re
 
-from fetch_wiki import ASSETS, DATA, bucket_all, category_members, download, image_urls, slug, write_json
+from fetch_wiki import ASSETS, DATA, bucket_all, category_members, damage_bonus, download, image_urls, slug, write_json
 
 FIELDS = ["page_name", "page_name_sub", "combat_class", "equipment_slot", "equipment_type", "weapon_damage",
           "weapon_accuracy", "attack_style", "attack_range", "equipment_armour", "equipment_life_points",
@@ -77,6 +77,8 @@ def main():
                 "abilityDamage": float(str(j.get("ability_damage") or 0).replace(",", "")) if str(j.get("ability_damage") or "0").replace(",", "").replace(".", "").isdigit() else None,
                 "armour": float(r.get("equipment_armour") or 0),
                 "lifePoints": int(r.get("equipment_life_points") or 0),
+                # damage bonus per style (shields / off-hands with a bonus); null = the wiki lists none
+                "bonus": damage_bonus(j),
                 "charges": r.get("degradation_charges") or None,
                 "spec": spec_of.get(page),
                 "innateMastery": False,

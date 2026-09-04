@@ -2,7 +2,7 @@ import { COMMAND_READY_AFTER, CONJURE_BASE_TICKS } from './rules-necromancy';
 import { AbilityType, CombatMode, EnemyConfig, EntityKind, FAMILIAR_SPECIAL_MAX, FAMILIAR_SPECIAL_REGEN, Familiar, PrayerStats, Prebuild, RevolutionSettings, SPEC_KEY, StepResult, Style, Style4, isStyle4 } from '../core/models';
 import { ResolvedLoadout, defaultResolvedLoadout } from './loadout-resolved';
 import { PROTECTION, PrayerBook, SOUL_SPLIT, bookOf, togglePrayer } from './prayer-rules';
-import { BASE_CRIT_CHANCE, BUFF_DAMAGE_MULT, BUFF_FLAT_ADD, BUFF_TYPE_DAMAGE_MULT, POISON_EVERY_TICKS, POISON_ROLL, RAGE_MAX, RAGE_PER_STACK, SPIRIT_ATTACKS, TARGET_DAMAGE_ADD, TARGET_DAMAGE_MULT, critMultiplier } from './damage';
+import { BASE_CRIT_CHANCE, BUFF_DAMAGE_MULT, BUFF_FLAT_ADD, BUFF_TYPE_DAMAGE_MULT, FORTITUDE, POISON_EVERY_TICKS, POISON_ROLL, RAGE_MAX, RAGE_PER_STACK, SPIRIT_ATTACKS, TARGET_DAMAGE_ADD, TARGET_DAMAGE_MULT, critMultiplier, damageSkillOf, fortitudeLifePoints, prayerDamagePct } from './damage';
 import { MORPH_TARGETS } from './morphs';
 import { BUFF_BY_ID, MODELLED_WIKI_BUFFS, GLOBALS, actionRuleFor, ruleFor, scrollRuleFor, specRuleFor, specialRuleFor, spellBookOf, spellRuleFor } from './rules';
 import { boneShieldTier } from './rules-necromancy';
@@ -318,6 +318,8 @@ export class TrainerEngine {
   wield: Wield = { mainHand: null, offHand: null, twoHand: null };
   /** ids of the active prayers (e.g. "soul-split") */
   activePrayers = new Set<string>();
+  /** tick every active prayer was switched on (the leech curses' damage boost climbs from there) */
+  prayerSince = new Map<string, number>();
   prayerStats: PrayerStats = { ticks: 0, soulSplitTicks: 0, attacks: 0, prayed: 0, hits: 0, absorbed: 0 };
   nextAttack: IncomingAttack | null = null;
   /** life points left on the target (0 when unlimited) */
@@ -381,6 +383,12 @@ export class TrainerEngine {
     return mult;
   }
 
+  /** the player's maximum life points: the loadout's (100 Ã— Constitution + armour) Ã— Powerburst of vitality, plus Fortitude while it is on (engine/damage.ts) */
+  get maxLifePoints(): number {
+    const con = this.loadout.levels.constitution;
+    return Math.floor(this.loadout.maxLifePoints * this.maxLifePointsMult) + (this.activePrayers.has(FORTITUDE) ? fortitudeLifePoints(con) : 0);
+  }
+
   get prayerBook(): PrayerBook {
     return this.config.prayerBook ?? 'Curses';
   }
@@ -429,6 +437,7 @@ export class TrainerEngine {
     this.echoes = [];
     this.lastInputTick = null;
     this.activePrayers = new Set();
+    this.prayerSince = new Map();
     this.prayerStats = { ticks: 0, soulSplitTicks: 0, attacks: 0, prayed: 0, hits: 0, absorbed: 0 };
     this.attackHistory = [];
     this.cycleIndex = 0;
@@ -1048,6 +1057,9 @@ export class TrainerEngine {
       const id = prayerId(entity.key);
       const t = togglePrayer(this.activePrayers, id);
       this.activePrayers = t.active;
+      if (t.on) this.prayerSince.set(id, tick);
+      else this.prayerSince.delete(id);
+      for (const p of t.replaced) this.prayerSince.delete(p);
       this.events.push({ kind: 'prayer', id, on: t.on, replaced: t.replaced });
       return;
     }
@@ -1238,8 +1250,8 @@ export class TrainerEngine {
       damage = { min: damage.min + k * rule.damageRamp.perTick.min, max: damage.max + k * rule.damageRamp.perTick.max };
     }
     // style buffs and flat bonuses count as they are at the cast (a Snipe cast on the last Death's Swiftness tick keeps the 1.5x)
-    const mult = this.styleMultiplier(acting.style, false);
-    const dotMult = this.styleMultiplier(acting.style, true);
+    const mult = this.styleMultiplier(acting.style, false, tick);
+    const dotMult = this.styleMultiplier(acting.style, true, tick);
     const flat = this.flatShare(acting.style, entity.id, false);
     const hitDamage = (i: number) => {
       const h = rule?.hitDamage?.[i];
@@ -1433,7 +1445,7 @@ export class TrainerEngine {
     this.setStacks('perfect-equilibrium', 0, h.tick, PERFECT_EQUILIBRIUM_KEY);
     const share = (pe.hitShare.min + this.random() * (pe.hitShare.max - pe.hitShare.min)) / 100;
     const entity: EngineEntity = { key: PERFECT_EQUILIBRIUM_KEY, kind: 'ability', id: 'perfect-equilibrium', name: 'Perfect Equilibrium', icon: '', gcd: false, style: 'Ranged', adrenaline: 0, cooldownTicks: 0, buffs: [] };
-    this.scheduled.push({ key: PERFECT_EQUILIBRIUM_KEY, entity, rule: undefined, tick: h.tick, index: 0, total: 1, channel: null, guaranteedCrit: false, damage: { ...pe.abilityDamage }, mult: this.styleMultiplier('Ranged', false), flat: 0, castMult: 1, flags: new Set(), critAdd: 0, addAbs: share * preCrit, noStack: true });
+    this.scheduled.push({ key: PERFECT_EQUILIBRIUM_KEY, entity, rule: undefined, tick: h.tick, index: 0, total: 1, channel: null, guaranteedCrit: false, damage: { ...pe.abilityDamage }, mult: this.styleMultiplier('Ranged', false, h.tick), flat: 0, castMult: 1, flags: new Set(), critAdd: 0, addAbs: share * preCrit, noStack: true });
   }
 
   /** bleeds on the target (Dismember, Slaughter, Massacre) – Jaws of the Abyss and the champion's ring count them */
@@ -1512,6 +1524,7 @@ export class TrainerEngine {
       if (this.activePrayers.has(id)) continue;
       const t = togglePrayer(this.activePrayers, id);
       this.activePrayers = t.active;
+      this.prayerSince.set(id, 0);
     }
   }
 
@@ -1565,7 +1578,8 @@ export class TrainerEngine {
     if (h.addAbs) amount += h.addAbs; // Perfect Equilibrium: the share of the triggering hit
     let critFactor = 1;
     if (crit) {
-      let critMult = critMultiplier() + l.critDamageAdd + (h.rule?.crit?.damageAdd ?? 0) + (h.rule?.hitCrit?.[h.index]?.damageAdd ?? 0);
+      // critical strike damage follows the level of the style's damage skill (Strength for melee), boosts included â€“ engine/damage.ts
+      let critMult = critMultiplier(l.levels[damageSkillOf(h.entity.style)]) + l.critDamageAdd + (h.rule?.crit?.damageAdd ?? 0) + (h.rule?.hitCrit?.[h.index]?.damageAdd ?? 0);
       for (const b of this.buffs) {
         const add = l.buffCritDamageAdd[b.id] ?? BUFF_BY_ID.get(b.id)?.critDamageAdd;
         if (add) critMult += add;
@@ -1611,11 +1625,13 @@ export class TrainerEngine {
     if (extra > 0) this.applyDamage(h.key + ':split-soul', extra, false, false, h.tick);
   }
 
-  /** product of the active style buffs (Berserk, Sunshine, Death's Swiftness) for a hit of `style` */
-  private styleMultiplier(style: Style | undefined, dot: boolean): number {
+  /** product of the active style buffs (Berserk, Sunshine, Death's Swiftness) and the prayer boost (Turmoil +10% â€¦, not on DoTs) for a hit of `style` cast at `tick` */
+  private styleMultiplier(style: Style | undefined, dot: boolean, tick: number): number {
     let mult = 1;
     for (const m of BUFF_DAMAGE_MULT) if (m.style === style && (m.dots || !dot) && this.hasBuff(m.buff) && !(m.unlessBuff && this.hasBuff(m.unlessBuff))) mult *= m.mult;
     if (!dot) {
+      const prayer = prayerDamagePct(this.activePrayers, style, this.loadout.zealots, (p) => tick - (this.prayerSince.get(p) ?? tick));
+      if (prayer) mult *= 1 + prayer / 100;
       for (const b of this.buffs) {
         const p = BUFF_BY_ID.get(b.id)?.damageMultPerStack;
         if (p && p.style === style && b.stacks > 0) mult *= 1 + p.per * b.stacks;

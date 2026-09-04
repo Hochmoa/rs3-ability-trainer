@@ -1,5 +1,6 @@
 /** What the engine needs to know about the player's equipment, perks, relics and unlocks. */
-import { CombatSkill, DEFAULT_LEVELS, Familiar, Spellbook, Style } from '../core/models';
+import { CombatSkill, DEFAULT_LEVELS, Familiar, Spellbook, Style, Style4 } from '../core/models';
+import { baseLifePoints } from './damage';
 import { ChannelSpec, StackId } from './rules-model';
 import type { EngineEntity } from './trainer-engine';
 
@@ -125,12 +126,20 @@ export interface ResolvedLoadout {
   weaponSpec: EngineEntity | null;
   /** special attack stored in the Essence of Finality, as an entity */
   eofSpec: EngineEntity | null;
-  /** player ability damage for the wielded weapons (engine/damage.ts; level 99 boosted by the loadout's overload, no armour bonus) */
+  /** player ability damage for the wielded weapons (engine/damage.ts abilityDamageOf: the boosted level of the style's damage skill, the weapons' tier part, the gear's damage bonus) */
   abilityDamage: number;
-  /** combat level the ability damage was computed with: 99, or 116 / 118 / 120 under an overload / supreme / elder overload */
+  /** level of the wielded style's damage skill the ability damage was computed with (Loadout.levels under the overload: 99 â†’ 116 / 118 / 120, Necromancy 120 â†’ 145) */
   combatLevel: number;
   /** every combat skill's level with the overload applied (base: Loadout.levels) */
   levels: Record<CombatSkill, number>;
+  /** damage bonus (Strength / Ranged / Magic / Necromancy bonus) of the worn gear per style â€“ the b of the ability damage formula */
+  damageBonus: Record<Style4, number>;
+  /** life points the worn armour / shield adds to the maximum */
+  lifePointsBonus: number;
+  /** maximum life points: 100 Ã— Constitution level + the gear's bonus (Powerburst of vitality and Fortitude come on top in the engine) */
+  maxLifePoints: number;
+  /** amulet of zealots worn: single-stat prayers and leech curses boost damage by a further 10% */
+  zealots: boolean;
   /** extra critical strike chance (Biting 2% per rank) */
   critChanceAdd: number;
   /** Precise: minimum hit +1.5% of the max per rank (not DoTs, except Bloat's initial hit) */
@@ -223,6 +232,10 @@ export function defaultResolvedLoadout(): ResolvedLoadout {
     abilityDamage: 0,
     combatLevel: 99,
     levels: { ...DEFAULT_LEVELS },
+    damageBonus: { Melee: 0, Ranged: 0, Magic: 0, Necromancy: 0 },
+    lifePointsBonus: 0,
+    maxLifePoints: baseLifePoints(DEFAULT_LEVELS.constitution),
+    zealots: false,
     critChanceAdd: 0,
     preciseRank: 0,
     equilibriumRank: 0,

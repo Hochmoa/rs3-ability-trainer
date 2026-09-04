@@ -3,8 +3,9 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { DataService, GearView } from '../../core/data.service';
 import { GearResult, GearState, addItem, equip, moveItem, removeItem, removeWorn, unequip, updateRef } from '../../core/equipment';
-import { EquipSlot, Gizmo, ItemRef, KwuarmPotency, Loadout as LoadoutModel, OVERLOAD_CHOICES, OverloadChoice, Perk, RELICS, SLOT_NAMES, Style, WEAPON_POISON_NAMES, WeaponPoisonTier, WeaponSpec, newLoadout, COMBAT_SKILLS, CombatSkill, SKILL_MAX, SKILL_NAMES, loadoutLevels } from '../../core/models';
-import { OVERLOADS, boostedLevel, poisonPct } from '../../engine/damage';
+import { EquipSlot, Gizmo, ItemRef, KwuarmPotency, Loadout as LoadoutModel, OVERLOAD_CHOICES, OverloadChoice, Perk, RELICS, SLOT_NAMES, STYLES4, Style, WEAPON_POISON_NAMES, WeaponPoisonTier, WeaponSpec, newLoadout, COMBAT_SKILLS, CombatSkill, SKILL_MAX, SKILL_NAMES, isStyle4, loadoutLevels } from '../../core/models';
+import { OVERLOADS, boostedLevel, critMultiplier, damageSkillOf, levelPart, poisonPct } from '../../engine/damage';
+import { ResolvedLoadout } from '../../engine/loadout-resolved';
 import { isObscureGear, isObscurePerk, isObscureSpec, isObscureWeapon } from '../../core/obscure';
 import { StorageService } from '../../core/storage.service';
 import { LoadoutData, NOT_SIMULATED_EFFECT_KINDS, loadoutWarnings, mainStyle, resolveLoadout, wornPassives, wornSets } from '../../engine/loadout-resolver';
@@ -168,10 +169,28 @@ export class Loadout {
   /** set thresholds / passives the simulation ignores: "<id>:<kind>" → reason */
   readonly notSimulated = computed<Map<string, string>>(() => {
     const out = new Map<string, string>();
-    if (!this.data.loaded()) return out;
-    for (const e of resolveLoadout(this.l(), this.loadoutData()).ignoredEffects) out.set(e.id + ':' + e.kind, NOT_SIMULATED_EFFECT_KINDS[e.kind] ?? 'not simulated');
+    for (const e of this.resolved()?.ignoredEffects ?? []) out.set(e.id + ':' + e.kind, NOT_SIMULATED_EFFECT_KINDS[e.kind] ?? 'not simulated');
     return out;
   });
+  /** the engine's numbers for the worn gear (ability damage, damage bonus, life points, ignored effects) */
+  readonly resolved = computed<ResolvedLoadout | null>(() => (this.data.loaded() ? resolveLoadout(this.l(), this.loadoutData()) : null));
+  readonly STYLES4 = STYLES4;
+  readonly levelPart = levelPart;
+
+  /** name of the skill whose level feeds the ability damage of the wielded style */
+  damageSkillName(r: ResolvedLoadout): string {
+    return SKILL_NAMES[damageSkillOf(r.style)];
+  }
+
+  /** damage bonus of the worn gear for the wielded style (b of the ability damage formula) */
+  styleBonus(r: ResolvedLoadout): number {
+    return r.style && isStyle4(r.style) ? r.damageBonus[r.style] : 0;
+  }
+
+  /** critical strike damage in % at the wielded style's level, gear bonuses included */
+  critPct(r: ResolvedLoadout): number {
+    return Math.round((critMultiplier(r.combatLevel) - 1 + r.critDamageAdd) * 100);
+  }
 
   ignoredReason(id: string, kind: string | undefined): string | null {
     return kind ? this.notSimulated().get(id + ':' + kind) ?? null : null;

@@ -2,8 +2,8 @@
  * Turns a saved Loadout (worn items, perks on them, relics) into the numbers the engine uses.
  * Effect kinds are the ones written in public/data/set-effects.json and perks.json.
  */
-import { EquipSlot, Familiar, GearItem, Gizmo, ItemRef, Loadout, Perk, SetEffect, Style, WEAPON_SETS, Weapon, WeaponSpec, loadoutWield, loadoutLevels } from '../core/models';
-import { KWUARM_PER_POTENCY, WEAPON_POISON_CHANCE, abilityDamageOf, boostedLevels, damageSkillOf, poisonPct } from './damage';
+import { EquipSlot, Familiar, GearItem, Gizmo, ItemRef, Loadout, Perk, STYLES4, SetEffect, Style, WEAPON_SETS, Weapon, WeaponSpec, isStyle4, loadoutWield, loadoutLevels } from '../core/models';
+import { AMULET_OF_ZEALOTS, BONUS_KEY, KWUARM_PER_POTENCY, WEAPON_POISON_CHANCE, abilityDamageOf, baseLifePoints, boostedLevels, damageBonusOf, damageSkillOf, poisonPct } from './damage';
 import { ruleFor } from './rules';
 import { FORTIFIED_BONES_BONUS } from './rules-necromancy';
 import { ResolvedLoadout, defaultResolvedLoadout } from './loadout-resolved';
@@ -175,7 +175,24 @@ export function resolveLoadout(l: Loadout, data: LoadoutData): ResolvedLoadout {
   // (Strength / Ranged / Magic / Necromancy) – elder overload at 99 → 120, at 120 → 145
   r.levels = boostedLevels(loadoutLevels(l), l.overload);
   r.combatLevel = r.levels[damageSkillOf(r.style)];
-  r.abilityDamage = abilityDamageOf(two ? null : main, off, two, r.combatLevel);
+  // damage bonus of the worn gear per style (power armour, jewellery, capes, pocket items – gear.json `bonus`, wiki numbers;
+  // engine/damage.ts damageBonusOf falls back to the power armour tier table) and the life points the gear adds
+  for (const g of wn.gear) {
+    for (const s of STYLES4) r.damageBonus[s] += damageBonusOf(g.item, s);
+    r.lifePointsBonus += g.item.lifePoints ?? 0;
+    if (g.item.id === AMULET_OF_ZEALOTS) r.zealots = true;
+  }
+  for (const wp of [two, wn.main, off]) {
+    if (!wp) continue;
+    for (const s of STYLES4) r.damageBonus[s] += wp.bonus?.[BONUS_KEY[s]] ?? 0;
+    r.lifePointsBonus += wp.lifePoints ?? 0;
+  }
+  for (const s of STYLES4) r.damageBonus[s] = Math.round(r.damageBonus[s] * 10) / 10;
+  r.maxLifePoints = baseLifePoints(r.levels.constitution) + r.lifePointsBonus;
+  // Ranged: the weapon part of the ability damage is min(weapon tier, ammunition tier) – arrows in a bow, bolts in a crossbow
+  const ammo = wn.gear.find((g) => g.slot === 'ammo' && g.item.style === 'Ranged' && g.item.tier > 0 && ammoFits(g.item, r.weaponType));
+  const bonus = r.style && isStyle4(r.style) ? r.damageBonus[r.style] : 0;
+  r.abilityDamage = abilityDamageOf(two ? null : main, off, two, r.combatLevel, bonus, r.style === 'Ranged' && ammo ? ammo.item.tier : undefined);
   const specId = main?.spec ?? (off?.spec ?? null);
   if (specId) {
     const spec = data.specById.get(specId);
@@ -273,7 +290,7 @@ export const NOT_SIMULATED_EFFECT_KINDS: Record<string, string> = {
   'armour-reduction': 'target armour only changes the hit chance, which is not simulated – there is no damage equivalent (Black stone arrows)',
   'heal': "the player's life points are not simulated (scrimshaw of vampyrism)",
   'damage-delay': 'incoming damage is not simulated (Trimmed masterwork)',
-  'strength-bonus': 'ability damage ignores armour and strength bonuses (Achto)',
+  'strength-bonus': 'the strength bonus Achto gains with a shield / defender has no numbers on the wiki (the damage bonus of the pieces themselves counts)',
   'defensive-cooldown-reset-on-hit': 'incoming damage is not simulated (Achto)',
   'damage-taken': 'incoming damage is not simulated (Cryptbloom)',
   'proc': 'Croesus Deathspores / Fungal Shield depend on position and life points (Cryptbloom)',
@@ -300,6 +317,12 @@ export function wornSets(l: Loadout, data: LoadoutData): { set: SetEffect; piece
 /** Passive item effects in play (for the loadout page). */
 export function wornPassives(l: Loadout, data: LoadoutData): SetEffect[] {
   return [...worn(l, data).passives].map((id) => data.setEffectById.get(id)).filter((x): x is SetEffect => !!x);
+}
+
+/** arrows fire from a bow, bolts from a crossbow – only then does the ammunition's tier cap the weapon part of the ability damage */
+function ammoFits(item: GearItem, weapon: 'bow' | 'crossbow' | 'other' | null): boolean {
+  const n = item.name.toLowerCase();
+  return (weapon === 'bow' && n.includes('arrow')) || (weapon === 'crossbow' && n.includes('bolt'));
 }
 
 function weaponType(w: Weapon): 'bow' | 'crossbow' | 'other' {

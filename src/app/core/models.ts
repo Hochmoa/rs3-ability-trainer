@@ -342,6 +342,8 @@ export interface Weapon {
   abilityDamage: number | null;
   armour: number;
   lifePoints: number;
+  /** damage bonus per style (shields / off-hands with one); null = the wiki lists none */
+  bonus?: DamageBonus | null;
   charges: string | null;
   /** weapon special attack id (specs.json) */
   spec: string | null;
@@ -450,6 +452,9 @@ export const SLOT_NAMES: Record<EquipSlot, string> = {
 /** backpack size, like in the game */
 export const INVENTORY_SIZE = 28;
 
+/** Strength / Ranged / Magic / Necromancy bonus of an item keyed by the style it boosts (gear.json / weapons.json `bonus`, runescape.wiki/w/Damage_bonus) */
+export type DamageBonus = Record<'melee' | 'ranged' | 'magic' | 'necromancy', number>;
+
 /** A wearable non-weapon item (gear.json): armour, capes, jewellery, ammo, pocket, aura, sigil. */
 export interface GearItem {
   id: string;
@@ -460,6 +465,10 @@ export interface GearItem {
   type: string | null;
   armour: number;
   lifePoints: number;
+  /** damage bonus per style: power armour, jewellery, capes, pocket items; null = the wiki lists none (engine/damage.ts falls back to the power armour tier table) */
+  bonus?: DamageBonus | null;
+  /** tier the wiki rates the damage bonus at (Vestments of havoc: 110 at level 95); null = unknown */
+  damageTier?: number | null;
   prayer: number;
   /** armour set it belongs to (set-effects.json, kind "set") */
   set: string | null;
