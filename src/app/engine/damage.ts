@@ -40,6 +40,11 @@ export const BASE_CRIT_CHANCE = 0.1;
 
 /** self buffs that multiply the damage of one style (bleeds / burns excluded where the wiki says so) */
 export const BUFF_DAMAGE_MULT: { buff: string; style: Style; mult: number; dots: boolean }[] = [
+  // Scripture of Ful: +20% damage dealt, every style
+  { buff: 'gladiator-s-rage', style: 'Melee', mult: 1.2, dots: true },
+  { buff: 'gladiator-s-rage', style: 'Ranged', mult: 1.2, dots: true },
+  { buff: 'gladiator-s-rage', style: 'Magic', mult: 1.2, dots: true },
+  { buff: 'gladiator-s-rage', style: 'Necromancy', mult: 1.2, dots: true },
   { buff: 'berserk', style: 'Melee', mult: 1.75, dots: false },
   { buff: 'enduring-ruin', style: 'Melee', mult: 1.1, dots: false },
   { buff: 'sunshine', style: 'Magic', mult: 1.5, dots: false },
@@ -80,6 +85,13 @@ export const SPIRIT_ATTACKS: Record<string, { everyTicks: number; firstTick: num
   'putrid-zombie': { everyTicks: 6, firstTick: 7, min: 18, max: 22, poison: { everyTicks: 3, firstTick: 9, min: 8, max: 12 } },
   'vengeful-ghost': { everyTicks: 7, firstTick: 6, min: 18, max: 22 },
 };
+
+/**
+ * Poison on a monster (cinderbane gloves): a hit every 10 s of the tier's share of the ability damage
+ * (tier 1 20%, +5% per tier) × 0.65–1.3 – https://runescape.wiki/w/Poison
+ */
+export const POISON_EVERY_TICKS = 17;
+export const POISON_ROLL = { min: 0.65, max: 1.3 };
 
 /** Skeleton Warrior Rage: +3% damage per stack, max 25, one stack per skeleton attack */
 export const RAGE_PER_STACK = 0.03;

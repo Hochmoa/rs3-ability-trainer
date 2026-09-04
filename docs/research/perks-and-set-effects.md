@@ -335,6 +335,50 @@ Full per-perk field dump (title, gizmo, std, anc, level, dbrow id, desc) for all
 | Tumeken's Light ("Purifying Light") | Melee | "Upon killing a monster, it deals 65%-75% melee damage to up to 4 additional enemies within 6 tiles" | 3 DMG | https://runescape.wiki/w/Purifying_Light |
 | Omni guard ("Death Spark") / Soulbound lantern ("Soul Siphon") / Devourer's Guard ("Soul Reave") | Necromancy | 5 basic attacks → next basic double damage; +2 max Residual Souls; 4 basics → empowered basic gives +1 Residual Soul. Death Essence spec (30 % adren, 60 s CD): 360–440 %, readies Death Spark, ToD/FoD/Death Skulls ready Death Spark for 30 s. | 2 CD + 3 DMG | https://runescape.wiki/w/Template:Death_Spark_details |
 
+### B.3a Simulation status (feature/gear, September 2026)
+
+How each entry of `public/data/set-effects.json` reaches the engine: `loadout-resolver.ts applyEffect()` turns the effect kind into `ResolvedLoadout` fields, or rules gate on the item id (`when: { item }`). Kinds the trainer cannot model are listed in `NOT_SIMULATED_EFFECT_KINDS` (with the reason) and reported in `ResolvedLoadout.ignoredEffects`; `gear.spec.ts` fails when a kind in the data is neither applied nor listed.
+
+| Entry | Kind | Status |
+|---|---|---|
+| Vestments of havoc 2 / 3 / 4 | adrenaline-after-ultimate / buff-duration / max-adrenaline | full |
+| Robes of the First Necromancer 2 / 4 | conjure-damage / conjure-duration | full |
+| Dracolich, Elite Dracolich 1 / 3 / 4 / 5 | channel-adrenaline-per-tick / buff-on-full-channel / buff-duration | full |
+| Tumeken's resplendence 3 / 4 / 5 | crit-in-sunshine / channel-override / buff-override | full |
+| Tectonic, Elite tectonic | crit-chance | full |
+| Void knight 4 | damage (+5 % / +7 % superior) | partial – accuracy ignored |
+| Song of Destruction 1 / 2 | essence-corruption / dot-damage | full (stacks, 30 % instant dump without cooldown, 10+ flat damage, 25+ adrenaline, ×1.3) |
+| Sirenic, Elite sirenic | bolt-proc | not simulated (ammunition) |
+| Trimmed masterwork, Achto, Cryptbloom | damage-delay / strength-bonus / defensive-cooldown-reset-on-hit / damage-taken / proc | not simulated (incoming damage) |
+| Deathdealer | death-mark | not simulated (execution, boss immunities) |
+| Warpriest Armadyl/Bandos, Tuska | cooldown-chance / crit-proc | not simulated (no numbers on the wiki) |
+| Igneous Kal-Ket / Mej / Xil / Mor / Zuk | ability-override / includes | full |
+| Greater Sunshine / Death's Swiftness codex | replaces-ability | full (rules) |
+| Fleeting boots, blast diffusion boots, Kerapac's wrist wraps, gloves of passage | snipe-cdr / buff-on-cast / instant-dot-window / buff-on-hit | full (rules); enhanced (enchantment) variants not modelled |
+| Nightmare gauntlets | snipe-mobile | partial – movement only, no hit chance |
+| Cinderbane gloves | poison | full for the gloves alone (tier 2 = 25 % AD every 17 ticks, extra hit on re-application); other poison sources not modelled |
+| Malletops totem | buff-duration | partial – tier 1 only |
+| Ring of vigour | vigour | full |
+| Asylum surgeon's ring | asylum | full (10 % chance −15 %, 30 s cooldown; data updated to the 2 March 2026 effect) |
+| Ring of death | adrenaline-on-kill | not simulated (session ends with the kill) |
+| Jaws of the Abyss | adrenaline-per-bleed | full (Dismember / Slaughter / Massacre) |
+| Reaver's ring | crit-chance | partial – hit chance ignored |
+| Champion's ring | crit-vs-bleeding | full base effect; enchantment of heroism not modelled |
+| Channeller's ring | channel-crit | full base effect; enchantment of metaphysics not modelled |
+| Stalker's ring | crit-chance (bow) | full base effect; enchantment of shadows not modelled |
+| Erethdor's grimoire | crit-chance | full |
+| Scripture of Ful / Wen / Jas | proc-buff / proc-damage | full (Wen: beams on ticks 2–6 + shatter; Jas: 20 % of the damage in the 17-tick window, the triggering hit excluded) |
+| Dark Sliver of Leng | proc-buff | full (Frostblades); the Dark Shard's Primordial Ice is a special-attack resource (not in the data) |
+| Fractured Staff of Armadyl | crit-damage | full (+20 % = midpoint of 15–25 %); Instability spec: specs.json |
+| Ek-ZekKil | spec-adrenaline | not simulated (special attack side effect) |
+| Omni guard, Devourer's Guard | death-spark / soul-reave | full (basic attack builds / spends; Death Essence / Soul Crush windows via the `death-essence` / `soul-crush` buffs) |
+| Soulbound lantern | stack-cap | full |
+| Amulet of souls | prayer | not simulated |
+| Essence of Finality | eof | full (stored spec) |
+| Spirit Pact | conjure-duration-add | full (loadout talent tier) |
+| Occultist's ring, Zorgoth's soul ring | necrosis-chance / soul-chance | full (rules) |
+| Salve amulet, Enhanced gloves of passage (enchantments), Tumeken's Light, Bow of the Last Guardian passive | – | not in the data |
+
 ### B.4 Counts
 
 * Multi-piece **armour sets** with combat relevance on the Set bonus page: 30 (incl. Barrows/void/warpriest/ports). Of these, **8 sets (14 thresholds) change ability behaviour** (adrenaline / duration / cooldown / hit count): Vestments of havoc (2/3/4), Robes of the First Necromancer (4), Dracolich & Elite Dracolich (1/3/4/5), Tumeken's Resplendence (4/5), Achto ×3 (3+ cooldown reset), Nakatra "Song of Destruction" (1), Warpriest of Armadyl/Bandos (3). Torag's (target adrenaline drain) is PvP-only relevant.

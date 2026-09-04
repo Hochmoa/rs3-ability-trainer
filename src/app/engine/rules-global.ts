@@ -26,6 +26,18 @@ export const GLOBAL_RULES: GlobalRule[] = [
     onHit: [{ kind: 'stack', stack: 'residual-souls', amount: 1, when: { item: 'zorgoth-s-soul-ring', chance: 0.05 } }],
   },
   {
+    id: 'essence-corruption-build',
+    notes: ['Song of Destruction (Roar of Awakening + Ode to Deceit): every Combust / Corruption Blast hit adds an Essence Corruption stack, max 100, 30 s from the last stack (' + W + 'Template:Song_of_Destruction )'],
+    when: { abilities: ['combust', 'corruption-blast'] },
+    onHit: [{ kind: 'stack', stack: 'essence-corruption', amount: 1, when: { item: 'song-of-destruction:1' } }],
+  },
+  {
+    id: 'essence-corruption-adrenaline',
+    notes: ['Song of Destruction: with 25+ Essence Corruption every basic ability generates +1% adrenaline per tick over 6 ticks (' + W + 'Template:Song_of_Destruction )'],
+    when: { type: 'Basic', gcd: true },
+    onCast: [{ kind: 'adrenaline-per-tick', amount: 1, ticks: 6, when: { item: 'song-of-destruction:1', stackMin: { stack: 'essence-corruption', min: 25 } } }],
+  },
+  {
     id: 'meteor-strike-basics',
     notes: ['Meteor Strike: melee basic abilities generate 1.5x adrenaline (not the basic attack) (' + W + 'Meteor_Strike )'],
     when: { style: 'Melee', type: 'Basic', gcd: true, buff: 'meteor-strike', excludeAbilities: ['attack', 'bladed-dive', 'dive'] },

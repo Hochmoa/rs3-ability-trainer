@@ -1,7 +1,11 @@
 /** Magic ability interactions – docs/research/magic.md */
-import { AbilityRule, Effect } from './rules-model';
+import { AbilityRule, Condition, Effect } from './rules-model';
 
 const W = 'https://runescape.wiki/w/';
+
+/** Song of Destruction (Roar of Awakening + Ode to Deceit): with 1+ Essence Corruption a DoT has a 30% chance to land at once and start no cooldown */
+const ESSENCE_DUMP: Condition = { item: 'song-of-destruction:1', stackMin: { stack: 'essence-corruption', min: 1 }, chance: 0.3 };
+const ESSENCE_NOTE = 'Song of Destruction (Roar of Awakening + Ode to Deceit): every hit adds an Essence Corruption stack; with 1+ stacks a 30% chance that all hits land at once and the cooldown is removed; 2 pieces: DoT damage ×1.3 (' + W + 'Template:Song_of_Destruction )';
 
 /** Sonic Wave / Greater Sonic Wave: consume Anima Charged for the strong Flow, else the normal one. */
 function sonicWave(normal: string, charged: string): Effect[] {
@@ -60,9 +64,12 @@ export const MAGIC_RULES: AbilityRule[] = [
   {
     ability: 'combust',
     bleed: { hits: 10, everyTicks: 3 },
-    bleedWhen: [{ when: { buff: 'kerapac-window' }, bleed: { hits: 10, everyTicks: 0, startTicks: 0 } }],
+    bleedWhen: [
+      { when: { buff: 'kerapac-window' }, bleed: { hits: 10, everyTicks: 0, startTicks: 0 } },
+      { when: ESSENCE_DUMP, bleed: { hits: 10, everyTicks: 0, startTicks: 0, noCooldown: true } },
+    ],
     damageRules: [{ when: { flag: 'instant' }, mult: 1.25 }],
-    notes: ['Burn: 10 hits every 3 ticks; re-applying refreshes it; removed by Freedom (' + W + 'Combust )', "Kerapac's wrist wraps: within 6 s after Dragon Breath all ten hits land at once at +25% (" + W + "Kerapac's_wrist_wraps )"],
+    notes: ['Burn: 10 hits every 3 ticks; re-applying refreshes it; removed by Freedom (' + W + 'Combust )', "Kerapac's wrist wraps: within 6 s after Dragon Breath all ten hits land at once at +25% (" + W + "Kerapac's_wrist_wraps )", ESSENCE_NOTE],
     onCast: [{ kind: 'buff', id: 'combust', refresh: true }, { kind: 'choose', when: { buff: 'kerapac-window' }, then: [{ kind: 'remove-buff', id: 'kerapac-window' }, { kind: 'flag', flag: 'instant', value: true }] }],
   },
   {
@@ -112,7 +119,8 @@ export const MAGIC_RULES: AbilityRule[] = [
     ability: 'corruption-blast',
     sharedCooldown: 'corruption',
     bleed: { hits: 5, everyTicks: 2, startTicks: 0, factors: [1, 0.8, 0.6, 0.4, 0.2] },
-    notes: ['20% adrenaline; DoT of 5 hits every 2 ticks; shares its cooldown with Corruption Shot; removed by Freedom (' + W + 'Corruption_Blast )'],
+    bleedWhen: [{ when: ESSENCE_DUMP, bleed: { hits: 5, everyTicks: 0, startTicks: 0, factors: [1, 0.8, 0.6, 0.4, 0.2], noCooldown: true } }],
+    notes: ['20% adrenaline; DoT of 5 hits every 2 ticks; shares its cooldown with Corruption Shot; removed by Freedom (' + W + 'Corruption_Blast )', ESSENCE_NOTE],
     onCast: [{ kind: 'buff', id: 'corruption-blast', refresh: true }],
   },
   {

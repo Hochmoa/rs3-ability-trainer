@@ -3,6 +3,23 @@ import { Spellbook, Style } from '../core/models';
 import { ChannelSpec, StackId } from './rules-model';
 import type { EngineEntity } from './trainer-engine';
 
+/** An item effect rolled on every non-DoT hit of the player (Scripture of Ful / Wen / Jas, Dark Sliver of Leng). */
+export interface HitProc {
+  /** item id (set-effects.json) */
+  id: string;
+  chance: number;
+  /** no second proc for this many ticks after one */
+  cooldownTicks: number;
+  /** only hits of this style roll it (Dark Sliver of Leng: melee) */
+  style?: Style;
+  /** self buff granted by the proc (Gladiator's Rage, Frostblades) */
+  buff?: { id: string; durationTicks: number };
+  /** extra hits: tick offset from the proc and roll in % of the ability damage (Scripture of Wen: 5 beams + shatter) */
+  hits?: { offset: number; min: number; max: number }[];
+  /** Scripture of Jas: `share` of all damage dealt within `windowTicks` after the proc is dealt again one tick later, capped */
+  echo?: { windowTicks: number; share: number; cap: number };
+}
+
 export interface ResolvedLoadout {
   startAdrenaline: number;
   /** 100 + Heightened Senses 10 + Vestments of havoc (4) 20 */
@@ -17,8 +34,24 @@ export interface ResolvedLoadout {
   relentlessRank: number;
   /** Ring of vigour: special attacks need and cost 90% */
   specCostMult: number;
-  /** asylum surgeon's ring: chance that a threshold costs nothing */
-  thresholdFreeChance: number;
+  /** asylum surgeon's ring: chance that an adrenaline-costing ability costs `amount` less (30 s internal cooldown) */
+  costReduction: { chance: number; amount: number; cooldownTicks: number } | null;
+  /** channeller's ring: critical strike chance added to hit n (0-based) of a channel of `style`: (n + 1) × add */
+  channelCritPerHit: { add: number; style: Style | null } | null;
+  /** jaws of the abyss: adrenaline added to a damaging melee basic per bleed on the target */
+  adrenalinePerBleed: number;
+  /** champion's ring: critical strike chance added while the target bleeds */
+  critVsBleeding: number;
+  /** void knight: every player hit × this (conjured spirits excluded) */
+  damageMult: number;
+  /** ability id → multiplier of its damage-over-time hits (Song of Destruction (2): Combust, Corruption Blast × 1.3) */
+  dotDamageMult: Record<string, number>;
+  /** item procs rolled on every non-DoT hit */
+  hitProcs: HitProc[];
+  /** cinderbane gloves: chance per hit to poison the target; a poison hit is `pct` % of the ability damage × 0.65–1.3 */
+  poison: { chance: number; pct: number } | null;
+  /** set thresholds / items whose effect kind the simulation ignores (NOT_SIMULATED_EFFECT_KINDS in loadout-resolver.ts) */
+  ignoredEffects: { id: string; kind: string }[];
   /** active item / set-threshold ids used in rule conditions ("planted-feet", "fleeting-boots", "gloves-of-passage", ...) */
   items: Set<string>;
   /** buff id → extra ticks (Berserk +10 with 3 Vestments, Barricade +3 Malletops, Anticipation Clear Headed ...) */
@@ -119,7 +152,15 @@ export function defaultResolvedLoadout(): ResolvedLoadout {
     invigoratingRank: 0,
     relentlessRank: 0,
     specCostMult: 1,
-    thresholdFreeChance: 0,
+    costReduction: null,
+    channelCritPerHit: null,
+    adrenalinePerBleed: 0,
+    critVsBleeding: 0,
+    damageMult: 1,
+    dotDamageMult: {},
+    hitProcs: [],
+    poison: null,
+    ignoredEffects: [],
     items: new Set(),
     buffDurationAdd: {},
     buffDurationMult: {},
