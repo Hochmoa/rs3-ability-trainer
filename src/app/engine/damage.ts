@@ -64,6 +64,7 @@ export const BUFF_TYPE_DAMAGE_MULT: { buff: string; style: Style; type: string; 
 /** target debuffs that raise the damage it takes (dotsOnly: bleed / burn hits only – Corrupted Wounds) */
 export const TARGET_DAMAGE_MULT: { buff: string; mult: number; dotsOnly?: boolean }[] = [
   { buff: 'special:vulnerability-bomb', mult: 1.1 },
+  { buff: 'vulnerability', mult: 1.1 }, // the Vulnerability spell (standard spellbook) – same debuff as the bomb
   { buff: 'corrupted-wounds', mult: 1.2, dotsOnly: true },
 ];
 

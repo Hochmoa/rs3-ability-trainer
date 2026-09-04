@@ -76,7 +76,32 @@ export interface Special {
   icon: string;
 }
 
-export type EntityKind = 'ability' | 'prayer' | 'special' | 'weapon' | 'spec' | 'action';
+export type EntityKind = 'ability' | 'prayer' | 'special' | 'weapon' | 'spec' | 'action' | 'spell';
+
+/** The three spellbooks; a loadout has one active (docs/research/spells.md). */
+export type Spellbook = 'standard' | 'ancient' | 'lunar';
+export const SPELLBOOKS: Spellbook[] = ['standard', 'ancient', 'lunar'];
+export const SPELLBOOK_NAMES: Record<Spellbook, string> = { standard: 'Standard spellbook', ancient: 'Ancient Magicks', lunar: 'Lunar spells' };
+
+/** A combat spell pressed as an action (Disruption Shield, Vengeance, Smoke Cloud …) or selected as the auto-cast attack spell (public/data/spells.json). */
+export interface Spell {
+  id: string;
+  name: string;
+  book: Spellbook;
+  level: number;
+  /** cast = pressed as an action; autocast = combat spell selected as the basic Magic attack (the selection itself is instant) */
+  kind: 'cast' | 'autocast';
+  /** false for spells usable during / not starting the global cooldown (Vengeance, Disruption Shield, Animate Dead) */
+  gcd: boolean;
+  cooldownTicks: number;
+  /** null = until removed / until it blocks or reflects a hit */
+  durationTicks: number | null;
+  description: string;
+  /** hand-checked effect summary (docs/research/spells.md) */
+  effect: string;
+  icon: string;
+  wikiId: number | null;
+}
 
 /** Weapon special attack (runescape.wiki `infobox_weapon_special_attack`), e.g. Death Essence of the Omni guard. */
 export interface Spec {
@@ -412,6 +437,8 @@ export interface Loadout {
   switches: string[];
   /** active prayer book – standard prayers or Ancient Curses; never mixed inside a session */
   prayerBook: 'Prayers' | 'Curses';
+  /** active spellbook – spells of another book cannot be cast (default standard) */
+  spellbook: Spellbook;
   /** special attack stored in the Essence of Finality amulet (specs.json id) */
   eofSpec: string | null;
   /** legacy (builds before the inventory): armour set and pieces worn – the loadout page moves them into `equipment` once */
@@ -448,6 +475,7 @@ export function newLoadout(name = 'Default'): Loadout {
     twoHand: null,
     switches: [],
     prayerBook: 'Curses',
+    spellbook: 'standard',
     eofSpec: null,
     armourSet: null,
     armourPieces: 0,
@@ -720,6 +748,8 @@ export interface PrayerStats {
   prayed: number;
   /** attacks that landed without the right overhead */
   hits: number;
+  /** attacks blocked by Disruption Shield, Barricade, Resonance or Divert (neither prayed nor a hit) */
+  absorbed?: number;
 }
 
 export type StepOutcome = 'perfect' | 'late' | 'early' | 'done' | 'missed';

@@ -3,7 +3,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { forkJoin } from 'rxjs';
 import { ruleFor } from '../engine/rules';
 import { EngineBuff, EngineEntity } from '../engine/trainer-engine';
-import { ACTIONS, Ability, Action, Buff, EntityKind, EquipSlot, GearItem, ItemRef, Perk, Prayer, RotationStep, SPEC_KEY, SetEffect, Special, Style, Weapon, WeaponSpec, entityKey, weaponSlot } from './models';
+import { ACTIONS, Ability, Action, Buff, EntityKind, EquipSlot, GearItem, ItemRef, Perk, Prayer, RotationStep, SPEC_KEY, SPELLBOOK_NAMES, SetEffect, Special, Spell, Style, Weapon, WeaponSpec, entityKey, weaponSlot } from './models';
 
 /** Anything that can sit in a rotation / get a keybind, in one shape for lists and tooltips. */
 export interface Entity {
@@ -12,10 +12,12 @@ export interface Entity {
   id: string;
   name: string;
   icon: string;
-  /** group label for catalogs: style, "Prayers", "Curses", "Special", "Weapons", "Specs", "Actions" */
+  /** group label for catalogs: style, "Prayers", "Curses", "Special", "Weapons", "Specs", "Actions", spellbook names */
   group: string;
   ability?: Ability;
   prayer?: Prayer;
+  /** combat spell (spells.json) – "spell:<id>" */
+  spell?: Spell;
   special?: Special;
   /** weapon item (weapons.json) – a rotation step "weapon:<id>" wields it */
   weapon?: Weapon;
@@ -55,6 +57,8 @@ export class DataService {
   readonly buffs = signal<Buff[]>([]);
   readonly prayers = signal<Prayer[]>([]);
   readonly specials = signal<Special[]>([]);
+  /** combat spells of the three spellbooks (spells.json) */
+  readonly spells = signal<Spell[]>([]);
   readonly weapons = signal<Weapon[]>([]);
   readonly specs = signal<WeaponSpec[]>([]);
   readonly perks = signal<Perk[]>([]);
@@ -72,10 +76,12 @@ export class DataService {
   readonly setEffectById = computed(() => new Map(this.setEffects().map((s) => [s.id, s])));
   readonly gearById = computed(() => new Map(this.gear().map((g) => [g.id, g])));
   readonly specialById = computed(() => new Map(this.specials().map((s) => [s.id, s])));
+  readonly spellById = computed(() => new Map(this.spells().map((s) => [s.id, s])));
   readonly entities = computed<Entity[]>(() => [
     ...this.abilities().map<Entity>((a) => ({ key: entityKey('ability', a.id), kind: 'ability', id: a.id, name: a.name, icon: a.icon, group: a.style, ability: a })),
     ...this.prayers().map<Entity>((p) => ({ key: entityKey('prayer', p.id), kind: 'prayer', id: p.id, name: p.name, icon: p.icon, group: p.book, prayer: p })),
     ...this.specials().map<Entity>((s) => ({ key: entityKey('special', s.id), kind: 'special', id: s.id, name: s.name, icon: s.icon, group: 'Special', special: s })),
+    ...this.spells().map<Entity>((s) => ({ key: entityKey('spell', s.id), kind: 'spell', id: s.id, name: s.name, icon: s.icon, group: SPELLBOOK_NAMES[s.book], spell: s })),
     ...this.weapons().map<Entity>((w) => ({ key: entityKey('weapon', w.id), kind: 'weapon', id: w.id, name: w.name, icon: w.icon ?? '', group: 'Weapons', weapon: w })),
     ...this.specs().map<Entity>((s) => ({ key: entityKey('spec', s.id), kind: 'spec', id: s.id, name: s.name, icon: s.weaponIcons[0] ?? 'assets/abilities/weapon-special-attack.png', group: 'Specs', spec: s })),
     ...ACTIONS.map<Entity>((a) => ({ key: entityKey('action', a.id), kind: 'action', id: a.id, name: a.name, icon: a.icon, group: 'Actions', action: a })),
@@ -88,6 +94,7 @@ export class DataService {
       buffs: this.http.get<Buff[]>('data/buffs.json'),
       prayers: this.http.get<Prayer[]>('data/prayers.json'),
       specials: this.http.get<Special[]>('data/specials.json'),
+      spells: this.http.get<Spell[]>('data/spells.json'),
       weapons: this.http.get<Weapon[]>('data/weapons.json'),
       specs: this.http.get<WeaponSpec[]>('data/specs.json'),
       perks: this.http.get<Perk[]>('data/perks.json'),
@@ -100,6 +107,7 @@ export class DataService {
         this.buffs.set(d.buffs);
         this.prayers.set(d.prayers);
         this.specials.set(d.specials);
+        this.spells.set(d.spells);
         this.weapons.set(d.weapons);
         this.specs.set(d.specs);
         this.perks.set(d.perks);
@@ -262,6 +270,10 @@ export class DataService {
       };
     }
     if (e.spec) return this.specEntity(e.spec);
+    if (e.spell) {
+      const s = e.spell;
+      return { key: e.key, kind: 'spell', id: s.id, name: s.name, icon: s.icon, gcd: s.gcd, adrenaline: 0, cooldownTicks: s.cooldownTicks, buffs: [], durationTicks: s.durationTicks ?? undefined };
+    }
     if (e.action) {
       return { key: e.key, kind: 'action', id: e.id, name: e.name, icon: e.icon, gcd: false, adrenaline: 0, cooldownTicks: 0, buffs: [] };
     }

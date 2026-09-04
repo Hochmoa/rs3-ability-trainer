@@ -4,7 +4,7 @@ import { Router, RouterLink } from '@angular/router';
 import { DataService, Entity } from '../../core/data.service';
 import { keybindLabel } from '../../core/keybind.util';
 import { parsePvme } from '../../core/pvme';
-import { Rotation, RotationStep, STYLES } from '../../core/models';
+import { Rotation, RotationStep, SPELLBOOKS, SPELLBOOK_NAMES, STYLES } from '../../core/models';
 import { isObscureEntity } from '../../core/obscure';
 import { StorageService } from '../../core/storage.service';
 import { SupabaseService } from '../../core/supabase.service';
@@ -14,7 +14,7 @@ import { AbilityIcon } from '../../shared/ability-icon';
 import { EntityTip } from '../../shared/tooltip';
 import { DialogService } from '../../shared/dialog';
 
-const TABS = [...STYLES, 'Prayers', 'Curses', 'Special', 'Weapons', 'Specs', 'Actions'] as const;
+const TABS = [...STYLES, 'Prayers', 'Curses', 'Spells', 'Special', 'Weapons', 'Specs', 'Actions'] as const;
 type Tab = (typeof TABS)[number];
 const TYPE_ORDER: Record<string, number> = { Basic: 0, Enhanced: 1, Threshold: 2, Ultimate: 3, Special: 4 };
 
@@ -52,7 +52,8 @@ export class Rotations {
     const hide = this.hideObscure();
     const byId = this.data.weaponById();
     const all = this.data.entities().filter((e) => !hide || !isObscureEntity(e, byId));
-    const list = q ? all.filter((e) => e.name.toLowerCase().includes(q)) : all.filter((e) => e.group === this.tab());
+    const tab = this.tab();
+    const list = q ? all.filter((e) => e.name.toLowerCase().includes(q)) : all.filter((e) => (tab === 'Spells' ? e.kind === 'spell' : e.group === tab));
     return [...list].sort((a, b) => {
       if (a.kind !== b.kind) return a.kind.localeCompare(b.kind);
       if (a.ability && b.ability) {
@@ -61,6 +62,7 @@ export class Rotations {
         return a.ability.level - b.ability.level || a.name.localeCompare(b.name);
       }
       if (a.prayer && b.prayer) return a.prayer.level - b.prayer.level || a.name.localeCompare(b.name);
+      if (a.spell && b.spell) return SPELLBOOKS.indexOf(a.spell.book) - SPELLBOOKS.indexOf(b.spell.book) || a.spell.level - b.spell.level || a.name.localeCompare(b.name);
       return a.name.localeCompare(b.name);
     });
   });
@@ -106,6 +108,7 @@ export class Rotations {
     if (e.weapon) return 'weapon switch · no GCD';
     if (e.spec) return 'spec · ' + (e.spec.adrenaline ?? 0) + '% adrenaline';
     if (e.action) return 'client action · no GCD';
+    if (e.spell) return SPELLBOOK_NAMES[e.spell.book] + ' · level ' + e.spell.level + (e.spell.gcd ? '' : ' · no GCD');
     return '';
   }
 

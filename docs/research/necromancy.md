@@ -575,3 +575,28 @@ URL: https://runescape.wiki/w/Living_Death ; status: https://runescape.wiki/w/Li
 8. **Phantom Guardian duration:** tooltip "1m" / status "60 seconds" — unclear whether that is the base (42 s + Spirit Pact III = 60 s like the other spirits) or a genuine 60 s base. The other three spirits are documented as 42 s base.
 9. **Outdated status pages:** Putrid Zombie (status) says 45 s, Vengeful Ghost (status) says 30 s / 175 %, Skeleton Warrior (status) says "1 % ability damage per Rage stack", Living Death (status) says Death Skulls 12 s — all superseded by the ability/NPC pages (42 s, 140 %, 3 % multiplicative, 17 ticks).
 10. **Necromancy abilities overview page** is template-generated (AbilityList); the per-ability infoboxes above are the authoritative numbers.
+
+---
+
+## Addendum (2026-09-04): bone shields and nexuses
+
+Sources: https://runescape.wiki/w/Lesser_Bone_Shield, https://runescape.wiki/w/Greater_Bone_Shield, https://runescape.wiki/w/Nexuses, https://runescape.wiki/w/Zemouregal%27s_nexus, https://runescape.wiki/w/Incantations (raw wikitext, fetched 2026-09-04).
+
+### Lesser Bone Shield (level 25) / Greater Bone Shield (level 73)
+- Ability text: "Surround yourself with a whirlwind of bones. - Applies a level [number] (25% Necromancy) Bone Shield to self. - Togglable." (Greater: "(50% Necromancy)") and "Bone Shield - Allows the use of non-offensive abilities that require a shield, at the cost of necromancy runes."
+- Infobox: `cooldown = None`, type Combat, incantations "activate the player's global cooldown" (Incantations page) – abilities.json has `triggersGcd: true` for both.
+- Duration: "The buff will remain on until the player toggles it off by deactivating either bone shield ability, even if the player logs out." – a toggle without timer; the two replace each other.
+- Tier: Lesser = 25 % of the Necromancy level rounded down ("equivalent to a mithril kiteshield at level 120" = tier 30); Greater = "50% of their Necromancy level, rounded down" (level 120 = tier 60, "dragon kiteshield tier").
+- "Players which have a Zemouregal's nexus equipped will receive a 15 tier boost to their Bone Shield." – Zemouregal's nexus passive *Fortified Bones*: "increases the level of Bone Shield by 15" once worn for 9 seconds (Greater at 120: 75; Lesser at 120: 45).
+- Abilities enabled: Debilitate, Resonance, Divert, Barricade, Preparation, Reflect, Immortality, Rejuvenate. "Bash and Revenge cannot be used" – they are "classed as 'offensive'". Scaling abilities (Barricade, Debilitate duration) use the bone shield tier; Reflect, Immortality, Rejuvenate do not scale ("players using only non-scaling abilities … should use Lesser Bone Shield instead to conserve runes").
+- Runes: every activation / shield-ability cast costs runes (Lesser 5 spirit + 5 bone; Greater 10 spirit, 10 bone, 5 flesh); "No runes consumed if an actual shield is equipped".
+- Works with every combat style.
+
+### Nexuses
+- "Nexuses are worn in the ammunition slot" (gear.json: `deathwarden-nexus` T60, `zemouregal-s-nexus` T80, `the-devourer-s-nexus` T80, all `slot: "ammo"`). They "store ectoplasm and necrotic runes" like a rune pouch; a nexus "does not have to be equipped to use its contents", only for its passive. The wiki nowhere requires a nexus for the bone shields – they need runes, which may sit in the backpack.
+
+### Trainer model (src/app/engine/rules-necromancy.ts, trainer-engine.ts)
+- `lesser-bone-shield` / `greater-bone-shield`: GCD incantations with `toggle-buff` effects (mutually exclusive, no timer). BuffDef `shieldTierShare` 0.25 / 0.5; tier = ⌊share × 99⌋ (+15 with Zemouregal's nexus – `ResolvedLoadout.boneShieldLevelBonus`); the trainer assumes level 99 like engine/damage.ts, so Lesser = 24, Greater = 49 (39 / 64 with the nexus).
+- `requirementMet`: a `shield` / `defender-or-shield` requirement is met by an active bone shield unless the requirement is `offensive` (Bash, Revenge). `ResolvedLoadout.hasNexus` is recorded (ammunition slot) but not required, following the wiki.
+- `TrainerEngine.shieldTier`: the worn shield (defender half) wins, else the bone shield tier – used by `durationByShieldTier` (Barricade 8 + ⌊t/10⌋, Debilitate 14 + ⌊t/10⌋).
+- Enemy attacks: Barricade (`absorbs: 'all'`) blocks every attack while active; Disruption Shield, Resonance and Divert (`absorbs: 'next'`) block one attack and are removed, in that priority. Absorbed attacks are counted in `prayerStats.absorbed`, not as hits.

@@ -1,7 +1,27 @@
 /** Necromancy ability interactions – docs/research/necromancy.md */
-import { AbilityRule } from './rules-model';
+import { AbilityRule, BuffDef } from './rules-model';
 
 const W = 'https://runescape.wiki/w/';
+
+/** the trainer assumes level 99 in every combat skill (engine/damage.ts); the bone shields scale with the Necromancy level */
+export const NECROMANCY_LEVEL = 99;
+/** Zemouregal's nexus passive Fortified Bones: +15 levels on the Bone Shield */
+export const FORTIFIED_BONES_BONUS = 15;
+
+/** Bone shield tier for a share of the Necromancy level (Lesser 25%, Greater 50%) at the trainer's level, plus the nexus bonus. */
+export function boneShieldTier(share: number, bonus = 0): number {
+  return Math.floor(share * NECROMANCY_LEVEL) + bonus;
+}
+
+const BONE_SHIELD_TEXT = ' Enables the non-offensive shield abilities (Resonance, Divert, Preparation, Reflect, Debilitate, Immortality, Rejuvenate, Barricade) at the cost of necromancy runes – not Bash or Revenge. Toggle without a timer; the two bone shields replace each other.';
+
+/** status effects of the necromancy rules that are not in rules-buffs.ts (docs/research/necromancy.md § bone shields) */
+export const NECROMANCY_BUFFS: BuffDef[] = [
+  { id: 'lesser-bone-shield', name: 'Lesser Bone Shield', kind: 'Buff', on: 'self', durationTicks: null, untilConsumed: true, shieldTierShare: 0.25, icon: 'assets/abilities/lesser-bone-shield.png',
+    text: 'Counts as a shield of tier ⌊25% × Necromancy level⌋ – ' + boneShieldTier(0.25) + ' at level 99, +15 with Zemouregal\'s nexus.' + BONE_SHIELD_TEXT, source: W + 'Lesser_Bone_Shield' },
+  { id: 'greater-bone-shield', name: 'Greater Bone Shield', kind: 'Buff', on: 'self', durationTicks: null, untilConsumed: true, shieldTierShare: 0.5, icon: 'assets/abilities/greater-bone-shield.png',
+    text: 'Counts as a shield of tier ⌊50% × Necromancy level⌋ – ' + boneShieldTier(0.5) + ' at level 99, +15 with Zemouregal\'s nexus.' + BONE_SHIELD_TEXT, source: W + 'Greater_Bone_Shield' },
+];
 
 /** base conjure lifetime in ticks (42 s); Spirit Pact and Robes of the First Necromancer are applied by the loadout */
 export const CONJURE_BASE_TICKS = 70;
@@ -137,6 +157,22 @@ export const NECROMANCY_RULES: AbilityRule[] = [
     ],
   },
   // ---------------------------------------------------------------- incantations (durations from the wiki, Sept 2026)
+  {
+    ability: 'lesser-bone-shield',
+    notes: [
+      'Incantation (GCD), toggle: a Bone Shield of level ⌊25% × Necromancy⌋ (' + boneShieldTier(0.25) + ' at 99, +15 with Zemouregal\'s nexus) that lets the non-offensive shield abilities be used without a shield, paid in necromancy runes; Bash and Revenge stay locked (' + W + 'Lesser_Bone_Shield )',
+      'Pressing it again or the Greater Bone Shield switches it off; with a real shield equipped no runes are used (' + W + 'Lesser_Bone_Shield )',
+    ],
+    onCast: [{ kind: 'toggle-buff', id: 'lesser-bone-shield', excludes: ['greater-bone-shield'] }],
+  },
+  {
+    ability: 'greater-bone-shield',
+    notes: [
+      'Incantation (GCD), toggle: a Bone Shield of level ⌊50% × Necromancy⌋ (' + boneShieldTier(0.5) + ' at 99, +15 with Zemouregal\'s nexus) that lets the non-offensive shield abilities be used without a shield, paid in necromancy runes; Barricade / Debilitate durations scale with that tier; Bash and Revenge stay locked (' + W + 'Greater_Bone_Shield )',
+      'Pressing it again or the Lesser Bone Shield switches it off; with a real shield equipped no runes are used (' + W + 'Greater_Bone_Shield )',
+    ],
+    onCast: [{ kind: 'toggle-buff', id: 'greater-bone-shield', excludes: ['lesser-bone-shield'] }],
+  },
   {
     ability: 'invoke-death',
     notes: ['Incantation, 12 s (20 ticks): the next necromancy attack applies Death Mark – the target is executed below 25% life points (' + W + 'Invoke_Death )'],

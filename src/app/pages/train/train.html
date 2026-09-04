@@ -121,7 +121,7 @@
           <span>First attack after (ticks)</span>
           <input type="number" min="1" max="50" [ngModel]="enemy().firstAttackTicks" (ngModelChange)="setEnemy('firstAttackTicks', numberOf($event, 1, 50))" [disabled]="running()" />
         </label>
-        <p class="muted small note">Scoring: +1 for every tick with Soul Split active, +1 for every attack met with the right overhead. Specials of the bosses are not simulated; the presets use the auto-attack styles and rate from the wiki.</p>
+        <p class="muted small note">Scoring: +1 for every tick with Soul Split active, +1 for every attack met with the right overhead or absorbed by Disruption Shield, Barricade, Resonance or Divert. Specials of the bosses are not simulated; the presets use the auto-attack styles and rate from the wiki.</p>
       </div>
     }
   </div>
@@ -436,13 +436,14 @@
       @if (enemy().enabled) {
         <span class="good">Prayed {{ prayerStats().prayed }}/{{ prayerStats().attacks }}</span>
         <span class="bad">Hits taken {{ prayerStats().hits }}</span>
+        @if (prayerStats().absorbed) { <span class="good">Absorbed {{ prayerStats().absorbed }}</span> }
         <span class="muted">Soul Split ticks {{ prayerStats().soulSplitTicks }}</span>
       }
     </div>
     @if (enemy().enabled && attackLog().length) {
       <div class="attack-log">
         @for (a of attackLog(); track a.tick) {
-          <span class="hit" [class.good]="a.prayed" [class.bad]="!a.prayed" [title]="a.style + (a.prayed ? ' – prayed' : ' – hit')">
+          <span class="hit" [class.good]="a.prayed || a.absorbed" [class.bad]="!a.prayed && !a.absorbed" [title]="a.style + (a.absorbed ? ' – absorbed by ' + buffName(a.absorbed) : a.prayed ? ' – prayed' : ' – hit')">
             <img [src]="weaponIcon(a.style)" [alt]="a.style" />
           </span>
         }
@@ -471,7 +472,7 @@
       @if (enemy().enabled) {
         <p class="prayer-summary">
           <b>Prayer score {{ prayerScore().score }} / {{ prayerScore().max }} ({{ prayerScore().pct }}%)</b> ·
-          {{ prayerStats().prayed }} of {{ prayerStats().attacks }} {{ enemy().name }} attacks prayed, {{ prayerStats().hits }} hits taken,
+          {{ prayerStats().prayed }} of {{ prayerStats().attacks }} {{ enemy().name }} attacks prayed, {{ prayerStats().hits }} hits taken{{ prayerStats().absorbed ? ', ' + prayerStats().absorbed + ' absorbed by defensives' : '' }},
           Soul Split active on {{ prayerStats().soulSplitTicks }} of {{ prayerStats().ticks - prayerStats().attacks }} free ticks.
         </p>
       }

@@ -1,6 +1,6 @@
 import { Component, Directive, ElementRef, HostListener, Injectable, computed, inject, input, signal } from '@angular/core';
 import { DataService, Entity, GearView } from '../core/data.service';
-import { Buff } from '../core/models';
+import { Buff, SPELLBOOK_NAMES } from '../core/models';
 import { ruleFor } from '../engine/rules';
 import { TICK_MS } from '../engine/trainer-engine';
 
@@ -236,6 +236,16 @@ interface Note {
           </table>
           @if (p.effect) { <p class="desc">{{ p.effect }}</p> }
           <p class="desc muted">{{ p.description }}</p>
+        } @else if (e.spell; as s) {
+          <table>
+            <tr><th>Spellbook</th><td>{{ bookName(s.book) }}</td></tr>
+            <tr><th>Level</th><td>{{ s.level }} Magic</td></tr>
+            @if (s.cooldownTicks) { <tr><th>Cooldown</th><td>{{ seconds(s.cooldownTicks) }}</td></tr> }
+            @if (s.durationTicks) { <tr><th>Duration</th><td>{{ seconds(s.durationTicks) }}</td></tr> }
+            <tr><th>GCD</th><td [class.warn]="!s.gcd">{{ s.kind === 'autocast' ? 'selecting the auto-cast spell is instant' : s.gcd ? 'starts the global cooldown' : 'off the global cooldown' }}</td></tr>
+          </table>
+          <p class="desc">{{ s.effect }}</p>
+          <p class="desc muted">{{ s.description }}</p>
         } @else if (e.weapon; as w) {
           <table>
             <tr><th>Style</th><td>{{ w.style }}</td></tr>
@@ -404,7 +414,12 @@ export class EntityTooltip {
     if (e.prayer) return (e.prayer.book === 'Curses' ? 'Ancient curse' : 'Prayer') + ' · level ' + e.prayer.level;
     if (e.special) return 'Adrenaline potion';
     if (e.weapon) return 'Weapon switch · ' + e.weapon.style;
+    if (e.spell) return (e.spell.kind === 'autocast' ? 'Auto-cast spell · ' : 'Spell · ') + SPELLBOOK_NAMES[e.spell.book] + ' · level ' + e.spell.level;
     return '';
+  }
+
+  bookName(book: keyof typeof SPELLBOOK_NAMES): string {
+    return SPELLBOOK_NAMES[book];
   }
 
   adrenaline(v: number | null): string {

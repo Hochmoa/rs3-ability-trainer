@@ -82,7 +82,7 @@ interface IncomingView {
   covered: boolean;
 }
 
-const EMPTY_PRAYER_STATS: PrayerStats = { ticks: 0, soulSplitTicks: 0, attacks: 0, prayed: 0, hits: 0 };
+const EMPTY_PRAYER_STATS: PrayerStats = { ticks: 0, soulSplitTicks: 0, attacks: 0, prayed: 0, hits: 0, absorbed: 0 };
 
 @Component({
   selector: 'app-train',
@@ -381,11 +381,12 @@ export class Train implements OnDestroy {
   /** floating hit numbers, newest last */
   readonly hitsplats = signal<{ id: number; amount: number; crit: boolean; dot: boolean; name: string }[]>([]);
   private hitId = 0;
-  readonly attackLog = signal<{ style: Style4; prayed: boolean; tick: number }[]>([]);
+  readonly attackLog = signal<{ style: Style4; prayed: boolean; tick: number; absorbed?: string }[]>([]);
   /** Soul Split ticks + prayed attacks, out of all ticks */
   readonly prayerScore = computed(() => {
     const s = this.prayerStats();
-    return { score: s.soulSplitTicks + s.prayed, max: s.ticks, pct: s.ticks ? Math.round(((s.soulSplitTicks + s.prayed) / s.ticks) * 100) : 0 };
+    const good = s.soulSplitTicks + s.prayed + (s.absorbed ?? 0);
+    return { score: good, max: s.ticks, pct: s.ticks ? Math.round((good / s.ticks) * 100) : 0 };
   });
   readonly prayerBook = computed(() => this.storage.loadout().prayerBook ?? 'Curses');
 
@@ -873,6 +874,11 @@ export class Train implements OnDestroy {
     });
   }
 
+  /** display name of a rule buff (Disruption Shield, Barricade ...) */
+  buffName(id: string): string {
+    return BUFF_BY_ID.get(id)?.name ?? id;
+  }
+
   /** style icon for incoming attacks */
   weaponIcon(style: Style4): string {
     return 'assets/weapons/' + style.toLowerCase() + '.png';
@@ -989,12 +995,15 @@ export class Train implements OnDestroy {
         this.flash('wrong', 'prayer:' + ev.id, now, 300);
         break;
       case 'attack': {
-        this.attackLog.update((l) => [...l.slice(-19), { style: ev.style, prayed: ev.prayed, tick: ev.tick }]);
+        this.attackLog.update((l) => [...l.slice(-19), { style: ev.style, prayed: ev.prayed, tick: ev.tick, absorbed: ev.absorbed }]);
         const needed = this.data.name('prayer:' + ev.needed);
-        if (ev.prayed) {
-          this.feedback.set({ text: ev.style + ' attack blocked by ' + needed, cls: 'good' });
+        const veng = ev.reflected ? ' – Vengeance hit back' : '';
+        if (ev.absorbed) {
+          this.feedback.set({ text: ev.style + ' attack absorbed by ' + this.buffName(ev.absorbed), cls: 'good' });
+        } else if (ev.prayed) {
+          this.feedback.set({ text: ev.style + ' attack blocked by ' + needed + veng, cls: 'good' });
         } else {
-          this.feedback.set({ text: 'Hit by a ' + ev.style + ' attack – ' + needed + ' was not active', cls: 'bad' });
+          this.feedback.set({ text: 'Hit by a ' + ev.style + ' attack – ' + needed + ' was not active' + veng, cls: 'bad' });
         }
         break;
       }

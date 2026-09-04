@@ -117,6 +117,16 @@
       </select>
       <small class="muted">Prayers of the other book are ignored while training.</small>
     </label>
+    <h3>Spellbook</h3>
+    <label>
+      <span>Spells used in this loadout</span>
+      <select [ngModel]="l().spellbook" (ngModelChange)="setSpellbook($event)">
+        <option value="standard">Standard spellbook (Vulnerability, Entangle, Surges)</option>
+        <option value="ancient">Ancient Magicks (Smoke Cloud, Animate Dead, Exsanguinate …)</option>
+        <option value="lunar">Lunar spells (Vengeance, Disruption Shield …)</option>
+      </select>
+      <small class="muted">Spells of the other books cannot be cast while training.</small>
+    </label>
     <h3>Archaeology relics</h3>
     @for (r of RELICS; track r.id) {
       <label class="check">
