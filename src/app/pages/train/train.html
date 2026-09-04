@@ -273,8 +273,8 @@
               [ability]="s.entity"
               [keyLabel]="s.key"
               [px]="s.kind === 'current' ? 72 : s.kind === 'next' ? 48 : 40"
-              [gcdPhase]="s.kind === 'current' && running() && (s.entity.kind === 'ability' || s.entity.kind === 'spec') ? gcdPhase() : running() && s.kind === 'next' ? cdPhase(s) : 1"
-              [remainingMs]="s.kind === 'current' && running() && (s.entity.kind === 'ability' || s.entity.kind === 'spec') ? gcdRemaining() : running() && s.kind === 'next' ? cdRemaining(s) : 0"
+              [gcdPhase]="queuePhase(s)"
+              [remainingMs]="queueRemaining(s)"
               [state]="s.done ? 'done' : s.kind === 'current' && running() ? iconState() : 'idle'"
             />
             <span class="name">{{ s.entity.name }}</span>

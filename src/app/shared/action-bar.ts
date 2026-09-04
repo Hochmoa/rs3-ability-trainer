@@ -27,6 +27,8 @@ export interface SlotView {
   active?: boolean;
   /** brief highlight after a cast */
   flash: 'fired' | 'wrong' | null;
+  /** pressed, the server has not processed it yet – the game's instant click feedback */
+  pressed?: boolean;
 }
 
 /**
@@ -44,7 +46,7 @@ export interface SlotView {
         @for (s of slots(); track $index) {
           <div
             class="slot"
-            [class]="'slot' + (s.entity ? ' ' + s.entity.kind : ' empty') + (s.expected ? ' expected' : '') + (s.queued ? ' queued' : '') + (s.active ? ' active' : '') + (s.usable && s.usable !== 'ok' ? ' unusable ' + s.usable : '') + (s.flash ? ' flash-' + s.flash : '')"
+            [class]="'slot' + (s.entity ? ' ' + s.entity.kind : ' empty') + (s.expected ? ' expected' : '') + (s.queued ? ' queued' : '') + (s.active ? ' active' : '') + (s.usable && s.usable !== 'ok' ? ' unusable ' + s.usable : '') + (s.flash ? ' flash-' + s.flash : '') + (s.pressed ? ' pressed' : '')"
             [entityTip]="s.morph?.entity ?? s.entity"
             cdkDropList
             cdkDropListSortingDisabled
@@ -61,6 +63,10 @@ export interface SlotView {
               @if (s.active) {
                 <!-- active prayer / curse: lit-up overlay, like the game's "on" state -->
                 <div class="active-glow"></div>
+              }
+              @if (s.pressed) {
+                <!-- pressed: white flash over the icon until the server takes the input on the next tick -->
+                <div class="press-flash"></div>
               }
               @if (s.queued) {
                 <!-- queued: black loading ring, like the game's queue indicator -->
@@ -253,6 +259,17 @@ export interface SlotView {
     .slot.queued {
       border-color: #ffe27a;
       box-shadow: 0 0 8px #ffe27a;
+    }
+    .slot.pressed {
+      border-color: #fff;
+      box-shadow: 0 0 8px #fff, inset 0 0 5px rgba(255, 255, 255, 0.8);
+    }
+    .press-flash {
+      position: absolute;
+      inset: 0;
+      background: rgba(255, 255, 255, 0.35);
+      pointer-events: none;
+      z-index: 2;
     }
     .slot.flash-fired {
       border-color: #4caf50;

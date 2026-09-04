@@ -82,6 +82,8 @@ interface IncomingView {
   covered: boolean;
 }
 
+/** how long a press stays lit at least, so a 0 ms ping still shows the click */
+const PRESS_FLASH_MS = 200;
 const EMPTY_PRAYER_STATS: PrayerStats = { ticks: 0, soulSplitTicks: 0, attacks: 0, prayed: 0, hits: 0, absorbed: 0 };
 
 @Component({
@@ -370,6 +372,10 @@ export class Train implements OnDestroy {
   readonly expectedKey = signal<string | null>(null);
   readonly queuedKey = signal<string | null>(null);
   readonly flashKey = signal<{ key: string; kind: 'fired' | 'wrong' } | null>(null);
+  /** slots pressed but not yet processed by the server – lit up at once, like the game's click feedback */
+  readonly pressedKeys = signal<ReadonlySet<string>>(new Set());
+  /** key → time until which the press stays visible even when the server has already taken it (0 ping) */
+  private pressedUntil = new Map<string, number>();
   /** per visible entity: usability + own cooldown, refreshed every frame */
   readonly slotState = signal<Map<string, { usable: UsableReason; cooldownS: number; cooldownPhase: number }>>(new Map());
   /** slot key → what it shows right now (Command X, Slaughter, Spectral Scythe 2) */
@@ -415,6 +421,7 @@ export class Train implements OnDestroy {
     const expected = this.expectedKey();
     const queued = this.queuedKey();
     const flash = this.flashKey();
+    const pressed = this.pressedKeys();
     const layout = this.layout();
     const morphs = this.morphs();
     const activeKeys = new Set(this.activePrayers().map((p) => p.key));
@@ -441,6 +448,7 @@ export class Train implements OnDestroy {
           queued: running && !!shown && shown.key === queued,
           active: running && !!entity && activeKeys.has(entity.key),
           flash: running && shown && flash?.key === shown.key ? flash.kind : null,
+          pressed: running && !!entity && (pressed.has(entity.key) || (!!shown && pressed.has(shown.key))),
         };
       });
       return { position: pos, presetName: preset?.name ?? '– empty –', slots, shape: layout.shape[pos] };
@@ -621,6 +629,23 @@ export class Train implements OnDestroy {
     return this.cooldowns()[slot.entity.key]?.remainingMs ?? 0;
   }
 
+  /**
+   * overlay of a queue slot, like on the bars: an ability on cooldown shows its cooldown sweep and seconds,
+   * the current GCD ability otherwise shows the global cooldown, everything else is ready
+   */
+  queuePhase(slot: QueueSlot): number {
+    if (!this.running() || slot.kind === 'prev') return 1;
+    if (this.cdRemaining(slot) > 0) return this.cdPhase(slot);
+    return slot.kind === 'current' && (slot.entity.kind === 'ability' || slot.entity.kind === 'spec') ? this.gcdPhase() : 1;
+  }
+
+  queueRemaining(slot: QueueSlot): number {
+    if (!this.running() || slot.kind === 'prev') return 0;
+    const cd = this.cdRemaining(slot);
+    if (cd > 0) return cd;
+    return slot.kind === 'current' && (slot.entity.kind === 'ability' || slot.entity.kind === 'spec') ? this.gcdRemaining() : 0;
+  }
+
   start(): void {
     const rot = this.rotation();
     if (!rot || !this.canStart()) return;
@@ -710,6 +735,8 @@ export class Train implements OnDestroy {
     this.index.set(0);
     this.iconState.set('idle');
     this.flashKey.set(null);
+    this.pressedUntil.clear();
+    this.pressedKeys.set(new Set());
     this.engine.start(performance.now());
     this.syncWield(this.engine);
     this.adrenaline.set(this.engine.adrenaline);
@@ -750,8 +777,8 @@ export class Train implements OnDestroy {
     }
     const name = this.data.view(a.ref)?.name ?? a.ref.id;
     if (a.from.kind === 'inv') {
-      if (a.ref.kind === 'weapon') return e.press('weapon:' + a.ref.id, performance.now());
-      if (a.ref.kind === 'special') return e.press('special:' + a.ref.id, performance.now());
+      if (a.ref.kind === 'weapon') return this.press('weapon:' + a.ref.id);
+      if (a.ref.kind === 'special') return this.press('special:' + a.ref.id);
       const r = equip(l, a.ref, this.slotOf, a.from.index);
       if (r.error) return this.toast.show(r.error, 'warn');
       this.live.set({ ...l, ...r.state });
@@ -808,6 +835,13 @@ export class Train implements OnDestroy {
     this.syncWield(e);
     this.expectedKey.set(e.currentStep?.key ?? null);
     this.queuedKey.set(e.queuedKey);
+    const pressed = new Set(e.inflightKeys);
+    for (const [key, until] of this.pressedUntil) {
+      if (until > now) pressed.add(key);
+      else this.pressedUntil.delete(key);
+    }
+    const wasPressed = this.pressedKeys();
+    if (pressed.size !== wasPressed.size || [...pressed].some((k) => !wasPressed.has(k))) this.pressedKeys.set(pressed);
     this.buffs.set(e.buffs.map((b) => this.buffView(b, now)));
     const cds: Record<string, { remainingMs: number; totalMs: number }> = {};
     for (const s of this.slots()) {
@@ -1148,11 +1182,19 @@ export class Train implements OnDestroy {
     return this.activePrayers().some((p) => p.id === SOUL_SPLIT);
   }
 
+  /** send a press to the (simulated) server and light the slot up right away, like the game does on click */
+  private press(key: string): void {
+    const now = performance.now();
+    this.engine?.press(key, now);
+    this.pressedUntil.set(key, now + PRESS_FLASH_MS);
+    this.pressedKeys.set(new Set([...this.pressedKeys(), key]));
+  }
+
   /** click on a bar slot while training = press it (for touch / mouse users) */
   slotClick(pos: number, slot: number): void {
     if (!this.running()) return;
     const entity = this.bars()[pos]?.slots[slot]?.entity;
-    if (entity) this.engine?.press(entity.key, performance.now());
+    if (entity) this.press(entity.key);
   }
 
   @HostListener('window:keydown', ['$event'])
@@ -1170,14 +1212,14 @@ export class Train implements OnDestroy {
     for (const [id, wk] of Object.entries(setup.weaponKeybinds)) {
       if (wk && keybindKey(wk) === k) {
         e.preventDefault();
-        this.engine?.press('weapon:' + id, performance.now());
+        this.press('weapon:' + id);
         return;
       }
     }
     for (const [id, ak] of Object.entries(setup.actionKeybinds ?? {})) {
       if (ak && keybindKey(ak) === k) {
         e.preventDefault();
-        this.engine?.press('action:' + id, performance.now());
+        this.press('action:' + id);
         return;
       }
     }
@@ -1188,7 +1230,7 @@ export class Train implements OnDestroy {
         if (skb && keybindKey(skb) === k) {
           e.preventDefault();
           const entity = this.bars()[pos]?.slots[i]?.entity;
-          if (entity) this.engine?.press(entity.key, performance.now());
+          if (entity) this.press(entity.key);
           return;
         }
       }

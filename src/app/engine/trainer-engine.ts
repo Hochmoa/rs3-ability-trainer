@@ -676,6 +676,11 @@ export class TrainerEngine {
 
   // ---------------------------------------------------------------- input
 
+  /** keys pressed but not yet processed by the server (the game shows them as "clicked" until their tick) */
+  get inflightKeys(): string[] {
+    return this.inflight.map((i) => i.key);
+  }
+
   press(key: string, now: number): void {
     if (this.state !== 'running') return;
     const jitter = this.config.jitterMs > 0 ? (this.random() * 2 - 1) * this.config.jitterMs : 0;
