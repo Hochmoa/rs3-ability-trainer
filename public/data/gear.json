@@ -12,7 +12,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/primal-arrow.png"
  },
  {
   "id": "primal-bolts",
@@ -27,7 +27,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/primal-bolts.png"
  },
  {
   "id": "bik-arrow",
@@ -42,7 +42,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/bik-arrow.png"
  },
  {
   "id": "deathspore-arrows",
@@ -57,7 +57,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/deathspore-arrows.png"
  },
  {
   "id": "diamond-bakriminel-bolts-e",
@@ -72,7 +72,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/diamond-bakriminel-bolts-e.png"
  },
  {
   "id": "dinarrow",
@@ -87,7 +87,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/dinarrow.png"
  },
  {
   "id": "dragonstone-bakriminel-bolts-e",
@@ -102,7 +102,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/dragonstone-bakriminel-bolts-e.png"
  },
  {
   "id": "emerald-bakriminel-bolts-e",
@@ -117,7 +117,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/emerald-bakriminel-bolts-e.png"
  },
  {
   "id": "ful-arrow",
@@ -132,7 +132,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/ful-arrow.png"
  },
  {
   "id": "hydrix-bakriminel-bolts-e",
@@ -147,7 +147,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/hydrix-bakriminel-bolts-e.png"
  },
  {
   "id": "jade-bakriminel-bolts-e",
@@ -162,7 +162,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/jade-bakriminel-bolts-e.png"
  },
  {
   "id": "jas-demonbane-arrow",
@@ -177,7 +177,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/jas-demonbane-arrow.png"
  },
  {
   "id": "jas-dragonbane-arrow",
@@ -192,7 +192,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/jas-dragonbane-arrow.png"
  },
  {
   "id": "onyx-bakriminel-bolts-e",
@@ -207,7 +207,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/onyx-bakriminel-bolts-e.png"
  },
  {
   "id": "opal-bakriminel-bolts-e",
@@ -222,7 +222,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/opal-bakriminel-bolts-e.png"
  },
  {
   "id": "pearl-bakriminel-bolts-e",
@@ -237,7 +237,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/pearl-bakriminel-bolts-e.png"
  },
  {
   "id": "red-topaz-bakriminel-bolts-e",
@@ -252,7 +252,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/red-topaz-bakriminel-bolts-e.png"
  },
  {
   "id": "ruby-bakriminel-bolts-e",
@@ -267,7 +267,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/ruby-bakriminel-bolts-e.png"
  },
  {
   "id": "sapphire-bakriminel-bolts-e",
@@ -282,7 +282,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/sapphire-bakriminel-bolts-e.png"
  },
  {
   "id": "splintering-arrows",
@@ -297,7 +297,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/splintering-arrows.png"
  },
  {
   "id": "wen-arrow",
@@ -312,7 +312,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/wen-arrow.png"
  },
  {
   "id": "ascendri-bolts",
@@ -327,7 +327,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/ascendri-bolts.png"
  },
  {
   "id": "ascendri-bolts-e",
@@ -342,7 +342,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/ascendri-bolts-e.png"
  },
  {
   "id": "black-stone-arrows",
@@ -357,7 +357,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/black-stone-arrows.png"
  },
  {
   "id": "blight-bolts",
@@ -372,7 +372,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/blight-bolts.png"
  },
  {
   "id": "araxyte-arrow",
@@ -387,7 +387,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/araxyte-arrow.png"
  },
  {
   "id": "ascension-bolts",
@@ -402,7 +402,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/ascension-bolts.png"
  },
  {
   "id": "elder-rune-arrow",
@@ -417,7 +417,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/elder-rune-arrow.png"
  },
  {
   "id": "elder-rune-bolts",
@@ -432,7 +432,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/elder-rune-bolts.png"
  },
  {
   "id": "diamond-bakriminel-bolts",
@@ -447,7 +447,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/diamond-bakriminel-bolts.png"
  },
  {
   "id": "dragonstone-bakriminel-bolts",
@@ -462,7 +462,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/dragonstone-bakriminel-bolts.png"
  },
  {
   "id": "emerald-bakriminel-bolts",
@@ -477,7 +477,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/emerald-bakriminel-bolts.png"
  },
  {
   "id": "grasping-rune-pouch",
@@ -507,7 +507,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/hydrix-bakriminel-bolts.png"
  },
  {
   "id": "jade-bakriminel-bolts",
@@ -522,7 +522,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/jade-bakriminel-bolts.png"
  },
  {
   "id": "onyx-bakriminel-bolts",
@@ -537,7 +537,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/onyx-bakriminel-bolts.png"
  },
  {
   "id": "opal-bakriminel-bolts",
@@ -552,7 +552,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/opal-bakriminel-bolts.png"
  },
  {
   "id": "pearl-bakriminel-bolts",
@@ -567,7 +567,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/pearl-bakriminel-bolts.png"
  },
  {
   "id": "red-topaz-bakriminel-bolts",
@@ -582,7 +582,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/red-topaz-bakriminel-bolts.png"
  },
  {
   "id": "ruby-bakriminel-bolts",
@@ -597,7 +597,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/ruby-bakriminel-bolts.png"
  },
  {
   "id": "sapphire-bakriminel-bolts",
@@ -612,7 +612,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/sapphire-bakriminel-bolts.png"
  },
  {
   "id": "wild-arrow",
@@ -627,7 +627,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/wild-arrow.png"
  },
  {
   "id": "wyvern-spines",
@@ -642,7 +642,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/wyvern-spines.png"
  },
  {
   "id": "abyssalbane-arrow",
@@ -657,7 +657,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/abyssalbane-arrow.png"
  },
  {
   "id": "abyssalbane-bolts",
@@ -672,7 +672,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/abyssalbane-bolts.png"
  },
  {
   "id": "arrows-class-5",
@@ -687,7 +687,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/arrows-class-5.png"
  },
  {
   "id": "bane-arrow",
@@ -702,7 +702,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/bane-arrow.png"
  },
  {
   "id": "bane-bolts",
@@ -717,7 +717,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/bane-bolts.png"
  },
  {
   "id": "basiliskbane-arrow",
@@ -732,7 +732,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/basiliskbane-arrow.png"
  },
  {
   "id": "basiliskbane-bolts",
@@ -747,7 +747,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/basiliskbane-bolts.png"
  },
  {
   "id": "dragonbane-arrow",
@@ -762,7 +762,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/dragonbane-arrow.png"
  },
  {
   "id": "dragonbane-bolts",
@@ -777,7 +777,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/dragonbane-bolts.png"
  },
  {
   "id": "onyx-bolts-e",
@@ -792,7 +792,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/onyx-bolts-e.png"
  },
  {
   "id": "royal-bolts",
@@ -807,7 +807,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/royal-bolts.png"
  },
  {
   "id": "stalker-arrow",
@@ -822,7 +822,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/stalker-arrow.png"
  },
  {
   "id": "the-devourer-s-nexus",
@@ -852,7 +852,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/wallasalkibane-arrow.png"
  },
  {
   "id": "wallasalkibane-bolts",
@@ -867,7 +867,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/wallasalkibane-bolts.png"
  },
  {
   "id": "zemouregal-s-nexus",
@@ -897,7 +897,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/bakriminel-bolts.png"
  },
  {
   "id": "hand-cannon-shot",
@@ -927,7 +927,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/blisterwood-stakes-ammo.png"
  },
  {
   "id": "bolt-rack",
@@ -942,7 +942,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/bolt-rack.png"
  },
  {
   "id": "dark-arrow",
@@ -957,7 +957,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/dark-arrow.png"
  },
  {
   "id": "diamond-bolts-e",
@@ -972,7 +972,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/diamond-bolts-e.png"
  },
  {
   "id": "dragon-bolts-e",
@@ -987,7 +987,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/dragon-bolts-e.png"
  },
  {
   "id": "harralander-tar",
@@ -1017,7 +1017,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/lit-dark-fire-arrows.png"
  },
  {
   "id": "necronium-arrow",
@@ -1032,7 +1032,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/necronium-arrow.png"
  },
  {
   "id": "necronium-bolts",
@@ -1047,7 +1047,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/necronium-bolts.png"
  },
  {
   "id": "onyx-bolts",
@@ -1062,7 +1062,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/onyx-bolts.png"
  },
  {
   "id": "unlit-dark-fire-arrows",
@@ -1077,7 +1077,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/unlit-dark-fire-arrows.png"
  },
  {
   "id": "large-rune-pouch",
@@ -1107,7 +1107,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/arrows-class-4.png"
  },
  {
   "id": "deathwarden-nexus",
@@ -1137,7 +1137,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/diamond-bolts.png"
  },
  {
   "id": "dragon-arrow",
@@ -1152,7 +1152,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/dragon-arrow.png"
  },
  {
   "id": "dragon-bolts",
@@ -1167,7 +1167,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/dragon-bolts.png"
  },
  {
   "id": "dragon-fire-arrows-lit",
@@ -1182,7 +1182,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/dragon-fire-arrows-lit.png"
  },
  {
   "id": "dragon-fire-arrows-unlit",
@@ -1197,7 +1197,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/dragon-fire-arrows-unlit.png"
  },
  {
   "id": "emerald-bolts-e",
@@ -1212,7 +1212,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/emerald-bolts-e.png"
  },
  {
   "id": "havensilver-bolt-2",
@@ -1227,7 +1227,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/havensilver-bolt-2.png"
  },
  {
   "id": "orikalkum-arrow",
@@ -1242,7 +1242,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/orikalkum-arrow.png"
  },
  {
   "id": "orikalkum-bolts",
@@ -1257,7 +1257,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/orikalkum-bolts.png"
  },
  {
   "id": "ruby-bolts-e",
@@ -1272,7 +1272,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/ruby-bolts-e.png"
  },
  {
   "id": "tarromin-tar",
@@ -1302,7 +1302,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/broad-arrow.png"
  },
  {
   "id": "guthix-arrows",
@@ -1317,7 +1317,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/guthix-arrows.png"
  },
  {
   "id": "saradomin-arrows",
@@ -1332,7 +1332,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/saradomin-arrows.png"
  },
  {
   "id": "zamorak-arrows",
@@ -1347,7 +1347,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/zamorak-arrows.png"
  },
  {
   "id": "broad-tipped-bolts",
@@ -1362,7 +1362,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/broad-tipped-bolts.png"
  },
  {
   "id": "clan-rune-arrow",
@@ -1377,7 +1377,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/clan-rune-arrow.png"
  },
  {
   "id": "emerald-bolts",
@@ -1392,7 +1392,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/emerald-bolts.png"
  },
  {
   "id": "kebbit-bolts",
@@ -1452,7 +1452,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/ruby-bolts.png"
  },
  {
   "id": "rune-arrow",
@@ -1467,7 +1467,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/rune-arrow.png"
  },
  {
   "id": "rune-bolts",
@@ -1482,7 +1482,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/rune-bolts.png"
  },
  {
   "id": "rune-fire-arrows-lit",
@@ -1497,7 +1497,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/rune-fire-arrows-lit.png"
  },
  {
   "id": "rune-fire-arrows-unlit",
@@ -1512,7 +1512,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/rune-fire-arrows-unlit.png"
  },
  {
   "id": "sapphire-bolts-e",
@@ -1527,7 +1527,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/sapphire-bolts-e.png"
  },
  {
   "id": "rune-brutal",
@@ -1542,7 +1542,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/rune-brutal.png"
  },
  {
   "id": "adamant-arrow",
@@ -1557,7 +1557,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/adamant-arrow.png"
  },
  {
   "id": "adamant-bolts",
@@ -1572,7 +1572,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/adamant-bolts.png"
  },
  {
   "id": "adamant-fire-arrows-lit",
@@ -1587,7 +1587,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/adamant-fire-arrows-lit.png"
  },
  {
   "id": "adamant-fire-arrows-unlit",
@@ -1602,7 +1602,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/adamant-fire-arrows-unlit.png"
  },
  {
   "id": "arrows-class-3",
@@ -1617,7 +1617,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/arrows-class-3.png"
  },
  {
   "id": "ice-arrows",
@@ -1632,7 +1632,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/ice-arrows.png"
  },
  {
   "id": "sapphire-bolts",
@@ -1647,7 +1647,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/sapphire-bolts.png"
  },
  {
   "id": "topaz-bolts-e",
@@ -1662,7 +1662,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/topaz-bolts-e.png"
  },
  {
   "id": "jade-bolts-e",
@@ -1677,7 +1677,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/jade-bolts-e.png"
  },
  {
   "id": "adamant-brutal",
@@ -1692,7 +1692,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/adamant-brutal.png"
  },
  {
   "id": "steel-bolts-p",
@@ -1707,7 +1707,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/steel-bolts-p.png"
  },
  {
   "id": "steel-bolts-p",
@@ -1722,7 +1722,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/steel-bolts-p.png"
  },
  {
   "id": "guam-tar",
@@ -1752,7 +1752,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/havensilver-bolt-1.png"
  },
  {
   "id": "kratonite-arrows-three-s-company",
@@ -1782,7 +1782,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/mithril-arrow.png"
  },
  {
   "id": "mithril-bolts",
@@ -1797,7 +1797,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/mithril-bolts.png"
  },
  {
   "id": "mithril-fire-arrows-lit",
@@ -1812,7 +1812,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/mithril-fire-arrows-lit.png"
  },
  {
   "id": "mithril-fire-arrows-unlit",
@@ -1827,7 +1827,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/mithril-fire-arrows-unlit.png"
  },
  {
   "id": "ogre-arrow",
@@ -1842,7 +1842,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/ogre-arrow.png"
  },
  {
   "id": "pearl-bolts-e",
@@ -1857,7 +1857,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/pearl-bolts-e.png"
  },
  {
   "id": "topaz-bolts",
@@ -1872,7 +1872,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/topaz-bolts.png"
  },
  {
   "id": "bone-bolts",
@@ -1887,7 +1887,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/bone-bolts.png"
  },
  {
   "id": "black-bolts",
@@ -1902,7 +1902,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/black-bolts.png"
  },
  {
   "id": "jade-bolts",
@@ -1917,7 +1917,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/jade-bolts.png"
  },
  {
   "id": "silver-bolts",
@@ -1932,7 +1932,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/silver-bolts.png"
  },
  {
   "id": "mithril-brutal",
@@ -1947,7 +1947,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/mithril-brutal.png"
  },
  {
   "id": "arrows-class-2",
@@ -1962,7 +1962,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/arrows-class-2.png"
  },
  {
   "id": "black-brutal",
@@ -1977,7 +1977,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/black-brutal.png"
  },
  {
   "id": "opal-bolts-e",
@@ -1992,7 +1992,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/opal-bolts-e.png"
  },
  {
   "id": "pearl-bolts",
@@ -2007,7 +2007,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/pearl-bolts.png"
  },
  {
   "id": "steel-arrow",
@@ -2022,7 +2022,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/steel-arrow.png"
  },
  {
   "id": "steel-bolts",
@@ -2037,7 +2037,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/steel-bolts.png"
  },
  {
   "id": "steel-fire-arrows-lit",
@@ -2052,7 +2052,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/steel-fire-arrows-lit.png"
  },
  {
   "id": "steel-fire-arrows-unlit",
@@ -2067,7 +2067,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/steel-fire-arrows-unlit.png"
  },
  {
   "id": "blurite-bolts",
@@ -2082,7 +2082,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/blurite-bolts.png"
  },
  {
   "id": "steel-brutal",
@@ -2097,7 +2097,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/steel-brutal.png"
  },
  {
   "id": "iron-arrow",
@@ -2112,7 +2112,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/iron-arrow.png"
  },
  {
   "id": "iron-bolts",
@@ -2127,7 +2127,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/iron-bolts.png"
  },
  {
   "id": "iron-brutal",
@@ -2142,7 +2142,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/iron-brutal.png"
  },
  {
   "id": "iron-fire-arrows-lit",
@@ -2157,7 +2157,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/iron-fire-arrows-lit.png"
  },
  {
   "id": "iron-fire-arrows-unlit",
@@ -2172,7 +2172,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/iron-fire-arrows-unlit.png"
  },
  {
   "id": "opal-bolts",
@@ -2187,7 +2187,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/opal-bolts.png"
  },
  {
   "id": "arrows-class-1",
@@ -2202,7 +2202,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/arrows-class-1.png"
  },
  {
   "id": "barbed-bolts",
@@ -2217,7 +2217,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/barbed-bolts.png"
  },
  {
   "id": "bronze-arrow",
@@ -2232,7 +2232,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/bronze-arrow.png"
  },
  {
   "id": "bronze-bolts",
@@ -2247,7 +2247,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/bronze-bolts.png"
  },
  {
   "id": "bronze-brutal",
@@ -2262,7 +2262,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/bronze-brutal.png"
  },
  {
   "id": "bronze-fire-arrows-lit",
@@ -2277,7 +2277,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/bronze-fire-arrows-lit.png"
  },
  {
   "id": "bronze-fire-arrows-unlit",
@@ -2292,7 +2292,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/bronze-fire-arrows-unlit.png"
  },
  {
   "id": "clan-bronze-arrow",
@@ -2307,7 +2307,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/clan-bronze-arrow.png"
  },
  {
   "id": "coral-bolts",
@@ -2322,7 +2322,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/coral-bolts.png"
  },
  {
   "id": "fragment-arrows",
@@ -2337,7 +2337,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/fragment-arrows.png"
  },
  {
   "id": "fragment-bolts",
@@ -2352,7 +2352,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/fragment-bolts.png"
  },
  {
   "id": "havensilver-bolt",
@@ -2367,7 +2367,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/havensilver-bolt.png"
  },
  {
   "id": "performance-arrow",
@@ -2382,7 +2382,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/performance-arrow.png"
  },
  {
   "id": "training-arrows",
@@ -2397,7 +2397,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/training-arrows.png"
  },
  {
   "id": "abyssal-armour-spikes",
@@ -5142,7 +5142,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/slime-hunter-chestplate.png"
  },
  {
   "id": "superior-rock-shell-plate",
@@ -5637,7 +5637,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/skirmisher-cuirass.png"
  },
  {
   "id": "granite-body",
@@ -7482,7 +7482,7 @@
   "set": "warpriest-armadyl-bandos",
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/warpriest-of-armadyl-cuirass.png"
  },
  {
   "id": "warpriest-of-bandos-cuirass",
@@ -7497,7 +7497,7 @@
   "set": "warpriest-armadyl-bandos",
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/warpriest-of-bandos-cuirass.png"
  },
  {
   "id": "warpriest-of-saradomin-cuirass",
@@ -7512,7 +7512,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/warpriest-of-saradomin-cuirass.png"
  },
  {
   "id": "warpriest-of-tuska-cuirass",
@@ -7527,7 +7527,7 @@
   "set": "warpriest-tuska",
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/warpriest-of-tuska-cuirass.png"
  },
  {
   "id": "warpriest-of-zamorak-cuirass",
@@ -7542,7 +7542,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/warpriest-of-zamorak-cuirass.png"
  },
  {
   "id": "white-platebody",
@@ -7617,7 +7617,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/ghost-hunter-body.png"
  },
  {
   "id": "pathfinder-jacket",
@@ -7677,7 +7677,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/challenger-torso.png"
  },
  {
   "id": "deathwarden-robe-top-tier-20",
@@ -8127,7 +8127,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/starfire-chestplate.png"
  },
  {
   "id": "starfire-hauberk",
@@ -8142,7 +8142,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/starfire-hauberk.png"
  },
  {
   "id": "starfire-robe",
@@ -8157,7 +8157,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/starfire-robe.png"
  },
  {
   "id": "starfury-chestplate",
@@ -8172,7 +8172,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/starfury-chestplate.png"
  },
  {
   "id": "starfury-hauberk",
@@ -8187,7 +8187,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/starfury-hauberk.png"
  },
  {
   "id": "starfury-robe",
@@ -8202,7 +8202,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/starfury-robe.png"
  },
  {
   "id": "wizard-robe-top",
@@ -10287,7 +10287,7 @@
   "set": "warpriest-armadyl-bandos",
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/warpriest-of-armadyl-cape.png"
  },
  {
   "id": "warpriest-of-bandos-cape",
@@ -10302,7 +10302,7 @@
   "set": "warpriest-armadyl-bandos",
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/warpriest-of-bandos-cape.png"
  },
  {
   "id": "warpriest-of-saradomin-cape",
@@ -10317,7 +10317,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/warpriest-of-saradomin-cape.png"
  },
  {
   "id": "warpriest-of-tuska-cape",
@@ -10332,7 +10332,7 @@
   "set": "warpriest-tuska",
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/warpriest-of-tuska-cape.png"
  },
  {
   "id": "warpriest-of-zamorak-cape",
@@ -10347,7 +10347,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/warpriest-of-zamorak-cape.png"
  },
  {
   "id": "pathfinder-cape",
@@ -10782,7 +10782,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/starfire-cape.png"
  },
  {
   "id": "starfury-cape",
@@ -10797,7 +10797,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/starfury-cape.png"
  },
  {
   "id": "blue-cape-soul-wars",
@@ -12507,7 +12507,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/slime-hunter-boots.png"
  },
  {
   "id": "superior-rock-shell-boots",
@@ -12777,7 +12777,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/skirmisher-boots.png"
  },
  {
   "id": "infinity-boots",
@@ -13467,7 +13467,7 @@
   "set": "warpriest-armadyl-bandos",
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/warpriest-of-armadyl-boots.png"
  },
  {
   "id": "warpriest-of-bandos-boots",
@@ -13482,7 +13482,7 @@
   "set": "warpriest-armadyl-bandos",
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/warpriest-of-bandos-boots.png"
  },
  {
   "id": "warpriest-of-saradomin-boots",
@@ -13497,7 +13497,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/warpriest-of-saradomin-boots.png"
  },
  {
   "id": "warpriest-of-tuska-boots",
@@ -13512,7 +13512,7 @@
   "set": "warpriest-tuska",
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/warpriest-of-tuska-boots.png"
  },
  {
   "id": "warpriest-of-zamorak-boots",
@@ -13527,7 +13527,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/warpriest-of-zamorak-boots.png"
  },
  {
   "id": "white-boots",
@@ -13587,7 +13587,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/challenger-boots.png"
  },
  {
   "id": "deathwarden-boots-tier-20",
@@ -13857,7 +13857,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/starfire-magic-boots.png"
  },
  {
   "id": "starfire-melee-boots",
@@ -13872,7 +13872,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/starfire-melee-boots.png"
  },
  {
   "id": "starfire-ranged-boots",
@@ -13887,7 +13887,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/starfire-ranged-boots.png"
  },
  {
   "id": "starfury-magic-boots",
@@ -13902,7 +13902,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/starfury-magic-boots.png"
  },
  {
   "id": "starfury-melee-boots",
@@ -13917,7 +13917,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/starfury-melee-boots.png"
  },
  {
   "id": "starfury-ranged-boots",
@@ -13932,7 +13932,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/starfury-ranged-boots.png"
  },
  {
   "id": "wizard-boots",
@@ -14007,7 +14007,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/silverhawk-boots.png"
  },
  {
   "id": "argonlike-boots",
@@ -15762,7 +15762,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/slime-hunter-gloves.png"
  },
  {
   "id": "superior-rock-shell-gloves",
@@ -16167,7 +16167,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/skirmisher-gloves.png"
  },
  {
   "id": "blue-spiky-vambraces",
@@ -16932,7 +16932,7 @@
   "set": "warpriest-armadyl-bandos",
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/warpriest-of-armadyl-gauntlets.png"
  },
  {
   "id": "warpriest-of-bandos-gauntlets",
@@ -16947,7 +16947,7 @@
   "set": "warpriest-armadyl-bandos",
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/warpriest-of-bandos-gauntlets.png"
  },
  {
   "id": "warpriest-of-saradomin-gauntlets",
@@ -16962,7 +16962,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/warpriest-of-saradomin-gauntlets.png"
  },
  {
   "id": "warpriest-of-zamorak-gauntlets",
@@ -16977,7 +16977,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/warpriest-of-zamorak-gauntlets.png"
  },
  {
   "id": "white-gauntlets",
@@ -17052,7 +17052,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/challenger-gloves.png"
  },
  {
   "id": "culinaromancer-s-gloves-3",
@@ -17292,7 +17292,7 @@
   "set": "warpriest-tuska",
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/warpriest-of-tuska-gauntlets.png"
  },
  {
   "id": "spiky-vambraces",
@@ -17427,7 +17427,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/starfire-gauntlets.png"
  },
  {
   "id": "starfire-gloves",
@@ -17442,7 +17442,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/starfire-gloves.png"
  },
  {
   "id": "starfire-vambraces",
@@ -17457,7 +17457,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/starfire-vambraces.png"
  },
  {
   "id": "starfury-gauntlets",
@@ -17472,7 +17472,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/starfury-gauntlets.png"
  },
  {
   "id": "starfury-gloves",
@@ -17487,7 +17487,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/starfury-gloves.png"
  },
  {
   "id": "starfury-vambraces",
@@ -17502,7 +17502,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/starfury-vambraces.png"
  },
  {
   "id": "wizard-gloves",
@@ -20007,7 +20007,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/slime-hunter-helmet.png"
  },
  {
   "id": "strong-slayer-helmet",
@@ -20667,7 +20667,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/skirmisher-helm.png"
  },
  {
   "id": "granite-helm",
@@ -23592,7 +23592,7 @@
   "set": "warpriest-armadyl-bandos",
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/warpriest-of-armadyl-helm.png"
  },
  {
   "id": "warpriest-of-bandos-helm",
@@ -23607,7 +23607,7 @@
   "set": "warpriest-armadyl-bandos",
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/warpriest-of-bandos-helm.png"
  },
  {
   "id": "warpriest-of-saradomin-helm",
@@ -23622,7 +23622,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/warpriest-of-saradomin-helm.png"
  },
  {
   "id": "warpriest-of-tuska-helm",
@@ -23637,7 +23637,7 @@
   "set": "warpriest-tuska",
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/warpriest-of-tuska-helm.png"
  },
  {
   "id": "warpriest-of-zamorak-helm",
@@ -23652,7 +23652,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/warpriest-of-zamorak-helm.png"
  },
  {
   "id": "white-full-helm",
@@ -23712,7 +23712,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/ghost-hunter-goggles.png"
  },
  {
   "id": "pathfinder-hood",
@@ -23772,7 +23772,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/challenger-helm.png"
  },
  {
   "id": "coif-class-2",
@@ -24657,7 +24657,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/starfire-coif.png"
  },
  {
   "id": "starfire-helmet",
@@ -24672,7 +24672,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/starfire-helmet.png"
  },
  {
   "id": "starfire-hood",
@@ -24687,7 +24687,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/starfire-hood.png"
  },
  {
   "id": "starfury-coif",
@@ -24702,7 +24702,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/starfury-coif.png"
  },
  {
   "id": "starfury-helmet",
@@ -24717,7 +24717,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/starfury-helmet.png"
  },
  {
   "id": "starfury-hood",
@@ -24732,7 +24732,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/starfury-hood.png"
  },
  {
   "id": "tyras-helm",
@@ -27312,7 +27312,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/slime-hunter-legplates.png"
  },
  {
   "id": "superior-rock-shell-legs",
@@ -27807,7 +27807,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/skirmisher-tassets.png"
  },
  {
   "id": "granite-legs",
@@ -30042,7 +30042,7 @@
   "set": "warpriest-armadyl-bandos",
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/warpriest-of-armadyl-greaves.png"
  },
  {
   "id": "warpriest-of-bandos-greaves",
@@ -30057,7 +30057,7 @@
   "set": "warpriest-armadyl-bandos",
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/warpriest-of-bandos-greaves.png"
  },
  {
   "id": "warpriest-of-saradomin-greaves",
@@ -30072,7 +30072,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/warpriest-of-saradomin-greaves.png"
  },
  {
   "id": "warpriest-of-tuska-robe-legs",
@@ -30087,7 +30087,7 @@
   "set": "warpriest-tuska",
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/warpriest-of-tuska-robe-legs.png"
  },
  {
   "id": "warpriest-of-zamorak-greaves",
@@ -30102,7 +30102,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/warpriest-of-zamorak-greaves.png"
  },
  {
   "id": "white-platelegs",
@@ -30222,7 +30222,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/challenger-legs.png"
  },
  {
   "id": "chaps-class-2",
@@ -30612,7 +30612,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/starfire-chaps.png"
  },
  {
   "id": "starfire-legplates",
@@ -30627,7 +30627,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/starfire-legplates.png"
  },
  {
   "id": "starfire-skirt",
@@ -30642,7 +30642,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/starfire-skirt.png"
  },
  {
   "id": "starfury-chaps",
@@ -30657,7 +30657,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/starfury-chaps.png"
  },
  {
   "id": "starfury-legplates",
@@ -30672,7 +30672,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/starfury-legplates.png"
  },
  {
   "id": "starfury-skirt",
@@ -30687,7 +30687,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/starfury-skirt.png"
  },
  {
   "id": "wizard-robe-skirt",
@@ -33447,7 +33447,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/games-necklace.png"
  },
  {
   "id": "games-necklace-c",
@@ -35937,7 +35937,7 @@
   "set": "void-knight",
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/void-knight-seal.png"
  },
  {
   "id": "winter-scarf-black-and-orange",
@@ -39687,7 +39687,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/challenger-ring.png"
  },
  {
   "id": "champion-s-ring",
@@ -39972,7 +39972,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/ferocious-ring.png"
  },
  {
   "id": "ferocious-ring-c",
@@ -40107,7 +40107,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/hoardstalker-ring.png"
  },
  {
   "id": "hydrix-ring",
@@ -40167,7 +40167,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/kethsi-ring.png"
  },
  {
   "id": "lapis-lazuli-ring",
@@ -40647,7 +40647,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/ring-of-duelling.png"
  },
  {
   "id": "ring-of-duelling-c",
@@ -41142,7 +41142,7 @@
   "set": null,
   "passive": null,
   "augmentable": false,
-  "icon": null
+  "icon": "assets/gear/ring-of-slaying.png"
  },
  {
   "id": "ring-of-slaying-c",

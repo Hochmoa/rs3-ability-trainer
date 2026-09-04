@@ -198,3 +198,26 @@ def parse_percent(s: str | None) -> float | None:
 def write_json(path: Path, data) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
+def image_urls_any(names: list[str]) -> dict[str, str]:
+    """Item name -> icon URL, trying the wiki's naming variants: "Name.png", then stackables ("Name 5.png",
+    "Name 1.png") and level-scaled items ("Name (10).png": first file with prefix "Name (")."""
+    out: dict[str, str] = {}
+    todo = list(dict.fromkeys(names))
+    for suffix in (".png", " 5.png", " 1.png"):
+        if not todo:
+            break
+        found = image_urls([n + suffix for n in todo])
+        for n in todo:
+            if n + suffix in found:
+                out[n] = found[n + suffix]
+        todo = [n for n in todo if n not in out]
+    for n in todo:
+        key = n.replace(" ", "_")  # allimages works on the underscored db key
+        data = get({"action": "query", "format": "json", "list": "allimages", "aiprefix": key + "_(", "ailimit": "20"})
+        imgs = [i for i in data["query"]["allimages"] if re.fullmatch(re.escape(key) + r"_\(\d+\)\.png", i["name"])]
+        if imgs:
+            out[n] = sorted(imgs, key=lambda i: int(re.search(r"\((\d+)\)", i["name"]).group(1)))[0]["url"]
+        time.sleep(0.3)
+    return out
