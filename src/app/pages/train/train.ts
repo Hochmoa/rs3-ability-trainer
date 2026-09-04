@@ -32,8 +32,8 @@ export interface HistoryEntry {
   key: string;
   name: string;
   icon: string | null;
-  /** ok = expected step on time · late = expected step late / early · wrong = wrong ability or refused · queued = waits for adrenaline/cooldown · auto = Revolution · other = prayer / weapon switch outside the rotation */
-  kind: 'ok' | 'late' | 'wrong' | 'queued' | 'auto' | 'other';
+  /** only things that really happened: ok = expected step on time · late = expected step late / early · wrong = a wrong ability that cast · auto = Revolution · other = prayer / weapon switch outside the rotation. Refused presses (adrenaline, cooldown, requirement) are not listed. */
+  kind: 'ok' | 'late' | 'wrong' | 'auto' | 'other';
   /** rotation step it completed */
   step?: number;
   text: string;
@@ -1112,7 +1112,6 @@ export class Train implements OnDestroy {
       case 'wrong':
         this.counts.update((c) => ({ ...c, wrong: c.wrong + 1 }));
         this.feedback.set({ text: 'Wrong ability: ' + this.name(ev.key) + ' – ignored, on cooldown', cls: 'bad' });
-        this.log(ev.key, 'wrong', this.feedback()?.text ?? '');
         this.flash('wrong', ev.key, now, 250);
         break;
       case 'wrong-weapon':
@@ -1121,7 +1120,6 @@ export class Train implements OnDestroy {
           text: this.name(ev.key) + (ev.reason === 'weapon' ? ' needs a ' + (this.data.get(ev.key)?.ability?.style ?? this.data.get(ev.key)?.spec?.style ?? '') + ' weapon – you wield ' + (e.style ?? 'nothing') : ' is not the special attack of the wielded weapon'),
           cls: 'bad',
         });
-        this.log(ev.key, 'wrong', this.feedback()?.text ?? '');
         this.flash('wrong', ev.key, now, 300);
         break;
       case 'weapon':
@@ -1140,7 +1138,6 @@ export class Train implements OnDestroy {
       case 'wrong-book':
         this.counts.update((c) => ({ ...c, wrong: c.wrong + 1 }));
         this.feedback.set({ text: this.data.name('prayer:' + ev.id) + ' is a ' + (ev.book === 'Curses' ? 'curse' : 'standard prayer') + ' – your book is ' + (this.prayerBook() === 'Curses' ? 'Ancient Curses' : 'standard prayers') + ' (Loadout)', cls: 'bad' });
-        this.log('prayer:' + ev.id, 'wrong', this.feedback()?.text ?? '');
         this.flash('wrong', 'prayer:' + ev.id, now, 300);
         break;
       case 'attack': {
@@ -1158,17 +1155,14 @@ export class Train implements OnDestroy {
       }
       case 'no-adrenaline':
         this.feedback.set({ text: this.name(ev.key) + ' needs ' + ev.need + '% adrenaline, you have ' + Math.floor(ev.have) + '%' + (this.storage.settings().abilityQueueing ? ' – queued until you have it' : ''), cls: 'bad' });
-        this.log(ev.key, queueing ? 'queued' : 'wrong', this.feedback()?.text ?? '');
         this.flash('wrong', ev.key, now, 300);
         break;
       case 'on-cooldown':
         this.feedback.set({ text: this.name(ev.key) + ' is on cooldown for ' + (ev.readyInTicks * TICK_MS) / 1000 + ' s' + (this.storage.settings().abilityQueueing ? ' – queued' : ''), cls: 'bad' });
-        this.log(ev.key, queueing ? 'queued' : 'wrong', this.feedback()?.text ?? '');
         this.flash('wrong', ev.key, now, 300);
         break;
       case 'requirement':
         this.feedback.set({ text: this.name(ev.key) + ': ' + ev.text + (queueing ? ' – queued' : ''), cls: 'bad' });
-        this.log(ev.key, queueing ? 'queued' : 'wrong', this.feedback()?.text ?? '');
         this.flash('wrong', ev.key, now, 300);
         break;
       case 'recast':

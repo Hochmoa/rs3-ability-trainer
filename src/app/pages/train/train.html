@@ -334,7 +334,7 @@
     </div>
 
     <!-- what the server made of every press, in order – compare with the rotation strip above; always rendered so nothing below moves -->
-    <div class="history" title="Every processed input in order. Green = expected step on time, yellow = late or queued, red = wrong or refused, blue = Revolution, grey = prayer / weapon switch outside the rotation. The number is the rotation step it completed.">
+    <div class="history" title="Everything that really cast, in order – presses the game refused (not enough adrenaline, on cooldown, requirement missing) are not listed. Green = expected step on time, yellow = late, red = wrong ability, blue = Revolution, grey = prayer / weapon switch outside the rotation. The number is the rotation step it completed.">
       <span class="bar-label">Pressed</span>
       <div class="history-strip" #historyStrip>
         @for (h of history(); track h.id) {

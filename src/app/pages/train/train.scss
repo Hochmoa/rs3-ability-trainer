@@ -977,8 +977,7 @@
   &.ok {
     border-color: #4caf50;
   }
-  &.late,
-  &.queued {
+  &.late {
     border-color: #ffb300;
   }
   &.wrong {
