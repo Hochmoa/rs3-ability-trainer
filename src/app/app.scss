@@ -72,6 +72,12 @@ main {
   margin: 0 auto;
   padding: 20px 16px 80px;
   box-sizing: border-box;
+
+  /* the /focus popout: the routed view fills the window */
+  &.bare {
+    max-width: none;
+    padding: 0;
+  }
 }
 
 footer {

@@ -1,3 +1,4 @@
+@if (!bare()) {
 <header class="topbar">
   <a class="brand" routerLink="/">RS3 Ability Trainer</a>
   <nav>
@@ -22,8 +23,9 @@
     <a routerLink="/account" routerLinkActive="active" class="account">{{ supabase.profile()?.display_name ?? (supabase.user() ? 'Account' : 'Sign in') }}</a>
   </nav>
 </header>
+}
 
-<main>
+<main [class.bare]="bare()">
   @if (supabase.isBlocked()) {
     <div class="panel warning blocked">
       Your account is blocked{{ supabase.profile()?.blocked_reason ? ': ' + supabase.profile()?.blocked_reason : '' }}. You can keep training locally, but nothing is saved online any more.
@@ -32,6 +34,7 @@
   <router-outlet />
 </main>
 
+@if (!bare()) {
 <footer>
   Not affiliated with Jagex. Ability, prayer and item icons and names are © Jagex Ltd, taken from the
   <a href="https://runescape.wiki" target="_blank" rel="noopener">RuneScape Wiki</a> (CC BY-NC-SA 3.0). Non-commercial fan tool ·
@@ -44,10 +47,13 @@
     · <a class="support" [href]="supportUrl" target="_blank" rel="noopener">☕ {{ supportLabel }}</a>
   }
 </footer>
+}
 
 <consent-banner />
 <entity-tooltip />
-<support-nudge />
+@if (!bare()) {
+  <support-nudge />
+}
 <feedback-dialog />
 <app-toast />
 <app-dialog />

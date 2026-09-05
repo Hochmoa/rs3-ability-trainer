@@ -9,6 +9,13 @@
   "description": "Free RuneScape 3 rotation trainer: real 0.6 s ticks, 1.8 s global cooldown, adrenaline, ability queueing and ping simulation. Import PvME rotations and practise them.",
   "routes": [
     {
+      "path": "focus",
+      "title": "Focus view – RS3 Ability Trainer",
+      "h1": "Focus view",
+      "description": "Compact popout of the RS3 Ability Trainer for a small window next to the game or inside Alt1: rotation strip, tick and GCD bars, feedback and action bars.",
+      "noindex": true
+    },
+    {
       "path": "",
       "title": "RS3 Ability Trainer – Practise RuneScape 3 Rotations",
       "h1": "RS3 Ability Trainer",
