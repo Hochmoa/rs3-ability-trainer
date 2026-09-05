@@ -270,8 +270,15 @@ export interface Settings {
    * hit (a hit lands fully or misses), 'off' = every hit lands. Missing = 'scaled'.
    */
   hitChance?: HitChanceMode;
+  /**
+   * what the pages show: 'simple' = the core (pick a rotation, Start, press the keys, get feedback), 'advanced' = every
+   * panel and option (enemy, pre-build, HUD, gear, Revolution options, Loadout / Setups / Explore pages). The simulation
+   * is the same in both. Missing = 'simple'.
+   */
+  uiMode: UiMode;
 }
 
+export type UiMode = 'simple' | 'advanced';
 export type HitChanceMode = 'scaled' | 'roll' | 'off';
 export const HIT_CHANCE_MODES: { id: HitChanceMode; label: string }[] = [
   { id: 'scaled', label: 'Scaled damage (PvM, wiki)' },
@@ -334,6 +341,7 @@ export const DEFAULT_SETTINGS: Settings = {
   combatMode: 'manual',
   revolution: { ...DEFAULT_REVOLUTION },
   hitChance: 'scaled',
+  uiMode: 'simple',
 };
 
 // ---------------------------------------------------------------- equipment data (public/data/*.json)

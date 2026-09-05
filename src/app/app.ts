@@ -1,8 +1,9 @@
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { BarsSyncService } from './core/bars-sync.service';
 import { FeedbackService } from './core/feedback.service';
 import { SetupSyncService } from './core/setup-sync.service';
+import { StorageService } from './core/storage.service';
 import { SupabaseService } from './core/supabase.service';
 import { SyncService } from './core/sync.service';
 import { ConsentBanner } from './shared/consent-banner';
@@ -25,6 +26,9 @@ export class App {
   readonly build = BUILD;
   readonly supabase = inject(SupabaseService);
   readonly feedback = inject(FeedbackService);
+  private readonly storage = inject(StorageService);
+  /** Settings.uiMode: the Loadout / Setups / Explore pages are only in the menu in the advanced view (routes stay reachable) */
+  readonly advanced = computed(() => this.storage.settings().uiMode === 'advanced');
   /** created at start-up so the login effect and the change hooks are wired immediately */
   private readonly sync = inject(SyncService);
   private readonly barsSync = inject(BarsSyncService);

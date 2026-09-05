@@ -5,11 +5,15 @@
     <a routerLink="/rotations" routerLinkActive="active">Rotations</a>
     <a routerLink="/bars" routerLinkActive="active">Action bars</a>
     <a routerLink="/keybinds" routerLinkActive="active">Keybinds</a>
-    <a routerLink="/loadout" routerLinkActive="active">Loadout</a>
-    <a routerLink="/settings" routerLinkActive="active">Settings</a>
-    <a routerLink="/explore" routerLinkActive="active">Explore</a>
-    <a routerLink="/setups" routerLinkActive="active">Setups</a>
+    @if (advanced()) {
+      <a routerLink="/loadout" routerLinkActive="active">Loadout</a>
+    }
     <a routerLink="/presets" routerLinkActive="active">Presets</a>
+    <a routerLink="/settings" routerLinkActive="active">Settings</a>
+    @if (advanced()) {
+      <a routerLink="/explore" routerLinkActive="active">Explore</a>
+      <a routerLink="/setups" routerLinkActive="active">Setups</a>
+    }
     @if (supabase.isStaff()) {
       <a routerLink="/admin" routerLinkActive="active" class="admin-link">Admin</a>
     }

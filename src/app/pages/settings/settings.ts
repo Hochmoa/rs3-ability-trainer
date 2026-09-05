@@ -12,6 +12,14 @@ import { DialogService } from '../../shared/dialog';
       <h1>Settings</h1>
       <div class="form">
         <label>
+          <span>View</span>
+          <select [ngModel]="s().uiMode" (ngModelChange)="set('uiMode', $event)">
+            <option value="simple">Simple – rotation, bars, keys, feedback</option>
+            <option value="advanced">Advanced – everything</option>
+          </select>
+          <small>Simple hides the enemy, pre-build, buff HUD, gear panel and extra options on the Train page and the Loadout, Setups and Explore pages from the menu (they stay reachable by URL). The simulation is the same in both.</small>
+        </label>
+        <label>
           <span>Simulated ping (ms)</span>
           <input type="number" min="0" max="2000" step="5" [ngModel]="s().pingMs" (ngModelChange)="set('pingMs', $event)" />
           <small>Delay between your key press and the server seeing it. Default 60.</small>

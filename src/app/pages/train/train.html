@@ -19,7 +19,7 @@
           }
         </select>
       </label>
-      <label class="field" title="Gear, backpack and prayer book (Loadout page)">
+      <label class="field" [class.compact]="!advanced()" title="Gear, backpack and prayer book (Loadout page)">
         <span>Loadout</span>
         <select [ngModel]="storage.activeLoadoutId()" (ngModelChange)="pickLoadout($event)" [disabled]="running()">
           @for (l of storage.loadouts(); track l.id) {
@@ -45,7 +45,9 @@
       <div class="actions">
         @if (!running()) {
           <button class="btn btn-primary btn-start" (click)="start()" [disabled]="!canStart()">Start</button>
-          <button class="btn" [class.active]="editLayout()" (click)="editLayout.set(!editLayout())" title="Arrange the action bars: move with the arrows, toggle half width, rearrange slots">{{ editLayout() ? 'Done' : 'Layout' }}</button>
+          @if (advanced()) {
+            <button class="btn" [class.active]="editLayout()" (click)="editLayout.set(!editLayout())" title="Arrange the action bars: move with the arrows, toggle half width, rearrange slots">{{ editLayout() ? 'Done' : 'Layout' }}</button>
+          }
         } @else {
           <button class="btn btn-start" (click)="stop()">Stop (Esc)</button>
         }
@@ -63,13 +65,15 @@
           Recharge +10%/tick
         </label>
       </span>
+      @if (advanced()) {
       <span class="opt-group" title="Bone Shield incantation up from the start. It stands in for a shield: Reflect, Immortality, Rejuvenate and Preparation work with either; Debilitate, Resonance, Divert and Barricade scale with the tier – Greater (⌊50% × Necromancy⌋) is the one to use.">
         <span class="opt-label">Bone Shield</span>
         <label class="pill"><input type="radio" name="boneShield" [checked]="storage.settings().boneShield === 'none'" (change)="setSetting('boneShield', 'none')" [disabled]="running()" /> none</label>
         <label class="pill"><input type="radio" name="boneShield" [checked]="storage.settings().boneShield === 'lesser'" (change)="setSetting('boneShield', 'lesser')" [disabled]="running()" /> Lesser</label>
         <label class="pill"><input type="radio" name="boneShield" [checked]="storage.settings().boneShield === 'greater'" (change)="setSetting('boneShield', 'greater')" [disabled]="running()" /> Greater</label>
       </span>
-      @if (revolution()) {
+      }
+      @if (advanced() && revolution()) {
         <span class="opt-group revo" title="Revolution: size and which ability types fire on their own">
           <span class="opt-label">Revolution</span>
           <label class="slots" title="Revolution size: how many slots of the main bar are used automatically (1-14)">
@@ -85,9 +89,14 @@
       <span class="muted hint">
         Ping {{ storage.settings().pingMs }} ms ± {{ storage.settings().jitterMs }} · queueing {{ storage.settings().abilityQueueing ? 'on' : 'off' }}@if (storage.settings().loop) { · loop } · {{ prayerBook() === 'Curses' ? 'curses' : 'prayers' }} · <a routerLink="/settings">settings</a>
       </span>
+      <label class="pill adv" title="Advanced view: enemy attacks, pre-build, buff and prayer HUD, equipment panel, Revolution and Bone Shield options, layout editor. The simulation is the same either way.">
+        <input type="checkbox" [checked]="advanced()" (change)="setUiMode(!advanced())" [disabled]="running()" />
+        Advanced
+      </label>
     </div>
   </div>
 
+  @if (advanced()) {
   <div class="panel enemy" [class.on]="enemy().enabled">
     <div class="enemy-head">
       <label class="check">
@@ -264,6 +273,7 @@
       </div>
     }
   </div>
+  }
 
   <div cdkDropListGroup>
   @if (unreachable().length) {
@@ -424,7 +434,7 @@
           <span class="value">{{ adrenaline() | number: '1.0-0' }}%</span>
         </div>
       </div>
-      @if (enemy().lifePoints > 0) {
+      @if (advanced() && enemy().lifePoints > 0) {
         <div class="bar-row">
           <span class="bar-label">Target <small>{{ enemy().preset ? enemy().name : 'life points' }}</small></span>
           <div class="bar target">
@@ -435,7 +445,8 @@
       }
     </div>
 
-    <!-- HUD: buffs, target debuffs, prayers, carried weapons and the incoming attack – fixed height, so the bars below never move -->
+    <!-- HUD: buffs, target debuffs, prayers, carried weapons and the incoming attack – fixed height, so the bars below never move; the simple view omits it (the view cannot change during a session) -->
+    @if (advanced()) {
     <div class="hud">
       <div class="hud-rows">
         <div class="hud-row">
@@ -519,6 +530,7 @@
         </div>
       }
     </div>
+    }
 
     <div class="action-bars" [class.editing]="editLayout() && !running()">
       @for (b of bars(); track b.position) {
@@ -560,19 +572,19 @@
       @if (revolution()) { <span class="muted" title="abilities Revolution cast on its own">Auto {{ counts().auto }}</span> }
       <span class="muted">Damage {{ damage() | number: '1.0-0' }}</span>
       <span class="muted">DPS {{ dps() | number: '1.0-0' }}</span>
-      @if (hitChance() !== null) {
+      @if (advanced() && hitChance() !== null) {
         <span class="muted" title="hit chance of the wielded style against the target's affinity, Defence level and armour with the active prayers (wiki: affinity × accuracy / armour rating, capped at 100%)">Hit chance {{ hitChance()! * 100 | number: '1.0-0' }}%</span>
         <span [class]="misses() ? 'warn' : 'muted'">Misses {{ misses() }}</span>
       }
       @if (killedAtMs(); as ms) { <span class="good">Kill {{ (ms / 1000) | number: '1.1-1' }} s</span> }
-      @if (enemy().enabled) {
+      @if (advanced() && enemy().enabled) {
         <span class="good">Prayed {{ prayerStats().prayed }}/{{ prayerStats().attacks }}</span>
         <span class="bad">Hits taken {{ prayerStats().hits }}</span>
         @if (prayerStats().absorbed) { <span class="good">Absorbed {{ prayerStats().absorbed }}</span> }
         <span class="muted">Soul Split ticks {{ prayerStats().soulSplitTicks }}</span>
       }
     </div>
-    @if (enemy().enabled && attackLog().length) {
+    @if (advanced() && enemy().enabled && attackLog().length) {
       <div class="attack-log">
         @for (a of attackLog(); track a.tick) {
           <span class="hit" [class.good]="a.prayed || a.absorbed" [class.bad]="!a.prayed && !a.absorbed" [title]="a.style + (a.absorbed ? ' – absorbed by ' + buffName(a.absorbed) : a.prayed ? ' – prayed' : ' – hit')">
@@ -582,11 +594,13 @@
       </div>
     }
    </div>
+   @if (advanced()) {
    <aside class="gear-side">
     <div class="gear-head"><b>Equipment &amp; backpack</b> <a routerLink="/loadout">edit</a></div>
     <gear-panel [equipment]="gearState().equipment" [inventory]="gearState().inventory" [live]="true" [cdkDrops]="!running()" [dragOut]="!running()" [usable]="gearUsable()" [keyOf]="gearKey" (action)="onGear($event)" (cdkDrop)="dropIntoInventory($event.index, $event.data)" />
     <p class="muted small">{{ running() ? 'Click a weapon to wield it, a potion to drink it, armour to wear it; click a worn item to take it off. Changes are not saved to the loadout.' : 'While training: click to switch weapons, drink potions and swap armour. Set effects follow what you wear. Drag a potion or weapon from the backpack onto a bar slot, or a missing one into the backpack.' }}</p>
    </aside>
+   }
   </div>
 
   </div>
@@ -597,12 +611,12 @@
       @if (damage() > 0) {
         <p class="damage-summary">
           <b>{{ damage() | number: '1.0-0' }} damage</b> in {{ hits() }} hits · {{ dps() | number: '1.0-0' }} DPS
-          @if (hitChance() !== null) { · hit chance {{ hitChance()! * 100 | number: '1.0-0' }}% · {{ misses() }} {{ misses() === 1 ? 'miss' : 'misses' }} }
+          @if (advanced() && hitChance() !== null) { · hit chance {{ hitChance()! * 100 | number: '1.0-0' }}% · {{ misses() }} {{ misses() === 1 ? 'miss' : 'misses' }} }
           @if (killedAtMs(); as ms) { · target killed after {{ (ms / 1000) | number: '1.1-1' }} s }
-          <small class="muted">(level 99, no armour bonus – see the wiki's ability damage formula)</small>
+          @if (advanced()) { <small class="muted">(level 99, no armour bonus – see the wiki's ability damage formula)</small> }
         </p>
       }
-      @if (enemy().enabled) {
+      @if (advanced() && enemy().enabled) {
         <p class="prayer-summary">
           <b>Prayer score {{ prayerScore().score }} / {{ prayerScore().max }} ({{ prayerScore().pct }}%)</b> ·
           {{ prayerStats().prayed }} of {{ prayerStats().attacks }} {{ enemy().name }} attacks prayed, {{ prayerStats().hits }} hits taken{{ prayerStats().absorbed ? ', ' + prayerStats().absorbed + ' absorbed by defensives' : '' }},
