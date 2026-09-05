@@ -37,6 +37,7 @@ export class Setups {
   readonly myId = computed(() => this.supabase.user()?.id ?? null);
 
   constructor() {
+    void this.data.ensure('weapons', 'perks'); // names in the loadout summaries
     void this.load();
   }
 

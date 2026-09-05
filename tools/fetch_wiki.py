@@ -213,8 +213,11 @@ def damage_bonus(j: dict) -> dict | None:
 
 
 def write_json(path: Path, data) -> None:
+    """Writes a data file slimmed for the browser (slim_data.py: one record per line, default icons left out, unread columns dropped)."""
+    from slim_data import dumps, slim
+
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+    path.write_text(dumps(slim(path.stem, data)), encoding="utf-8", newline="\n")
 
 
 def image_urls_any(names: list[str]) -> dict[str, str]:

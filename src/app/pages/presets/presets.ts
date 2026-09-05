@@ -1,29 +1,12 @@
-import { HttpClient } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { DataService, GearView } from '../../core/data.service';
 import { parsePvme } from '../../core/pvme';
-import { BAR_POSITIONS, BAR_SLOTS, BarProfileData, EquipSlot, Equipment, INVENTORY_SIZE, ItemRef, Loadout, Rotation, RotationStep, SPEC_KEY, Style4, defaultActionBars, entityKey, isStyle4, newLoadout, profileData } from '../../core/models';
+import { BAR_POSITIONS, BAR_SLOTS, BarProfileData, BossPreset, Equipment, INVENTORY_SIZE, Loadout, Rotation, RotationStep, SPEC_KEY, Style4, defaultActionBars, entityKey, isStyle4, newLoadout, profileData } from '../../core/models';
 import { StorageService } from '../../core/storage.service';
 import { DialogService } from '../../shared/dialog';
 import { GearTip } from '../../shared/tooltip';
 import { ToastService } from '../../shared/toast';
-
-/** One PvME boss setup (public/data/presets.json, built by tools/fetch-presets.py). */
-export interface BossPreset {
-  id: string;
-  boss: string;
-  style: string;
-  title: string;
-  guide: string;
-  presetUrl: string | null;
-  notes: string;
-  equipment: Partial<Record<EquipSlot | 'aura', ItemRef>>;
-  inventory: (ItemRef | null)[];
-  /** items of the PvME preset the trainer does not model (food, brews, familiars ...) */
-  unknown: string[];
-  rotations: { name: string; text: string }[];
-}
 
 interface PresetView {
   preset: BossPreset;
@@ -44,7 +27,6 @@ interface PresetView {
 export class Presets {
   readonly data = inject(DataService);
   readonly storage = inject(StorageService);
-  private http = inject(HttpClient);
   private dialogs = inject(DialogService);
   private toast = inject(ToastService);
   private router = inject(Router);
@@ -57,7 +39,7 @@ export class Presets {
   readonly styleFilter = signal<string>('all');
 
   readonly views = computed<PresetView[]>(() => {
-    if (!this.data.loaded()) return [];
+    if (!this.data.loadoutReady()) return [];
     const f = this.styleFilter();
     return this.presets()
       .filter((p) => f === 'all' || p.style === f)
@@ -72,16 +54,17 @@ export class Presets {
   readonly styles = computed(() => [...new Set(this.presets().map((p) => p.style))]);
 
   constructor() {
-    this.http.get<BossPreset[]>('data/presets.json').subscribe({
-      next: (p) => {
-        this.presets.set(p);
+    // the presets plus everything their items and rotations resolve against
+    this.data.ensure('presets', 'gear', 'weapons', 'perks', 'aliases').then(
+      () => {
+        this.presets.set(this.data.presets());
         this.loading.set(false);
       },
-      error: () => {
+      () => {
         this.error.set('presets.json could not be loaded');
         this.loading.set(false);
       },
-    });
+    );
   }
 
   toggle(id: string): void {

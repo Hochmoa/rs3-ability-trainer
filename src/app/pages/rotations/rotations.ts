@@ -30,6 +30,11 @@ export class Rotations {
   private dialogs = inject(DialogService);
   readonly storage = inject(StorageService);
   readonly data = inject(DataService);
+
+  constructor() {
+    // weapons are entities of the catalog (a step can wield one); the PvME import loads the alias table on use
+    void this.data.ensure('weapons');
+  }
   readonly supabase = inject(SupabaseService);
   readonly sync = inject(SyncService);
   private router = inject(Router);
@@ -124,9 +129,10 @@ export class Rotations {
   }
 
   /** Parses PvME notation and appends the steps to the rotation being edited. */
-  importPvme(): void {
+  async importPvme(): Promise<void> {
     const text = this.importText().trim();
     if (!text) return;
+    await this.data.ensure('aliases', 'weapons');
     const { steps, unknown } = parsePvme(text, (alias) => this.data.resolvePvmeAlias(alias));
     if (!steps.length) {
       this.importReport.set('Nothing recognised.');

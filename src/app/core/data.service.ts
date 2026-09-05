@@ -1,9 +1,33 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { forkJoin } from 'rxjs';
+import { firstValueFrom, forkJoin } from 'rxjs';
 import { ruleFor } from '../engine/rules';
 import { EngineBuff, EngineEntity } from '../engine/trainer-engine';
-import { ACTIONS, Ability, Action, Buff, EntityKind, EquipSlot, Familiar, GearItem, ItemRef, Perk, Prayer, RotationStep, SPEC_KEY, SPELLBOOK_NAMES, SetEffect, Special, Spell, Style, Weapon, WeaponSpec, entityKey, scrollSpecial, weaponSlot } from './models';
+import { ACTIONS, Ability, Action, BossPreset, Buff, EntityKind, EquipSlot, Familiar, GearItem, ItemRef, Perk, Prayer, RotationStep, SPEC_KEY, SPELLBOOK_NAMES, SetEffect, Special, Spell, Style, Weapon, WeaponSpec, entityKey, scrollSpecial, weaponSlot } from './models';
+
+/**
+ * The heavy data files, loaded on demand with `DataService.ensure()`: the full gear and weapon catalogs (~1 MB each),
+ * Invention perks, the PvME boss presets and the PvME alias table. Everything else (abilities, prayers, specials,
+ * spells, specs, buffs, set effects, familiars) is small and loaded at start-up.
+ */
+export type Catalog = 'gear' | 'weapons' | 'perks' | 'presets' | 'aliases';
+
+const CATALOG_FILES: Record<Catalog, string> = {
+  gear: 'data/gear.json',
+  weapons: 'data/weapons.json',
+  perks: 'data/perks.json',
+  presets: 'data/presets.json',
+  aliases: 'data/pvme-aliases.json',
+};
+
+/**
+ * gear.json / weapons.json / perks.json leave the `icon` out when it is the default `assets/<dir>/<id>.png`
+ * (tools/slim_data.py); `null` stays `null` (no icon on the wiki).
+ */
+function withIcons<T extends { id: string; icon?: string | null }>(items: T[], dir: string): T[] {
+  for (const it of items) if (it.icon === undefined) it.icon = 'assets/' + dir + '/' + it.id + '.png';
+  return items;
+}
 
 /** Anything that can sit in a rotation / get a keybind, in one shape for lists and tooltips. */
 export interface Entity {
@@ -62,15 +86,25 @@ export class DataService {
   readonly familiars = signal<Familiar[]>([]);
   /** combat spells of the three spellbooks (spells.json) */
   readonly spells = signal<Spell[]>([]);
+  /** every weapon, shield and defender (weapons.json) – empty until `ensure('weapons')` */
   readonly weapons = signal<Weapon[]>([]);
   readonly specs = signal<WeaponSpec[]>([]);
+  /** Invention perks (perks.json) – empty until `ensure('perks')` */
   readonly perks = signal<Perk[]>([]);
   readonly setEffects = signal<SetEffect[]>([]);
-  /** every wearable non-weapon item (gear.json) */
+  /** every wearable non-weapon item (gear.json) – empty until `ensure('gear')` */
   readonly gear = signal<GearItem[]>([]);
-  /** PvME emoji alias → entity key ("deathskulls" → "ability:death-skulls", "omniguard" → "gear:omni-guard") */
+  /** PvME emoji alias → entity key ("deathskulls" → "ability:death-skulls", "omniguard" → "gear:omni-guard") – empty until `ensure('aliases')` */
   readonly pvmeAliases = signal<Record<string, string>>({});
+  /** PvME boss setups (presets.json) – empty until `ensure('presets')` */
+  readonly presets = signal<BossPreset[]>([]);
+  /** the core data files (everything but the catalogs) have arrived */
   readonly loaded = signal(false);
+  /** which on-demand catalogs have arrived (see `ensure`) */
+  readonly catalogs = signal<Record<Catalog, boolean>>({ gear: false, weapons: false, perks: false, presets: false, aliases: false });
+  /** everything a loadout resolves against is in: core files + gear, weapons and perks */
+  readonly loadoutReady = computed(() => this.loaded() && this.has('gear', 'weapons', 'perks'));
+  private readonly inflight = new Map<Catalog, Promise<void>>();
 
   readonly buffById = computed(() => new Map(this.buffs().map((b) => [b.id, b])));
   readonly weaponById = computed(() => new Map(this.weapons().map((w) => [w.id, w])));
@@ -99,12 +133,8 @@ export class DataService {
       prayers: this.http.get<Prayer[]>('data/prayers.json'),
       specials: this.http.get<Special[]>('data/specials.json'),
       spells: this.http.get<Spell[]>('data/spells.json'),
-      weapons: this.http.get<Weapon[]>('data/weapons.json'),
       specs: this.http.get<WeaponSpec[]>('data/specs.json'),
-      perks: this.http.get<Perk[]>('data/perks.json'),
       setEffects: this.http.get<SetEffect[]>('data/set-effects.json'),
-      aliases: this.http.get<Record<string, string>>('data/pvme-aliases.json'),
-      gear: this.http.get<GearItem[]>('data/gear.json'),
       familiars: this.http.get<Familiar[]>('data/familiars.json'),
     }).subscribe({
       next: (d) => {
@@ -114,16 +144,65 @@ export class DataService {
         this.specials.set([...d.specials, ...d.familiars.map(scrollSpecial)]);
         this.familiars.set(d.familiars);
         this.spells.set(d.spells);
-        this.weapons.set(d.weapons);
         this.specs.set(d.specs);
-        this.perks.set(d.perks);
         this.setEffects.set(d.setEffects);
-        this.pvmeAliases.set(d.aliases);
-        this.gear.set(d.gear);
         this.loaded.set(true);
       },
       error: (err) => console.error('data files failed to load', err),
     });
+  }
+
+  /** true once every named catalog has arrived (reactive: reads the `catalogs` signal) */
+  has(...names: Catalog[]): boolean {
+    const c = this.catalogs();
+    return names.every((n) => c[n]);
+  }
+
+  /**
+   * Loads the named catalogs once; resolves when all of them are in. Idempotent: repeated calls share one request
+   * per file, a failed request is retried by the next call. Pages call this for the files they need and read the
+   * signals (`gear()`, `weaponById()` …), which fill in as the files arrive.
+   */
+  ensure(...names: Catalog[]): Promise<void> {
+    return Promise.all(names.map((n) => this.fetchCatalog(n))).then(() => undefined);
+  }
+
+  private fetchCatalog(name: Catalog): Promise<void> {
+    let p = this.inflight.get(name);
+    if (p) return p;
+    p = firstValueFrom(this.http.get<unknown>(CATALOG_FILES[name])).then(
+      (d) => {
+        this.storeCatalog(name, d);
+        this.catalogs.update((c) => ({ ...c, [name]: true }));
+      },
+      (err: unknown) => {
+        this.inflight.delete(name);
+        console.error(CATALOG_FILES[name] + ' failed to load', err);
+        throw err;
+      },
+    );
+    this.inflight.set(name, p);
+    return p;
+  }
+
+  private storeCatalog(name: Catalog, d: unknown): void {
+    switch (name) {
+      case 'gear':
+        this.gear.set(withIcons(d as GearItem[], 'gear'));
+        break;
+      case 'weapons':
+        this.weapons.set(withIcons(d as Weapon[], 'weapons'));
+        break;
+      case 'perks':
+        this.perks.set(withIcons(d as Perk[], 'perks'));
+        break;
+      case 'presets':
+        this.presets.set(d as BossPreset[]);
+        break;
+      case 'aliases':
+        this.pvmeAliases.set(d as Record<string, string>);
+        break;
+    }
   }
 
   get(key: string): Entity | undefined {

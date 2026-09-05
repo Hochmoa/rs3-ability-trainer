@@ -6,7 +6,7 @@ import { Weapon } from '../core/models';
 
 function weapon(slot: Weapon['slot'], tier: number): Weapon {
   const ad = slot === '2h' ? 14.4 * tier : slot === 'main' ? 9.6 * tier : 4.8 * tier;
-  return { id: 'w-' + slot, name: 'w', style: 'Necromancy', slot, type: null, tier, tierDamage: tier, tierAccuracy: tier, speed: null, attackStyle: null, range: null, damage: 0, accuracy: 0, abilityDamage: ad, armour: 0, lifePoints: 0, charges: null, spec: null, innateMastery: false, icon: null, role: null };
+  return { id: 'w-' + slot, name: 'w', style: 'Necromancy', slot, type: null, tier, tierDamage: tier, tierAccuracy: tier, attackStyle: null, accuracy: 0, abilityDamage: ad, armour: 0, lifePoints: 0, spec: null, icon: null, role: null };
 }
 
 function ability(id: string, extra: Partial<EngineEntity> = {}): EngineEntity {
