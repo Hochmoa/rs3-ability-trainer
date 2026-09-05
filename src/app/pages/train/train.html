@@ -159,6 +159,21 @@
           Recharge +10%/tick
         </label>
       </span>
+      <span class="opt-group" title="Voice coach: the trainer says the keys out loud (3, Ctrl 4, Shift Q) – for players who learn by ear. Settings → Coach for volume, lead time and voice.">
+        <span class="opt-label">Voice</span>
+        <label class="pill" title="After every cast the keys of the next steps are said out loud (Q, then 3) – you hear what comes next while the global cooldown runs">
+          <input type="checkbox" [checked]="storage.settings().coach.callouts" (change)="setCoach('callouts', !storage.settings().coach.callouts)" [disabled]="running()" />
+          Call-outs
+        </label>
+        <label class="pill" title="Coach: every key is called at the moment to press it, in the tick rhythm like a rhythm game – press along. Falls behind with you: the next key is only called after the actual cast.">
+          <input type="checkbox" [checked]="storage.settings().coach.lead" (change)="setCoach('lead', !storage.settings().coach.lead)" [disabled]="running()" />
+          Coach
+        </label>
+        <label class="pill" title="Click on every game tick (0.6 s) and a higher beep the moment the global cooldown ends – the moment to press">
+          <input type="checkbox" [checked]="storage.settings().coach.metronome" (change)="setCoach('metronome', !storage.settings().coach.metronome)" [disabled]="running()" />
+          Metronome
+        </label>
+      </span>
       @if (advanced()) {
       <span class="opt-group" title="Bone Shield incantation up from the start. It stands in for a shield: Reflect, Immortality, Rejuvenate and Preparation work with either; Debilitate, Resonance, Divert and Barricade scale with the tier – Greater (⌊50% × Necromancy⌋) is the one to use.">
         <span class="opt-label">Bone Shield</span>

@@ -1,9 +1,11 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { HIT_CHANCE_MODES, Settings as SettingsModel } from '../../core/models';
+import { HIT_CHANCE_MODES, Settings as SettingsModel, CoachSettings } from '../../core/models';
 import { ALT1_ADD_URL } from '../../core/popout';
+import { CoachService } from '../../core/coach.service';
 import { StorageService } from '../../core/storage.service';
 import { DialogService } from '../../shared/dialog';
+import { ToastService } from '../../shared/toast';
 
 @Component({
   selector: 'app-settings',
@@ -69,6 +71,58 @@ import { DialogService } from '../../shared/dialog';
         then click the link below – Alt1 opens it and asks to add the app. The same view opens in a browser popup with "Popout" on the Train page.
       </p>
       <a class="btn" [href]="ALT1_ADD_URL" title="alt1://addapp/… – needs the Alt1 Toolkit installed">Add to Alt1</a>
+      <h2>Coach</h2>
+      <p class="muted small">
+        The trainer calls the keys out loud – "3", "Ctrl 4", "Shift Q" – like a caller in a rhythm game, and clicks the tick rhythm.
+        Switched on and off with the Voice pills on the Train page; the sound starts with the Start button.
+      </p>
+      <div class="form">
+        <label class="check">
+          <input type="checkbox" [ngModel]="s().coach.callouts" (ngModelChange)="setCoach('callouts', $event)" />
+          <span>Call-outs</span>
+        </label>
+        <small class="indent">After every cast the keys of the next steps are said at once ("Q, then 3") – you hear what comes next while the global cooldown runs.</small>
+        <label class="check">
+          <input type="checkbox" [ngModel]="s().coach.lead" (ngModelChange)="setCoach('lead', $event)" />
+          <span>Coach mode – call every key at its tick</span>
+        </label>
+        <small class="indent">
+          Every step is called at the moment it should be pressed: the next ability when the global cooldown ends (or a channel finishes), prayers, potions and switches
+          on the ticks in between. The voice follows the engine's clock and waits for your actual cast when you fall behind – the scoring is the same as without it.
+        </small>
+        <label class="check">
+          <input type="checkbox" [ngModel]="s().coach.metronome" (ngModelChange)="setCoach('metronome', $event)" />
+          <span>Metronome</span>
+        </label>
+        <small class="indent">A click on every game tick (0.6 s) and a higher beep the moment the global cooldown ends. Sample-accurate (Web Audio).</small>
+        <label>
+          <span>Volume ({{ s().coach.volume }}%)</span>
+          <input type="range" min="0" max="100" step="5" [ngModel]="s().coach.volume" (ngModelChange)="setCoach('volume', $event)" />
+        </label>
+        <label>
+          <span>Call-out lead (ms)</span>
+          <input type="number" min="0" max="1000" step="10" [ngModel]="s().coach.leadMs" (ngModelChange)="setCoach('leadMs', $event)" />
+          <small>
+            How long before the tick the voice starts, on top of the measured start-up delay of the speech engine
+@if (coach.latencyMs()) { (measured: {{ coach.latencyMs() }} ms)}. Default 250 – raise it when the voice comes too late, lower it when it runs ahead of the beep.
+          </small>
+        </label>
+        <label>
+          <span>Voice</span>
+          <select [ngModel]="s().coach.voice" (ngModelChange)="setCoach('voice', $event)">
+            <option value="">automatic (English)</option>
+            @for (v of coach.voices(); track v.voiceURI) { <option [value]="v.voiceURI">{{ v.name }} ({{ v.lang }})</option> }
+          </select>
+          <small>
+            @if (!coach.supported.speech) { This browser has no speech synthesis – only the metronome works. }
+            @else if (!coach.voices().length) { No voices installed – the browser's speech engine has nothing to speak with. }
+            @else { The browser's own voices; a local one answers fastest. }
+          </small>
+        </label>
+        <div>
+          <button class="btn" (click)="test()" [disabled]="testing()">{{ testing() ? 'Speaking …' : 'Test: "Ctrl 4, then 3"' }}</button>
+        </div>
+      </div>
     </div>
 
     <div class="panel">
@@ -110,7 +164,10 @@ import { DialogService } from '../../shared/dialog';
 })
 export class Settings {
   private dialogs = inject(DialogService);
+  private toast = inject(ToastService);
+  readonly coach = inject(CoachService);
   readonly storage = inject(StorageService);
+  readonly testing = signal(false);
   readonly s = this.storage.settings;
   readonly HIT_CHANCE_MODES = HIT_CHANCE_MODES;
   readonly ALT1_ADD_URL = ALT1_ADD_URL;
@@ -124,6 +181,27 @@ export class Settings {
     if (typeof next.hitDelayTicks !== 'number' || isNaN(next.hitDelayTicks)) next.hitDelayTicks = 0;
     next.hitDelayTicks = Math.max(0, Math.min(5, Math.round(next.hitDelayTicks)));
     void this.storage.saveSettings(next);
+  }
+
+  setCoach<K extends keyof CoachSettings>(key: K, value: CoachSettings[K]): void {
+    const c = { ...this.s().coach, [key]: value };
+    if (typeof c.volume !== 'number' || isNaN(c.volume)) c.volume = 0;
+    c.volume = Math.max(0, Math.min(100, Math.round(c.volume)));
+    if (typeof c.leadMs !== 'number' || isNaN(c.leadMs)) c.leadMs = 0;
+    c.leadMs = Math.max(0, Math.min(1000, Math.round(c.leadMs)));
+    this.set('coach', c);
+  }
+
+  /** runs inside the click: browsers only start audio from a user gesture */
+  async test(): Promise<void> {
+    this.testing.set(true);
+    this.coach.configure(this.s().coach);
+    const ok = await this.coach.test();
+    if (!ok) this.toast.show('The browser blocked the sound – allow audio for this site and try again.', 'warn');
+    window.setTimeout(() => {
+      this.testing.set(false);
+      this.coach.disable();
+    }, 2500);
   }
 
   async clearAll(): Promise<void> {
