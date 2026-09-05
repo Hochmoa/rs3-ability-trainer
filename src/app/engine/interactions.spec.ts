@@ -23,7 +23,7 @@ function ability(id: string): EngineEntity {
 }
 
 const T = 600;
-const ON: Omit<EngineConfig, 'loadout'> = { pingMs: 0, jitterMs: 0, abilityQueueing: true, loop: true };
+const ON: Omit<EngineConfig, 'loadout'> = { pingMs: 0, jitterMs: 0, autoAttacks: false, abilityQueueing: true, loop: true };
 
 /** Engine over the given ability ids; every id is also in the catalog. Deterministic RNG (no crits, no procs). */
 function make(ids: string[], loadout: Partial<ResolvedLoadout> = {}, cfg: Partial<EngineConfig> = {}): TrainerEngine {

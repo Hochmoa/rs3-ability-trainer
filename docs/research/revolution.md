@@ -59,6 +59,16 @@ Legend: **[VERIFIED]** = quoted from the wiki. **[INFERRED]** = my reading of th
 - **[MODEL]** Necromancy incantations (Conjure X, Invoke Death, ...) are GCD abilities without an "Enhanced/Threshold/Ultimate"
   class; the wiki's Necromancy Revolution bars contain the conjures, so they follow the **Basic** toggle.
 
+## 3b. Basic attacks are the last resort
+
+- **[VERIFIED]** "during Revolution, basic attacks are never used unless there are no other useable abilities within the action
+  bar's specified Revolution size, even if basic attacks are placed first in the action bar." (https://runescape.wiki/w/Basic_attacks);
+  Necromancy (ability): "Regardless of the setting, Revolution will only trigger this ability when there are no other automatically
+  triggered abilities available on the action bar."
+- **[MODEL]** `revolutionChoice` skips Attack / Ranged / Magic / Necromancy while scanning and returns the leftmost usable one only
+  when no other slot in the range can cast. The full-manual automatic basic attack (`EngineConfig.autoAttacks`) is inactive in
+  Revolution mode – the bar handles it.
+
 ## 4. What Revolution never triggers
 
 - **[VERIFIED]** "Revolution will no longer trigger special attacks." (13 November 2017 hotfix) – neither the Weapon Special

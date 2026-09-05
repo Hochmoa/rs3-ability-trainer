@@ -95,6 +95,12 @@ export interface EngineConfig {
    * 'roll': the pre-2024 / PvP model – every hit rolls against the hit chance and either lands in full or misses.
    */
   hitChanceModel?: 'scaled' | 'roll';
+  /**
+   * The wielded style's basic attack fires on its own when the global cooldown ends and nothing was pressed or queued
+   * ("used whenever other abilities are not being cast" – docs/research/mechanics.md §3): a late press then waits for the
+   * basic attack's GCD. Default true; off = the in-game Combat Mode toggle, or tests that want plain timing.
+   */
+  autoAttacks?: boolean;
 }
 
 /**
@@ -170,6 +176,10 @@ export interface EngineEntity {
   offsetTicks?: number;
   /** rotation steps only: free text from an imported rotation, skipped automatically */
   isNote?: boolean;
+  /** rotation steps only: PvME "asphyx (4t)" – the next ability cancels this channel this many ticks after the cast, so it is due there */
+  cancelAfterTicks?: number;
+  /** rotation steps only: PvME "7 hit rapid" – the next ability is due on the tick this channel's n-th hit lands */
+  afterHits?: number;
 }
 
 export interface ActiveBuff {
@@ -240,6 +250,11 @@ export type EngineEvent =
   | { kind: 'killed'; tick: number }
   /** Revolution cast `key` on its own; `matched` = it was the expected step (a 'fired' result with auto: true follows) */
   | { kind: 'auto'; key: string; tick: number; matched: boolean; expected: string }
+  /**
+   * the basic attack fired on its own because nothing was pressed or queued when the GCD ended (`dueTick` = when the next
+   * step was due); `matched` = it was the expected step (an "(auto)" step); otherwise the next press waits a GCD ("+1 GCD")
+   */
+  | { kind: 'auto-attack'; key: string; tick: number; matched: boolean; expected: string; dueTick: number }
   | { kind: 'finished' };
 
 interface PendingInput {
@@ -256,7 +271,16 @@ interface Pending {
   notified?: boolean;
   /** chosen by Revolution, not pressed */
   auto?: boolean;
+  /** the automatic basic attack (also `auto`) */
+  autoAttack?: boolean;
+  /** pressed on the cast tick while this was queued: it queues behind (the bypass window is the tick before) */
+  next?: PendingInput;
 }
+
+/** hit key of the automatic basic attack (the cast itself keeps the ability's key) */
+export const AUTO_ATTACK_KEY = 'auto-attack';
+/** the basic attack of each style (abilities.json `basicAttack`) */
+export const BASIC_ATTACK_OF: Partial<Record<Style, string>> = { Melee: 'attack', Ranged: 'ranged', Magic: 'magic', Necromancy: 'necromancy' };
 
 interface ScheduledHit {
   key: string;
@@ -291,6 +315,15 @@ interface ScheduledHit {
   noStack?: boolean;
   /** tick of the cast that scheduled the hit (a bleed's later ticks follow the first one's hit roll) */
   castTick?: number;
+  /** the hit records what it dealt before on-npc effects here (Bloat's initial hit, crit included) */
+  shareOut?: SharedHit;
+  /** the hit deals `share` of the linked hit's recorded damage instead of a roll of its own (Bloated: 25% of the initial hit) */
+  shareIn?: { link: SharedHit; share: number };
+}
+
+/** damage of a hit before on-npc effects (target debuffs, hit chance), read by the hits that are a share of it; null until it landed */
+interface SharedHit {
+  amount: number | null;
 }
 
 interface SequenceState {
@@ -326,6 +359,10 @@ export class TrainerEngine {
   channel: ActiveChannel | null = null;
   /** end tick of the channel the last GCD cast started (null once it was cancelled or another ability cast): the next ability is due there */
   private lastChannelEnd: number | null = null;
+  /** tick the next step was due at before automatic basic attacks slipped in (null = none did): the late press is scored from it */
+  private autoDue: number | null = null;
+  /** buffs applied with a conjured spirit's next hit (Haunted after Command Vengeful Ghost) */
+  private spiritHitDeferred: { spirit: string; apply: (tick: number) => void }[] = [];
   /** weapons in hand */
   wield: Wield = { mainHand: null, offHand: null, twoHand: null };
   /** ids of the active prayers (e.g. "soul-split") */
@@ -429,6 +466,9 @@ export class TrainerEngine {
     this.spirits.clear();
     this.familiarSpecial = FAMILIAR_SPECIAL_MAX;
     this.channel = null;
+    this.lastChannelEnd = null;
+    this.autoDue = null;
+    this.spiritHitDeferred = [];
     this.inflight = [];
     this.pending = null;
     this.done.clear();
@@ -813,13 +853,22 @@ export class TrainerEngine {
       return;
     }
     if (tickP === gcdEnd) {
-      if (this.pending && this.pending.key !== input.key && this.config.abilityQueueing) {
-        const queued = this.pending;
-        this.accept(input, gcdEnd, expected);
-        if (this.pending) this.pending.bypassed = queued;
-      } else {
-        this.accept(input, gcdEnd, expected);
+      if (this.pending && this.pending.key !== input.key && this.pending.tick === gcdEnd && this.config.abilityQueueing) {
+        // the queued ability is cast on this very tick – too late to bypass it ("on the tick before the queued ability
+        // is set to be cast"); the press queues behind it for the next GCD end
+        this.pending.next = input;
+        this.events.push({ kind: 'queued', key: input.key, expected, fireTick: gcdEnd + GCD_TICKS, marginMs: 0 });
+        return;
       }
+      this.accept(input, gcdEnd, expected);
+      return;
+    }
+    if (tickP === gcdEnd - 1 && this.pending && this.pending.key !== input.key && this.config.abilityQueueing) {
+      // bypass: "a queued ability can be bypassed if the player ... presses another ability on the tick before the queued
+      // ability is set to be cast ... the ability that was previously queued remains queued" (/w/Ability_queueing)
+      const queued = this.pending;
+      this.accept(input, gcdEnd, expected);
+      if (this.pending) this.pending.bypassed = queued;
       return;
     }
     if (!this.config.abilityQueueing) {
@@ -967,11 +1016,37 @@ export class TrainerEngine {
     return !rule?.offGcd;
   }
 
+  /** the wielded style's basic attack, if the catalog knows it */
+  basicAttackEntity(): EngineEntity | undefined {
+    const id = this.style ? BASIC_ATTACK_OF[this.style] : undefined;
+    return id ? this.catalog.get('ability:' + id) : undefined;
+  }
+
+  /** a cast completes a step with the same key; a basic-attack step ("(auto)") is satisfied by the basic attack of whatever style is wielded */
+  private satisfies(cast: EngineEntity, step: EngineEntity): boolean {
+    return cast.key === step.key || (cast.kind === 'ability' && step.kind === 'ability' && this.isBasicAttack(cast) && this.isBasicAttack(step));
+  }
+
+  /** the tick the ability after `step` is due at: the channel's end, or earlier when the step says the channel is cut (`(4t)`, `7 hit`) */
+  private channelDueAfter(entity: EngineEntity, step: EngineEntity, castTick: number): number | null {
+    const ch = this.channel;
+    if (!ch || ch.cancelled || ch.castTick !== castTick) return null;
+    if (step.cancelAfterTicks) return castTick + Math.max(1, step.cancelAfterTicks);
+    if (step.afterHits) {
+      const spec = this.loadout.channelOverrides[entity.id] ?? this.ruleOf(entity)?.channel ?? entity.channel;
+      const offsets = spec?.hits ?? [];
+      if (offsets.length) return castTick + offsets[Math.min(step.afterHits, offsets.length) - 1];
+    }
+    return null;
+  }
+
   // ---------------------------------------------------------------- casting
 
   private castPending(): void {
     const p = this.pending!;
     const entity = this.catalog.get(p.key)!;
+    /** what pending comes after this cast: the bypassed one, else the press that arrived on the cast tick */
+    const after = (): Pending | null => (p.bypassed ? { ...p.bypassed, tick: p.tick + GCD_TICKS } : p.next ? { key: p.next.key, tick: p.tick + GCD_TICKS, arrival: p.next.arrival } : null);
     // a Revolution choice that became unusable in the meantime is dropped; the bar is scanned again next tick
     if (p.auto && (this.weaponFailure(entity) || this.blocker(entity, p.tick))) {
       this.pending = null;
@@ -980,7 +1055,7 @@ export class TrainerEngine {
     // the weapon may have changed since the press: the queued ability just fails, like in the game
     const wf = this.weaponFailure(entity);
     if (wf) {
-      this.pending = p.bypassed ? { ...p.bypassed, tick: p.tick } : null;
+      this.pending = p.bypassed ? { ...p.bypassed, tick: p.tick } : p.next ? { key: p.next.key, tick: p.tick, arrival: p.next.arrival } : null;
       this.wrong++;
       this.events.push({ kind: 'wrong-weapon', key: entity.key, reason: wf });
       return;
@@ -994,21 +1069,24 @@ export class TrainerEngine {
       p.tick += Math.max(1, blocked.kind === 'on-cooldown' ? blocked.readyInTicks : 1);
       return;
     }
-    this.pending = p.bypassed ? { ...p.bypassed, tick: p.tick + GCD_TICKS } : null;
+    this.pending = after();
     const expected = this.expectedAbility;
     const gcdEnd = this.gcdEndTick;
     // a channel the previous cast started: the rotation means "after the channel", so the next ability is on time
     // anywhere from the GCD end (an early cancel) up to the channel's end; only presses after that are late
     const channelEnd = this.lastChannelEnd;
     this.lastChannelEnd = null;
+    // automatic basic attacks that slipped in before this cast: the press is late from the tick it was due at, not from their GCD
+    const autoDue = this.autoDue;
     this.castTick = p.tick;
     this.lastInputTick = p.tick;
-    this.activate(entity, p.tick, { offGcd: false, noGain: false });
+    this.activate(entity, p.tick, { offGcd: false, noGain: false, hitKey: p.autoAttack ? AUTO_ATTACK_KEY : undefined });
 
-    const matched = !!expected && entity.key === expected.key;
-    if (p.auto) this.events.push({ kind: 'auto', key: entity.key, tick: p.tick, matched, expected: expected?.key ?? '' });
-    if (!expected || entity.key !== expected.key) {
-      // Revolution's own choice is not a player mistake: no wrong counter, the rotation keeps waiting for the expected step
+    const matched = !!expected && this.satisfies(entity, expected);
+    if (p.autoAttack) this.events.push({ kind: 'auto-attack', key: entity.key, tick: p.tick, matched, expected: expected?.key ?? '', dueTick: autoDue ?? p.tick });
+    else if (p.auto) this.events.push({ kind: 'auto', key: entity.key, tick: p.tick, matched, expected: expected?.key ?? '' });
+    if (!matched) {
+      // Revolution's own choice / the automatic basic attack is not a player mistake: no wrong counter, the rotation keeps waiting for the expected step
       if (p.auto) return;
       this.wrong++;
       this.events.push({ kind: 'wrong-fired', key: entity.key, expected: expected?.key ?? '', tick: p.tick });
@@ -1032,7 +1110,8 @@ export class TrainerEngine {
     }
     if (missed.length) this.events.push({ kind: 'missed', keys: missed });
 
-    const dueTick = gcdEnd === null ? null : channelEnd !== null && channelEnd > gcdEnd ? channelEnd : gcdEnd;
+    const dueTick = autoDue !== null ? autoDue : gcdEnd === null ? null : channelEnd !== null && channelEnd > gcdEnd ? channelEnd : gcdEnd;
+    this.autoDue = null;
     const lateTicks = dueTick === null ? 0 : Math.max(0, p.tick - dueTick);
     const result: StepResult = {
       step: expectedIndex,
@@ -1048,6 +1127,11 @@ export class TrainerEngine {
       adrenaline: this.adrenaline,
     };
     if (p.auto) result.auto = true;
+    if (p.autoAttack) result.autoAttack = true;
+    else if (autoDue !== null) result.autoAttackBefore = true;
+    // "asphyx (4t) →" / "7 hit rapid →": the next step is due where the rotation cuts the channel, not at its end
+    const cut = this.channelDueAfter(entity, expected, p.tick);
+    if (cut !== null) this.lastChannelEnd = cut;
     this.results.push(result);
     this.events.push({ kind: 'fired', result });
     this.done.add(expectedIndex);
@@ -1072,7 +1156,7 @@ export class TrainerEngine {
   }
 
   /** Apply everything an entity does when it casts / activates at `tick`. */
-  private activate(entity: EngineEntity, tick: number, opt: { offGcd: boolean; noGain: boolean }): void {
+  private activate(entity: EngineEntity, tick: number, opt: { offGcd: boolean; noGain: boolean; hitKey?: string }): void {
     if (entity.kind === 'prayer') {
       const id = prayerId(entity.key);
       const t = togglePrayer(this.activePrayers, id);
@@ -1238,7 +1322,7 @@ export class TrainerEngine {
         apply: () => {
           const max = this.config.targetLifePoints;
           let amount = max ? Math.min(t.cap, Math.floor(t.share * max)) : t.cap;
-          for (const m of TARGET_DAMAGE_MULT) if (!m.dotsOnly && this.hasBuff(m.buff)) amount *= m.mult;
+          amount *= this.targetDamageMult(false);
           this.applyDamage(key, Math.floor(amount), false, false, at);
         },
       });
@@ -1307,11 +1391,13 @@ export class TrainerEngine {
       const per = b.damage ?? (damage && b.splitTotal ? { min: damage.min / b.hits, max: damage.max / b.hits } : damage);
       // a recast restarts the DoT: the previous cast's remaining ticks are dropped
       this.scheduled = this.scheduled.filter((h) => !(h.dot && h.key === entity.key));
-      if (b.direct) this.scheduled.push({ key: entity.key, entity: acting, rule, tick: tick + this.hitDelay(), index: 0, total: 1, channel: null, guaranteedCrit: !!rule?.guaranteedCrit, damage, mult, flat, castMult, flags, critAdd: consumedCritAdd, castTick: tick });
+      // Bloat: the DoT hits are a share of what the initial hit actually dealt (crit and off-npc boosts included)
+      const link: SharedHit | undefined = b.direct && b.shareOfDirect ? { amount: null } : undefined;
+      if (b.direct) this.scheduled.push({ key: entity.key, entity: acting, rule, tick: tick + this.hitDelay(), index: 0, total: 1, channel: null, guaranteedCrit: !!rule?.guaranteedCrit, damage, mult, flat, castMult, flags, critAdd: consumedCritAdd, castTick: tick, shareOut: link });
       for (let i = 0; i < b.hits; i++) {
         const f = b.factors?.[i] ?? 1;
         const offset = (b.startTicks ?? b.everyTicks) + i * b.everyTicks;
-        this.scheduled.push({ key: entity.key, entity: acting, rule, tick: tick + offset, index: i, total: b.hits, channel: null, guaranteedCrit: false, dot: true, damage: per ? { min: per.min * f, max: per.max * f } : null, mult: dotMult, flat: 0, castMult: b.direct ? 1 : multAt(i), flags, critAdd: 0, castTick: tick });
+        this.scheduled.push({ key: entity.key, entity: acting, rule, tick: tick + offset, index: i, total: b.hits, channel: null, guaranteedCrit: false, dot: true, damage: per ? { min: per.min * f, max: per.max * f } : null, mult: dotMult, flat: 0, castMult: b.direct ? 1 : multAt(i), flags, critAdd: 0, castTick: tick, shareIn: link ? { link, share: b.shareOfDirect! } : undefined });
       }
       this.lastAttackTick = tick;
     } else if (hits) {
@@ -1319,7 +1405,7 @@ export class TrainerEngine {
       const delay = hits.every((o) => o === 0) ? this.hitDelay() : 0;
       hits.forEach((offset, i) => {
         if (!hitWanted(i)) return;
-        this.scheduled.push({ key: entity.key, entity: acting, rule, tick: tick + offset + delay, index: i, total: hits.length, channel: null, guaranteedCrit: !!rule?.guaranteedCrit, damage: hitDamage(i), mult, flat, castMult, flags, spirit: rule?.spiritHit, critAdd: consumedCritAdd, castTick: tick });
+        this.scheduled.push({ key: opt.hitKey ?? entity.key, entity: acting, rule, tick: tick + offset + delay, index: i, total: hits.length, channel: null, guaranteedCrit: !!rule?.guaranteedCrit, damage: hitDamage(i), mult, flat, castMult, flags, spirit: rule?.spiritHit, critAdd: consumedCritAdd, castTick: tick });
       });
       this.lastAttackTick = tick;
     }
@@ -1607,12 +1693,49 @@ export class TrainerEngine {
   /** Rolls and applies the damage of one hit (engine/damage.ts). Returns what the hit would have dealt without its critical strike (Perfect Equilibrium stores that). `hitScale`: the hit chance the damage potential is scaled by. */
   private dealHit(h: ScheduledHit, crit: boolean, hitScale = 1): number {
     const l = this.loadout;
-    let { min, max } = h.damage!;
     const rules = (h.rule?.damageRules ?? []).filter((d) => this.conditionMet(d.when, h.tick, h.index, h.flags));
+    let critFactor = 1;
+    let amount: number;
+    if (h.shareIn) {
+      // Bloated: "25% of initial damage per hit" – "calculated after applying the critical strike damage boost, before any
+      // on-npc effects are applied"; the on-npc effects (Vulnerability, Haunted, hit chance) then apply to each tick below
+      amount = (h.shareIn.link.amount ?? 0) * h.shareIn.share;
+    } else {
+      ({ amount, critFactor } = this.rollHit(h, crit, rules));
+      if (h.shareOut) h.shareOut.amount = amount;
+    }
+    amount *= this.targetDamageMult(!!h.dot);
+    // hit chance as a damage multiplier (wiki "damage potential"); Haunted's extra damage "is not reduced if the player has less than 100% accuracy"
+    amount *= hitScale;
+    amount += this.targetDamageAdd(amount);
+    for (const d of rules) {
+      if (d.mult !== undefined) amount *= d.mult;
+      if (d.perMissingLp) {
+        const lp = this.config.targetLifePoints;
+        const missing = lp ? Math.max(0, 1 - this.targetHp / lp) * 100 : 0;
+        amount *= 1 + Math.min(d.perMissingLp.max, d.perMissingLp.per * missing);
+      }
+    }
+    if (h.channel) {
+      const spec = this.loadout.channelOverrides[h.entity.id] ?? h.rule?.channel ?? h.entity.channel;
+      if (spec?.finalAddsPriorShare && h.index === h.total - 1) amount += spec.finalAddsPriorShare * h.channel.dealt;
+    }
+    if (h.rule?.damagePerStack?.cap) amount = Math.min(amount, h.rule.damagePerStack.cap);
+    const dealt = Math.floor(amount + 1e-6); // epsilon: 0.175 + 0.12 is 0.29499… in floating point
+    if (h.channel) h.channel.dealt += dealt;
+    this.applyDamage(h.key, dealt, crit, !!h.dot, h.tick);
+    this.splitSoul(h, dealt);
+    return Math.floor(amount / critFactor + 1e-6);
+  }
+
+  /** the player-side part of a hit: roll, perks, style buffs, critical strike – everything before the on-npc effects (target debuffs, hit chance) */
+  private rollHit(h: ScheduledHit, crit: boolean, rules: NonNullable<AbilityRule['damageRules']>): { amount: number; critFactor: number } {
+    const l = this.loadout;
+    let { min, max } = h.damage!;
     for (const d of rules) if (d.damage) ({ min, max } = d.damage);
-    // Precise: "Increases your minimum damage by 1.5% per rank of your maximum damage." Not DoTs – except Bloat, whose
-    // DoT is a share of its (Precise-rolled) initial hit. Equilibrium / Eruptive live in the ability damage stat (resolver).
-    if (l.preciseRank && (!h.dot || h.entity.id === 'bloat')) min = Math.min(max, min + 0.015 * l.preciseRank * max);
+    // Precise: "Increases your minimum damage by 1.5% per rank of your maximum damage." Not DoTs (Bloat's DoT is a share
+    // of its Precise-rolled initial hit). Equilibrium / Eruptive live in the ability damage stat (resolver).
+    if (l.preciseRank && !h.dot) min = Math.min(max, min + 0.015 * l.preciseRank * max);
     let amount = ((min + this.random() * Math.max(0, max - min)) / 100 + h.flat) * l.abilityDamage;
     // Lunging (Combust / Dismember, every bleed hit), Shield Bashing / Bulwark (Debilitate)
     const perAbility = l.damageMultPerAbility[h.entity.id];
@@ -1664,28 +1787,24 @@ export class TrainerEngine {
       critFactor = critMult;
     }
     if (!h.spirit) amount *= l.damageMult; // Void knight +5% / +7%
-    for (const m of TARGET_DAMAGE_MULT) if ((!m.dotsOnly || h.dot) && this.hasBuff(m.buff)) amount *= m.mult;
-    // hit chance as a damage multiplier (wiki "damage potential"); Haunted's extra damage "is not reduced if the player has less than 100% accuracy"
-    amount *= hitScale;
-    amount += this.targetDamageAdd(amount);
-    for (const d of rules) {
-      if (d.mult !== undefined) amount *= d.mult;
-      if (d.perMissingLp) {
-        const lp = this.config.targetLifePoints;
-        const missing = lp ? Math.max(0, 1 - this.targetHp / lp) * 100 : 0;
-        amount *= 1 + Math.min(d.perMissingLp.max, d.perMissingLp.per * missing);
-      }
+    return { amount, critFactor };
+  }
+
+  /**
+   * Product of the target debuffs that raise the damage it takes (engine/damage.ts TARGET_DAMAGE_MULT). Debuffs of one
+   * `status` count once: the Vulnerability spell and bomb apply the same status, which refreshes and never stacks.
+   */
+  private targetDamageMult(dot: boolean): number {
+    let mult = 1;
+    const seen = new Set<string>();
+    for (const m of TARGET_DAMAGE_MULT) {
+      if ((m.dotsOnly && !dot) || !this.hasBuff(m.buff)) continue;
+      const status = m.status ?? m.buff;
+      if (seen.has(status)) continue;
+      seen.add(status);
+      mult *= m.mult;
     }
-    if (h.channel) {
-      const spec = this.loadout.channelOverrides[h.entity.id] ?? h.rule?.channel ?? h.entity.channel;
-      if (spec?.finalAddsPriorShare && h.index === h.total - 1) amount += spec.finalAddsPriorShare * h.channel.dealt;
-    }
-    if (h.rule?.damagePerStack?.cap) amount = Math.min(amount, h.rule.damagePerStack.cap);
-    const dealt = Math.floor(amount + 1e-6); // epsilon: 0.175 + 0.12 is 0.29499… in floating point
-    if (h.channel) h.channel.dealt += dealt;
-    this.applyDamage(h.key, dealt, crit, !!h.dot, h.tick);
-    this.splitSoul(h, dealt);
-    return Math.floor(amount / critFactor + 1e-6);
+    return mult;
   }
 
   /** Haunted: +10% of the hit, capped at 20% of the ability damage */
@@ -1767,7 +1886,7 @@ export class TrainerEngine {
     }
     const lp = this.config.targetLifePoints;
     if (fam.damagePerMissingLp && lp) amount *= 1 + fam.damagePerMissingLp * Math.max(0, 1 - this.targetHp / lp);
-    for (const m of TARGET_DAMAGE_MULT) if (!m.dotsOnly && this.hasBuff(m.buff)) amount *= m.mult;
+    amount *= this.targetDamageMult(false);
     amount += this.targetDamageAdd(amount);
     this.applyDamage('familiar:' + fam.id, Math.floor(amount + 1e-6), false, false, tick);
   }
@@ -1863,11 +1982,18 @@ export class TrainerEngine {
       }
       case 'buff': {
         if (eff.untilSpirit) {
-          const s = this.spirits.get(eff.untilSpirit);
-          if (!s) break;
-          this.applyBuff(eff.id, tick, entity.key, Math.max(1, s.endTick - tick), eff.stacks, true);
-          const b = this.buff(eff.id);
-          if (b) b.spirit = eff.untilSpirit;
+          const spirit = eff.untilSpirit;
+          if (!this.spirits.has(spirit)) break;
+          const bind = (at: number) => {
+            const s = this.spirits.get(spirit);
+            if (!s) return;
+            this.applyBuff(eff.id, at, entity.key, Math.max(1, s.endTick - at), eff.stacks, true);
+            const b = this.buff(eff.id);
+            if (b) b.spirit = spirit;
+          };
+          // Haunted: applied with the ghost's next hit, not on the Command cast
+          if (eff.onSpiritHit) this.spiritHitDeferred.push({ spirit, apply: bind });
+          else bind(tick);
           break;
         }
         if (eff.delayTicks) {
@@ -1949,6 +2075,7 @@ export class TrainerEngine {
         this.spirits.delete(eff.spirit);
         this.removeBuff('spirit-' + eff.spirit);
         this.buffs = this.buffs.filter((b) => b.spirit !== eff.spirit);
+        this.spiritHitDeferred = this.spiritHitDeferred.filter((d) => d.spirit !== eff.spirit);
         if (s && eff.reconjureAfterTicks) this.reconjureReady.set(eff.spirit, s.sinceTick + eff.reconjureAfterTicks);
         break;
       }
@@ -2123,14 +2250,20 @@ export class TrainerEngine {
         let amount = ((a.min + this.random() * (a.max - a.min)) / 100) * this.loadout.abilityDamage * this.loadout.conjureDamageMult;
         amount *= 1 + RAGE_PER_STACK * s.rage;
         if (name === 'skeleton-warrior') s.rage = Math.min(RAGE_MAX, s.rage + 1);
-        for (const m of TARGET_DAMAGE_MULT) if (!m.dotsOnly && this.hasBuff(m.buff)) amount *= m.mult;
+        amount *= this.targetDamageMult(false);
         amount += this.targetDamageAdd(amount);
         this.applyDamage('spirit:' + name, Math.floor(amount), false, false, tick);
+        // Command Vengeful Ghost: "future attacks will apply Haunted" – the debuff comes with the ghost's next hit, not the cast
+        const due = this.spiritHitDeferred.filter((d) => d.spirit === name);
+        if (due.length) {
+          this.spiritHitDeferred = this.spiritHitDeferred.filter((d) => d.spirit !== name);
+          for (const d of due) d.apply(tick);
+        }
       }
       const p = a.poison;
       if (p && age >= p.firstTick && (age - p.firstTick) % p.everyTicks === 0) {
         let amount = ((p.min + this.random() * (p.max - p.min)) / 100) * this.loadout.abilityDamage * this.loadout.conjureDamageMult;
-        for (const m of TARGET_DAMAGE_MULT) if (this.hasBuff(m.buff)) amount *= m.mult;
+        amount *= this.targetDamageMult(true);
         amount += this.targetDamageAdd(amount);
         this.applyDamage('spirit:' + name + '-poison', Math.floor(amount), false, true, tick);
       }
@@ -2140,6 +2273,7 @@ export class TrainerEngine {
         this.spirits.delete(name);
         this.removeBuff('spirit-' + name);
         this.buffs = this.buffs.filter((b) => b.spirit !== name);
+        this.spiritHitDeferred = this.spiritHitDeferred.filter((d) => d.spirit !== name);
       }
     }
     // the familiar (Loadout page) attacks on its own and regains special move points
@@ -2183,6 +2317,24 @@ export class TrainerEngine {
       this.prayerStats.soulSplitTicks++;
     }
     if (this.state === 'running') this.revolutionTick(tick);
+    if (this.state === 'running') this.autoAttackTick(tick);
+  }
+
+  /**
+   * Full manual: the wielded style's basic attack "is used whenever other abilities are not being cast" – when the GCD
+   * (or a running channel) has ended on this tick and nothing was pressed or queued, it fires now and starts its own GCD,
+   * so a late press waits a whole GCD. The tick the next step was due at is kept for scoring that press. Revolution
+   * fires the basic attack through its bar instead (last resort), so nothing happens there.
+   */
+  private autoAttackTick(tick: number): void {
+    if (this.config.autoAttacks === false || this.revolutionOn || this.pending || this.castTick === null) return;
+    const gcdEnd = this.gcdEndTick!;
+    if (tick < gcdEnd) return;
+    if (this.channel && !this.channel.cancelled && tick < this.channel.endTick) return;
+    const basic = this.basicAttackEntity();
+    if (!basic || this.weaponFailure(basic) || this.blocker(basic, tick)) return;
+    if (this.autoDue === null) this.autoDue = this.lastChannelEnd !== null && this.lastChannelEnd > gcdEnd ? this.lastChannelEnd : gcdEnd;
+    this.pending = { key: basic.key, tick, arrival: this.tickTime(tick), auto: true, autoAttack: true };
   }
 
   // ---------------------------------------------------------------- Revolution (docs/research/revolution.md)
@@ -2219,16 +2371,25 @@ export class TrainerEngine {
     }
   }
 
-  /** Leftmost slot of the Revolution range whose shown ability can cast at `tick`, or null. */
+  /**
+   * Leftmost slot of the Revolution range whose shown ability can cast at `tick`, or null. Basic attacks are the last
+   * resort: "never used unless there are no other useable abilities within the action bar's specified Revolution size,
+   * even if basic attacks are placed first" (/w/Basic_attacks).
+   */
   revolutionChoice(tick: number): string | null {
+    let basic: string | null = null;
     for (const slot of this.revolutionBar()) {
       if (!slot) continue;
       const key = this.morphOf(slot, tick)?.key ?? slot; // the slot fires what it shows (Command X, Slaughter ...)
       const e = this.catalog.get(key);
       if (!e || !this.revolutionTriggers(e) || this.weaponFailure(e) || this.blocker(e, tick)) continue;
+      if (this.isBasicAttack(e)) {
+        basic ??= key;
+        continue;
+      }
       return key;
     }
-    return null;
+    return basic;
   }
 
   /**

@@ -4,6 +4,8 @@ import { RotationStep } from './models';
  * Parser for rotations written in PvME notation (https://pvme.io style guide, "Rotations"):
  *   →  separates ticks / GCDs            +  joins same-tick actions
  *   (tc) target cycle   (auto) basic attack   (2t) or "2t x": x comes 2 ticks after the previous action
+ *   asphyx (4t) → x  the channel is cut by x 4 ticks after the cast (step.cancelAfterTicks)
+ *   7 hit rapid / rapid (7 hits)  7 hits land, then the next ability (step.afterHits)
  *   <weapon> spec / eofspec  weapon special attack     :alias: / <:alias:id>  Discord emoji aliases
  *   gricocaroming / overpowerigneous / sunshinepf ...  perk, cape and flank variants → the base ability
  *   bloodlust / residualsoul / flankicon ...  stack and status markers → a hint on the input they describe
@@ -196,15 +198,26 @@ export function parsePvme(text: string, resolve: AliasResolver): PvmeParseResult
         }
         const sameTick = !first;
         first = false;
-        const resolved = resolveAction(action, resolve);
+        // "asphyx (4t)": the channel is cut by the next ability 4 ticks after the cast; "7 hit rapid" / "rapid (7 hits)":
+        // let 7 hits land, then continue – both only when the action resolves to an ability that can carry the cut
+        const cut = channelCut(action, annotations);
+        let resolved = cut ? resolveAction(cut.action, resolve) : null;
+        const cutAt = resolved?.some((s) => s.kind === 'ability') ? cut : null;
+        if (!cutAt) resolved = resolveAction(action, resolve); // no ability to carry the cut: the notation stays prose
         const off = offset ?? pendingOffset;
         pendingOffset = undefined;
         if (resolved) {
+          const cutIndex = cutAt ? resolved.map((s) => s.kind).lastIndexOf('ability') : -1;
+          const notes = cutAt ? annotations.filter((a) => !cutAt.fromAnnotation || a !== cutAt.fromAnnotation) : annotations;
           resolved.forEach((s, i) => {
             const step: RotationStep = { ...s };
             if (sameTick || i > 0) step.sameTick = true; // the UI hides the flag on GCD casts, the engine scores companions only
             if (off !== undefined && i === 0) step.offsetTicks = off;
-            if (annotations.length && i === resolved.length - 1) step.hint = joinHint(step.hint, annotations.join(', '));
+            if (cutAt && i === cutIndex) {
+              if (cutAt.cancelAfterTicks !== undefined) step.cancelAfterTicks = cutAt.cancelAfterTicks;
+              if (cutAt.afterHits !== undefined) step.afterHits = cutAt.afterHits;
+            }
+            if (notes.length && i === resolved.length - 1) step.hint = joinHint(step.hint, notes.join(', '));
             steps.push(step);
           });
         } else {
@@ -219,6 +232,38 @@ export function parsePvme(text: string, resolve: AliasResolver): PvmeParseResult
 
 function joinHint(hint: string | undefined, text: string): string {
   return hint ? hint + ', ' + text : text;
+}
+
+/** trailing "(4t)" of "asphyx (4t)" */
+const CANCEL_SUFFIX = /\s+\(\s*(\d+)\s*t\s*\)$/i;
+/** leading "7 hit" / "3 hits" / "2t hit" of "7 hit rapid" */
+const HITS_PREFIX = /^(\d+)\s*t?\s*hits?\s+(?=\S)/i;
+/** annotation "(7 hits)" */
+const HITS_ANNOTATION = /^(\d+)\s*hits?$/i;
+
+interface ChannelCut {
+  /** the action without the notation */
+  action: string;
+  cancelAfterTicks?: number;
+  afterHits?: number;
+  /** the annotation the hit count came from (dropped from the hint when the cut is applied) */
+  fromAnnotation?: string;
+}
+
+/**
+ * PvME channel notation: "asphyx (4t)" = cancel the channel with the next ability 4 ticks after the cast, "7 hit rapid" /
+ * "rapid (7 hits)" = let 7 hits land, then continue. Null when the action carries neither.
+ */
+function channelCut(action: string, annotations: string[]): ChannelCut | null {
+  const cancel = CANCEL_SUFFIX.exec(action);
+  if (cancel) return { action: action.slice(0, cancel.index).trim(), cancelAfterTicks: parseInt(cancel[1], 10) };
+  const hits = HITS_PREFIX.exec(action);
+  if (hits) return { action: action.slice(hits[0].length).trim(), afterHits: parseInt(hits[1], 10) };
+  for (const a of annotations) {
+    const m = HITS_ANNOTATION.exec(a.trim());
+    if (m) return { action, afterHits: parseInt(m[1], 10), fromAnnotation: a };
+  }
+  return null;
 }
 
 /** copy of the steps with `text` added to the hint of the last one (where annotations and trailing prose go too) */

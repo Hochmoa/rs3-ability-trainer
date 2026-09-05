@@ -15,7 +15,7 @@ function engine(steps: EngineEntity[], style: 'Melee' | 'Necromancy', caps: Part
   loadout.style = style;
   loadout.hasConduit = style === 'Necromancy';
   loadout.stackCaps = caps;
-  const e = new TrainerEngine(steps, new Map(steps.map((s) => [s.key, s])), { pingMs: 0, jitterMs: 0, abilityQueueing: false, loop: true, loadout, hitChanceDisabled: true });
+  const e = new TrainerEngine(steps, new Map(steps.map((s) => [s.key, s])), { pingMs: 0, jitterMs: 0, autoAttacks: false, abilityQueueing: false, loop: true, loadout, hitChanceDisabled: true });
   e.random = () => 0.99;
   e.start(0);
   return e;

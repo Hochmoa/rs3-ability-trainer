@@ -34,7 +34,7 @@ const STRIKE: EngineEntity = { key: 'ability:strike', kind: 'ability', id: 'stri
 function make(steps: EngineEntity[], loadout: Partial<ResolvedLoadout> = {}, cfg: Partial<EngineConfig> = {}, random = 0.5): TrainerEngine {
   const catalog = new Map(steps.map((e) => [e.key, e]));
   const l = { ...defaultResolvedLoadout(), style: 'Melee' as const, abilityDamage: 1000, ...loadout };
-  const e = new TrainerEngine(steps, catalog, { pingMs: 0, jitterMs: 0, abilityQueueing: true, loop: true, fullAdrenaline: true, hitChanceDisabled: true, ...cfg, loadout: l });
+  const e = new TrainerEngine(steps, catalog, { pingMs: 0, jitterMs: 0, autoAttacks: false, abilityQueueing: true, loop: true, fullAdrenaline: true, hitChanceDisabled: true, ...cfg, loadout: l });
   e.random = () => random;
   e.start(0);
   return e;

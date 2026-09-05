@@ -289,6 +289,8 @@ https://runescape.wiki/w/Greater_Barge
   Barge's damage range is increased by 5-12% (the tooltip incorrectly states 5-7%), capping at 10 ticks
   (6 seconds) for a range of 125-165% ability damage." **AMBIGUOUS**: the prose says 5-12 %/tick but its
   own table and the 125-165 % cap use 5-7 %/tick (75+50 / 95+70). Use 5-7 % per tick (max +50 / +70).
+  Re-checked 2026-09-05: the page's per-tick table (0 → 75–95 %, 1 → 80–102 %, … 10 → 125–165 %) is
+  exactly +5 / +7 per tick; "5-12%" in the prose has no table behind it, so the rule keeps 5–7.
   Analysis: "Greater Barge's damage is based on the time since the player has moved off their target
   (either by moving away, or by using Surge, Escape, or Bladed Dive)." Opening attack from out of combat
   = full 125-165 %. "If already engaged in combat, Greater Barge effectively becomes a minimum of a
@@ -585,7 +587,9 @@ https://runescape.wiki/w/Overpower
 - Infobox (standard): "Strike the target with a massive overhead swing. * 520%-570% Melee damage. Damage
   is 55% effective in PvP." Level 15, equipment "Any".
 - Igneous variant: "* 280%-340% Melee damage. * 2 hits." with Igneous Kal-Ket / Kal-Zuk; "Both hitsplats
-  are dealt simultaneously."
+  are dealt simultaneously." Update history 9 March 2026: base "550%–600% → 520%–570%", igneous per hit
+  "310%–370% (340% average) → 280%–340% (310% average)" – the Kal-Zuk page still shows 310–370.
+  **[MODEL]** `set-effects.json` igneous-kal-ket: 2 hits × 280–340 % (checked 2026-09-05).
 - "Overpower hits 3 ticks after it was cast."
 - "Overpower is affected by the Ultimatums perk, increasing its damage by 3% + 1% per rank."
 - CSM: "Removed Overpower adrenaline cost reduction effect (Overpower now always costs 60%)".

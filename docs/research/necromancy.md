@@ -245,11 +245,13 @@ URL: https://runescape.wiki/w/Conjure_Vengeful_Ghost
   > * With Spirit Pact III (100 ticks duration): The Ghost's last hit is tick 104. The Ghost's duration bar vanishes at tick 105
 
   Default "10 attacks over its lifetime ... 14 attacks at rank 3".
+- **[MODEL]** `SPIRIT_ATTACKS['vengeful-ghost'] = { firstTick: 6, everyTicks: 7 }` from the conjure; a pre-built ghost counts as conjured 6 ticks before the start (hits on ticks 0, 7, 14 …).
 
 ---
 
 ## 10. Bloat
 URL: https://runescape.wiki/w/Bloat ; debuff: https://runescape.wiki/w/Bloated
+(Invoke Death, for the record: Death Mark executes "if life points drop below 20%" or 30,000, whichever is lower; 20-tick buff, 6-tick cooldown — https://runescape.wiki/w/Invoke_Death. The trainer only shows the text, no execute.)
 
 - **type / adrenaline / cooldown / duration / channelled / GCD:** Enhanced, level 48, Single, equipment Any. Adrenaline `-20`. Cooldown `0`. DoT duration: 10 hits every 3 ticks (Bloat page: "19.8-second duration"; Bloated page: "18 seconds"). Not channelled. Triggers GCD.
   > Bloat the target, causing them to take damage over time.
@@ -272,6 +274,7 @@ URL: https://runescape.wiki/w/Bloat ; debuff: https://runescape.wiki/w/Bloated
 - **BUFFS/DEBUFFS applied:** Bloated (target debuff, no stacks, no timer icon; 10 hits × 25 % of initial hit every 3 ticks; refresh-on-recast; on-death spreads "with the same damage to up to nine enemies within one game square for four hits"; "May spread to further enemies on death even from the target that wasn't the primary target of Bloat.").
 - **CHANNEL / multi-cast:** none.
 - **OTHER:** total "472.5%–577.5% (average 525%) ability damage" over the full duration; "Bloat does not heal Nex during her blood phase."
+- **[MODEL]** (2026-09-05) `bleed: { hits: 10, everyTicks: 3, direct: true, shareOfDirect: 0.25 }`: the initial hit is rolled once (Precise, prayer / curse boost, style buffs, critical strike, Void …) and what it dealt **before on-npc effects** (target debuffs, hit chance scaling) is stored; every Bloated tick deals 25 % of that number and then applies the on-npc effects of its own tick (Vulnerability, Haunted, hit chance) – no crit roll, no prayer on the ticks themselves. A missed opener drops the DoT. Earlier the ticks were re-rolled independently as 25 % of a fresh 135–165 % roll without the crit or the curse.
 
 ---
 
@@ -334,6 +337,7 @@ URL: https://runescape.wiki/w/Command_Vengeful_Ghost ; debuff: https://runescape
 - **BUFFS/DEBUFFS applied:** Haunted on the ghost's target, re-applied on each ghost hit. Duration: "There is a discrepancy with the duration of Haunted. The tooltip states a duration of 4.8, but it has an effective duration of 3.6 seconds. However, due to the Vengeful Ghost attacking every 4.2 seconds, the Haunted status will have 100% uptime." (Simulator: 6-tick debuff refreshed every 7 ticks ⇒ effectively permanent while the ghost hits.) Not stacking; not player-specific.
 - **CHANNEL / multi-cast:** none.
 - **OTHER – timing** (https://runescape.wiki/w/Vengeful_Ghost/Hit_timings): "The following tick, the Ghost says ... and future attacks will apply Haunted. The Ghost's normal attack timing is unaffected regardless of when the Command is used." Table: command used on tick 6 (ghost's first hit, no Haunted), Haunted first applied with the hit on tick 13.
+- **[MODEL]** (2026-09-05) The rule's `{ kind: 'buff', id: 'haunted', untilSpirit: 'vengeful-ghost', onSpiritHit: true }` defers Haunted to the ghost's next hit (`spiritHitDeferred`); the hit that applies it does not itself get the +10 %. Haunted then lives as long as the ghost (Life Transfer extends both). A ghost that expires before its next hit never applies it. No cooldown, no cost and no wiki basis for a lock-out: pressing Command again while the target is Haunted is an ordinary cast (a wasted GCD), the earlier "target is already Haunted" requirement was removed.
 
 ---
 

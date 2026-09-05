@@ -18,6 +18,7 @@ describe('pre-build', () => {
     loadout.stackCaps['residual-souls'] = 5; // Soulbound lantern
     const e = new TrainerEngine([command, finger], catalog, {
       pingMs: 0,
+      autoAttacks: false,
       jitterMs: 0,
       abilityQueueing: false,
       loop: false,
@@ -48,6 +49,7 @@ describe('pre-build', () => {
     loadout.hasConduit = true;
     const e = new TrainerEngine([command], catalog, {
       pingMs: 0,
+      autoAttacks: false,
       jitterMs: 0,
       abilityQueueing: false,
       loop: false,
@@ -71,6 +73,7 @@ describe('pre-build', () => {
     loadout.hasConduit = true;
     const e = new TrainerEngine([transfer], catalog, {
       pingMs: 0,
+      autoAttacks: false,
       jitterMs: 0,
       abilityQueueing: false,
       loop: false,
@@ -94,18 +97,19 @@ describe('pre-build', () => {
     loadout.style = 'Necromancy';
     loadout.hasConduit = true;
     const e = new TrainerEngine([command, transfer], catalog, {
-      pingMs: 0, jitterMs: 0, abilityQueueing: false, loop: true, loadout,
+      pingMs: 0, jitterMs: 0, autoAttacks: false, abilityQueueing: false, loop: true, loadout,
       prebuild: { stacks: {}, spirits: ['vengeful-ghost'], abilities: [], prayers: [], remaining: { 'spirit:vengeful-ghost': 20 } },
     });
     e.random = () => 0.99;
     e.start(0);
     e.press(command.key, 0);
     e.update(TICK_MS);
-    expect(e.buff('haunted')?.endTick).toBe(20); // ghost ends at tick 20, so does Haunted
+    expect(e.hasBuff('haunted')).toBe(false); // Haunted comes with the ghost's next hit (20 ticks left of 70: age 50, next hit at age 55 = tick 5)
     e.press(transfer.key, 4 * TICK_MS);
-    e.update(5 * TICK_MS);
+    e.update(4 * TICK_MS);
     expect(e.spirits.get('vengeful-ghost')?.endTick).toBe(55);
-    expect(e.buff('haunted')?.endTick).toBe(55);
+    e.update(5 * TICK_MS);
+    expect(e.buff('haunted')).toMatchObject({ startTick: 5, endTick: 55 }); // bound to the (already extended) ghost
     e.update(56 * TICK_MS);
     expect(e.hasBuff('haunted')).toBe(false);
   });
@@ -116,7 +120,7 @@ describe('pre-build', () => {
     const loadout = defaultResolvedLoadout();
     loadout.style = 'Necromancy';
     loadout.hasConduit = true;
-    const e = new TrainerEngine([bloat], catalog, { pingMs: 0, jitterMs: 0, abilityQueueing: false, loop: true, loadout });
+    const e = new TrainerEngine([bloat], catalog, { pingMs: 0, jitterMs: 0, autoAttacks: false, abilityQueueing: false, loop: true, loadout });
     e.random = () => 0.99;
     e.start(0);
     e.adrenaline = 100;

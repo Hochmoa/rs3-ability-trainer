@@ -255,10 +255,13 @@ export const BUFF_TYPE_DAMAGE_MULT: { buff: string; style: Style; type: string; 
   { buff: 'icy-precision', style: 'Ranged', type: 'Special', mult: 1.3 },
 ];
 
-/** target debuffs that raise the damage it takes (dotsOnly: bleed / burn hits only – Corrupted Wounds) */
-export const TARGET_DAMAGE_MULT: { buff: string; mult: number; dotsOnly?: boolean }[] = [
-  { buff: 'special:vulnerability-bomb', mult: 1.1 },
-  { buff: 'vulnerability', mult: 1.1 }, // the Vulnerability spell (standard spellbook) – same debuff as the bomb
+/**
+ * Target debuffs that raise the damage it takes (dotsOnly: bleed / burn hits only – Corrupted Wounds). Entries with the same
+ * `status` are one in-game status and count once: the Vulnerability spell and the vulnerability bomb both apply the
+ * `vulnerability` buff ("Uses stacks: No" – a second application refreshes, https://runescape.wiki/w/Vulnerability_(status)).
+ */
+export const TARGET_DAMAGE_MULT: { buff: string; mult: number; dotsOnly?: boolean; status?: string }[] = [
+  { buff: 'vulnerability', mult: 1.1, status: 'vulnerability' }, // spell (standard spellbook) and bomb (rules-consumables.ts)
   { buff: 'corrupted-wounds', mult: 1.2, dotsOnly: true },
 ];
 

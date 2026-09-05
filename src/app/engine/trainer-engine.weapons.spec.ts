@@ -24,7 +24,7 @@ function resolve(w: Wield): ResolvedLoadout {
 }
 
 const START: Wield = { mainHand: null, offHand: null, twoHand: 'melee-2h' };
-const cfg: EngineConfig = { pingMs: 0, jitterMs: 0, abilityQueueing: false, loop: false, loadout: resolve(START), startWield: START, resolveWield: resolve, hitChanceDisabled: true };
+const cfg: EngineConfig = { pingMs: 0, jitterMs: 0, autoAttacks: false, abilityQueueing: false, loop: false, loadout: resolve(START), startWield: START, resolveWield: resolve, hitChanceDisabled: true };
 
 function ability(key: string, extra: Partial<EngineEntity> = {}): EngineEntity {
   return { key, kind: 'ability', id: key, name: key, icon: '', gcd: true, abilityType: 'Basic', adrenaline: 9, cooldownTicks: 0, buffs: [], style: 'Melee', ...extra };

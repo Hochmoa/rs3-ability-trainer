@@ -196,7 +196,7 @@ function engine(steps: EngineEntity[], opts: { book?: 'Prayers' | 'Curses'; rand
   loadout.abilityDamage = 1000;
   loadout.levels = { ...DEFAULT_LEVELS, ...opts.levels };
   loadout.zealots = opts.zealots ?? false;
-  const e = new TrainerEngine(steps, catalog, { pingMs: 0, jitterMs: 0, abilityQueueing: false, loop: false, loadout, fullAdrenaline: true, prayerBook: opts.book ?? 'Curses' });
+  const e = new TrainerEngine(steps, catalog, { pingMs: 0, jitterMs: 0, autoAttacks: false, abilityQueueing: false, loop: false, loadout, fullAdrenaline: true, prayerBook: opts.book ?? 'Curses' });
   e.random = () => opts.random ?? 0.5;
   e.start(0);
   return e;

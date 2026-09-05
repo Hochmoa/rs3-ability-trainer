@@ -132,7 +132,8 @@ export type Effect =
   | { kind: 'consume-stack'; stack: StackId; amount: number | 'all'; min?: number; when?: Condition; then?: Effect[] }
   /** `untilSpirit`: the buff lives exactly as long as that conjured spirit (Haunted while the commanded ghost hits) */
   /** `delayTicks`: the buff appears that many ticks after the cast (Death's Swiftness / Sunshine start 1 tick later) */
-  | { kind: 'buff'; id: string; durationTicks?: number; refresh?: boolean; when?: Condition; stacks?: number; untilSpirit?: string; delayTicks?: number }
+  /** `onSpiritHit` (with `untilSpirit`): the buff is applied with that spirit's next hit, not on the cast (Haunted after Command Vengeful Ghost) */
+  | { kind: 'buff'; id: string; durationTicks?: number; refresh?: boolean; when?: Condition; stacks?: number; untilSpirit?: string; onSpiritHit?: boolean; delayTicks?: number }
   | { kind: 'extend-buff'; buff: string; ticks: number; maxTotal?: number; when?: Condition }
   /** Life Transfer: every active conjured spirit lives `ticks` longer */
   | { kind: 'extend-spirits'; ticks: number }
@@ -207,6 +208,8 @@ export interface BleedSpec {
   damage?: { min: number; max: number };
   /** the cast starts no cooldown (Essence Corruption: a DoT dealt at once has its cooldown removed) */
   noCooldown?: boolean;
+  /** with `direct`: every DoT hit deals this share of what the direct hit actually dealt – crit and off-npc boosts included, on-npc effects applied per tick (Bloat 0.25) – instead of a roll of its own */
+  shareOfDirect?: number;
 }
 
 export interface ChannelSpec {

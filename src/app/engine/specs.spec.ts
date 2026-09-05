@@ -59,7 +59,7 @@ function make(steps: EngineEntity[], o: Opts = {}): TrainerEngine {
   if (first && !l.weaponSpec && !l.eofSpec) l.weaponSpec = first;
   l.style ??= first?.style ?? l.weaponSpec?.style ?? l.eofSpec?.style ?? null;
   const prebuild: Prebuild | undefined = o.stacks ? { stacks: o.stacks as Record<string, number>, spirits: [], abilities: [], prayers: [] } : undefined;
-  const cfg: EngineConfig = { pingMs: 0, jitterMs: 0, abilityQueueing: true, loop: true, loadout: l, prebuild, targetLifePoints: o.targetLifePoints, hitChanceDisabled: true };
+  const cfg: EngineConfig = { pingMs: 0, jitterMs: 0, autoAttacks: false, abilityQueueing: true, loop: true, loadout: l, prebuild, targetLifePoints: o.targetLifePoints, hitChanceDisabled: true };
   const e = new TrainerEngine(steps, new Map(steps.map((s) => [s.key, s])), cfg);
   e.random = () => o.random ?? 0.5;
   e.start(0);
