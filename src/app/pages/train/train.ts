@@ -115,6 +115,8 @@ export class Train implements OnDestroy {
   readonly GCD_MS = TICK_MS * GCD_TICKS;
   readonly REVOLUTION_MIN_SLOTS = REVOLUTION_MIN_SLOTS;
   readonly REVOLUTION_MAX_SLOTS = REVOLUTION_MAX_SLOTS;
+  /** Settings.uiMode: 'advanced' shows every panel and option; 'simple' (default) only the core – the simulation is the same */
+  readonly advanced = computed(() => this.storage.settings().uiMode === 'advanced');
   /** Revolution combat mode is selected (docs/research/revolution.md) */
   readonly revolution = computed(() => this.storage.settings().combatMode === 'revolution');
   /** slots of the main bar inside the yellow Revolution box (0 = full manual) */
@@ -1281,6 +1283,16 @@ export class Train implements OnDestroy {
 
   setSetting<K extends keyof Settings>(key: K, value: Settings[K]): void {
     void this.storage.saveSettings({ ...this.storage.settings(), [key]: value });
+  }
+
+  /** simple ⇄ advanced view; the layout editor and the open sub-forms belong to the advanced view */
+  setUiMode(advanced: boolean): void {
+    if (!advanced) {
+      this.editLayout.set(false);
+      this.enemyOpen.set(false);
+      this.prebuildOpen.set(false);
+    }
+    this.setSetting('uiMode', advanced ? 'advanced' : 'simple');
   }
 
   /** Revolution size / type toggles */
