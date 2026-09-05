@@ -25,6 +25,8 @@ import { slotAbilities } from '../../engine/morphs';
 import { AbilityIcon, IconState } from '../../shared/ability-icon';
 import { ActionBar, SlotView } from '../../shared/action-bar';
 import { GearAction, GearPanel } from '../../shared/gear-panel';
+import { DialogService, isTypingTarget } from '../../shared/dialog';
+import { FeedbackService } from '../../core/feedback.service';
 import { ToastService } from '../../shared/toast';
 import { EntityTip } from '../../shared/tooltip';
 
@@ -129,6 +131,11 @@ export class Train implements OnDestroy {
   readonly coach = inject(CoachService);
   /** "Load a demo" on the empty state: the first PvME preset with default keys */
   readonly presets = inject(PresetsService);
+  /** while a dialog / the feedback form is open the session hotkeys stay quiet (see onKeydown) */
+  private dialogs = inject(DialogService);
+  private feedbackDialog = inject(FeedbackService);
+  private hostEl = inject(ElementRef<HTMLElement>);
+  /** touch device: "Popout" (a PiP / popup window nobody can type into) becomes a "Phone view" link to /focus in this tab */
 
   readonly TICK_MS = TICK_MS;
   readonly GCD_MS = TICK_MS * GCD_TICKS;
@@ -778,6 +785,14 @@ export class Train implements OnDestroy {
     // the rotation the URL asks for ("Load a demo" and the Presets page save first and navigate after, so the
     // query param must be reactive, not a snapshot)
     const query = toSignal(this.route.queryParamMap, { initialValue: this.route.snapshot.queryParamMap });
+    // the session-end overlay takes the focus (its Restart button, or Close when Restart is disabled) so keyboard
+    // users are not left pressing keys into nothing; the focus goes back to the page when it closes
+    afterRenderEffect(() => {
+      if (!this.finishReason() || this.finishDismissed()) return;
+      const card = this.hostEl.nativeElement as HTMLElement;
+      const btn = card.querySelector('.finish-card button:not(:disabled)') as HTMLButtonElement | null;
+      if (btn && !btn.contains(document.activeElement)) btn.focus();
+    });
     effect(() => {
       const rotations = this.storage.rotations();
       const wanted = query().get('rotation');
@@ -1648,6 +1663,8 @@ export class Train implements OnDestroy {
   @HostListener('window:keydown', ['$event'])
   onKeydown(e: KeyboardEvent): void {
     if (!this.running()) return;
+    // typing into a text field (the feedback form, a prompt) or using an open dialog is not a key press for the bars
+    if (isTypingTarget(e.target) || this.dialogs.current() || this.feedbackDialog.open()) return;
     if (e.code === 'Escape') {
       e.preventDefault();
       this.stop();

@@ -39,6 +39,7 @@
 
     .btn-sm {
       flex: none;
+      min-height: 28px; // Alt1 users often drive the window with a pen / touch overlay
       padding: 3px 10px;
       font-size: 12px;
     }
@@ -187,6 +188,30 @@
     flex: none;
     font-size: 11px;
     line-height: 1.2;
+  }
+}
+
+// narrow window (360-wide popup, phones in portrait): the 14-column bars give ~20 px slots – smaller key labels and
+// seconds so they fit, tighter gaps; under 400 px the hint has no room at all
+@media (max-width: 440px) {
+  .focus {
+    padding: 4px 4px 3px;
+    gap: 3px;
+
+    // the slots' key labels and bar labels shrink too – that rule lives in shared/action-bar.ts (`:host-context(.focus)`)
+    .focus-bars {
+      gap: 2px;
+    }
+
+    .focus-strip .fslot .name {
+      max-width: 56px;
+    }
+  }
+}
+
+@media (max-width: 400px) {
+  .focus .focus-head .focus-hint {
+    display: none;
   }
 }
 

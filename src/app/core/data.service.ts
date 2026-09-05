@@ -126,7 +126,17 @@ export class DataService {
   ]);
   readonly byKey = computed(() => new Map(this.entities().map((e) => [e.key, e])));
 
+  /** the core files (or a catalog a page asked for) could not be fetched – offline, CDN hiccup; `retry()` tries again */
+  readonly loadError = signal(false);
+  /** catalogs whose fetch failed – `retry()` requests them again */
+  private readonly failedCatalogs = new Set<Catalog>();
+
   constructor() {
+    this.loadCore();
+  }
+
+  private loadCore(): void {
+    this.loadError.set(false);
     forkJoin({
       abilities: this.http.get<Ability[]>('data/abilities.json'),
       buffs: this.http.get<Buff[]>('data/buffs.json'),
@@ -148,8 +158,20 @@ export class DataService {
         this.setEffects.set(d.setEffects);
         this.loaded.set(true);
       },
-      error: (err) => console.error('data files failed to load', err),
+      error: (err) => {
+        console.error('data files failed to load', err);
+        this.loadError.set(true);
+      },
     });
+  }
+
+  /** "Retry" after a failed load: fetches the core files again (unless they are in) and every catalog that failed */
+  retry(): void {
+    if (!this.loaded()) this.loadCore();
+    else this.loadError.set(false);
+    const failed = [...this.failedCatalogs];
+    this.failedCatalogs.clear();
+    if (failed.length) void this.ensure(...failed).catch(() => undefined);
   }
 
   /** true once every named catalog has arrived (reactive: reads the `catalogs` signal) */
@@ -177,6 +199,8 @@ export class DataService {
       },
       (err: unknown) => {
         this.inflight.delete(name);
+        this.failedCatalogs.add(name);
+        this.loadError.set(true);
         console.error(CATALOG_FILES[name] + ' failed to load', err);
         throw err;
       },

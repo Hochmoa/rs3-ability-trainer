@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { groupCatalog } from '../../core/catalog-groups';
@@ -8,9 +8,10 @@ import { ActionBarSetup, BAR_POSITION_NAMES, RotationStep, SPELLBOOKS, SPELLBOOK
 import { isObscureEntity } from '../../core/obscure';
 import { StorageService } from '../../core/storage.service';
 import { AbilityIcon } from '../../shared/ability-icon';
-import { EntityTip } from '../../shared/tooltip';
+import { EntityTip, TooltipService } from '../../shared/tooltip';
 import { DialogService } from '../../shared/dialog';
 import { ToastService } from '../../shared/toast';
+import { DragArm } from '../../shared/hold-drag';
 
 const TABS = [...STYLES, 'Prayers', 'Curses', 'Spells', 'Special', 'Weapons'] as const;
 type Tab = (typeof TABS)[number];
@@ -23,9 +24,10 @@ const TYPE_ORDER: Record<string, number> = { Basic: 0, Enhanced: 1, Threshold: 2
   templateUrl: './bars.html',
   styleUrl: './bars.scss',
 })
-export class Bars {
+export class Bars implements OnDestroy {
   private dialogs = inject(DialogService);
   private toast = inject(ToastService);
+  private tips = inject(TooltipService);
   readonly storage = inject(StorageService);
   readonly data = inject(DataService);
   /** the "Copy from" select: shows the pick while the copy runs, then the placeholder again */
@@ -53,8 +55,15 @@ export class Bars {
   /** slot being dragged (dimmed) */
   readonly dragSlot = signal<number | null>(null);
   readonly isDragging = signal(false);
-  private drag: { entity: Entity; fromSlot: number | null; startX: number; startY: number; ghost: HTMLElement | null; moved: boolean } | null = null;
+  private drag: { entity: Entity; fromSlot: number | null; ghost: HTMLElement | null; moved: boolean } | null = null;
   private suppressClick = false;
+  /** mouse: drag after 6 px; touch: only after a 300 ms hold without movement (a swipe scrolls) – shared/hold-drag.ts */
+  private readonly arm = new DragArm();
+  private holdTimer = 0;
+
+  ngOnDestroy(): void {
+    this.abortDrag(); // a route change mid-drag would leave the window listeners and the ghost behind
+  }
 
   /** "Hide obscure abilities / prayers" – slayer passives, sub-36 standard prayers, saps & leeches … (core/obscure.ts) */
   readonly hideObscure = computed(() => this.storage.settings().hideObscureAbilities);
@@ -161,27 +170,52 @@ export class Bars {
   /**
    * Pointer-based drag: the source stays where it is (the CDK hid it and left a gap in the catalog),
    * a ghost icon follows the pointer and the slot underneath is highlighted. Catalog → slot sets the
-   * slot; slot → slot swaps the two slots.
+   * slot; slot → slot swaps the two slots. Touch: the finger has to rest 300 ms first (a swipe scrolls
+   * the page – the cells keep `touch-action: pan-y`); while dragging the touchmoves are cancelled so the
+   * browser does not pan under the drag.
    */
   startDrag(ev: PointerEvent, entity: Entity, fromSlot: number | null): void {
-    if (ev.button !== 0) return;
-    ev.preventDefault();
-    this.drag = { entity, fromSlot, startX: ev.clientX, startY: ev.clientY, ghost: null, moved: false };
+    if (ev.button !== 0 || this.drag) return;
+    const touch = ev.pointerType === 'touch';
+    if (!touch) ev.preventDefault(); // mouse: no text selection / native image drag; touch: the pan must stay possible
+    this.drag = { entity, fromSlot, ghost: null, moved: false };
+    const wait = this.arm.down(ev.pointerType, ev.clientX, ev.clientY, performance.now());
+    const { clientX, clientY } = ev;
+    if (wait) this.holdTimer = window.setTimeout(() => this.arm.tick(performance.now()) && this.beginDrag(clientX, clientY), wait);
     window.addEventListener('pointermove', this.onDragMove);
-    window.addEventListener('pointerup', this.onDragEnd, { once: true });
-    window.addEventListener('pointercancel', this.onDragEnd, { once: true });
+    window.addEventListener('pointerup', this.onDragEnd);
+    window.addEventListener('pointercancel', this.onDragEnd);
+    if (touch) window.addEventListener('touchmove', this.onTouchMove, { passive: false });
   }
+
+  /** the drag is on: ghost under the pointer, source dimmed, slots lit up */
+  private beginDrag(x: number, y: number): void {
+    const d = this.drag;
+    if (!d || d.moved) return;
+    d.moved = true;
+    d.ghost = this.makeGhost(d.entity);
+    d.ghost.style.left = x - 24 + 'px';
+    d.ghost.style.top = y - 24 + 'px';
+    this.dragSlot.set(d.fromSlot);
+    this.isDragging.set(true);
+    this.tips.dragging = true; // no long-press tooltip on top of the drag
+    this.tips.state.set(null);
+  }
+
+  private onTouchMove = (ev: TouchEvent): void => {
+    if (this.arm.dragging && ev.cancelable) ev.preventDefault();
+  };
 
   private onDragMove = (ev: PointerEvent): void => {
     const d = this.drag;
     if (!d) return;
-    if (!d.moved) {
-      if (Math.hypot(ev.clientX - d.startX, ev.clientY - d.startY) < 6) return;
-      d.moved = true;
-      d.ghost = this.makeGhost(d.entity);
-      this.dragSlot.set(d.fromSlot);
-      this.isDragging.set(true);
+    const r = this.arm.move(ev.clientX, ev.clientY, performance.now());
+    if (r === 'cancel') {
+      this.abortDrag(); // the finger is scrolling
+      return;
     }
+    if (r === 'start') this.beginDrag(ev.clientX, ev.clientY);
+    if (!d.moved) return;
     if (d.ghost) {
       d.ghost.style.left = ev.clientX - 24 + 'px';
       d.ghost.style.top = ev.clientY - 24 + 'px';
@@ -189,20 +223,35 @@ export class Bars {
     this.hoverSlot.set(this.slotUnder(ev));
   };
 
-  private onDragEnd = (ev: PointerEvent): void => {
+  /** removes the listeners, the timer and the ghost; returns the drag that was in flight */
+  private cleanupDrag(): typeof this.drag {
     const d = this.drag;
     this.drag = null;
+    window.clearTimeout(this.holdTimer);
+    this.arm.up();
     window.removeEventListener('pointermove', this.onDragMove);
     window.removeEventListener('pointerup', this.onDragEnd);
     window.removeEventListener('pointercancel', this.onDragEnd);
-    if (!d) return;
+    window.removeEventListener('touchmove', this.onTouchMove);
+    if (!d) return null;
     d.ghost?.remove();
     this.hoverSlot.set(null);
     this.dragSlot.set(null);
     this.isDragging.set(false);
-    if (!d.moved) return; // plain click – handled by (click)
+    this.tips.dragging = false;
+    return d;
+  }
+
+  private abortDrag(): void {
+    this.cleanupDrag();
+  }
+
+  private onDragEnd = (ev: PointerEvent): void => {
+    const d = this.cleanupDrag();
+    if (!d || !d.moved) return; // plain click – handled by (click)
     this.suppressClick = true;
     window.setTimeout(() => (this.suppressClick = false), 0);
+    if (ev.type === 'pointercancel') return;
     const target = this.slotUnder(ev);
     if (target === null) return;
     this.mutatePreset((slots) => {

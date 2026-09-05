@@ -1,5 +1,7 @@
 <h1 class="sr-only">Keybind drill – burn your RS3 keybinds into muscle memory</h1>
-@if (!storage.ready() || !data.loaded()) {
+@if (data.loadError()) {
+  <p class="bad" role="alert">Could not load the ability data – check your connection. <button class="btn btn-sm" type="button" (click)="data.retry()">Retry</button></p>
+} @else if (!storage.ready() || !data.loaded()) {
   <p class="muted">Loading…</p>
 } @else if (!anyKeys()) {
   <div class="panel empty">

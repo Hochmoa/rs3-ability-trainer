@@ -43,7 +43,7 @@ export interface SlotView {
   selector: 'action-bar',
   imports: [EntityTip, CdkDropList, CdkDrag],
   template: `
-    <div class="bar" [class.main]="position() === 0" [class.compact]="compact()" [class.editable]="editable()">
+    <div class="bar" [class.main]="position() === 0" [class.compact]="compact()" [class.editable]="editable()" role="group" [attr.aria-label]="(position() === 0 ? 'Main bar' : 'Bar ' + position()) + (presetName() ? ' – ' + presetName() : '')">
       <div class="slots">
         @for (s of slots(); track $index) {
           <div
@@ -57,11 +57,17 @@ export interface SlotView {
             [cdkDropListDisabled]="!droppable()"
             [id]="'bar-' + position() + '-slot-' + $index"
             (cdkDropListDropped)="onDrop($event, $index)"
+            role="button"
+            [attr.tabindex]="s.entity ? 0 : -1"
+            [attr.aria-label]="slotLabel(s, $index)"
             (click)="slotClick.emit($index)"
+            (keydown.enter)="slotClick.emit($index)"
+            (keydown.space)="slotClick.emit($index); $event.preventDefault()"
           >
             @if (s.entity) {
-              <!-- the icon can be dragged to another slot / bar while the bars are editable (not during a session) -->
-              <div class="drag" cdkDrag [cdkDragData]="{ pos: position(), slot: $index, entity: s.entity }" [cdkDragDisabled]="!droppable()">
+              <!-- the icon can be dragged to another slot / bar while the bars are editable (not during a session);
+                   on touch only after a short hold, so a swipe over the bars still scrolls the page -->
+              <div class="drag" cdkDrag [cdkDragData]="{ pos: position(), slot: $index, entity: s.entity }" [cdkDragDisabled]="!droppable()" [cdkDragStartDelay]="{ touch: 250, mouse: 0 }">
                 <img [src]="(s.morph?.entity ?? s.entity).icon" [alt]="(s.morph?.entity ?? s.entity).name" draggable="false" />
               </div>
               @if (s.morph && s.morph.stage > 1 && s.morph.entity.key === s.entity.key) {
@@ -389,6 +395,54 @@ export interface SlotView {
     .slot:hover .edit.right {
       bottom: 16px;
     }
+    /* no hover on touch: the buttons are always there and big enough for a finger */
+    @media (hover: none) {
+      .editable .slot .edit {
+        display: flex;
+      }
+      .editable .slot .edit.move {
+        width: 30%;
+        min-width: 16px;
+      }
+      .editable .slot .edit.clear {
+        width: 40%;
+        height: 40%;
+        min-width: 16px;
+        min-height: 16px;
+        font-size: 15px;
+      }
+      .editable .slot .edit.right {
+        bottom: 40%;
+      }
+    }
+    /* narrow focus window (360-wide popup, phones in portrait): 14 columns give ~20 px slots – smaller labels so they fit */
+    @media (max-width: 440px) {
+      :host-context(.focus) .key {
+        font-size: 9px;
+        padding: 0 2px;
+      }
+      :host-context(.focus) .seconds.small {
+        font-size: 9px;
+      }
+      :host-context(.focus) .label,
+      :host-context(.focus) .bar.compact .label {
+        width: 22px;
+        padding: 0;
+        gap: 2px;
+      }
+      :host-context(.focus) .pos {
+        font-size: 11px;
+      }
+      :host-context(.focus) .info {
+        display: none;
+      }
+    }
+    /* keyboard focus on a slot (mouse clicks do not show it – the game does not either) */
+    .slot:focus-visible {
+      outline: 2px solid var(--gold);
+      outline-offset: 1px;
+      z-index: 2;
+    }
   `,
 })
 export class ActionBar {
@@ -411,6 +465,19 @@ export class ActionBar {
   readonly ceil = Math.ceil;
   readonly gearDrag = inject(GearDragService);
   private readonly data = inject(DataService);
+
+  /** screen-reader name of a slot: "Sever, key 3, expected next" – the states are colour-only otherwise */
+  slotLabel(s: SlotView, index: number): string {
+    if (!s.entity) return 'empty slot ' + (index + 1);
+    const parts = [(s.morph?.entity ?? s.entity).name];
+    if (s.keyLabel) parts.push('key ' + s.keyLabel);
+    if (s.expected) parts.push('expected next');
+    if (s.queued) parts.push('queued');
+    if (s.active) parts.push('active');
+    if (s.cooldownS > 0) parts.push('cooldown ' + Math.ceil(s.cooldownS) + ' s');
+    else if (s.usable && s.usable !== 'ok') parts.push('not usable');
+    return parts.join(', ');
+  }
 
   /** `data-gear-drop` id of a slot: a potion / weapon dragged out of the backpack lands here */
   gearDropId(slot: number): string {

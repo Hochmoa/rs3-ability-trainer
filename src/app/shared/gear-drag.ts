@@ -1,5 +1,7 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import type { GearDrag } from './gear-panel';
+import { DragArm } from './hold-drag';
+import { TooltipService } from './tooltip';
 
 /** DOM event fired on the drop target (an element with `data-gear-drop`); `detail` is the GearDrag. */
 export const GEAR_DROP_EVENT = 'gear-drop';
@@ -22,15 +24,67 @@ export class GearDragService {
   /** true right after a drop: the click the browser fires on the common ancestor is not a click */
   suppressClick = false;
 
-  private current: { drag: GearDrag; icon: string | null; name: string; startX: number; startY: number; ghost: HTMLElement | null; moved: boolean } | null = null;
+  private current: { drag: GearDrag; icon: string | null; name: string; ghost: HTMLElement | null; moved: boolean } | null = null;
+  /** mouse: drag after 6 px; touch: only after a 300 ms hold without movement (a swipe scrolls) – hold-drag.ts */
+  private readonly arm = new DragArm();
+  private holdTimer = 0;
+  private readonly tips = inject(TooltipService);
 
+  /**
+   * pointerdown on a source. Touch: the finger has to rest 300 ms first (a swipe scrolls – the sources keep
+   * `touch-action: pan-y`); while dragging the touchmoves are cancelled so the browser does not pan under the drag.
+   */
   start(ev: PointerEvent, drag: GearDrag, view: { icon: string | null; name: string }): void {
     if (ev.button !== 0 || this.current) return;
-    ev.preventDefault();
-    this.current = { drag, icon: view.icon, name: view.name, startX: ev.clientX, startY: ev.clientY, ghost: null, moved: false };
+    const touch = ev.pointerType === 'touch';
+    if (!touch) ev.preventDefault(); // mouse: no text selection / native image drag; touch: the pan must stay possible
+    this.current = { drag, icon: view.icon, name: view.name, ghost: null, moved: false };
+    const wait = this.arm.down(ev.pointerType, ev.clientX, ev.clientY, performance.now());
+    const { clientX, clientY } = ev;
+    if (wait) this.holdTimer = window.setTimeout(() => this.arm.tick(performance.now()) && this.begin(clientX, clientY), wait);
     window.addEventListener('pointermove', this.onMove);
-    window.addEventListener('pointerup', this.onEnd, { once: true });
-    window.addEventListener('pointercancel', this.onEnd, { once: true });
+    window.addEventListener('pointerup', this.onEnd);
+    window.addEventListener('pointercancel', this.onEnd);
+    if (touch) window.addEventListener('touchmove', this.onTouchMove, { passive: false });
+  }
+
+  /** drops a drag in flight without a drop (the panel / page is destroyed mid-drag) */
+  cancel(): void {
+    this.cleanup();
+  }
+
+  private begin(x: number, y: number): void {
+    const c = this.current;
+    if (!c || c.moved) return;
+    c.moved = true;
+    c.ghost = this.makeGhost(c.icon, c.name);
+    c.ghost.style.left = x - 24 + 'px';
+    c.ghost.style.top = y - 24 + 'px';
+    this.drag.set(c.drag);
+    this.tips.dragging = true; // no long-press tooltip on top of the drag
+    this.tips.state.set(null);
+  }
+
+  private onTouchMove = (ev: TouchEvent): void => {
+    if (this.arm.dragging && ev.cancelable) ev.preventDefault();
+  };
+
+  /** removes the listeners, the timer and the ghost; returns the drag that was in flight */
+  private cleanup(): typeof this.current {
+    const c = this.current;
+    this.current = null;
+    window.clearTimeout(this.holdTimer);
+    this.arm.up();
+    window.removeEventListener('pointermove', this.onMove);
+    window.removeEventListener('pointerup', this.onEnd);
+    window.removeEventListener('pointercancel', this.onEnd);
+    window.removeEventListener('touchmove', this.onTouchMove);
+    if (!c) return null;
+    c.ghost?.remove();
+    this.hover.set(null);
+    this.drag.set(null);
+    this.tips.dragging = false;
+    return c;
   }
 
   /** is this source the one being dragged (dimmed in the panel) */
@@ -45,12 +99,13 @@ export class GearDragService {
   private onMove = (ev: PointerEvent): void => {
     const c = this.current;
     if (!c) return;
-    if (!c.moved) {
-      if (Math.hypot(ev.clientX - c.startX, ev.clientY - c.startY) < 6) return;
-      c.moved = true;
-      c.ghost = this.makeGhost(c.icon, c.name);
-      this.drag.set(c.drag);
+    const r = this.arm.move(ev.clientX, ev.clientY, performance.now());
+    if (r === 'cancel') {
+      this.cleanup(); // the finger is scrolling
+      return;
     }
+    if (r === 'start') this.begin(ev.clientX, ev.clientY);
+    if (!c.moved) return;
     if (c.ghost) {
       c.ghost.style.left = ev.clientX - 24 + 'px';
       c.ghost.style.top = ev.clientY - 24 + 'px';
@@ -59,16 +114,8 @@ export class GearDragService {
   };
 
   private onEnd = (ev: PointerEvent): void => {
-    const c = this.current;
-    this.current = null;
-    window.removeEventListener('pointermove', this.onMove);
-    window.removeEventListener('pointerup', this.onEnd);
-    window.removeEventListener('pointercancel', this.onEnd);
-    if (!c) return;
-    c.ghost?.remove();
-    this.hover.set(null);
-    this.drag.set(null);
-    if (!c.moved) return; // plain click – handled by (click)
+    const c = this.cleanup();
+    if (!c || !c.moved) return; // plain click – handled by (click)
     this.suppressClick = true;
     window.setTimeout(() => (this.suppressClick = false), 0);
     if (ev.type === 'pointercancel') return;

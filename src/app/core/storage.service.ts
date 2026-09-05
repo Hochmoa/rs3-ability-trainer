@@ -1,20 +1,66 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { IDBPDatabase, deleteDB, openDB } from 'idb';
 import { Subject } from 'rxjs';
+import { ToastService } from '../shared/toast';
 import { DEFAULT_LAYOUT_ID, applyLayout, defaultActionBarsWithKeys, hasNoSlotKeys, keybindLayout } from './keybind-layouts';
 import { ActionBarSetup, BarProfile, BarProfileData, DEFAULT_BAR_PROFILE_ID, DEFAULT_ENEMY, enemyWithStats, activateProfile, profileData, snapshotActiveProfile, DEFAULT_SETTINGS, EnemyConfig, Equipment, INVENTORY_SIZE, ItemRef, Keybind, LegacyLoadout, Loadout, Prebuild, Rotation, RotationStep, Session, SetupBundle, SetupMeta, Settings, defaultActionBars, migrateLegacyLoadout, newLoadout } from './models';
 
 const DB_NAME = 'rs3trainer';
 const CONSENT_KEY = 'rs3trainer.consent';
+/** one "could not save" toast per this many ms – a burst of failing puts (quota) is one problem, not twenty */
+const WRITE_TOAST_MS = 30_000;
+const WRITE_FAILED_TEXT = "Could not save to this browser's storage – your change is kept for this visit only.";
+const LOAD_FAILED_TEXT = "Could not read this browser's storage – running with defaults, nothing is saved until you reload.";
+
+/**
+ * Runs a storage operation and never throws: a failure (QuotaExceededError, Safari's UnknownError, a closed
+ * database …) goes to `report` and resolves undefined. The signals were already updated, so the app keeps
+ * working with the in-memory copy.
+ */
+export async function safeWrite<T>(op: () => Promise<T>, report: (err: unknown) => void): Promise<T | undefined> {
+  try {
+    return await op();
+  } catch (err) {
+    report(err);
+    return undefined;
+  }
+}
+
+/** `fire()` runs the callback at most once per `ms` (leading edge); the calls in between are dropped */
+export class Throttle {
+  private last = -Infinity;
+
+  constructor(
+    private readonly ms: number,
+    private readonly now: () => number = () => Date.now(),
+  ) {}
+
+  fire(fn: () => void): boolean {
+    const t = this.now();
+    if (t - this.last < this.ms) return false;
+    this.last = t;
+    fn();
+    return true;
+  }
+}
 
 /**
  * Holds all user data as signals and mirrors it into IndexedDB once the user has accepted
  * storage. Before consent everything lives in memory only.
+ *
+ * Every IndexedDB write goes through `write()`: a failure is logged and toasted (throttled), never thrown –
+ * the signals already hold the change. A failed *read* at start-up sets `loadFailed`, which blocks every
+ * write for this page load: the app would otherwise overwrite the user's stored data with the defaults it
+ * fell back to.
  */
 @Injectable({ providedIn: 'root' })
 export class StorageService {
+  private readonly toast = inject(ToastService);
   readonly consent = signal(readConsent());
   readonly ready = signal(false);
+  /** a store could not be read at start-up – the app runs on defaults and does not write (see class doc) */
+  readonly loadFailed = signal(false);
+  private readonly writeToast = new Throttle(WRITE_TOAST_MS);
   readonly settings = signal<Settings>({ ...DEFAULT_SETTINGS });
   /** named loadouts; the active one drives the simulation */
   readonly loadouts = signal<Loadout[]>([newLoadout()]);
@@ -66,56 +112,85 @@ export class StorageService {
     return this.db;
   }
 
+  /**
+   * A read at start-up; a failure (a corrupt record, a blocked database) is logged, flags `loadFailed` and
+   * resolves undefined – the other stores are still read and applied.
+   */
+  private async read<T>(what: string, op: (db: IDBPDatabase) => Promise<T>): Promise<T | undefined> {
+    try {
+      return await op(await this.open());
+    } catch (err) {
+      console.error('IndexedDB read failed: ' + what, err);
+      this.loadFailed.set(true);
+      return undefined;
+    }
+  }
+
+  /** an IndexedDB write – skipped without consent or after a failed read; a failure is logged and toasted, never thrown */
+  private async write(op: (db: IDBPDatabase) => Promise<unknown>): Promise<void> {
+    if (!this.consent() || this.loadFailed()) return;
+    await safeWrite(
+      async () => op(await this.open()),
+      (err) => {
+        console.error('IndexedDB write failed', err);
+        this.writeToast.fire(() => this.toast.show(WRITE_FAILED_TEXT, 'warn'));
+      },
+    );
+  }
+
   private async load(): Promise<void> {
     if (!this.consent()) {
       this.ready.set(true);
       return;
     }
-    try {
-      const db = await this.open();
-      const settings = await db.get('settings', 'settings');
-      if (settings) this.settings.set(migrateSettings(settings));
-      const stored = (await db.get('settings', 'loadouts')) as { loadouts: Loadout[]; active: string } | undefined;
-      if (stored?.loadouts?.length) {
-        this.loadouts.set(stored.loadouts.map(normaliseLoadout));
-        this.activeLoadoutId.set(stored.loadouts.some((l) => l.id === stored.active) ? stored.active : stored.loadouts[0].id);
-      } else {
-        const legacy = (await db.get('settings', 'loadout')) as Partial<LegacyLoadout> | undefined; // builds before Sept 2026
-        if (legacy) {
-          const l = migrateLegacyLoadout(legacy);
-          this.loadouts.set([l]);
-          this.activeLoadoutId.set(l.id);
-          await db.put('settings', { loadouts: [l], active: l.id }, 'loadouts');
-        }
-      }
-      const enemy = await db.get('settings', 'enemy');
-      if (enemy) this.enemy.set(enemyWithStats(enemy));
-      const prebuilds = await db.get('settings', 'prebuilds');
-      if (prebuilds) this.prebuilds.set(prebuilds);
-      const bars = await db.get('settings', 'actionbars');
-      if (bars) this.actionBars.set(mergeActionBars(bars));
-      const meta = (await db.get('settings', 'setupmeta')) as SetupMeta | undefined;
-      if (meta) this.setupMeta.set({ ...meta });
+    const settings = await this.read('settings', (db) => db.get('settings', 'settings'));
+    if (settings) this.settings.set(migrateSettings(settings));
 
-      const keys = (await db.getAllKeys('keybinds')) as string[];
-      const values = (await db.getAll('keybinds')) as Keybind[];
+    const stored = await this.read('loadouts', (db) => db.get('settings', 'loadouts') as Promise<{ loadouts: Loadout[]; active: string } | undefined>);
+    if (stored?.loadouts?.length) {
+      this.loadouts.set(stored.loadouts.map(normaliseLoadout));
+      this.activeLoadoutId.set(stored.loadouts.some((l) => l.id === stored.active) ? stored.active : stored.loadouts[0].id);
+    } else if (!stored) {
+      const legacy = await this.read('loadout', (db) => db.get('settings', 'loadout') as Promise<Partial<LegacyLoadout> | undefined>); // builds before Sept 2026
+      if (legacy) {
+        const l = migrateLegacyLoadout(legacy);
+        this.loadouts.set([l]);
+        this.activeLoadoutId.set(l.id);
+        await this.write((db) => db.put('settings', { loadouts: [l], active: l.id }, 'loadouts'));
+      }
+    }
+
+    const enemy = await this.read('enemy', (db) => db.get('settings', 'enemy'));
+    if (enemy) this.enemy.set(enemyWithStats(enemy));
+    const prebuilds = await this.read('prebuilds', (db) => db.get('settings', 'prebuilds'));
+    if (prebuilds) this.prebuilds.set(prebuilds);
+    const bars = await this.read('actionbars', (db) => db.get('settings', 'actionbars'));
+    if (bars) this.actionBars.set(mergeActionBars(bars));
+    const meta = await this.read('setupmeta', (db) => db.get('settings', 'setupmeta') as Promise<SetupMeta | undefined>);
+    if (meta) this.setupMeta.set({ ...meta });
+
+    const storedKeybinds = await this.read('keybinds', async (db) => ({ keys: (await db.getAllKeys('keybinds')) as string[], values: (await db.getAll('keybinds')) as Keybind[] }));
+    if (storedKeybinds) {
+      const { keys, values } = storedKeybinds;
       const keybinds: Record<string, Keybind> = {};
       for (let i = 0; i < keys.length; i++) {
         const k = keys[i].includes(':') ? keys[i] : 'ability:' + keys[i]; // legacy: plain ability ids
         keybinds[k] = values[i];
         if (k !== keys[i]) {
-          await db.delete('keybinds', keys[i]);
-          await db.put('keybinds', values[i], k);
+          await this.write((db) => db.delete('keybinds', keys[i]));
+          await this.write((db) => db.put('keybinds', values[i], k));
         }
       }
       this.keybinds.set(keybinds);
-
-      const rotations = ((await db.getAll('rotations')) as Rotation[]).map(migrateRotation);
-      for (const r of rotations) await db.put('rotations', r);
-      this.rotations.set(rotations.sort((a, b) => b.updatedAt - a.updatedAt));
-    } catch (err) {
-      console.error('IndexedDB load failed', err);
     }
+
+    const rotations = await this.read('rotations', async (db) => ((await db.getAll('rotations')) as Rotation[]).map(migrateRotation));
+    if (rotations) {
+      for (const r of rotations) await this.write((db) => db.put('rotations', r));
+      this.rotations.set(rotations.sort((a, b) => b.updatedAt - a.updatedAt));
+    }
+
+    if (this.loadFailed()) this.toast.show(LOAD_FAILED_TEXT, 'warn', 12_000);
     this.ready.set(true);
   }
 
@@ -136,19 +211,20 @@ export class StorageService {
       /* storage blocked – keep in memory */
     }
     this.consent.set(true);
-    const db = await this.open();
-    await db.put('settings', this.settings(), 'settings');
-    await db.put('settings', { loadouts: this.loadouts(), active: this.activeLoadoutId() }, 'loadouts');
-    await db.put('settings', this.enemy(), 'enemy');
-    await db.put('settings', this.actionBars(), 'actionbars');
-    await db.put('settings', this.setupMeta(), 'setupmeta');
-    for (const [id, kb] of Object.entries(this.keybinds())) await db.put('keybinds', kb, id);
-    for (const r of this.rotations()) await db.put('rotations', r);
+    await this.write(async (db) => {
+      await db.put('settings', this.settings(), 'settings');
+      await db.put('settings', { loadouts: this.loadouts(), active: this.activeLoadoutId() }, 'loadouts');
+      await db.put('settings', this.enemy(), 'enemy');
+      await db.put('settings', this.actionBars(), 'actionbars');
+      await db.put('settings', this.setupMeta(), 'setupmeta');
+      for (const [id, kb] of Object.entries(this.keybinds())) await db.put('keybinds', kb, id);
+      for (const r of this.rotations()) await db.put('rotations', r);
+    });
   }
 
   async saveSettings(s: Settings): Promise<void> {
     this.settings.set({ ...s });
-    if (this.consent()) await (await this.open()).put('settings', this.settings(), 'settings');
+    await this.write((db) => db.put('settings', this.settings(), 'settings'));
     await this.touchSetup();
   }
 
@@ -157,12 +233,12 @@ export class StorageService {
     if (p) next[rotationId] = { ...p, stacks: { ...p.stacks }, spirits: [...p.spirits], abilities: [...p.abilities], prayers: [...p.prayers] };
     else delete next[rotationId];
     this.prebuilds.set(next);
-    if (this.consent()) await (await this.open()).put('settings', next, 'prebuilds');
+    await this.write((db) => db.put('settings', next, 'prebuilds'));
   }
 
   async saveEnemy(e: EnemyConfig): Promise<void> {
     this.enemy.set({ ...e, styles: [...e.styles] });
-    if (this.consent()) await (await this.open()).put('settings', this.enemy(), 'enemy');
+    await this.write((db) => db.put('settings', this.enemy(), 'enemy'));
     await this.touchSetup();
   }
 
@@ -174,7 +250,7 @@ export class StorageService {
 
   async putSetupMeta(m: SetupMeta): Promise<void> {
     this.setupMeta.set({ ...m });
-    if (this.consent()) await (await this.open()).put('settings', this.setupMeta(), 'setupmeta');
+    await this.write((db) => db.put('settings', this.setupMeta(), 'setupmeta'));
   }
 
   /** Applies the server copy of settings + loadouts + enemy without firing the sync hook. */
@@ -184,12 +260,11 @@ export class StorageService {
     this.loadouts.set(list.length ? list : [newLoadout()]);
     this.activeLoadoutId.set(this.loadouts().some((l) => l.id === s.activeLoadoutId) ? s.activeLoadoutId : this.loadouts()[0].id);
     if (s.enemy) this.enemy.set(enemyWithStats(s.enemy));
-    if (this.consent()) {
-      const db = await this.open();
+    await this.write(async (db) => {
       await db.put('settings', this.settings(), 'settings');
       await db.put('settings', { loadouts: this.loadouts(), active: this.activeLoadoutId() }, 'loadouts');
       await db.put('settings', this.enemy(), 'enemy');
-    }
+    });
     await this.putSetupMeta(meta);
   }
 
@@ -204,11 +279,10 @@ export class StorageService {
     const keybinds: Record<string, Keybind> = {};
     for (const [key, kb] of Object.entries(b.keybinds ?? {})) if (kb && typeof kb.code === 'string') keybinds[key] = { code: kb.code, ctrl: !!kb.ctrl, shift: !!kb.shift, alt: !!kb.alt };
     this.keybinds.set(keybinds);
-    if (this.consent()) {
-      const db = await this.open();
+    await this.write(async (db) => {
       await db.clear('keybinds');
       for (const [key, kb] of Object.entries(keybinds)) await db.put('keybinds', kb, key);
-    }
+    });
     this.keybindsReplaced.next(keybinds);
 
     const bars = b.actionBars ? mergeActionBars(b.actionBars) : defaultActionBarsWithKeys();
@@ -239,7 +313,7 @@ export class StorageService {
   }
 
   private async persistLoadouts(): Promise<void> {
-    if (this.consent()) await (await this.open()).put('settings', { loadouts: this.loadouts(), active: this.activeLoadoutId() }, 'loadouts');
+    await this.write((db) => db.put('settings', { loadouts: this.loadouts(), active: this.activeLoadoutId() }, 'loadouts'));
   }
 
   async saveActionBars(setup: ActionBarSetup): Promise<void> {
@@ -284,7 +358,7 @@ export class StorageService {
   /** Stores the setup as-is (keeps updatedAt / syncedAt) without firing the sync hook. */
   async putActionBars(setup: ActionBarSetup): Promise<void> {
     this.actionBars.set(structuredClone(setup));
-    if (this.consent()) await (await this.open()).put('settings', this.actionBars(), 'actionbars');
+    await this.write((db) => db.put('settings', this.actionBars(), 'actionbars'));
   }
 
   async setKeybind(key: string, kb: Keybind | null): Promise<void> {
@@ -298,11 +372,7 @@ export class StorageService {
     if (kb) next[key] = kb;
     else delete next[key];
     this.keybinds.set(next);
-    if (this.consent()) {
-      const db = await this.open();
-      if (kb) await db.put('keybinds', kb, key);
-      else await db.delete('keybinds', key);
-    }
+    await this.write((db) => (kb ? db.put('keybinds', kb, key) : db.delete('keybinds', key)));
   }
 
   async saveRotation(r: Rotation): Promise<void> {
@@ -314,7 +384,7 @@ export class StorageService {
   async putRotation(r: Rotation): Promise<Rotation> {
     const rot: Rotation = { ...r, steps: r.steps.map(cleanStep) };
     this.rotations.set([rot, ...this.rotations().filter((x) => x.id !== rot.id)].sort((a, b) => b.updatedAt - a.updatedAt));
-    if (this.consent()) await (await this.open()).put('rotations', rot);
+    await this.write((db) => db.put('rotations', rot));
     return rot;
   }
 
@@ -326,30 +396,42 @@ export class StorageService {
   /** Removes a rotation without firing the sync hook. */
   async removeRotation(id: string): Promise<void> {
     this.rotations.set(this.rotations().filter((x) => x.id !== id));
-    if (this.consent()) await (await this.open()).delete('rotations', id);
+    await this.write((db) => db.delete('rotations', id));
   }
 
   async addSession(s: Session): Promise<void> {
     this.sessionsSaved.update((n) => n + 1);
-    if (this.consent()) await (await this.open()).add('sessions', s);
+    await this.write((db) => db.add('sessions', s));
     this.sessionAdded.next(s);
   }
 
   async listSessions(): Promise<Session[]> {
     if (!this.consent()) return [];
-    return ((await (await this.open()).getAll('sessions')) as Session[]).sort((a, b) => b.startedAt - a.startedAt);
+    const list = await safeWrite(
+      async () => (await (await this.open()).getAll('sessions')) as Session[],
+      (err) => console.error('IndexedDB read failed: sessions', err),
+    );
+    return (list ?? []).sort((a, b) => b.startedAt - a.startedAt);
   }
 
   async clearAll(): Promise<void> {
-    if (this.db) (await this.db).close();
+    try {
+      if (this.db) (await this.db).close();
+    } catch {
+      /* never opened */
+    }
     this.db = null;
     try {
       localStorage.removeItem(CONSENT_KEY);
     } catch {
       /* ignore */
     }
-    await deleteDB(DB_NAME);
+    await safeWrite(
+      () => deleteDB(DB_NAME),
+      (err) => console.error('IndexedDB delete failed', err),
+    );
     this.consent.set(false);
+    this.loadFailed.set(false);
     this.settings.set({ ...DEFAULT_SETTINGS });
     this.loadouts.set([newLoadout()]);
     this.activeLoadoutId.set(this.loadouts()[0].id);

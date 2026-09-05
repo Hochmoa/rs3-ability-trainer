@@ -33,8 +33,24 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="preconnect" href="https://lqimsvrbpfabkyaupcgx.supabase.co" crossorigin>
   <script type="application/ld+json" id="ld-json">{}</script>
+  <!-- first paint on slow phones: the app's dark background and text colour before the stylesheet arrives -->
+  <style>body{margin:0;background:#0f0f12;color:#e8e4d8;font-family:'Segoe UI',system-ui,-apple-system,Roboto,sans-serif}#boot-msg{padding:16px;color:#9a968c}</style>
 </head>
 <body>
-  <app-root><!-- crawlable static content per route is injected here by tools/postbuild.mjs --><p class="muted" style="padding:16px">Loading RS3 Ability Trainer…</p></app-root>
+  <app-root><!-- crawlable static content per route is injected here by tools/postbuild.mjs --><p class="muted" id="boot-msg" style="padding:16px">Loading RS3 Ability Trainer…</p></app-root>
+  <noscript><p style="padding:16px;color:#ffb300">This trainer needs JavaScript – please enable it for this site.</p></noscript>
+  <!-- the bundle targets ES2022 (Chrome 94+, Safari 15.4+, Firefox 93+, the Chromium in Alt1): an older browser would parse-fail
+       silently and stay on "Loading…" – say so instead. structuredClone / Array.prototype.at arrived with that generation. -->
+  <script>
+    (function () {
+      var ok = typeof structuredClone === 'function' && typeof Array.prototype.at === 'function' && typeof Object.hasOwn === 'function';
+      if (ok) return;
+      var msg = 'This browser is too old for the trainer – it needs Chrome / Edge 94+, Firefox 93+ or Safari 15.4+ (Alt1: update the toolkit).';
+      var p = document.getElementById('boot-msg');
+      var root = document.querySelector('app-root'); // the built pages carry static content instead of the loading line (tools/postbuild.mjs)
+      if (p) p.textContent = msg;
+      else if (root) root.insertAdjacentHTML('afterbegin', '<p style="padding:16px;color:#ffb300">' + msg + '</p>');
+    })();
+  </script>
 </body>
 </html>

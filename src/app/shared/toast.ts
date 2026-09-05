@@ -12,11 +12,20 @@ export class ToastService {
   readonly messages = signal<ToastMessage[]>([]);
   private nextId = 1;
 
-  show(text: string, kind: ToastMessage['kind'] = 'info', ms = 3500): void {
+  /** `ms` defaults to reading time (3.5 s, plus 60 ms per character for the long ones); a tap on the toast dismisses it early */
+  show(text: string, kind: ToastMessage['kind'] = 'info', ms = toastDuration(text)): void {
     const id = this.nextId++;
     this.messages.update((m) => [...m, { id, text, kind }]);
-    window.setTimeout(() => this.messages.update((m) => m.filter((x) => x.id !== id)), ms);
+    window.setTimeout(() => this.dismiss(id), ms);
   }
+
+  dismiss(id: number): void {
+    this.messages.update((m) => m.filter((x) => x.id !== id));
+  }
+}
+
+export function toastDuration(text: string): number {
+  return Math.max(3500, text.length * 60);
 }
 
 @Component({
@@ -24,7 +33,7 @@ export class ToastService {
   template: `
     <div class="toasts" aria-live="polite">
       @for (m of toasts.messages(); track m.id) {
-        <div class="toast" [class.warn]="m.kind === 'warn'">{{ m.text }}</div>
+        <div class="toast" [class.warn]="m.kind === 'warn'" (click)="toasts.dismiss(m.id)" title="Tap to dismiss">{{ m.text }}</div>
       }
     </div>
   `,
@@ -41,6 +50,9 @@ export class ToastService {
       pointer-events: none;
     }
     .toast {
+      pointer-events: auto;
+      cursor: pointer;
+      max-width: calc(100vw - 24px);
       padding: 8px 14px;
       background: #26231c;
       border: 1px solid var(--gold);
