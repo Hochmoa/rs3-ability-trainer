@@ -1,15 +1,19 @@
 import { CdkDrag, CdkDropList, CdkDropListGroup } from '@angular/cdk/drag-drop';
 import { DecimalPipe, DOCUMENT } from '@angular/common';
-import { Component, ElementRef, HostListener, OnDestroy, afterNextRender, afterRenderEffect, computed, effect, inject, signal, viewChild } from '@angular/core';
+import { Component, DestroyRef, ElementRef, HostListener, OnDestroy, WritableSignal, afterNextRender, afterRenderEffect, computed, effect, inject, signal, untracked, viewChild } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { placeOnBars } from '../../core/bar-place';
 import { DataService, EOF_ICON, Entity, SPEC_KEY } from '../../core/data.service';
 import { applyWield, equip, unequip } from '../../core/equipment';
+import { DEFAULT_LAYOUT_ID, keybindLayout } from '../../core/keybind-layouts';
 import { keybindFromEvent, keybindKey, keybindLabel } from '../../core/keybind.util';
 import { ActionBarSetup, AttackPattern, BAR_POSITIONS, BONE_SHIELD_ABILITY, INVENTORY_SIZE, BAR_SLOTS, BarShape, barLayout, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, TARGET_TYPES, EquipSlot, ItemRef, Loadout, PrayerStats, Prebuild, REVOLUTION_MAX_SLOTS, REVOLUTION_MIN_SLOTS, RevolutionSettings, Rotation, STYLES4, Settings, StepResult, Style, Style4, WeaponSpec, emptyPrebuild, entityKey, isStyle4, loadoutWeapons, loadoutWield, parseEntityKey, prebuildIsEmpty, visiblePresets, RotationStep, CoachSettings } from '../../core/models';
 import { alt1Announce, focusUrl, openFocusWindow } from '../../core/popout';
 import { CoachService, spokenLabel, spokenSequence } from '../../core/coach.service';
 import { PresetsService } from '../../core/presets.service';
+import { nextRotation, pickRotation as chooseRotation, worstStep } from '../../core/rotation-pick';
 import { StorageService } from '../../core/storage.service';
 import { resolveLoadout } from '../../engine/loadout-resolver';
 import { BUFF_BY_ID, ruleFor, stackMax, stackName } from '../../engine/rules';
@@ -17,7 +21,7 @@ import { STYLE_STACKS, StackId } from '../../engine/rules-model';
 import { COMMAND_READY_AFTER, CONJURE_BASE_TICKS } from '../../engine/rules-necromancy';
 import { ActiveBuff, EngineEntity, EngineEvent, GCD_TICKS, TICK_MS, TrainerEngine, UsableReason, Wield } from '../../engine/trainer-engine';
 import { SOUL_SPLIT } from '../../engine/prayer-rules';
-import { morphSourceOf, slotAbilities } from '../../engine/morphs';
+import { slotAbilities } from '../../engine/morphs';
 import { AbilityIcon, IconState } from '../../shared/ability-icon';
 import { ActionBar, SlotView } from '../../shared/action-bar';
 import { GearAction, GearPanel } from '../../shared/gear-panel';
@@ -27,6 +31,8 @@ import { EntityTip } from '../../shared/tooltip';
 interface Feedback {
   text: string;
   cls: 'good' | 'bad' | 'warn' | 'info';
+  /** muted small print after the text ("120 ms early") – advanced view only */
+  detail?: string;
 }
 
 /** one processed input on the "Pressed" strip – what the server made of a press, in order */
@@ -100,6 +106,10 @@ interface IncomingView {
 
 /** how long a press stays lit at least, so a 0 ms ping still shows the click */
 const PRESS_FLASH_MS = 200;
+/** phone-sized screen (train.scss uses the same breakpoint) */
+const NARROW_QUERY = '(max-width: 640px)';
+/** localStorage: the simple view's "Options" disclosure */
+const OPTIONS_KEY = 'rs3trainer.train.options';
 const EMPTY_PRAYER_STATS: PrayerStats = { ticks: 0, soulSplitTicks: 0, attacks: 0, prayed: 0, hits: 0, absorbed: 0 };
 
 @Component({
@@ -147,6 +157,28 @@ export class Train implements OnDestroy {
 
   readonly selectedId = signal<string | null>(null);
   readonly rotation = computed(() => this.storage.rotations().find((r) => r.id === this.selectedId()) ?? null);
+  /** "42 steps · Necromancy" under the rotation select */
+  readonly rotationCaption = computed(() => {
+    const r = this.rotation();
+    if (!r) return '';
+    const n = r.steps.filter((st) => st.kind !== 'note').length;
+    // the combat styles only – Defence / Constitution abilities are not what a rotation is "about"
+    const styles = [...this.rotationStyles()].filter((st) => isStyle4(st));
+    return n + (n === 1 ? ' step' : ' steps') + (styles.length ? ' · ' + styles.join(' / ') : '');
+  });
+  /** the rotation after this one in its PvME preset – "Next: Phase 4" on the session end */
+  readonly next = computed(() => nextRotation(this.storage.rotations(), this.rotation()));
+  /** the next rotation's name without the boss prefix it shares with the current one */
+  readonly nextLabel = computed(() => {
+    const n = this.next();
+    const cur = this.rotation();
+    if (!n) return '';
+    const sep = ' – ';
+    const prefix = cur && cur.name.includes(sep) ? cur.name.slice(0, cur.name.indexOf(sep) + sep.length) : '';
+    return prefix && n.name.startsWith(prefix) ? n.name.slice(prefix.length) : n.name;
+  });
+  /** simple view: the options row is folded behind "Options" – remembered per browser */
+  readonly optionsOpen = signal(readOptionsOpen());
   /** rotation steps resolved to entities (null = unknown / removed from the game); notes become synthetic entities */
   readonly stepEntities = computed<(Entity | null)[]>(
     () => this.rotation()?.steps.map((s, i) => (s.kind === 'note' ? noteEntity(s, i) : this.data.step(s) ?? null)) ?? [],
@@ -394,10 +426,32 @@ export class Train implements OnDestroy {
     this.dropIntoInventory(free >= 0 ? free : 0, e);
   }
 
+  /** "Auto-place on my bars": the missing steps go onto free slots of the style's bars, keys from the default layout where a slot has none (core/bar-place.ts) */
+  autoPlace(): void {
+    if (this.running()) return;
+    const layout = keybindLayout(DEFAULT_LAYOUT_ID);
+    const r = placeOnBars(this.storage.actionBars(), this.startStyle(), this.unreachable().map((e) => e.key), layout);
+    if (!r.placed.length) {
+      this.toast.show('No free slot on your bars – clear one below or use the Action bars page.', 'warn');
+      return;
+    }
+    void this.storage.saveActionBars(r.setup);
+    this.toast.show(
+      'Placed ' + r.placed.length + (r.placed.length === 1 ? ' step' : ' steps') + ' on your bars' +
+        (r.filled ? ', ' + r.filled + (r.filled === 1 ? ' key' : ' keys') + ' from the "' + layout.name + '" layout' : '') +
+        (r.left.length ? ' – ' + r.left.length + ' did not fit' : ''),
+    );
+  }
+
   /** phone-sized screen: every bar shows as 2 × 7 on its own line */
-  readonly narrow = signal(typeof window !== 'undefined' && window.matchMedia('(max-width: 640px)').matches);
+  readonly narrow = signal(mediaMatches(NARROW_QUERY));
+  /** touch device: the instructions say "tap the slot" instead of "press the key" */
+  readonly coarsePointer = signal(mediaMatches('(pointer: coarse)'));
+  private destroyRef = inject(DestroyRef);
 
   readonly canStart = computed(() => !!this.rotation() && this.stepEntities().length > 0 && this.unreachable().length === 0 && this.unknownSteps() === 0);
+  /** the feedback line before Start */
+  readonly idleText = computed(() => (this.canStart() ? (this.coarsePointer() ? 'Press Start, then tap the glowing slot.' : 'Press Start, then press the keys of the glowing slots.') : ''));
   /** resources shown for this rotation (STYLE_STACKS of its styles); Storm Shards sit on the target, so they cannot be pre-built */
   readonly styleStacks = computed<StackId[]>(() => {
     const out: StackId[] = [];
@@ -452,6 +506,14 @@ export class Train implements OnDestroy {
   private cancelNote: string | null = null;
   readonly counts = signal({ perfect: 0, late: 0, early: 0, wrong: 0, missed: 0, auto: 0 });
   readonly results = signal<StepResult[]>([]);
+  /** session summary: only the steps that were off, unless "show all" */
+  readonly showAllResults = signal(false);
+  readonly summaryRows = computed(() => (this.showAllResults() ? this.results() : this.results().filter((r) => r.outcome !== 'perfect' && r.outcome !== 'done')));
+  /** the step furthest off the tick – one line on the session end */
+  readonly worst = computed(() => worstStep(this.results()));
+  /** "press when the GCD bar empties" and "queueing is off" are said once per session, not per press */
+  private lateHintShown = false;
+  private tooEarlyShown = false;
   readonly expectedKey = signal<string | null>(null);
   readonly queuedKey = signal<string | null>(null);
   readonly flashKey = signal<{ key: string; kind: 'fired' | 'wrong' } | null>(null);
@@ -702,24 +764,50 @@ export class Train implements OnDestroy {
   private flashUntil = 0;
   private startedAt = 0;
 
+  /** the URL's `?rotation=<id>` was applied to the selection (once per id – later list changes keep what the player picked) */
+  private appliedWanted: string | null = null;
+
   constructor() {
-    if (typeof window !== 'undefined') {
-      const mq = window.matchMedia('(max-width: 640px)');
-      mq.addEventListener('change', (ev) => this.narrow.set(ev.matches));
-    }
+    this.watchMedia(NARROW_QUERY, this.narrow);
+    this.watchMedia('(pointer: coarse)', this.coarsePointer);
     // the gear and weapon catalogs (~1 MB each) come after the first paint; the resolved loadout, gear panel and
     // warnings recompute when they arrive
     afterNextRender(() => void this.data.ensure('gear', 'weapons', 'perks'));
     // inside the Alt1 Toolkit the popout is an app window: name it (every call is feature-checked)
     if (this.focus()) alt1Announce('RS3 Ability Trainer');
+    // the rotation the URL asks for ("Load a demo" and the Presets page save first and navigate after, so the
+    // query param must be reactive, not a snapshot)
+    const query = toSignal(this.route.queryParamMap, { initialValue: this.route.snapshot.queryParamMap });
     effect(() => {
       const rotations = this.storage.rotations();
-      const wanted = this.route.snapshot.queryParamMap.get('rotation');
-      if (this.selectedId() && rotations.some((r) => r.id === this.selectedId())) return;
-      const pick = rotations.find((r) => r.id === wanted) ?? rotations[0];
-      this.selectedId.set(pick ? pick.id : null);
-      if (pick && pick.id === wanted) void this.linkPreset(pick);
+      const wanted = query().get('rotation');
+      const fresh = wanted && wanted !== this.appliedWanted ? wanted : null;
+      const pick = chooseRotation(rotations, fresh, untracked(this.selectedId));
+      if ((pick?.id ?? null) !== untracked(this.selectedId)) this.selectedId.set(pick?.id ?? null);
+      if (pick && fresh && pick.id === fresh) {
+        this.appliedWanted = fresh;
+        void this.linkPreset(pick);
+      }
     });
+  }
+
+  private watchMedia(query: string, target: WritableSignal<boolean>): void {
+    if (typeof window === 'undefined') return;
+    const mq = window.matchMedia(query);
+    const on = (ev: MediaQueryListEvent) => target.set(ev.matches);
+    mq.addEventListener('change', on);
+    this.destroyRef.onDestroy(() => mq.removeEventListener('change', on));
+  }
+
+  /** "Options" in the simple view */
+  toggleOptions(): void {
+    const open = !this.optionsOpen();
+    this.optionsOpen.set(open);
+    try {
+      localStorage.setItem(OPTIONS_KEY, open ? '1' : '0');
+    } catch {
+      /* storage blocked – this visit only */
+    }
   }
 
   /** Rotation dropdown: a rotation from a PvME preset brings its loadout and bar setup along. */
@@ -727,6 +815,13 @@ export class Train implements OnDestroy {
     this.selectedId.set(id);
     const r = this.storage.rotations().find((x) => x.id === id);
     if (r) void this.linkPreset(r);
+  }
+
+  /** "Next: Phase 4" on the session end: switch to the sibling rotation and start it */
+  playNext(id: string): void {
+    this.finishDismissed.set(true);
+    this.pickRotation(id);
+    if (this.canStart() && this.data.loadoutReady()) this.start();
   }
 
   pickLoadout(id: string): void {
@@ -781,6 +876,18 @@ export class Train implements OnDestroy {
       .filter((e): e is Entity => !!e)
       .map((e) => ({ entity: e, key: keybindLabel(this.storage.actionBars().weaponKeybinds[e.id]) })),
   );
+
+  /** client actions with a key (target cycle …) as tappable chips next to the weapon switches – a rotation step like "(tc)" has no bar slot to tap otherwise */
+  readonly actionChips = computed(() =>
+    Object.entries(this.storage.actionBars().actionKeybinds ?? {})
+      .map(([id, kb]) => ({ entity: this.data.get('action:' + id), key: keybindLabel(kb) }))
+      .filter((c): c is { entity: Entity; key: string } => !!c.entity),
+  );
+
+  /** tap on an action chip while training = press it (touch / mouse) */
+  clickAction(id: string): void {
+    if (this.running()) this.press('action:' + id);
+  }
 
   /** cooldown overlay for a queue slot: phase 1 = ready */
   cdPhase(slot: QueueSlot): number {
@@ -841,6 +948,9 @@ export class Train implements OnDestroy {
     for (const r of this.storage.loadout().inventory) if (r?.kind === 'special') add('special:' + r.id);
     const familiar = this.storage.loadout().familiar ? this.data.familiarById().get(this.storage.loadout().familiar!) : undefined;
     if (familiar) add('special:' + familiar.scroll.id);
+    // every prayer of the book is pressable even when it is on no bar (touch / click users get it via the bars only)
+    for (const p of this.data.prayers()) add('prayer:' + p.id);
+    for (const id of this.effectivePrebuild().abilities) add('ability:' + id);
     for (const s of steps) catalog.set(s.key, s);
     const enemy = this.enemy();
     const l = structuredClone(this.storage.loadout());
@@ -879,9 +989,6 @@ export class Train implements OnDestroy {
     this.targetHp.set(enemy.lifePoints);
     this.killedAtMs.set(null);
     this.hitsplats.set([]);
-    // every prayer of the book is pressable even when it is on no bar (touch / click users get it via the bars only)
-    for (const p of this.data.prayers()) add('prayer:' + p.id);
-    for (const id of this.effectivePrebuild().abilities) add('ability:' + id);
     this.activePrayers.set([]);
     this.prayerStats.set({ ...EMPTY_PRAYER_STATS });
     this.incoming.set(null);
@@ -895,13 +1002,13 @@ export class Train implements OnDestroy {
     this.counts.set({ perfect: 0, late: 0, early: 0, wrong: 0, missed: 0, auto: 0 });
     this.doneSteps.set(new Set());
     this.buffs.set([]);
-    this.cooldowns.set({});
-    this.channelling.set(null);
-    this.channel.set(null);
+    this.showAllResults.set(false);
+    this.lateHintShown = false;
+    this.tooEarlyShown = false;
     this.maxAdrenaline.set(this.engine.maxAdrenaline);
     const first = this.slots().find((s) => s.kind === 'current');
     if (this.revolution()) this.feedback.set({ text: 'Revolution is on – the yellow slots of the main bar fire on their own; press what the rotation needs beyond that.', cls: 'info' });
-    else this.feedback.set({ text: 'Press ' + first?.key + ' (' + first?.entity.name + ') to start.', cls: 'info' });
+    else this.feedback.set({ text: (this.coarsePointer() ? 'Tap ' : 'Press ') + first?.key + ' (' + first?.entity.name + ') to start.', cls: 'info' });
     this.finished.set(false);
     this.finishReason.set(null);
     this.finishDismissed.set(false);
@@ -1283,10 +1390,12 @@ export class Train implements OnDestroy {
           this.feedback.set({ text: 'Revolution: ' + r.name + (r.outcome === 'late' ? ' – late by ' + r.lateTicks + (r.lateTicks === 1 ? ' tick' : ' ticks') + ' (nothing was usable earlier)' : ' – automatic'), cls: r.outcome === 'late' ? 'warn' : 'good' });
         } else if (r.outcome === 'perfect') {
           this.counts.update((c) => ({ ...c, perfect: c.perfect + 1 }));
-          this.feedback.set({ text: r.name + ' – perfect' + (r.offsetMs ? ' (' + r.offsetMs + ' ms early)' : ''), cls: 'good' });
+          this.feedback.set({ text: r.name + ' – on tick', detail: this.advanced() && r.offsetMs ? r.offsetMs + ' ms early' : undefined, cls: 'good' });
         } else if (r.outcome === 'late') {
           this.counts.update((c) => ({ ...c, late: c.late + 1 }));
-          this.feedback.set({ text: r.name + ' – late by ' + r.lateTicks + (r.lateTicks === 1 ? ' tick' : ' ticks') + (r.offsetMs ? ' (+' + r.offsetMs + ' ms)' : ''), cls: 'warn' });
+          const hint = this.lateHintShown ? '' : ' – press when the GCD bar empties';
+          this.lateHintShown = true;
+          this.feedback.set({ text: r.name + ' – ' + this.offText(r) + hint, detail: this.advanced() && r.offsetMs ? '+' + r.offsetMs + ' ms' : undefined, cls: 'warn' });
         } else if (r.outcome === 'early') {
           this.counts.update((c) => ({ ...c, late: c.late + 1 }));
           this.feedback.set({ text: r.name + ' – ' + -r.lateTicks + (r.lateTicks === -1 ? ' tick' : ' ticks') + ' early', cls: 'warn' });
@@ -1316,7 +1425,11 @@ export class Train implements OnDestroy {
         this.flash('wrong', ev.key, now, 300);
         break;
       case 'too-early':
-        // queueing off: players spam the key during the global cooldown – that is normal play, not a mistake
+        // queueing off: players spam the key during the global cooldown – normal play, not a mistake; said once per session
+        if (!queueing && !this.tooEarlyShown) {
+          this.tooEarlyShown = true;
+          this.feedback.set({ text: 'Too early – queueing is off (Settings)', cls: 'warn' });
+        }
         break;
       case 'wrong':
         this.counts.update((c) => ({ ...c, wrong: c.wrong + 1 }));
@@ -1496,8 +1609,20 @@ export class Train implements OnDestroy {
     return this.data.name(key);
   }
 
-  hasSoulSplit(): boolean {
-    return this.activePrayers().some((p) => p.id === SOUL_SPLIT);
+  readonly hasSoulSplit = computed(() => this.activePrayers().some((p) => p.id === SOUL_SPLIT));
+
+  /** "1 tick late" / "2 ticks early" of a step result */
+  offText(r: StepResult): string {
+    const n = Math.abs(r.lateTicks);
+    return n + (n === 1 ? ' tick ' : ' ticks ') + (r.outcome === 'early' ? 'early' : 'late');
+  }
+
+  /** the Timing column of the session summary */
+  timing(r: StepResult): string {
+    if (r.outcome === 'perfect') return 'on tick' + (this.advanced() && r.offsetMs ? ' (' + r.offsetMs + ' ms early)' : '');
+    if (r.outcome === 'late') return this.offText(r) + (this.advanced() && r.offsetMs ? ' (+' + r.offsetMs + ' ms)' : '');
+    if (r.outcome === 'early') return this.offText(r);
+    return r.outcome;
   }
 
   /** send a press to the (simulated) server and light the slot up right away, like the game does on click */
@@ -1558,6 +1683,18 @@ export class Train implements OnDestroy {
         }
       }
     }
+  }
+}
+
+function mediaMatches(query: string): boolean {
+  return typeof window !== 'undefined' && window.matchMedia(query).matches;
+}
+
+function readOptionsOpen(): boolean {
+  try {
+    return localStorage.getItem(OPTIONS_KEY) === '1';
+  } catch {
+    return false;
   }
 }
 

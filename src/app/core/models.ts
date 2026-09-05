@@ -227,6 +227,8 @@ export interface Rotation {
   updatedAt: number;
   /** PvME boss preset this came from (presets.json id) – the Train page switches loadout and bars along with it */
   presetId?: string;
+  /** position in the preset's guide (0 = first) – "Next" on the session end follows it */
+  presetIndex?: number;
   /** visible in the online explorer (missing = true) */
   isPublic?: boolean;
   /** origin when copied from the explorer */
@@ -349,7 +351,7 @@ export interface SetupMeta {
 export const DEFAULT_SETTINGS: Settings = {
   pingMs: 60,
   jitterMs: 20,
-  abilityQueueing: false,
+  abilityQueueing: true,
   loop: false,
   fullAdrenaline: false,
   rechargeAdrenaline: false,

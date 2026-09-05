@@ -23,6 +23,8 @@
 </header>
 }
 
+<consent-banner />
+
 <main [class.bare]="bare()">
   @if (supabase.isBlocked()) {
     <div class="panel warning blocked">
@@ -50,7 +52,6 @@
 </footer>
 }
 
-<consent-banner />
 <entity-tooltip />
 @if (!bare()) {
   <support-nudge />

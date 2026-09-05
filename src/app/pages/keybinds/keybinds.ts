@@ -303,6 +303,7 @@ export class Keybinds {
       this.toasts.show('Binding cancelled – nothing changed');
       return;
     }
+    if (await this.storage.acceptConsentOnSave()) this.toasts.show('Saved in this browser', 'info', 2000);
     await this.storage.saveActionBars(w.setup);
     this.toasts.show('Bound ' + w.bound + ' keys' + (w.skipped ? ', ' + w.skipped + ' skipped' : '') + (w.cleared ? ', ' + w.cleared + ' cleared' : ''));
     const dupes = [...this.conflictMap(w.setup).entries()].filter(([, places]) => places.length > 1);
