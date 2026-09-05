@@ -607,7 +607,7 @@
           @if (carriedWeapons().length) {
             <div class="weapons" title="carried weapons – the lit one is wielded">
               @for (w of carriedWeapons(); track w.entity.id) {
-                <div class="weapon" [class.active]="wielded().includes(w.entity.id)" [title]="w.entity.name" [entityTip]="w.entity">
+                <div class="weapon" [class.active]="wielded().includes(w.entity.id)" [title]="w.entity.name" [entityTip]="w.entity" (click)="clickWeapon(w.entity.id)">
                   <img [src]="w.entity.icon" [alt]="w.entity.name" />
                   <span class="key">{{ w.key || '–' }}</span>
                 </div>
@@ -649,6 +649,18 @@
     </div>
     }
 
+    @if (!advanced() && carriedWeapons().length) {
+      <!-- simple view has no HUD: the weapon switches still need a place to click (touch) and show their keys -->
+      <div class="weapons simple-weapons" title="carried weapons – press the key or click to switch; the lit one is wielded">
+        <span class="muted small">Switches</span>
+        @for (w of carriedWeapons(); track w.entity.id) {
+          <div class="weapon" [class.active]="wielded().includes(w.entity.id)" [title]="w.entity.name" [entityTip]="w.entity" (click)="clickWeapon(w.entity.id)">
+            <img [src]="w.entity.icon" [alt]="w.entity.name" />
+            <span class="key">{{ w.key || '–' }}</span>
+          </div>
+        }
+      </div>
+    }
     <div class="action-bars" [class.editing]="editLayout() && !running()">
       @for (b of bars(); track b.position) {
         <div class="bar-cell" [class]="'bar-cell ' + b.shape">

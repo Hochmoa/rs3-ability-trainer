@@ -1495,6 +1495,11 @@ export class Train implements OnDestroy {
     this.pressedKeys.set(new Set([...this.pressedKeys(), key]));
   }
 
+  /** click on a carried weapon while training = switch to it (touch / mouse) */
+  clickWeapon(id: string): void {
+    if (this.running()) this.press('weapon:' + id);
+  }
+
   /** click on a bar slot while training = press it (for touch / mouse users) */
   slotClick(pos: number, slot: number): void {
     if (!this.running()) return;

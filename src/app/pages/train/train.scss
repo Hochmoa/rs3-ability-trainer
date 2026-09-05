@@ -1362,3 +1362,18 @@
     justify-content: flex-start;
   }
 }
+
+/* the weapon switches in the simple view: a slim row above the bars */
+.simple-weapons {
+  align-items: center;
+  margin: 8px 0 2px;
+  padding-left: 0;
+  border-left: none;
+
+  .small {
+    margin-right: 6px;
+  }
+  .weapon {
+    cursor: pointer;
+  }
+}
