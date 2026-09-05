@@ -6,20 +6,21 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { placeOnBars } from '../../core/bar-place';
 import { DataService, EOF_ICON, Entity, SPEC_KEY } from '../../core/data.service';
-import { applyWield, equip, unequip } from '../../core/equipment';
+import { applyWield, equip, hasSpecial, unequip } from '../../core/equipment';
 import { DEFAULT_LAYOUT_ID, keybindLayout } from '../../core/keybind-layouts';
-import { keybindFromEvent, keybindKey, keybindLabel } from '../../core/keybind.util';
-import { ActionBarSetup, AttackPattern, BAR_POSITIONS, BONE_SHIELD_ABILITY, INVENTORY_SIZE, BAR_SLOTS, BarShape, barLayout, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, TARGET_TYPES, EquipSlot, ItemRef, Loadout, PrayerStats, Prebuild, REVOLUTION_MAX_SLOTS, REVOLUTION_MIN_SLOTS, RevolutionSettings, Rotation, STYLES4, Settings, StepResult, Style, Style4, WeaponSpec, emptyPrebuild, entityKey, isStyle4, loadoutWeapons, loadoutWield, parseEntityKey, prebuildIsEmpty, visiblePresets, RotationStep, CoachSettings } from '../../core/models';
+import { keybindFromEvent, keybindKey, keybindLabel, resolvePress } from '../../core/keybind.util';
+import { ActionBarSetup, AttackPattern, BAR_POSITIONS, BONE_SHIELD_ABILITY, INVENTORY_SIZE, BAR_SLOTS, BarShape, barLayout, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, TARGET_TYPES, EquipSlot, ItemRef, Loadout, PrayerStats, Prebuild, REVOLUTION_MAX_SLOTS, REVOLUTION_MIN_SLOTS, RevolutionSettings, Rotation, STYLES4, Settings, StepResult, Style, Style4, WeaponSpec, emptyPrebuild, entityKey, isStyle4, loadoutStyle, loadoutWield, parseEntityKey, prebuildIsEmpty, visiblePresets, RotationStep, CoachSettings } from '../../core/models';
 import { alt1Announce, focusUrl, openFocusWindow } from '../../core/popout';
 import { CoachService, spokenLabel, spokenSequence } from '../../core/coach.service';
 import { PresetsService } from '../../core/presets.service';
 import { nextRotation, pickRotation as chooseRotation, worstStep } from '../../core/rotation-pick';
+import { noteEntity, stepToEngineEntity } from '../../core/step-entity';
 import { StorageService } from '../../core/storage.service';
 import { resolveLoadout } from '../../engine/loadout-resolver';
 import { BUFF_BY_ID, ruleFor, stackMax, stackName } from '../../engine/rules';
 import { STYLE_STACKS, StackId } from '../../engine/rules-model';
 import { COMMAND_READY_AFTER, CONJURE_BASE_TICKS } from '../../engine/rules-necromancy';
-import { ActiveBuff, EngineEntity, EngineEvent, GCD_TICKS, TICK_MS, TrainerEngine, UsableReason, Wield } from '../../engine/trainer-engine';
+import { ActiveBuff, BASIC_ATTACK_OF, EngineEntity, EngineEvent, TICK_MS, TrainerEngine, UsableReason, Wield } from '../../engine/trainer-engine';
 import { SOUL_SPLIT } from '../../engine/prayer-rules';
 import { slotAbilities } from '../../engine/morphs';
 import { AbilityIcon, IconState } from '../../shared/ability-icon';
@@ -29,6 +30,7 @@ import { DialogService, isTypingTarget } from '../../shared/dialog';
 import { FeedbackService } from '../../core/feedback.service';
 import { ToastService } from '../../shared/toast';
 import { EntityTip } from '../../shared/tooltip';
+import { CoolingEntry, CooldownView, catalogPass, cooldownViews, sameMorphs, sameUsable } from './live-state';
 
 interface Feedback {
   text: string;
@@ -43,7 +45,7 @@ export interface HistoryEntry {
   key: string;
   name: string;
   icon: string | null;
-  /** only things that really happened: ok = expected step on time · late = expected step late / early · wrong = a wrong ability that cast · auto = Revolution · other = prayer / weapon switch outside the rotation. Refused presses (adrenaline, cooldown, requirement) are not listed. */
+  /** only things that really happened: ok = expected step on time · late = expected step late / early · wrong = a wrong ability that cast · auto = Revolution or the automatic basic attack · other = prayer / weapon switch outside the rotation. Refused presses (adrenaline, cooldown, requirement) are not listed. */
   kind: 'ok' | 'late' | 'wrong' | 'auto' | 'other';
   /** rotation step it completed */
   step?: number;
@@ -62,6 +64,12 @@ interface QueueSlot {
   hint?: string;
   sameTick?: boolean;
   offsetTicks?: number;
+  /**
+   * overlay like on the bars: an ability on cooldown shows its cooldown sweep and seconds, the current GCD ability
+   * otherwise the global cooldown, everything else is ready (phase 1, 0 ms)
+   */
+  gcdPhase: number;
+  remainingMs: number;
 }
 
 interface BuffView {
@@ -138,7 +146,6 @@ export class Train implements OnDestroy {
   /** touch device: "Popout" (a PiP / popup window nobody can type into) becomes a "Phone view" link to /focus in this tab */
 
   readonly TICK_MS = TICK_MS;
-  readonly GCD_MS = TICK_MS * GCD_TICKS;
   readonly REVOLUTION_MIN_SLOTS = REVOLUTION_MIN_SLOTS;
   readonly REVOLUTION_MAX_SLOTS = REVOLUTION_MAX_SLOTS;
   /** Settings.uiMode: 'advanced' shows every panel and option; 'simple' (default) only the core – the simulation is the same */
@@ -347,7 +354,7 @@ export class Train implements OnDestroy {
     const inv = this.storage.loadout().inventory;
     for (const e of this.stepEntities()) {
       if (e?.special?.kind === 'scroll' && this.storage.loadout().familiar !== e.special.familiar) out.add(e.name + ': needs the ' + (this.data.familiarById().get(e.special.familiar ?? '')?.name ?? e.special.familiar) + ' familiar (Loadout page)');
-      else if (e?.special && !inv.some((r) => r?.kind === 'special' && r.id === e.id)) out.add(e.name + ': not in your backpack');
+      else if (e?.special && !hasSpecial(inv, e.id)) out.add(e.name + ': not in your backpack');
       if (!e?.ability) continue;
       const rule = ruleFor(e.ability.id);
       for (const r of rule?.requires ?? []) {
@@ -424,7 +431,7 @@ export class Train implements OnDestroy {
     if (!this.data.loadoutReady()) return [];
     const inv = this.storage.loadout().inventory;
     const seen = new Set<string>();
-    return this.stepEntities().filter((e): e is Entity => !!e?.special && !inv.some((r) => r?.kind === 'special' && r.id === e.id) && !seen.has(e.id) && !!seen.add(e.id));
+    return this.stepEntities().filter((e): e is Entity => !!e?.special && !hasSpecial(inv, e.id) && !seen.has(e.id) && !!seen.add(e.id));
   });
 
   /** put a missing potion / bomb into the first free backpack slot of the active loadout */
@@ -476,12 +483,6 @@ export class Train implements OnDestroy {
   readonly history = signal<HistoryEntry[]>([]);
   private historyId = 0;
   private readonly historyStrip = viewChild<ElementRef<HTMLElement>>('historyStrip');
-  /** keep the newest entry in view: scroll the strip to its end after every render that added one */
-  private readonly historyScroll = afterRenderEffect(() => {
-    this.history();
-    const el = this.historyStrip()?.nativeElement;
-    if (el) el.scrollLeft = el.scrollWidth;
-  });
   readonly tickPhase = signal(0);
   readonly gcdPhase = signal(1);
   readonly gcdRemaining = signal(0);
@@ -494,11 +495,7 @@ export class Train implements OnDestroy {
   /** combat style of the wielded weapon (bars are bound per style) */
   readonly weapon = signal<Style4>('Melee');
   /** style of the loadout's starting weapon */
-  readonly startStyle = computed<Style4>(() => {
-    const l = this.storage.loadout();
-    const w = this.data.weaponById().get(l.twoHand ?? l.mainHand ?? '');
-    return w && isStyle4(w.style) ? w.style : 'Melee';
-  });
+  readonly startStyle = computed<Style4>(() => loadoutStyle(this.storage.loadout(), this.data.weaponById()));
   readonly buffs = signal<BuffView[]>([]);
   /** entity key → remaining internal cooldown ms */
   readonly cooldowns = signal<Record<string, { remainingMs: number; totalMs: number }>>({});
@@ -511,7 +508,8 @@ export class Train implements OnDestroy {
   readonly feedback = signal<Feedback | null>(null);
   /** a channel was cut by the cast reported next – appended to that cast's feedback line */
   private cancelNote: string | null = null;
-  readonly counts = signal({ perfect: 0, late: 0, early: 0, wrong: 0, missed: 0, auto: 0 });
+  /** `auto` = Revolution casts, `autoAttacks` = basic attacks that fired on their own because the press came after the GCD end */
+  readonly counts = signal({ perfect: 0, late: 0, early: 0, wrong: 0, missed: 0, auto: 0, autoAttacks: 0 });
   readonly results = signal<StepResult[]>([]);
   /** session summary: only the steps that were off, unless "show all" */
   readonly showAllResults = signal(false);
@@ -528,10 +526,24 @@ export class Train implements OnDestroy {
   readonly pressedKeys = signal<ReadonlySet<string>>(new Set());
   /** key → time until which the press stays visible even when the server has already taken it (0 ping) */
   private pressedUntil = new Map<string, number>();
-  /** per visible entity: usability + own cooldown, refreshed every frame */
-  readonly slotState = signal<Map<string, { usable: UsableReason; cooldownS: number; cooldownPhase: number }>>(new Map());
+  /** per catalog entity: usability of what the slot fires – refreshed on every server tick / engine event, set only when it changed */
+  readonly slotUsable = signal<ReadonlyMap<string, UsableReason>>(new Map());
+  /** per catalog entity on cooldown: seconds + sweep – refreshed every frame while something is on cooldown (arithmetic only) */
+  readonly slotCooldowns = signal<ReadonlyMap<string, CooldownView>>(new Map());
+  /** the cooldown ends behind `slotCooldowns`, from the last catalog pass */
+  private cooling: ReadonlyMap<string, CoolingEntry> = new Map();
   /** slot key → what it shows right now (Command X, Slaughter, Spectral Scythe 2) */
   readonly morphs = signal<Map<string, { entity: Entity; stage: number }>>(new Map());
+  /** the morphs of the last catalog pass (keys only) – `morphs` is rebuilt when they differ */
+  private morphKeys: ReadonlyMap<string, { key: string; stage: number }> = new Map();
+  /** the last server tick the catalog-wide state was computed for (-1 = compute on the next frame) */
+  private lastTick = -1;
+  /** buff views of the last tick with their end ticks: the timers move every frame, the lookups happen once per tick */
+  private liveBuffs: { view: BuffView; endTick: number | null }[] = [];
+  /** queue slot entities on cooldown (from the last tick): the seconds are derived per frame */
+  private queueCooling: { key: string; endTick: number; totalMs: number }[] = [];
+  /** floating hit numbers fade after a moment – the timers are cleared when the session stops */
+  private hitsplatTimers = new Set<number>();
   /** active prayers as entities (icon + tooltip) */
   readonly activePrayers = signal<Entity[]>([]);
   readonly prayerStats = signal<PrayerStats>({ ...EMPTY_PRAYER_STATS });
@@ -569,7 +581,8 @@ export class Train implements OnDestroy {
     const s = this.storage.actionBars();
     const style = this.running() ? this.weapon() : this.startStyle();
     const shown = visiblePresets(s, style);
-    const state = this.slotState();
+    const usableOf = this.slotUsable();
+    const cooldownOf = this.slotCooldowns();
     const running = this.running();
     const gcd = this.gcdPhase();
     const gcdMs = this.gcdRemaining();
@@ -590,15 +603,15 @@ export class Train implements OnDestroy {
         const icon = entity && !m ? dynamicIcon(entity) : null;
         const morph = m ? { entity: m.entity, stage: m.stage } : icon && entity ? { entity: { ...entity, icon }, stage: 1 } : null;
         const shown = morph?.entity ?? entity;
-        const st = shown ? state.get(shown.key) : undefined;
+        const cd = shown && running ? cooldownOf.get(shown.key) : undefined;
         const isGcdAbility = !!shown?.ability?.triggersGcd;
         return {
           entity,
           morph,
           keyLabel: keybindLabel(s.slotKeybinds[pos]?.[i]),
-          usable: running && entity ? st?.usable ?? 'ok' : null,
-          cooldownS: running ? st?.cooldownS ?? 0 : 0,
-          cooldownPhase: running ? st?.cooldownPhase ?? 1 : 1,
+          usable: running && entity && shown ? usableOf.get(shown.key) ?? 'ok' : null,
+          cooldownS: cd?.cooldownS ?? 0,
+          cooldownPhase: cd?.cooldownPhase ?? 1,
           gcdPhase: running && isGcdAbility ? gcd : 1,
           gcdRemainingMs: running && isGcdAbility ? gcdMs : 0,
           expected: running && !!shown && shown.key === expected,
@@ -724,9 +737,13 @@ export class Train implements OnDestroy {
     if (!entities.length || entities.some((e) => !e)) return [];
     const steps = entities as Entity[];
     const loop = this.storage.settings().loop;
-    const i = this.running() ? this.index() : 0;
+    const running = this.running();
+    const i = running ? this.index() : 0;
     const reach = this.reachable();
     const done = this.doneSteps();
+    const cooldowns = this.cooldowns();
+    const gcdPhase = this.gcdPhase();
+    const gcdMs = this.gcdRemaining();
     const slot = (idx: number, kind: QueueSlot['kind']): QueueSlot | null => {
       let j = idx;
       if (loop) j = ((idx % steps.length) + steps.length) % steps.length;
@@ -735,17 +752,23 @@ export class Train implements OnDestroy {
       const eofIcon = this.eofIcon(raw);
       const entity = eofIcon ? { ...raw, icon: eofIcon } : raw;
       const rs = this.rotation()?.steps[j];
+      // overlay: the ability's own cooldown wins, the current GCD ability otherwise shows the global cooldown
+      const cd = running && kind !== 'prev' ? cooldowns[entity.key] : undefined;
+      const onGcd = running && kind === 'current' && (entity.kind === 'ability' || entity.kind === 'spec');
+      const gcd = cd && cd.remainingMs > 0 ? { phase: cd.totalMs > 0 ? 1 - cd.remainingMs / cd.totalMs : 1, ms: cd.remainingMs } : onGcd ? { phase: gcdPhase, ms: gcdMs } : { phase: 1, ms: 0 };
       return {
         entity,
         key: reach.get(entity.key) ?? '',
         stepIndex: j,
         kind,
-        done: this.running() && done.has(j) && kind !== 'prev',
+        done: running && done.has(j) && kind !== 'prev',
         note: rs?.kind === 'note' ? rs.note ?? '' : undefined,
         phase: rs?.phase,
         hint: rs?.hint,
         sameTick: rs?.sameTick,
         offsetTicks: rs?.offsetTicks,
+        gcdPhase: gcd.phase,
+        remainingMs: gcd.ms,
       };
     };
     const out: QueueSlot[] = [];
@@ -777,6 +800,12 @@ export class Train implements OnDestroy {
   constructor() {
     this.watchMedia(NARROW_QUERY, this.narrow);
     this.watchMedia('(pointer: coarse)', this.coarsePointer);
+    // keep the newest "Pressed" entry in view: scroll the strip to its end after every render that added one
+    afterRenderEffect(() => {
+      this.history();
+      const el = this.historyStrip()?.nativeElement;
+      if (el) el.scrollLeft = el.scrollWidth;
+    });
     // the gear and weapon catalogs (~1 MB each) come after the first paint; the resolved loadout, gear panel and
     // warnings recompute when they arrive
     afterNextRender(() => void this.data.ensure('gear', 'weapons', 'perks'));
@@ -877,6 +906,7 @@ export class Train implements OnDestroy {
 
   ngOnDestroy(): void {
     this.stop();
+    this.clearHitsplats();
   }
 
   name(key: string): string {
@@ -885,12 +915,7 @@ export class Train implements OnDestroy {
   }
 
   /** carried weapons of the active loadout with their switch keys */
-  readonly carriedWeapons = computed(() =>
-    loadoutWeapons(this.gearState())
-      .map((id) => this.data.get('weapon:' + id))
-      .filter((e): e is Entity => !!e)
-      .map((e) => ({ entity: e, key: keybindLabel(this.storage.actionBars().weaponKeybinds[e.id]) })),
-  );
+  readonly carriedWeapons = computed(() => this.data.carriedWeapons(this.gearState()).map((e) => ({ entity: e, key: keybindLabel(this.storage.actionBars().weaponKeybinds[e.id]) })));
 
   /** client actions with a key (target cycle …) as tappable chips next to the weapon switches – a rotation step like "(tc)" has no bar slot to tap otherwise */
   readonly actionChips = computed(() =>
@@ -904,32 +929,13 @@ export class Train implements OnDestroy {
     if (this.running()) this.press('action:' + id);
   }
 
-  /** cooldown overlay for a queue slot: phase 1 = ready */
-  cdPhase(slot: QueueSlot): number {
-    const cd = this.cooldowns()[slot.entity.key];
-    if (!cd || cd.remainingMs <= 0 || cd.totalMs <= 0) return 1;
-    return 1 - cd.remainingMs / cd.totalMs;
-  }
-
-  cdRemaining(slot: QueueSlot): number {
-    return this.cooldowns()[slot.entity.key]?.remainingMs ?? 0;
-  }
-
-  /**
-   * overlay of a queue slot, like on the bars: an ability on cooldown shows its cooldown sweep and seconds,
-   * the current GCD ability otherwise shows the global cooldown, everything else is ready
-   */
+  /** overlay of a queue slot (computed in `slots`, see QueueSlot.gcdPhase) */
   queuePhase(slot: QueueSlot): number {
-    if (!this.running() || slot.kind === 'prev') return 1;
-    if (this.cdRemaining(slot) > 0) return this.cdPhase(slot);
-    return slot.kind === 'current' && (slot.entity.kind === 'ability' || slot.entity.kind === 'spec') ? this.gcdPhase() : 1;
+    return slot.gcdPhase;
   }
 
   queueRemaining(slot: QueueSlot): number {
-    if (!this.running() || slot.kind === 'prev') return 0;
-    const cd = this.cdRemaining(slot);
-    if (cd > 0) return cd;
-    return slot.kind === 'current' && (slot.entity.kind === 'ability' || slot.entity.kind === 'spec') ? this.gcdRemaining() : 0;
+    return slot.remainingMs;
   }
 
   start(): void {
@@ -937,14 +943,7 @@ export class Train implements OnDestroy {
     if (!rot || !this.canStart()) return;
     const setup = this.storage.actionBars();
     const rotSteps = rot.steps;
-    const steps = (this.stepEntities() as Entity[]).map((e, i) => {
-      const s = rotSteps[i];
-      if (s.kind === 'note') return { key: e.key, kind: 'action' as const, id: e.id, name: e.name, icon: e.icon, gcd: false, adrenaline: 0, cooldownTicks: 0, buffs: [], isNote: true };
-      const ee = { ...this.data.toEngineEntity(e) };
-      if (s.offsetTicks !== undefined) ee.offsetTicks = s.offsetTicks;
-      else if (s.sameTick) ee.offsetTicks = 0;
-      return ee;
-    });
+    const steps = (this.stepEntities() as Entity[]).map((e, i) => stepToEngineEntity(rotSteps[i], e, (x) => this.data.toEngineEntity(x)));
     const catalog = new Map<string, EngineEntity>();
     const add = (key: string) => {
       if (catalog.has(key)) return;
@@ -959,10 +958,13 @@ export class Train implements OnDestroy {
       }
     }
     for (const id of Object.keys(setup.actionKeybinds ?? {})) add('action:' + id);
-    for (const id of loadoutWeapons(this.storage.loadout())) add('weapon:' + id);
+    for (const w of this.data.carriedWeapons(this.storage.loadout())) add(w.key);
     for (const r of this.storage.loadout().inventory) if (r?.kind === 'special') add('special:' + r.id);
-    const familiar = this.storage.loadout().familiar ? this.data.familiarById().get(this.storage.loadout().familiar!) : undefined;
+    const familiarId = this.storage.loadout().familiar;
+    const familiar = familiarId ? this.data.familiarById().get(familiarId) : undefined;
     if (familiar) add('special:' + familiar.scroll.id);
+    // the four basic attacks are always known: the wielded style's one fires on its own when nothing is pressed
+    for (const id of Object.values(BASIC_ATTACK_OF)) add('ability:' + id);
     // every prayer of the book is pressable even when it is on no bar (touch / click users get it via the bars only)
     for (const p of this.data.prayers()) add('prayer:' + p.id);
     for (const id of this.effectivePrebuild().abilities) add('ability:' + id);
@@ -1012,9 +1014,17 @@ export class Train implements OnDestroy {
     this.channelling.set(null);
     this.channel.set(null);
     this.morphs.set(new Map());
+    this.morphKeys = new Map();
+    this.slotUsable.set(new Map());
+    this.slotCooldowns.set(new Map());
+    this.cooling = new Map();
+    this.liveBuffs = [];
+    this.queueCooling = [];
+    this.cooldownsShown = false;
+    this.lastTick = -1;
     this.startedAt = Date.now();
     this.results.set([]);
-    this.counts.set({ perfect: 0, late: 0, early: 0, wrong: 0, missed: 0, auto: 0 });
+    this.counts.set({ perfect: 0, late: 0, early: 0, wrong: 0, missed: 0, auto: 0, autoAttacks: 0 });
     this.doneSteps.set(new Set());
     this.buffs.set([]);
     this.showAllResults.set(false);
@@ -1041,8 +1051,19 @@ export class Train implements OnDestroy {
     this.coachStart();
     this.coachTick(this.engine, performance.now());
     this.raf = requestAnimationFrame(this.frame);
-    this.fallback = window.setInterval(() => this.tick(performance.now()), 100);
+    // a hidden tab gets no animation frames: a coarse interval keeps the session (and the coach) going there
+    this.doc.addEventListener('visibilitychange', this.onVisibility);
+    this.onVisibility();
   }
+
+  private readonly onVisibility = (): void => {
+    if (this.doc.hidden) {
+      if (!this.fallback) this.fallback = window.setInterval(() => this.tick(performance.now()), 100);
+    } else if (this.fallback) {
+      window.clearInterval(this.fallback);
+      this.fallback = 0;
+    }
+  };
 
   /** slot keys of the main bar (position 0) for `style`, null = empty slot – what Revolution scans */
   private mainBarKeys(style: Style4): (string | null)[] {
@@ -1064,6 +1085,7 @@ export class Train implements OnDestroy {
     this.stopLoops();
     this.coach.disable();
     this.engine?.stop();
+    this.clearHitsplats();
     this.running.set(false);
     this.finished.set(true);
     if (!this.finishReason()) this.finishReason.set('stopped');
@@ -1094,19 +1116,19 @@ export class Train implements OnDestroy {
     } else if (a.from.kind === 'equip') {
       const r = unequip(l, a.from.slot, this.slotOf);
       if (r.error) return this.toast.show(r.error, 'warn');
-      this.live.set({ ...l, ...r.state });
-      if (a.ref.kind === 'weapon') e.setWield(loadoutWield(this.live()!));
+      const next = { ...l, ...r.state };
+      this.live.set(next);
+      if (a.ref.kind === 'weapon') e.setWield(loadoutWield(next));
       else e.refreshLoadout();
       this.feedback.set({ text: name + ' taken off', cls: 'info' });
     }
+    // the gear changed outside the engine's tick: the usability of the bars is recomputed on the next frame
+    this.lastTick = -1;
   }
 
-  /** backpack potions grey out like bar slots when they cannot be drunk right now */
-  readonly gearUsable = computed<((ref: ItemRef) => boolean) | null>(() => {
-    if (!this.running()) return null;
-    const state = this.slotState();
-    return (ref) => ref.kind !== 'special' || (state.get('special:' + ref.id)?.usable ?? 'ok') === 'ok';
-  });
+  /** backpack potions grey out like bar slots when they cannot be drunk right now – reads `slotUsable` where it is called, so the panel input stays the same function */
+  private readonly gearUsableFn = (ref: ItemRef): boolean => ref.kind !== 'special' || (this.slotUsable().get('special:' + ref.id) ?? 'ok') === 'ok';
+  readonly gearUsable = computed<((ref: ItemRef) => boolean) | null>(() => (this.running() ? this.gearUsableFn : null));
 
   /** switch key of a carried weapon, shown on its backpack cell */
   readonly gearKey = (ref: ItemRef): string => (ref.kind === 'weapon' ? keybindLabel(this.storage.actionBars().weaponKeybinds[ref.id]) : '');
@@ -1118,88 +1140,36 @@ export class Train implements OnDestroy {
   private stopLoops(): void {
     cancelAnimationFrame(this.raf);
     window.clearInterval(this.fallback);
+    this.fallback = 0;
+    this.doc.removeEventListener('visibilitychange', this.onVisibility);
   }
 
+  private clearHitsplats(): void {
+    for (const t of this.hitsplatTimers) window.clearTimeout(t);
+    this.hitsplatTimers.clear();
+    if (this.hitsplats().length) this.hitsplats.set([]);
+  }
+
+  /**
+   * One animation frame. The engine changes only on server ticks (an input is processed on the first tick at or after
+   * its arrival) and reports everything else as events, so the catalog-wide work – usability and morph of every slot,
+   * buff lookups, prayers, cooldown ends – runs in `onTick` when the tick changed or an event arrived (≤ 1.67×/s), and
+   * only what moves continuously (tick / GCD phase, cooldown seconds, buff timers, the incoming attack, DPS) is
+   * derived per frame from arithmetic in `onFrame`.
+   */
   private tick(now: number): boolean {
     const e = this.engine;
     if (!e || !this.running()) return false;
     e.update(now);
-    for (const ev of e.events) this.applyEvent(ev, now);
+    const hadEvents = e.events.length > 0;
+    for (const ev of e.events) this.applyEvent(e, ev, now);
     e.events.length = 0;
-    this.tickPhase.set(e.tickPhase(now));
-    this.gcdPhase.set(e.gcdPhase(now));
-    this.gcdRemaining.set(e.gcdRemainingMs(now));
-    this.index.set(e.index);
-    this.adrenaline.set(e.adrenaline);
-    if (e.maxAdrenaline !== this.maxAdrenaline()) this.maxAdrenaline.set(e.maxAdrenaline);
-    if (e.damageDealt !== this.damage()) {
-      this.damage.set(e.damageDealt);
-      this.hits.set(e.hitCount);
-      this.targetHp.set(e.targetHp);
-    }
-    if (e.missCount !== this.misses()) this.misses.set(e.missCount);
-    const hc = e.hitChanceFor(e.style);
-    if (hc !== this.hitChance()) this.hitChance.set(hc);
-    const elapsedS = (now - e.t0) / 1000;
-    if (elapsedS >= 1) this.dps.set(e.damageDealt / elapsedS);
-    this.syncWield(e);
-    this.expectedKey.set(e.currentStep?.key ?? null);
-    this.coachTick(e, now);
-    this.queuedKey.set(e.queuedKey);
-    const pressed = new Set(e.inflightKeys);
-    for (const [key, until] of this.pressedUntil) {
-      if (until > now) pressed.add(key);
-      else this.pressedUntil.delete(key);
-    }
-    const wasPressed = this.pressedKeys();
-    if (pressed.size !== wasPressed.size || [...pressed].some((k) => !wasPressed.has(k))) this.pressedKeys.set(pressed);
-    this.buffs.set(e.buffs.map((b) => this.buffView(b, now)));
-    const cds: Record<string, { remainingMs: number; totalMs: number }> = {};
-    for (const s of this.slots()) {
-      const remainingMs = e.cooldownRemainingMs(s.entity.key, now);
-      if (remainingMs > 0) {
-        const ent = e.catalog.get(s.entity.key);
-        const total = ((ent ? (e.specFor(ent) ?? ent).cooldownTicks : 0) || 1) * TICK_MS;
-        cds[s.entity.key] = { remainingMs, totalMs: Math.max(total, remainingMs) };
-      }
-    }
-    this.cooldowns.set(cds);
-    this.channelling.set(e.channel && !e.channel.cancelled ? e.channel.key : null);
-    const cp = e.channelProgress(now);
-    this.channel.set(cp ? { ...cp, name: this.name(cp.key), icon: e.catalog.get(cp.key)?.icon ?? null, remainingS: cp.remainingMs / 1000 } : null);
-    this.syncPrayers(e, now);
-    if (now >= this.flashUntil) {
-      this.iconState.set(e.isQueued ? 'queued' : 'idle');
-      if (this.flashKey()) this.flashKey.set(null);
-    }
-    // usability of everything on the visible bars
     const tick = e.currentTick(now);
-    const state = new Map<string, { usable: UsableReason; cooldownS: number; cooldownPhase: number }>();
-    for (const key of e.catalog.keys()) {
-      // a morphed slot (Conjure → Command while the spirit lives) shows the state of what it will fire
-      const shown = e.morphOf(key, tick)?.key ?? key;
-      const cd = e.cooldownLeft(shown, tick);
-      // an ability on cooldown keeps its colour (the sweep + seconds show the cooldown); only missing
-      // adrenaline / resources / gear grey it out, like in the game
-      const usable = e.usable(shown, tick);
-      const total = e.cooldownTotalTicks(shown);
-      const remainingMs = cd > 0 ? e.tickTime(tick + cd) - now : 0;
-      state.set(key, {
-        usable: usable === 'cooldown' ? 'ok' : usable,
-        cooldownS: remainingMs / 1000,
-        cooldownPhase: cd > 0 && total > 0 ? Math.max(0, Math.min(1, 1 - remainingMs / (total * TICK_MS))) : 1,
-      });
+    if (tick !== this.lastTick || hadEvents) {
+      this.lastTick = tick;
+      this.onTick(e, tick, now);
     }
-    this.slotState.set(state);
-    const morphs = new Map<string, { entity: Entity; stage: number }>();
-    for (const key of e.catalog.keys()) {
-      const m = e.morphOf(key, tick);
-      if (!m) continue;
-      const ent = this.data.get(m.key);
-      if (ent) morphs.set(key, { entity: ent, stage: m.stage });
-    }
-    const cur = this.morphs();
-    if (morphs.size !== cur.size || [...morphs].some(([k, v]) => cur.get(k)?.entity.key !== v.entity.key || cur.get(k)?.stage !== v.stage)) this.morphs.set(morphs);
+    this.onFrame(e, tick, now);
     if (e.state !== 'running') {
       this.stopLoops();
       this.coach.disable();
@@ -1212,6 +1182,91 @@ export class Train implements OnDestroy {
     }
     return true;
   }
+
+  /** everything that only changes on a server tick or with an engine event */
+  private onTick(e: TrainerEngine, tick: number, now: number): void {
+    this.index.set(e.index);
+    this.adrenaline.set(e.adrenaline);
+    if (e.maxAdrenaline !== this.maxAdrenaline()) this.maxAdrenaline.set(e.maxAdrenaline);
+    if (e.damageDealt !== this.damage()) {
+      this.damage.set(e.damageDealt);
+      this.hits.set(e.hitCount);
+      this.targetHp.set(e.targetHp);
+    }
+    if (e.missCount !== this.misses()) this.misses.set(e.missCount);
+    const hc = e.hitChanceFor(e.style);
+    if (hc !== this.hitChance()) this.hitChance.set(hc);
+    this.syncWield(e);
+    this.expectedKey.set(e.currentStep?.key ?? null);
+    this.queuedKey.set(e.queuedKey);
+    this.coachTick(e, now);
+    // buffs: definition, icon and cap once per tick; the timers move per frame
+    this.liveBuffs = e.buffs.map((b) => ({ view: this.buffView(e, b, now), endTick: b.endTick }));
+    this.buffs.set(this.liveBuffs.map((b) => b.view));
+    this.channelling.set(e.channel && !e.channel.cancelled ? e.channel.key : null);
+    this.syncPrayers(e);
+    // cooldown ends of the queue slots (the seconds are derived per frame)
+    this.queueCooling = [];
+    for (const s of this.slots()) {
+      const left = e.cooldownLeft(s.entity.key, tick);
+      if (left <= 0) continue;
+      const ent = e.catalog.get(s.entity.key);
+      const total = ((ent ? (e.specFor(ent) ?? ent).cooldownTicks : 0) || 1) * TICK_MS;
+      this.queueCooling.push({ key: s.entity.key, endTick: tick + left, totalMs: total });
+    }
+    // usability, morph and cooldown end of everything on the visible bars – one pass over the catalog
+    const pass = catalogPass(e, tick);
+    this.cooling = pass.cooling;
+    if (!sameUsable(pass.usable, this.slotUsable())) this.slotUsable.set(pass.usable);
+    if (!sameMorphs(pass.morphs, this.morphKeys)) {
+      this.morphKeys = pass.morphs;
+      const morphs = new Map<string, { entity: Entity; stage: number }>();
+      for (const [key, m] of pass.morphs) {
+        const ent = this.data.get(m.key);
+        if (ent) morphs.set(key, { entity: ent, stage: m.stage });
+      }
+      this.morphs.set(morphs);
+    }
+  }
+
+  /** what moves continuously between ticks – arithmetic on the last tick's state, no catalog work */
+  private onFrame(e: TrainerEngine, tick: number, now: number): void {
+    this.tickPhase.set(e.tickPhase(now));
+    this.gcdPhase.set(e.gcdPhase(now));
+    this.gcdRemaining.set(e.gcdRemainingMs(now));
+    const elapsedS = (now - e.t0) / 1000;
+    if (elapsedS >= 1) this.dps.set(e.damageDealt / elapsedS);
+    const pressed = new Set(e.inflightKeys);
+    for (const [key, until] of this.pressedUntil) {
+      if (until > now) pressed.add(key);
+      else this.pressedUntil.delete(key);
+    }
+    const wasPressed = this.pressedKeys();
+    if (pressed.size !== wasPressed.size || [...pressed].some((k) => !wasPressed.has(k))) this.pressedKeys.set(pressed);
+    if (this.liveBuffs.some((b) => b.endTick !== null)) {
+      this.buffs.set(this.liveBuffs.map((b) => (b.endTick === null ? b.view : { ...b.view, remainingS: Math.max(0, (e.tickTime(b.endTick) - now) / 1000) })));
+    }
+    if (this.queueCooling.length || this.cooldownsShown) {
+      const cds: Record<string, { remainingMs: number; totalMs: number }> = {};
+      for (const q of this.queueCooling) {
+        const remainingMs = e.tickTime(q.endTick) - now;
+        if (remainingMs > 0) cds[q.key] = { remainingMs, totalMs: Math.max(q.totalMs, remainingMs) };
+      }
+      this.cooldowns.set(cds);
+      this.cooldownsShown = Object.keys(cds).length > 0;
+    }
+    const cp = e.channelProgress(now);
+    this.channel.set(cp ? { ...cp, name: this.name(cp.key), icon: e.catalog.get(cp.key)?.icon ?? null, remainingS: cp.remainingMs / 1000 } : null);
+    this.syncIncoming(e, tick, now);
+    if (now >= this.flashUntil) {
+      this.iconState.set(e.isQueued ? 'queued' : 'idle');
+      if (this.flashKey()) this.flashKey.set(null);
+    }
+    if (this.cooling.size || this.slotCooldowns().size) this.slotCooldowns.set(cooldownViews(e, this.cooling, now));
+  }
+
+  /** `cooldowns` holds something – it is cleared once when the last cooldown ends */
+  private cooldownsShown = false;
 
   // ---------------------------------------------------------------- coach: voice call-outs + metronome (core/coach.service.ts)
 
@@ -1309,19 +1364,22 @@ export class Train implements OnDestroy {
     for (const [t, labels] of [...byTick].sort((a, b) => a[0] - b[0])) this.coach.speak(spokenSequence(labels), e.tickTime(t));
   }
 
-  private syncPrayers(e: TrainerEngine, now: number): void {
+  private syncPrayers(e: TrainerEngine): void {
     const ids = [...e.activePrayers];
     const current = this.activePrayers();
     if (ids.length !== current.length || ids.some((id, i) => current[i]?.id !== id)) {
       this.activePrayers.set(ids.map((id) => this.data.get('prayer:' + id)).filter((x): x is Entity => !!x));
     }
     this.prayerStats.set({ ...e.prayerStats });
+  }
+
+  /** the incoming attack's progress bar (per frame) */
+  private syncIncoming(e: TrainerEngine, tick: number, now: number): void {
     const a = e.nextAttack;
     if (!a) {
       if (this.incoming()) this.incoming.set(null);
       return;
     }
-    const tick = e.currentTick(now);
     const interval = Math.max(1, this.enemy().intervalTicks);
     const startTime = e.tickTime(a.tick - interval);
     const progress = Math.max(0, Math.min(1, (now - startTime) / (e.tickTime(a.tick) - startTime)));
@@ -1366,20 +1424,19 @@ export class Train implements OnDestroy {
     if (f) this.feedback.set({ text: f.text + ' · ' + note, cls: f.cls === 'good' ? 'warn' : f.cls });
   }
 
-  private buffView(b: ActiveBuff, now: number): BuffView {
-    const remaining = b.endTick === null ? null : Math.max(0, (this.engine!.tickTime(b.endTick) - now) / 1000);
+  private buffView(e: TrainerEngine, b: ActiveBuff, now: number): BuffView {
+    const remaining = b.endTick === null ? null : Math.max(0, (e.tickTime(b.endTick) - now) / 1000);
     let icon = b.icon;
     if (!icon) {
       const def = BUFF_BY_ID.get(b.id);
-      icon = this.data.buffIcon(def?.wikiId) ?? this.engine!.catalog.get(b.sourceKey)?.icon ?? null;
+      icon = this.data.buffIcon(def?.wikiId) ?? e.catalog.get(b.sourceKey)?.icon ?? null;
     }
     const def = BUFF_BY_ID.get(b.id);
     const max = def?.stacks ? stackMax(b.id as StackId, this.resolved().stackCaps) : null;
     return { id: b.id, name: b.name, icon, kind: b.kind, remainingS: remaining, stacks: b.stacks, max: max === Infinity ? null : max };
   }
 
-  private applyEvent(ev: EngineEvent, now: number): void {
-    const e = this.engine!;
+  private applyEvent(e: TrainerEngine, ev: EngineEvent, now: number): void {
     const queueing = this.storage.settings().abilityQueueing;
     switch (ev.kind) {
       case 'unqueued':
@@ -1400,9 +1457,10 @@ export class Train implements OnDestroy {
         this.results.update((list) => [...list, r]);
         this.doneSteps.update((s) => new Set(s).add(r.step));
         if (r.auto) {
-          // Revolution completed the step on its own – counted like a press, but flagged as automatic
+          // Revolution (or the automatic basic attack) completed the step on its own – counted like a press, but flagged as automatic
           this.counts.update((c) => (r.outcome === 'late' ? { ...c, late: c.late + 1 } : { ...c, perfect: c.perfect + 1 }));
-          this.feedback.set({ text: 'Revolution: ' + r.name + (r.outcome === 'late' ? ' – late by ' + r.lateTicks + (r.lateTicks === 1 ? ' tick' : ' ticks') + ' (nothing was usable earlier)' : ' – automatic'), cls: r.outcome === 'late' ? 'warn' : 'good' });
+          const who = r.autoAttack ? 'Auto-attack: ' : 'Revolution: ';
+          this.feedback.set({ text: who + r.name + (r.outcome === 'late' ? ' – late by ' + r.lateTicks + (r.lateTicks === 1 ? ' tick' : ' ticks') + ' (nothing was usable earlier)' : ' – automatic'), cls: r.outcome === 'late' ? 'warn' : 'good' });
         } else if (r.outcome === 'perfect') {
           this.counts.update((c) => ({ ...c, perfect: c.perfect + 1 }));
           this.feedback.set({ text: r.name + ' – on tick', detail: this.advanced() && r.offsetMs ? r.offsetMs + ' ms early' : undefined, cls: 'good' });
@@ -1422,6 +1480,17 @@ export class Train implements OnDestroy {
         this.flash('fired', r.key, now, 200);
         break;
       }
+      case 'auto-attack':
+        // the basic attack fired on its own because the press came after the GCD end: not a wrong press, but the
+        // late cast now waits for the basic attack's GCD (a matching "(auto)" step gets its 'fired' result right after)
+        this.counts.update((c) => ({ ...c, autoAttacks: c.autoAttacks + 1 }));
+        if (!ev.matched) {
+          this.feedback.set({ text: 'Auto-attack slipped in – you were late, the next cast waits for its GCD', cls: 'warn' });
+          this.appendCancelNote();
+          this.log(ev.key, 'auto', this.feedback()?.text ?? '');
+          this.flash('fired', ev.key, now, 200);
+        }
+        break;
       case 'auto':
         // Revolution's own cast: never a mistake; a matching step gets its 'fired' result right after this event
         this.counts.update((c) => ({ ...c, auto: c.auto + 1 }));
@@ -1514,7 +1583,11 @@ export class Train implements OnDestroy {
         const id = ++this.hitId;
         const name = ev.key.startsWith('spirit:') ? ev.key.slice(7).replace(/-/g, ' ') : ev.key.startsWith('familiar:') ? this.data.familiarById().get(ev.key.slice(9))?.name ?? ev.key.slice(9) : this.name(ev.key);
         this.hitsplats.update((l) => [...l.slice(-7), { id, amount: ev.amount, crit: ev.crit, dot: ev.dot, miss: !!ev.miss, name }]);
-        window.setTimeout(() => this.hitsplats.update((l) => l.filter((h) => h.id !== id)), 1800);
+        const timer = window.setTimeout(() => {
+          this.hitsplatTimers.delete(timer);
+          this.hitsplats.update((l) => l.filter((h) => h.id !== id));
+        }, 1800);
+        this.hitsplatTimers.add(timer);
         break;
       }
       case 'killed': {
@@ -1634,8 +1707,10 @@ export class Train implements OnDestroy {
 
   /** the Timing column of the session summary */
   timing(r: StepResult): string {
-    if (r.outcome === 'perfect') return 'on tick' + (this.advanced() && r.offsetMs ? ' (' + r.offsetMs + ' ms early)' : '');
-    if (r.outcome === 'late') return this.offText(r) + (this.advanced() && r.offsetMs ? ' (+' + r.offsetMs + ' ms)' : '');
+    // a basic attack slipped in before this cast: the press came after the GCD end and waited a whole GCD
+    const auto = r.autoAttackBefore ? ' · +1 GCD auto-attack' : '';
+    if (r.outcome === 'perfect') return 'on tick' + (this.advanced() && r.offsetMs ? ' (' + r.offsetMs + ' ms early)' : '') + auto;
+    if (r.outcome === 'late') return this.offText(r) + (this.advanced() && r.offsetMs ? ' (+' + r.offsetMs + ' ms)' : '') + auto;
     if (r.outcome === 'early') return this.offText(r);
     return r.outcome;
   }
@@ -1672,33 +1747,15 @@ export class Train implements OnDestroy {
     }
     const kb = keybindFromEvent(e);
     if (!kb) return;
-    const k = keybindKey(kb);
-    const setup = this.storage.actionBars();
-    for (const [id, wk] of Object.entries(setup.weaponKeybinds)) {
-      if (wk && keybindKey(wk) === k) {
-        e.preventDefault();
-        this.press('weapon:' + id);
-        return;
-      }
-    }
-    for (const [id, ak] of Object.entries(setup.actionKeybinds ?? {})) {
-      if (ak && keybindKey(ak) === k) {
-        e.preventDefault();
-        this.press('action:' + id);
-        return;
-      }
-    }
-    for (let pos = 0; pos < BAR_POSITIONS; pos++) {
-      const row = setup.slotKeybinds[pos] ?? [];
-      for (let i = 0; i < row.length; i++) {
-        const skb = row[i];
-        if (skb && keybindKey(skb) === k) {
-          e.preventDefault();
-          const entity = this.bars()[pos]?.slots[i]?.entity;
-          if (entity) this.press(entity.key);
-          return;
-        }
-      }
+    // the same resolution as the drill (core/keybind.util): carried weapons' switch keys, client actions, then the bars
+    const target = resolvePress(this.storage.actionBars(), keybindKey(kb), this.carriedWeapons().map((w) => w.entity.id));
+    if (!target) return;
+    e.preventDefault();
+    if (target.kind === 'weapon') this.press('weapon:' + target.id);
+    else if (target.kind === 'action') this.press('action:' + target.id);
+    else {
+      const entity = this.bars().find((b) => b.position === target.pos)?.slots[target.slot]?.entity;
+      if (entity) this.press(entity.key);
     }
   }
 }
@@ -1713,16 +1770,4 @@ function readOptionsOpen(): boolean {
   } catch {
     return false;
   }
-}
-
-/** A note step shown in the queue like an entity (no key, no engine effect). */
-function noteEntity(step: RotationStep, index: number): Entity {
-  return {
-    key: 'note:' + index,
-    kind: 'action',
-    id: 'note-' + index,
-    name: step.note ?? '',
-    icon: step.phase ? 'assets/actions/phase.png' : 'assets/actions/note.png',
-    group: 'Notes',
-  };
 }

@@ -45,7 +45,8 @@ export class EngagementService {
   constructor() {
     const d = this.data();
     if (d.lastVisitDay !== today()) this.update({ visits: d.visits + 1, lastVisitDay: today() });
-    if (typeof window !== 'undefined') {
+    // without a donation page the nudge can never show – no reason to count active time (and write localStorage) every 15 s
+    if (typeof window !== 'undefined' && SUPPORT_URL) {
       window.setInterval(() => {
         if (document.visibilityState === 'visible') this.update({ activeSec: this.data().activeSec + TICK_S });
       }, TICK_S * 1000);

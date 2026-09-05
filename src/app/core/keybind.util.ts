@@ -1,4 +1,4 @@
-import { Keybind } from './models';
+import { ActionBarSetup, BAR_POSITIONS, Keybind } from './models';
 
 const MODIFIER_CODES = new Set([
   'ControlLeft', 'ControlRight', 'ShiftLeft', 'ShiftRight', 'AltLeft', 'AltRight', 'MetaLeft', 'MetaRight',
@@ -20,7 +20,7 @@ export function keybindFromEvent(e: KeyboardEvent): Keybind | null {
   return { code: e.code, ctrl: e.ctrlKey, shift: e.shiftKey, alt: e.altKey };
 }
 
-export function keyName(code: string): string {
+function keyName(code: string): string {
   if (CODE_LABELS[code]) return CODE_LABELS[code];
   if (code.startsWith('Key')) return code.slice(3);
   if (code.startsWith('Digit')) return code.slice(5);
@@ -42,10 +42,6 @@ export function keybindLabel(k: Keybind | null | undefined): string {
 /** Stable string key for map lookups. */
 export function keybindKey(k: Keybind): string {
   return (k.ctrl ? 'C' : '') + (k.shift ? 'S' : '') + (k.alt ? 'A' : '') + ':' + k.code;
-}
-
-export function keybindEquals(a: Keybind | null | undefined, b: Keybind | null | undefined): boolean {
-  return !!a && !!b && keybindKey(a) === keybindKey(b);
 }
 
 /**
@@ -74,4 +70,31 @@ export function parseKeybind(text: string): Keybind {
   const code = parts.pop() ?? '';
   const mods = parts.map((p) => p.toLowerCase());
   return { code, ctrl: mods.includes('ctrl'), shift: mods.includes('shift'), alt: mods.includes('alt') };
+}
+
+/** what a key press means for the bars: a weapon switch, a client action, or a bar slot */
+export type PressTarget = { kind: 'weapon'; id: string } | { kind: 'action'; id: string } | { kind: 'slot'; pos: number; slot: number };
+
+/**
+ * Resolves a pressed key (`keybindKey` of the keydown) against the bar setup, in the order the Train page and the
+ * drill agree on: the switch keys of the carried weapons (`carriedIds`; a bound weapon that is not carried does
+ * nothing, like in the game), then the client actions (target cycle …), then the bar slots top to bottom,
+ * left to right. Null = the key is bound to nothing.
+ */
+export function resolvePress(setup: ActionBarSetup, key: string, carriedIds: Iterable<string>): PressTarget | null {
+  for (const id of carriedIds) {
+    const wk = setup.weaponKeybinds[id];
+    if (wk && keybindKey(wk) === key) return { kind: 'weapon', id };
+  }
+  for (const [id, ak] of Object.entries(setup.actionKeybinds ?? {})) {
+    if (ak && keybindKey(ak) === key) return { kind: 'action', id };
+  }
+  for (let pos = 0; pos < BAR_POSITIONS; pos++) {
+    const row = setup.slotKeybinds[pos] ?? [];
+    for (let slot = 0; slot < row.length; slot++) {
+      const skb = row[slot];
+      if (skb && keybindKey(skb) === key) return { kind: 'slot', pos, slot };
+    }
+  }
+  return null;
 }

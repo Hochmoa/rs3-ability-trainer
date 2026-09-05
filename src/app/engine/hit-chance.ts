@@ -72,7 +72,7 @@ export function affinityStyleOf(style: Style | null | undefined, wielded: Style 
  * Prayers and curses add levels to the accuracy skill (prayers.json "+N levels (for accuracy)"; since the Combat Style
  * Modernisation they are level bonuses, not percentages). Leeches grow from +2 to +5 over 1–3 minutes – the maximum is used.
  */
-export const PRAYER_ACCURACY_LEVELS: Record<string, { style: Style4; levels: number }> = {
+const PRAYER_ACCURACY_LEVELS: Record<string, { style: Style4; levels: number }> = {
   'clarity-of-thought': { style: 'Melee', levels: 2 },
   'improved-reflexes': { style: 'Melee', levels: 4 },
   'incredible-reflexes': { style: 'Melee', levels: 6 },

@@ -129,8 +129,10 @@ export class SetupSyncService {
   async setPublic(value: boolean): Promise<void> {
     const uid = this.uid;
     if (!uid) return;
-    const { error } = await (await this.supabase.db()).from('setups').update({ is_public: value }).eq('user_id', uid);
+    const { data, error } = await (await this.supabase.db()).from('setups').update({ is_public: value }).eq('user_id', uid).select('user_id');
     if (error) throw error;
+    // a bare UPDATE on a missing row (the setup was never uploaded, or the account is blocked) changes nothing
+    if (!data?.length) throw new Error('Your setup is not online yet – it is uploaded after the next change');
     this.isPublic.set(value);
   }
 

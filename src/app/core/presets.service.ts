@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { ToastService } from '../shared/toast';
 import { DataService } from './data.service';
+import { stockSpecials } from './equipment';
 import { DEFAULT_LAYOUT_ID, keybindLayout } from './keybind-layouts';
 import { Rotation, RotationStep } from './models';
 import { BossPreset, demoRotationIndex, presetBars, presetLoadout, presetSlotKeys } from './preset-setup';
@@ -70,12 +71,7 @@ export class PresetsService {
     const parsed = this.parse(p);
     const loadout = presetLoadout(p, (ref) => this.data.slotOf(ref));
     // potions and bombs the rotations press must be in the backpack, or the trainer refuses them like the game
-    for (const id of new Set(parsed.flatMap((r) => r.steps).filter((st) => st.kind === 'special').map((st) => st.id))) {
-      if (loadout.inventory.some((r) => r?.kind === 'special' && r.id === id)) continue;
-      const free = loadout.inventory.findIndex((r) => !r);
-      if (free < 0) break;
-      loadout.inventory[free] = { kind: 'special', id };
-    }
+    loadout.inventory = stockSpecials(loadout, parsed.flatMap((r) => r.steps).filter((st) => st.kind === 'special').map((st) => st.id)).state.inventory;
     await this.storage.saveLoadout(loadout);
     await this.storage.setActiveLoadout(loadout.id);
 
@@ -107,7 +103,9 @@ export class PresetsService {
     let presets: BossPreset[];
     try {
       presets = await this.list();
-    } catch {
+    } catch (err) {
+      // the global handler only sees uncaught errors: log it, or a broken presets.json never shows up anywhere
+      console.error('presets could not be loaded', err);
       this.toast.show('The presets could not be loaded', 'warn');
       return false;
     }

@@ -20,21 +20,21 @@ const ROBOTS_INDEX = 'index,follow,max-image-preview:large';
 const ROBOTS_NOINDEX = 'noindex,nofollow';
 
 /** '/rotations?x=1#y' -> 'rotations' */
-export function seoPath(url: string): string {
+function seoPath(url: string): string {
   return url.split(/[?#]/)[0].replace(/^\/+|\/+$/g, '');
 }
 
-export function seoRouteFor(url: string): SeoRoute | undefined {
+function seoRouteFor(url: string): SeoRoute | undefined {
   const path = seoPath(url);
   return (seo.routes as SeoRoute[]).find((r) => r.path === path);
 }
 
-export function canonicalUrl(url: string): string {
+function canonicalUrl(url: string): string {
   return seo.origin + '/' + seoPath(url);
 }
 
 /** Schema.org description of a page; the home page also describes the app itself. */
-export function jsonLd(route: SeoRoute | undefined, url: string): object {
+function jsonLd(route: SeoRoute | undefined, url: string): object {
   const canonical = canonicalUrl(url);
   const website = {
     '@type': 'WebSite',

@@ -1,3 +1,4 @@
+import '@angular/compiler';
 import { describe, expect, it, vi } from 'vitest';
 import { Throttle, safeWrite } from './storage.service';
 

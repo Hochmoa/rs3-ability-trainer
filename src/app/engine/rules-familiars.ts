@@ -42,7 +42,7 @@ export const SCROLL_RULES: AbilityRule[] = [
   pointsOnly('mammoth-feast', 'Pack_mammoth', "6 special move points: eats a piece of food from the mammoth's inventory and heals you without draining adrenaline – not simulated"),
 ];
 
-export const SCROLL_RULE_BY_ID = new Map(SCROLL_RULES.map((r) => [r.ability, r]));
+const SCROLL_RULE_BY_ID = new Map(SCROLL_RULES.map((r) => [r.ability, r]));
 
 export function scrollRuleFor(scrollId: string): AbilityRule | undefined {
   return SCROLL_RULE_BY_ID.get(scrollId);

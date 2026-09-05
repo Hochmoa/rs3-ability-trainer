@@ -68,7 +68,7 @@ interface Cell {
             role="button"
             [attr.tabindex]="c.ref && !c.blocked ? 0 : -1"
             [attr.aria-label]="cellLabel(c)"
-            (gear-drop)="onDropEquip($event, c)"
+            (gear-drop)="onDropEquip($event)"
             (click)="clickCell(c)"
             (keydown.enter)="clickCell(c)"
             (keydown.space)="clickCell(c); $event.preventDefault()"
@@ -466,7 +466,7 @@ export class GearPanel implements OnDestroy {
     return this.editable() && !!this.gearDrag.drag();
   }
 
-  onDropEquip(e: Event, c: Cell): void {
+  onDropEquip(e: Event): void {
     const d = (e as CustomEvent<GearDrag>).detail;
     if (!d) return;
     const slot = this.data.slotOf(d.ref);

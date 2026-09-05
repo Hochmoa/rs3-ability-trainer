@@ -1,4 +1,4 @@
-import { Component, HostListener, computed, effect, inject, signal } from '@angular/core';
+import { Component, HostListener, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { DataService, GearView } from '../../core/data.service';
@@ -232,48 +232,8 @@ export class Loadout {
   }
 
   constructor() {
+    // legacy loadouts (flags instead of worn items) are migrated by the StorageService once these catalogs are in
     void this.data.ensure('gear', 'weapons', 'perks');
-    // loadouts saved before the inventory: flags (Ring of vigour, armour set + pieces, EoF spec) become worn items, once
-    effect(() => {
-      if (!this.data.loadoutReady() || !this.storage.ready()) return;
-      for (const l of this.storage.loadouts()) {
-        const migrated = this.migrateLegacy(l);
-        if (migrated) void this.storage.saveLoadout(migrated);
-      }
-    });
-  }
-
-  private migrateLegacy(l: LoadoutModel): LoadoutModel | null {
-    if (!l.items.length && !l.armourSet && !(l.eofSpec && !l.equipment.neck)) return null;
-    let s: GearState = { equipment: l.equipment, inventory: l.inventory };
-    const wear = (ref: ItemRef) => {
-      const r = equip(s, ref, (x) => this.data.slotOf(x));
-      if (!r.error) s = r.state;
-      else s = addItem(s, ref).state;
-    };
-    const gear = this.data.gear();
-    for (const id of l.items) {
-      const item = gear.find((g) => g.passive === id);
-      if (item && !Object.values(s.equipment).some((r) => r?.id === item.id)) wear({ kind: 'gear', id: item.id });
-    }
-    if (l.armourSet) {
-      const order = ['body', 'legs', 'head', 'hands', 'feet', 'cape'];
-      const pieces = gear.filter((g) => g.set === l.armourSet).sort((a, b) => order.indexOf(a.slot) - order.indexOf(b.slot) || b.tier - a.tier);
-      let n = 0;
-      const usedSlots = new Set<string>();
-      for (const p of pieces) {
-        if (n >= l.armourPieces) break;
-        if (usedSlots.has(p.slot) || s.equipment[p.slot]) continue;
-        wear({ kind: 'gear', id: p.id });
-        usedSlots.add(p.slot);
-        n++;
-      }
-    }
-    if (l.eofSpec && !s.equipment.neck) {
-      const eof = gear.find((g) => g.passive === 'essence-of-finality');
-      if (eof) wear({ kind: 'gear', id: eof.id, spec: l.eofSpec });
-    }
-    return { ...l, equipment: s.equipment, inventory: s.inventory, items: [], armourSet: null, armourPieces: 0 };
   }
 
   // ---------------------------------------------------------------- loadout list

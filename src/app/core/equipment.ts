@@ -3,7 +3,7 @@
  * (click to equip / drink while training). Every function returns a new state; on failure the state is
  * unchanged and `error` says why (like the game's "You don't have enough inventory space").
  */
-import { EquipSlot, Equipment, INVENTORY_SIZE, ItemRef, sameRef } from './models';
+import { EquipSlot, Equipment, INVENTORY_SIZE, ItemRef } from './models';
 
 export interface GearState {
   equipment: Equipment;
@@ -19,18 +19,18 @@ export interface GearResult {
 }
 
 /** Slots the item in `slot` blocks / is blocked by. */
-export function conflictingSlots(slot: EquipSlot): EquipSlot[] {
+function conflictingSlots(slot: EquipSlot): EquipSlot[] {
   if (slot === 'twoHand') return ['mainHand', 'offHand'];
   if (slot === 'mainHand' || slot === 'offHand') return ['twoHand'];
   return [];
 }
 
-export function normaliseInventory(inv: (ItemRef | null)[] | undefined): (ItemRef | null)[] {
+function normaliseInventory(inv: (ItemRef | null)[] | undefined): (ItemRef | null)[] {
   const out = Array.from({ length: INVENTORY_SIZE }, (_, i) => inv?.[i] ?? null);
   return out;
 }
 
-export function freeIndex(inv: (ItemRef | null)[], preferred?: number | null): number {
+function freeIndex(inv: (ItemRef | null)[], preferred?: number | null): number {
   if (preferred !== undefined && preferred !== null && preferred >= 0 && preferred < inv.length && !inv[preferred]) return preferred;
   return inv.findIndex((x) => !x);
 }
@@ -174,16 +174,23 @@ export function applyWield(state: GearState, wield: WieldIds, slotOf: SlotOf): G
   return s;
 }
 
-/** true when both states carry the same items in the same places */
-export function sameState(a: GearState, b: GearState): boolean {
-  const ia = normaliseInventory(a.inventory);
-  const ib = normaliseInventory(b.inventory);
-  for (let i = 0; i < ia.length; i++) if (!sameRef(ia[i], ib[i]) && (ia[i] || ib[i])) return false;
-  const keys = new Set([...Object.keys(a.equipment), ...Object.keys(b.equipment)]) as Set<EquipSlot>;
-  for (const k of keys) {
-    const x = a.equipment[k];
-    const y = b.equipment[k];
-    if (!sameRef(x, y) && (x || y)) return false;
+/** the potion / bomb / scroll `id` sits in the backpack */
+export function hasSpecial(inv: readonly (ItemRef | null)[], id: string): boolean {
+  return inv.some((r) => r?.kind === 'special' && r.id === id);
+}
+
+/**
+ * Puts every special of `ids` that is missing into the first free backpack slots (the trainer refuses a potion that is
+ * not carried, like the game). Stops when the backpack is full; returns a new state and the ids that did not fit.
+ */
+export function stockSpecials(state: GearState, ids: Iterable<string>): { state: GearState; left: string[] } {
+  let s = state;
+  const left: string[] = [];
+  for (const id of new Set(ids)) {
+    if (hasSpecial(s.inventory, id)) continue;
+    const r = addItem(s, { kind: 'special', id });
+    if (r.error) left.push(id);
+    else s = r.state;
   }
-  return true;
+  return { state: s, left };
 }

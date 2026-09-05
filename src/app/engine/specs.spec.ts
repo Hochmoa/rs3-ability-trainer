@@ -479,7 +479,7 @@ describe('Weapon Special Attack and Essence of Finality slots', () => {
     for (const [i, id] of ['locate', 'gravitate', 'blackhole', 'power-of-light'].entries()) {
       e.adrenaline = 100;
       e.config.loadout.weaponSpec = spec(id);
-      e.config.loadout.style = spec(id).style;
+      e.config.loadout.style = spec(id).style ?? null;
       cast(e, 'spec:' + id, 4 + 3 * i, 4 + 3 * i);
     }
     expect(['death-essence', 'locate', 'gravitate', 'blackhole', 'power-of-light'].map((b) => e.hasBuff(b))).toEqual([true, true, true, true, true]);

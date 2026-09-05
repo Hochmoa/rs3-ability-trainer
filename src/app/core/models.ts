@@ -142,24 +142,6 @@ export interface Spell {
   wikiId: number | null;
 }
 
-/** Weapon special attack (runescape.wiki `infobox_weapon_special_attack`), e.g. Death Essence of the Omni guard. */
-export interface Spec {
-  id: string;
-  name: string;
-  /** combat style of the weapons it belongs to ("Necromancy", ...) */
-  style: string;
-  /** gear ids of the weapons that have this special */
-  weapons: string[];
-  adrenaline: number | null;
-  cooldownTicks: number | null;
-  damageMin: number | null;
-  damageMax: number | null;
-  damageText: string;
-  target: string;
-  description: string;
-  icon: string;
-}
-
 /** Client actions that are keybinds but not abilities (target cycle). Defined in code, see ACTIONS. */
 export interface Action {
   id: string;
@@ -250,6 +232,12 @@ export interface Settings {
   jitterMs: number;
   /** in-game "Ability queueing": on = a press during the GCD is queued and casts when the GCD ends; off = ignored */
   abilityQueueing: boolean;
+  /**
+   * full manual: the wielded style's basic attack fires on its own when the global cooldown ends and nothing was
+   * pressed or queued, so a late press waits a whole GCD (docs/research/mechanics.md §3). Off = the in-game
+   * Combat Mode toggle. Missing = on.
+   */
+  autoAttacks: boolean;
   loop: boolean;
   /** start every session with full adrenaline (training-dummy style) */
   fullAdrenaline: boolean;
@@ -332,7 +320,7 @@ export interface RevolutionSettings {
   ultimates: boolean;
 }
 
-export const DEFAULT_REVOLUTION: RevolutionSettings = { slots: 9, basics: true, enhanced: true, thresholds: false, ultimates: false };
+const DEFAULT_REVOLUTION: RevolutionSettings = { slots: 9, basics: true, enhanced: true, thresholds: false, ultimates: false };
 
 /** Everything the Setups page shares and "Load this setup" replaces: all local data except the rotations. */
 export interface SetupBundle {
@@ -356,6 +344,7 @@ export const DEFAULT_SETTINGS: Settings = {
   pingMs: 60,
   jitterMs: 20,
   abilityQueueing: true,
+  autoAttacks: true,
   loop: false,
   fullAdrenaline: false,
   rechargeAdrenaline: false,
@@ -704,7 +693,7 @@ export interface ActionBarPreset {
 }
 
 export const BAR_SLOTS = 14;
-export const BAR_PRESETS = 18;
+const BAR_PRESETS = 18;
 /** main bar + additional bars 1-4 */
 export const BAR_POSITIONS = 5;
 export const BAR_POSITION_NAMES = ['Main bar', 'Additional bar 1', 'Additional bar 2', 'Additional bar 3', 'Additional bar 4'];
@@ -847,6 +836,12 @@ export function loadoutWeapons(l: Loadout): string[] {
   }
   for (const id of [l.twoHand, l.mainHand, l.offHand, ...(l.switches ?? [])]) if (id && !out.includes(id)) out.push(id);
   return out;
+}
+
+/** Combat style of the loadout's starting weapon (two-hander, else main hand); Melee when nothing is wielded or the style is not a combat style. */
+export function loadoutStyle(l: Pick<Loadout, 'twoHand' | 'mainHand'>, weaponById: Pick<Map<string, Weapon>, 'get'>): Style4 {
+  const w = weaponById.get(l.twoHand ?? l.mainHand ?? '');
+  return w && isStyle4(w.style) ? w.style : 'Melee';
 }
 
 /** Worn weapons of a loadout as ids (twoHand excludes mainHand/offHand). */

@@ -90,6 +90,7 @@
         <span class="bad">Wrong {{ counts().wrong }}</span>
         <span class="warn">Missed {{ counts().missed }}</span>
         @if (revolution()) { <span class="muted">Auto {{ counts().auto }}</span> }
+        @if (counts().autoAttacks) { <span class="muted">Auto-attacks {{ counts().autoAttacks }}</span> }
         @if (damage() > 0) { <span class="muted">{{ dps() | number: '1.0-0' }} DPS</span> }
       </div>
     }
@@ -478,6 +479,7 @@
                 <span class="warn">Late {{ counts().late }}</span>
                 <span class="bad">Wrong {{ counts().wrong }}</span>
                 <span class="warn">Missed {{ counts().missed }}</span>
+                @if (counts().autoAttacks) { <span class="muted" title="basic attacks that fired on their own because the press came after the GCD end">Auto-attacks {{ counts().autoAttacks }}</span> }
                 @if (damage() > 0) { <span class="muted">{{ damage() | number: '1.0-0' }} damage · {{ dps() | number: '1.0-0' }} DPS</span> }
               </p>
               @if (worst(); as w) { <p class="finish-worst warn">Worst: {{ w.name }}, {{ offText(w) }}</p> }
@@ -752,6 +754,7 @@
       <span class="bad">Wrong {{ counts().wrong }}</span>
       <span class="warn">Missed {{ counts().missed }}</span>
       @if (revolution()) { <span class="muted" title="abilities Revolution cast on its own">Auto {{ counts().auto }}</span> }
+      @if (counts().autoAttacks) { <span class="muted" title="basic attacks that fired on their own because the press came after the GCD end">Auto-attacks {{ counts().autoAttacks }}</span> }
       <span class="muted">Damage {{ damage() | number: '1.0-0' }}</span>
       <span class="muted">DPS {{ dps() | number: '1.0-0' }}</span>
       @if (advanced() && hitChance() !== null) {

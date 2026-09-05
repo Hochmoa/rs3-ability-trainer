@@ -11,7 +11,7 @@ import PERKS from '../../../public/data/perks.json';
 import SETS from '../../../public/data/set-effects.json';
 import SPECS from '../../../public/data/specs.json';
 import WEAPONS from '../../../public/data/weapons.json';
-import { Ability, EquipSlot, GearItem, ItemRef, Loadout, Perk, SetEffect, Weapon, WeaponSpec, newLoadout, weaponSlot } from '../core/models';
+import { Ability, EquipSlot, GearItem, ItemRef, Loadout, Perk, SetEffect, Weapon, WeaponSpec, emptyPrebuild, newLoadout, weaponSlot } from '../core/models';
 import { ResolvedLoadout } from './loadout-resolved';
 import { LoadoutData, NOT_SIMULATED_EFFECT_KINDS, SHADOWS_GRACE_ABILITIES, resolveLoadout } from './loadout-resolver';
 import { EngineConfig, EngineEntity, TICK_MS, TrainerEngine } from './trainer-engine';
@@ -454,12 +454,12 @@ describe('gear: effects in the engine', () => {
 
   it('Song of Destruction: with 25+ Essence Corruption a basic generates +1% adrenaline per tick over 6 ticks', () => {
     const r = resolve({ weapons: ['roar-of-awakening', 'ode-to-deceit'] });
-    const { e } = make(['magic'], r, { fullAdrenaline: false, prebuild: { stacks: { 'essence-corruption': 25 } } });
+    const { e } = make(['magic'], r, { fullAdrenaline: false, prebuild: { ...emptyPrebuild(), stacks: { 'essence-corruption': 25 } } });
     cast(e, 'magic', 1);
     expect(e.adrenaline).toBe(9);
     e.update(8 * T);
     expect(e.adrenaline).toBeCloseTo(15, 9);
-    const { e: few } = make(['magic'], r, { fullAdrenaline: false, prebuild: { stacks: { 'essence-corruption': 24 } } });
+    const { e: few } = make(['magic'], r, { fullAdrenaline: false, prebuild: { ...emptyPrebuild(), stacks: { 'essence-corruption': 24 } } });
     cast(few, 'magic', 1);
     few.update(8 * T);
     expect(few.adrenaline).toBe(9);

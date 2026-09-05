@@ -7,12 +7,12 @@
 
 /** window.open name – a second click reuses the same popup instead of opening another one */
 export const POPOUT_NAME = 'rs3focus';
-export const POPOUT_WIDTH = 520;
-export const POPOUT_HEIGHT = 360;
+const POPOUT_WIDTH = 520;
+const POPOUT_HEIGHT = 360;
 export const POPOUT_FEATURES = `popup,width=${POPOUT_WIDTH},height=${POPOUT_HEIGHT}`;
 
 /** the site the Alt1 appconfig points at (Alt1 needs absolute URLs, see public/appconfig.json) */
-export const SITE_ORIGIN = 'https://rs3trainer.hochware.com';
+const SITE_ORIGIN = 'https://rs3trainer.hochware.com';
 /** "Add app" link Alt1 registers as a protocol handler: alt1://addapp/<absolute url of appconfig.json> */
 export const ALT1_ADD_URL = 'alt1://addapp/' + SITE_ORIGIN + '/appconfig.json';
 

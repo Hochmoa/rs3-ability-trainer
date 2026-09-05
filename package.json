@@ -7,6 +7,8 @@
     "build": "ng build && node tools/postbuild.mjs",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
+    "test:ci": "vitest run",
+    "typecheck": "tsc -p tsconfig.spec.json --noEmit",
     "postbuild:only": "node tools/postbuild.mjs",
     "seo:images": "python tools/make-seo-images.py"
   },

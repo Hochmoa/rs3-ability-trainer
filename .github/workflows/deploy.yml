@@ -24,6 +24,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Type-check the app and the specs (vitest transpiles without checking types)
+        run: npm run typecheck
+      - name: Unit tests (engine, importer, storage migrations, sync merge rules)
+        run: npm run test:ci
       - name: Stamp the build (footer shows commit + time)
         run: echo "export const BUILD = '${GITHUB_SHA::7} $(date -u +'%Y-%m-%d %H:%M')';" > src/app/version.ts
       - run: npm run build

@@ -3,8 +3,8 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { DataService, Entity } from '../../core/data.service';
 import { Drill, DrillSource, DrillSummary, DrillTarget, WEAPON_POS, buildPool } from '../../core/drill';
-import { keybindFromEvent, keybindKey, keybindLabel } from '../../core/keybind.util';
-import { BAR_POSITIONS, BarShape, Style4, barLayout, entityKey, isStyle4, loadoutWeapons, visiblePresets } from '../../core/models';
+import { keybindFromEvent, keybindKey, keybindLabel, resolvePress } from '../../core/keybind.util';
+import { BAR_POSITIONS, BarShape, Style4, barLayout, entityKey, loadoutStyle, visiblePresets } from '../../core/models';
 import { PresetsService } from '../../core/presets.service';
 import { FeedbackService } from '../../core/feedback.service';
 import { StorageService } from '../../core/storage.service';
@@ -139,11 +139,7 @@ export class DrillPage implements OnDestroy {
   readonly startedAt = signal(0);
 
   /** bars follow the weapon of the active loadout, like the trainer before Start */
-  readonly style = computed<Style4>(() => {
-    const l = this.storage.loadout();
-    const w = this.data.weaponById().get(l.twoHand ?? l.mainHand ?? '');
-    return w && isStyle4(w.style) ? w.style : 'Melee';
-  });
+  readonly style = computed<Style4>(() => loadoutStyle(this.storage.loadout(), this.data.weaponById()));
   readonly layout = computed(() => barLayout(this.storage.actionBars()));
 
   /** the rotation the pool is restricted to (null = all) */
@@ -192,11 +188,7 @@ export class DrillPage implements OnDestroy {
   readonly anyKeys = computed(() => this.sources().some((s) => !!s.keybind));
 
   /** weapons of the active loadout (the switches the drill can ask for) */
-  readonly carried = computed(() =>
-    loadoutWeapons(this.storage.loadout())
-      .map((id) => this.data.get('weapon:' + id))
-      .filter((e): e is Entity => !!e),
-  );
+  readonly carried = computed(() => this.data.carriedWeapons(this.storage.loadout()));
 
   readonly current = computed<DrillTarget | null>(() => {
     this.version();
@@ -421,31 +413,21 @@ export class DrillPage implements OnDestroy {
     const kb = keybindFromEvent(e);
     if (!kb) return;
     const k = keybindKey(kb);
-    const setup = this.storage.actionBars();
-    // same order as the trainer: weapon keys, then the bars top to bottom
+    // same order as the trainer (core/keybind.util resolvePress): weapon keys, client actions, then the bars top to bottom
     const carried = this.carried();
-    for (let i = 0; i < carried.length; i++) {
-      const wk = setup.weaponKeybinds[carried[i].id];
-      if (wk && keybindKey(wk) === k) {
-        e.preventDefault();
-        this.press({ bind: k, key: carried[i].key }, { pos: WEAPON_POS, slot: i });
-        return;
-      }
+    const target = resolvePress(this.storage.actionBars(), k, carried.map((w) => w.id));
+    if (target?.kind === 'weapon') {
+      e.preventDefault();
+      const i = carried.findIndex((w) => w.id === target.id);
+      this.press({ bind: k, key: carried[i].key }, { pos: WEAPON_POS, slot: i });
+    } else if (target?.kind === 'slot') {
+      e.preventDefault();
+      const entity = this.bars().find((b) => b.position === target.pos)?.slots[target.slot]?.entity;
+      this.press({ bind: k, key: entity?.key }, { pos: target.pos, slot: target.slot });
+    } else {
+      // an unbound key (or a client action, which the drill does not prompt) is still a wrong press
+      this.press({ bind: k }, null);
     }
-    for (let pos = 0; pos < BAR_POSITIONS; pos++) {
-      const row = setup.slotKeybinds[pos] ?? [];
-      for (let i = 0; i < row.length; i++) {
-        const skb = row[i];
-        if (skb && keybindKey(skb) === k) {
-          e.preventDefault();
-          const entity = this.bars().find((b) => b.position === pos)?.slots[i]?.entity;
-          this.press({ bind: k, key: entity?.key }, { pos, slot: i });
-          return;
-        }
-      }
-    }
-    // an unbound key is still a wrong press
-    this.press({ bind: k }, null);
   }
 
   // ---- formatting
