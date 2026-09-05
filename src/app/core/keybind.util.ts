@@ -47,3 +47,31 @@ export function keybindKey(k: Keybind): string {
 export function keybindEquals(a: Keybind | null | undefined, b: Keybind | null | undefined): boolean {
   return !!a && !!b && keybindKey(a) === keybindKey(b);
 }
+
+/**
+ * Combos the browser handles before the page sees them (Chrome/Firefox/Edge): closing or opening tabs and windows,
+ * tab switching, reload, fullscreen, developer tools. Layouts never use them and the wizard refuses them.
+ */
+const RESERVED = new Set<string>([
+  ':F5', ':F11', ':F12', 'C:F5', 'CS:F5', 'S:F5', 'CS:KeyI', 'CS:KeyJ', 'CS:KeyC', 'C:KeyU', 'CS:Delete',
+  'C:KeyW', 'C:KeyT', 'C:KeyN', 'C:KeyQ', 'C:KeyR', 'C:KeyL', 'C:KeyD', 'C:KeyH', 'C:KeyJ', 'C:KeyP', 'C:KeyS', 'C:KeyO', 'C:KeyF', 'C:KeyG',
+  'CS:KeyW', 'CS:KeyT', 'CS:KeyN', 'CS:KeyQ', 'CS:KeyR', 'C:Tab', 'CS:Tab', 'C:PageUp', 'C:PageDown', 'C:F4',
+  'C:Digit1', 'C:Digit2', 'C:Digit3', 'C:Digit4', 'C:Digit5', 'C:Digit6', 'C:Digit7', 'C:Digit8', 'C:Digit9',
+  'A:Digit1', 'A:Digit2', 'A:Digit3', 'A:Digit4', 'A:Digit5', 'A:Digit6', 'A:Digit7', 'A:Digit8', 'A:Digit9',
+  'A:F4', 'A:Space', 'A:KeyD', 'A:Home', 'A:ArrowLeft', 'A:ArrowRight',
+  // used by the app itself while binding (skip / clear)
+  ':Escape', ':Backspace',
+]);
+
+/** True for combos the browser keeps for itself (Ctrl+W, Ctrl+T, F5, Alt+F4 …) or the app uses while binding (Esc, Backspace). */
+export function isReservedKeybind(k: Keybind): boolean {
+  return RESERVED.has(keybindKey(k));
+}
+
+/** "Shift+KeyQ", "Ctrl+Alt+Digit1", "F1" → Keybind (modifier names are case-insensitive, the code is a KeyboardEvent.code). */
+export function parseKeybind(text: string): Keybind {
+  const parts = text.split('+').map((p) => p.trim()).filter(Boolean);
+  const code = parts.pop() ?? '';
+  const mods = parts.map((p) => p.toLowerCase());
+  return { code, ctrl: mods.includes('ctrl'), shift: mods.includes('shift'), alt: mods.includes('alt') };
+}

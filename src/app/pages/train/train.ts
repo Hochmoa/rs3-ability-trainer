@@ -7,6 +7,7 @@ import { DataService, EOF_ICON, Entity, SPEC_KEY } from '../../core/data.service
 import { applyWield, equip, unequip } from '../../core/equipment';
 import { keybindFromEvent, keybindKey, keybindLabel } from '../../core/keybind.util';
 import { ActionBarSetup, AttackPattern, BAR_POSITIONS, BONE_SHIELD_ABILITY, INVENTORY_SIZE, BAR_SLOTS, BarShape, barLayout, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, TARGET_TYPES, EquipSlot, ItemRef, Loadout, PrayerStats, Prebuild, REVOLUTION_MAX_SLOTS, REVOLUTION_MIN_SLOTS, RevolutionSettings, Rotation, STYLES4, Settings, StepResult, Style, Style4, WeaponSpec, emptyPrebuild, entityKey, isStyle4, loadoutWeapons, loadoutWield, parseEntityKey, prebuildIsEmpty, visiblePresets, RotationStep } from '../../core/models';
+import { PresetsService } from '../../core/presets.service';
 import { StorageService } from '../../core/storage.service';
 import { resolveLoadout } from '../../engine/loadout-resolver';
 import { BUFF_BY_ID, ruleFor, stackMax, stackName } from '../../engine/rules';
@@ -110,6 +111,8 @@ export class Train implements OnDestroy {
   readonly data = inject(DataService);
   private route = inject(ActivatedRoute);
   private toast = inject(ToastService);
+  /** "Load a demo" on the empty state: the first PvME preset with default keys */
+  readonly presets = inject(PresetsService);
 
   readonly TICK_MS = TICK_MS;
   readonly GCD_MS = TICK_MS * GCD_TICKS;
