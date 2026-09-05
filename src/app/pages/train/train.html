@@ -19,7 +19,8 @@
       } @else {
         <button class="btn btn-sm" (click)="stop()" title="Esc stops too">Stop</button>
       }
-      <span class="focus-hint muted">{{ running() ? 'Esc stops' : 'Click into this window, then press your keys' }}</span>
+      <span class="focus-hint muted">{{ running() ? 'Esc stops' : coarsePointer() ? 'Tap the glowing slot' : 'Click into this window, then press your keys' }}</span>
+      @if (coarsePointer() && !running()) { <a class="btn btn-sm focus-back" routerLink="/" title="Back to the full Train page">Back</a> }
     </div>
     @if (!canStart()) {
       <p class="focus-warn">Cannot start: some steps are not on a keybound bar (or unknown). Fix it on the main Train page.</p>
@@ -203,7 +204,7 @@
         <span class="opt-group revo" title="Revolution: size and which ability types fire on their own">
           <span class="opt-label">Revolution</span>
           <label class="slots" title="Revolution size: how many slots of the main bar are used automatically (1-14)">
-            <input type="number" [min]="REVOLUTION_MIN_SLOTS" [max]="REVOLUTION_MAX_SLOTS" [ngModel]="storage.settings().revolution.slots" (ngModelChange)="setRevolution('slots', numberOf($event, REVOLUTION_MIN_SLOTS, REVOLUTION_MAX_SLOTS))" [disabled]="running()" />
+            <input type="number" inputmode="decimal" [min]="REVOLUTION_MIN_SLOTS" [max]="REVOLUTION_MAX_SLOTS" [ngModel]="storage.settings().revolution.slots" (ngModelChange)="setRevolution('slots', numberOf($event, REVOLUTION_MIN_SLOTS, REVOLUTION_MAX_SLOTS))" [disabled]="running()" />
             slots
           </label>
           <label class="pill" title="Automatically trigger Basic abilities (and Necromancy incantations)"><input type="checkbox" [checked]="storage.settings().revolution.basics" (change)="setRevolution('basics', !storage.settings().revolution.basics)" [disabled]="running()" /> Basic</label>
@@ -254,7 +255,7 @@
       }
       <label class="field lp" title="Life points of the target: damage is tracked and the session ends at 0. Leave 0 for a training dummy (unlimited).">
         <span>Life points</span>
-        <input type="number" min="0" step="10000" [ngModel]="enemy().lifePoints" (ngModelChange)="setEnemy('lifePoints', numberOf($event, 0, 100000000))" [disabled]="running()" />
+        <input type="number" inputmode="decimal" min="0" step="10000" [ngModel]="enemy().lifePoints" (ngModelChange)="setEnemy('lifePoints', numberOf($event, 0, 100000000))" [disabled]="running()" />
       </label>
       <label class="lp" title="What the target is: Salve amulet, Jas dragonbane / demonbane arrows and the Undead / Dragon / Demon Slayer perks only work against their type.">
         Type
@@ -283,36 +284,36 @@
         @if (enemy().pattern === 'streak') {
           <label class="field">
             <span>Streak length</span>
-            <input type="number" min="1" max="10" [ngModel]="enemy().streak" (ngModelChange)="setEnemy('streak', numberOf($event, 1, 10))" [disabled]="running()" />
+            <input type="number" inputmode="decimal" min="1" max="10" [ngModel]="enemy().streak" (ngModelChange)="setEnemy('streak', numberOf($event, 1, 10))" [disabled]="running()" />
           </label>
         }
         <label class="field">
           <span>Ticks between attacks</span>
-          <input type="number" min="1" max="20" [ngModel]="enemy().intervalTicks" (ngModelChange)="setEnemy('intervalTicks', numberOf($event, 1, 20))" [disabled]="running()" />
+          <input type="number" inputmode="decimal" min="1" max="20" [ngModel]="enemy().intervalTicks" (ngModelChange)="setEnemy('intervalTicks', numberOf($event, 1, 20))" [disabled]="running()" />
         </label>
         <label class="field">
           <span>Warning (ticks)</span>
-          <input type="number" min="0" max="20" [ngModel]="enemy().warningTicks" (ngModelChange)="setEnemy('warningTicks', numberOf($event, 0, 20))" [disabled]="running()" />
+          <input type="number" inputmode="decimal" min="0" max="20" [ngModel]="enemy().warningTicks" (ngModelChange)="setEnemy('warningTicks', numberOf($event, 0, 20))" [disabled]="running()" />
         </label>
         <label class="field">
           <span>First attack after (ticks)</span>
-          <input type="number" min="1" max="50" [ngModel]="enemy().firstAttackTicks" (ngModelChange)="setEnemy('firstAttackTicks', numberOf($event, 1, 50))" [disabled]="running()" />
+          <input type="number" inputmode="decimal" min="1" max="50" [ngModel]="enemy().firstAttackTicks" (ngModelChange)="setEnemy('firstAttackTicks', numberOf($event, 1, 50))" [disabled]="running()" />
         </label>
         <div class="field" title="Affinity (base hit chance) of the target per attack style, from the wiki infobox: 90 against its weakness, 55–70 otherwise; 100 = always hit. Necromancy uses the monster's middle value.">
           <span>Affinity (%)</span>
           <div class="affinity">
             @for (st of STYLES4; track st) {
-              <label><small>{{ st.slice(0, 3) }}</small><input type="number" min="0" max="100" [ngModel]="enemy().affinity[st]" (ngModelChange)="setAffinity(st, $event)" [disabled]="running()" /></label>
+              <label><small>{{ st.slice(0, 3) }}</small><input type="number" inputmode="decimal" min="0" max="100" [ngModel]="enemy().affinity[st]" (ngModelChange)="setAffinity(st, $event)" [disabled]="running()" /></label>
             }
           </div>
         </div>
         <label class="field" title="Defence level of the target (wiki infobox). Its armour rating is armour + f(Defence), f(x) = x³/1250 + 4x + 40.">
           <span>Defence level</span>
-          <input type="number" min="1" max="10000" [ngModel]="enemy().defenceLevel" (ngModelChange)="setEnemy('defenceLevel', numberOf($event, 1, 10000))" [disabled]="running()" />
+          <input type="number" inputmode="decimal" min="1" max="10000" [ngModel]="enemy().defenceLevel" (ngModelChange)="setEnemy('defenceLevel', numberOf($event, 1, 10000))" [disabled]="running()" />
         </label>
         <label class="field" title="Armour value of the target (wiki infobox). Hit chance = affinity × your accuracy / (armour + f(Defence)), capped at 100%.">
           <span>Armour</span>
-          <input type="number" min="0" max="100000" step="10" [ngModel]="enemy().armour" (ngModelChange)="setEnemy('armour', numberOf($event, 0, 100000))" [disabled]="running()" />
+          <input type="number" inputmode="decimal" min="0" max="100000" step="10" [ngModel]="enemy().armour" (ngModelChange)="setEnemy('armour', numberOf($event, 0, 100000))" [disabled]="running()" />
         </label>
         <p class="muted small note">Scoring: +1 for every tick with Soul Split active, +1 for every attack met with the right overhead or absorbed by Disruption Shield, Barricade, Resonance or Divert. Specials of the bosses are not simulated; the presets use the auto-attack styles, rate, affinity, Defence level and armour from the wiki. Hit chance: affinity × accuracy / armour rating (Settings: scaled damage, roll to hit, or off).</p>
       </div>
@@ -344,12 +345,12 @@
           <div class="pb-fields">
             <label class="field">
               <span>Adrenaline %</span>
-              <input type="number" min="0" max="120" placeholder="loadout" [ngModel]="prebuild().adrenaline ?? ''" (ngModelChange)="setPrebuildAdrenaline($event)" [disabled]="running()" />
+              <input type="number" inputmode="decimal" min="0" max="120" placeholder="loadout" [ngModel]="prebuild().adrenaline ?? ''" (ngModelChange)="setPrebuildAdrenaline($event)" [disabled]="running()" />
             </label>
             @for (s of prebuildStacks(); track s.id) {
               <label class="field">
                 <span>{{ s.name }} <small class="muted">/ {{ s.max }}</small></span>
-                <input type="number" min="0" [max]="s.max" [ngModel]="prebuild().stacks[s.id] ?? 0" (ngModelChange)="setPrebuildStack(s.id, $event, s.max)" [disabled]="running()" />
+                <input type="number" inputmode="decimal" min="0" [max]="s.max" [ngModel]="prebuild().stacks[s.id] ?? 0" (ngModelChange)="setPrebuildStack(s.id, $event, s.max)" [disabled]="running()" />
               </label>
             }
           </div>
@@ -363,7 +364,7 @@
                   <input type="checkbox" [checked]="prebuild().spirits.includes(sp.id)" (change)="togglePrebuildList('spirits', sp.id)" [disabled]="running()" />
                   <span class="chip-name">{{ sp.name }}</span>
                   @if (prebuild().spirits.includes(sp.id)) {
-                    <span class="chip-time"><input type="number" min="0.6" [max]="prebuildFullTicks('spirit:' + sp.id) * 0.6" step="0.6" [ngModel]="prebuildLeftS('spirit:' + sp.id)" (ngModelChange)="setPrebuildLeft('spirit:' + sp.id, $event)" (click)="$event.stopPropagation()" [disabled]="running()" /> s</span>
+                    <span class="chip-time"><input type="number" inputmode="decimal" min="0.6" [max]="prebuildFullTicks('spirit:' + sp.id) * 0.6" step="0.6" [ngModel]="prebuildLeftS('spirit:' + sp.id)" (ngModelChange)="setPrebuildLeft('spirit:' + sp.id, $event)" (click)="$event.stopPropagation()" [disabled]="running()" /> s</span>
                   }
                 </label>
               }
@@ -380,7 +381,7 @@
                   <img [src]="a.icon" alt="" />
                   <span class="chip-name">{{ a.name }}</span>
                   @if (prebuild().abilities.includes(a.id) && prebuildFullTicks('ability:' + a.id)) {
-                    <span class="chip-time" title="time left when the session starts (full: {{ prebuildFullTicks('ability:' + a.id) * 0.6 }} s)"><input type="number" min="0.6" [max]="prebuildFullTicks('ability:' + a.id) * 0.6" step="0.6" [ngModel]="prebuildLeftS('ability:' + a.id)" (ngModelChange)="setPrebuildLeft('ability:' + a.id, $event)" (click)="$event.stopPropagation()" [disabled]="running()" /> s</span>
+                    <span class="chip-time" title="time left when the session starts (full: {{ prebuildFullTicks('ability:' + a.id) * 0.6 }} s)"><input type="number" inputmode="decimal" min="0.6" [max]="prebuildFullTicks('ability:' + a.id) * 0.6" step="0.6" [ngModel]="prebuildLeftS('ability:' + a.id)" (ngModelChange)="setPrebuildLeft('ability:' + a.id, $event)" (click)="$event.stopPropagation()" [disabled]="running()" /> s</span>
                   }
                 </label>
               }

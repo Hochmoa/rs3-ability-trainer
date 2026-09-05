@@ -31,7 +31,7 @@
     <div class="steps" cdkDropList cdkDropListOrientation="mixed" (cdkDropListDropped)="reorder($event)">
       @for (s of r.steps; track $index) {
         @if (s.kind === 'note') {
-          <div class="tile note" [class.phase]="s.phase" cdkDrag [title]="(s.phase ? 'Phase: ' : 'Note: ') + s.note + ' – click to edit'" (click)="editNote($index)">
+          <div class="tile note" [class.phase]="s.phase" cdkDrag [cdkDragStartDelay]="{ touch: 250, mouse: 0 }" [title]="(s.phase ? 'Phase: ' : 'Note: ') + s.note + ' – click to edit'" (click)="editNote($index)">
             <span class="num">{{ $index + 1 }}</span>
             <span class="note-text">{{ s.note }}</span>
             <span class="tile-actions">
@@ -40,7 +40,7 @@
             </span>
           </div>
         } @else if (entity(s); as e) {
-          <div class="tile" [class]="'tile ' + e.kind + (s.sameTick && !(e.ability?.triggersGcd || e.spec) ? ' same' : '')" cdkDrag>
+          <div class="tile" [class]="'tile ' + e.kind + (s.sameTick && !(e.ability?.triggersGcd || e.spec) ? ' same' : '')" cdkDrag [cdkDragStartDelay]="{ touch: 250, mouse: 0 }">
             <span class="num">{{ $index + 1 }}</span>
             <span class="icon" [entityTip]="e" [tipHint]="s.hint"><ability-icon [ability]="e" [px]="44" [keyLabel]="keyOf(e)" /></span>
             @if (s.offsetTicks !== undefined && s.offsetTicks > 0) { <span class="tag">+{{ s.offsetTicks }}t</span> }
@@ -53,7 +53,7 @@
             </span>
           </div>
         } @else {
-          <div class="tile unknown" cdkDrag [title]="s.id + ' – removed from the game'">
+          <div class="tile unknown" cdkDrag [cdkDragStartDelay]="{ touch: 250, mouse: 0 }" [title]="s.id + ' – removed from the game'">
             <span class="num">{{ $index + 1 }}</span>
             <span class="removed-mark">?</span>
             <span class="tile-actions"><button class="act danger" (click)="removeStep($index)" title="Remove">×</button></span>
