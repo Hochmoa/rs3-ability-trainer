@@ -93,7 +93,7 @@ export class EngagementService {
   selector: 'support-nudge',
   template: `
     @if (engagement.due()) {
-      <div class="card" role="dialog" aria-label="Support the trainer" [style.bottom.px]="storage.consent() ? 18 : 96">
+      <div class="card" role="dialog" aria-label="Support the trainer" [style.bottom.px]="storage.consent() ? 18 : 64">
         <button class="close" (click)="engagement.snooze()" title="Not now">×</button>
         <div class="cup">☕</div>
         <div class="body">

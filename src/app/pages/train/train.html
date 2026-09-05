@@ -45,7 +45,7 @@
       }
     </div>
     <div class="feedback" [class]="'feedback ' + (feedback()?.cls ?? '')" [title]="feedback()?.text ?? ''">
-      {{ feedback()?.text ?? (canStart() ? 'Press Start, then the keys of the highlighted slots.' : '') }}
+      {{ feedback()?.text ?? idleText() }}@if (feedback()?.detail; as d) { <small class="detail muted">{{ d }}</small> }
     </div>
     <div class="focus-timers">
       <div class="bar-row">
@@ -56,7 +56,7 @@
         <span class="bar-label">GCD</span>
         <div class="bar gcd">
           <div class="fill" [style.width.%]="(running() ? gcdPhase() : 0) * 100"></div>
-          <div class="window" [style.width.%]="storage.settings().abilityQueueing ? 100 : 100 / 3" title="press window"></div>
+          <div class="window" [style.width.%]="storage.settings().abilityQueueing ? 100 : 100 / 3"><span class="window-label">press</span></div>
         </div>
       </div>
     </div>
@@ -80,14 +80,16 @@
         <p class="muted focus-msg">No abilities on your bars – set them up on the main Train page.</p>
       }
     </div>
-    <div class="focus-counts">
-      <span class="good">Perfect {{ counts().perfect }}</span>
-      <span class="warn">Late {{ counts().late }}</span>
-      <span class="bad">Wrong {{ counts().wrong }}</span>
-      <span class="warn">Missed {{ counts().missed }}</span>
-      @if (revolution()) { <span class="muted">Auto {{ counts().auto }}</span> }
-      @if (damage() > 0) { <span class="muted">{{ dps() | number: '1.0-0' }} DPS</span> }
-    </div>
+    @if (running() || finished()) {
+      <div class="focus-counts">
+        <span class="good">Perfect {{ counts().perfect }}</span>
+        <span class="warn">Late {{ counts().late }}</span>
+        <span class="bad">Wrong {{ counts().wrong }}</span>
+        <span class="warn">Missed {{ counts().missed }}</span>
+        @if (revolution()) { <span class="muted">Auto {{ counts().auto }}</span> }
+        @if (damage() > 0) { <span class="muted">{{ dps() | number: '1.0-0' }} DPS</span> }
+      </div>
+    }
   }
 </div>
 } @else {
@@ -97,57 +99,68 @@
 } @else if (!storage.rotations().length) {
   <div class="panel empty">
     <h2>No rotation yet</h2>
-    <p>Build one or paste PvME notation, drop the abilities onto your bars, bind your keys, press Start.</p>
-    <p class="muted">The trainer plays it back on the game clock (ticks, global cooldown, adrenaline, cooldowns, a bit of ping) and tells you after every press whether you were on the tick, early or late.</p>
-    <a class="btn btn-primary" routerLink="/rotations">Create a rotation</a>
-    <button class="btn" (click)="presets.addDemo()" title="Adds the Rasial preset from PvME with gear, rotations, bars and a default keyboard layout – nothing to configure">Load a demo</button>
+    <p>Press Start, hit the keys, see if you are on tick.</p>
+    <div class="empty-actions">
+      <button class="btn btn-primary" type="button" (click)="presets.addDemo()">Try the demo – Rasial, keys 1–0</button>
+      <a class="btn" routerLink="/rotations">Create a rotation</a>
+    </div>
   </div>
 } @else {
-  <div class="panel controls">
+  <div class="panel controls" [class.simple]="!advanced()">
     <div class="setup-row">
       <label class="field grow" title="Rotation to practise (Rotations page)">
         <span>Rotation</span>
         <select [ngModel]="selectedId()" (ngModelChange)="pickRotation($event)" [disabled]="running()">
           @for (r of storage.rotations(); track r.id) {
-            <option [value]="r.id">{{ r.name }} ({{ r.steps.length }})</option>
+            <option [value]="r.id">{{ r.name }}</option>
           }
         </select>
+        <small class="caption muted">{{ rotationCaption() }}</small>
       </label>
-      <label class="field" [class.compact]="!advanced()" title="Gear, backpack and prayer book (Loadout page)">
-        <span>Loadout</span>
-        <select [ngModel]="storage.activeLoadoutId()" (ngModelChange)="pickLoadout($event)" [disabled]="running()">
-          @for (l of storage.loadouts(); track l.id) {
-            <option [value]="l.id">{{ l.name }}</option>
-          }
-        </select>
-      </label>
-      <label class="field" title="Action bar setup: presets, positions, style bindings and keys (Action bars page)">
-        <span>Bars</span>
-        <select [ngModel]="storage.activeBarProfileId()" (ngModelChange)="pickBars($event)" [disabled]="running()">
-          @for (p of storage.barProfiles(); track p.id) {
-            <option [value]="p.id">{{ p.name }}</option>
-          }
-        </select>
-      </label>
-      <label class="field mode" title="In-game Combat Mode. Revolution: the leftmost usable ability inside the yellow box of the main bar fires on its own whenever the global cooldown is free; your presses take priority.">
-        <span>Mode</span>
-        <select [ngModel]="storage.settings().combatMode" (ngModelChange)="setSetting('combatMode', $event)" [disabled]="running()">
-          <option value="manual">Full manual</option>
-          <option value="revolution">Revolution</option>
-        </select>
-      </label>
+      @if (advanced() || optionsOpen()) {
+        @if (storage.loadouts().length > 1) {
+          <label class="field" title="Gear, backpack and prayer book (Loadout page)">
+            <span>Loadout</span>
+            <select [ngModel]="storage.activeLoadoutId()" (ngModelChange)="pickLoadout($event)" [disabled]="running()">
+              @for (l of storage.loadouts(); track l.id) {
+                <option [value]="l.id">{{ l.name }}</option>
+              }
+            </select>
+          </label>
+        }
+        @if (storage.barProfiles().length > 1) {
+          <label class="field" title="Action bar setup: presets, positions, style bindings and keys (Action bars page)">
+            <span>Bars</span>
+            <select [ngModel]="storage.activeBarProfileId()" (ngModelChange)="pickBars($event)" [disabled]="running()">
+              @for (p of storage.barProfiles(); track p.id) {
+                <option [value]="p.id">{{ p.name }}</option>
+              }
+            </select>
+          </label>
+        }
+      }
       <div class="actions">
         @if (!running()) {
-          <button class="btn btn-primary btn-start" (click)="start()" [disabled]="!canStart() || !data.loadoutReady()" [title]="data.loadoutReady() ? '' : 'loading the equipment data…'">Start</button>
+          <button class="btn btn-primary btn-start" (click)="start()" [disabled]="!canStart() || !data.loadoutReady()">{{ data.loadoutReady() ? 'Start' : 'Loading…' }}</button>
           @if (advanced()) {
             <button class="btn" [class.active]="editLayout()" (click)="editLayout.set(!editLayout())" title="Arrange the action bars: move with the arrows, toggle half width, rearrange slots">{{ editLayout() ? 'Done' : 'Layout' }}</button>
+          } @else {
+            <button class="btn options-toggle" type="button" [class.active]="optionsOpen()" [attr.aria-expanded]="optionsOpen()" (click)="toggleOptions()">Options {{ optionsOpen() ? '▴' : '▾' }}</button>
           }
         } @else {
           <button class="btn btn-start" (click)="stop()">Stop (Esc)</button>
         }
       </div>
     </div>
+    @if (advanced() || optionsOpen()) {
     <div class="options-row">
+      <span class="opt-group" title="In-game Combat Mode. Revolution: the leftmost usable ability inside the yellow box of the main bar fires on its own whenever the global cooldown is free; your presses take priority.">
+        <span class="opt-label">Mode</span>
+        <select class="mode" [ngModel]="storage.settings().combatMode" (ngModelChange)="setSetting('combatMode', $event)" [disabled]="running()">
+          <option value="manual">Full manual</option>
+          <option value="revolution">Revolution (auto-cast basics)</option>
+        </select>
+      </span>
       <span class="opt-group">
         <span class="opt-label">Adrenaline</span>
         <label class="pill" title="Every session starts with full adrenaline">
@@ -160,14 +173,14 @@
         </label>
       </span>
       <span class="opt-group" title="Voice coach: the trainer says the keys out loud (3, Ctrl 4, Shift Q) – for players who learn by ear. Settings → Coach for volume, lead time and voice.">
-        <span class="opt-label">Voice</span>
+        <span class="opt-label">Coach</span>
         <label class="pill" title="After every cast the keys of the next steps are said out loud (Q, then 3) – you hear what comes next while the global cooldown runs">
           <input type="checkbox" [checked]="storage.settings().coach.callouts" (change)="setCoach('callouts', !storage.settings().coach.callouts)" [disabled]="running()" />
           Call-outs
         </label>
-        <label class="pill" title="Coach: every key is called at the moment to press it, in the tick rhythm like a rhythm game – press along. Falls behind with you: the next key is only called after the actual cast.">
+        <label class="pill" title="Every key is called at the moment to press it, in the tick rhythm like a rhythm game – press along. Falls behind with you: the next key is only called after the actual cast.">
           <input type="checkbox" [checked]="storage.settings().coach.lead" (change)="setCoach('lead', !storage.settings().coach.lead)" [disabled]="running()" />
-          Coach
+          Key by key
         </label>
         <label class="pill" title="Click on every game tick (0.6 s) and a higher beep the moment the global cooldown ends – the moment to press">
           <input type="checkbox" [checked]="storage.settings().coach.metronome" (change)="setCoach('metronome', !storage.settings().coach.metronome)" [disabled]="running()" />
@@ -196,7 +209,7 @@
         </span>
       }
       <span class="muted hint">
-        Ping {{ storage.settings().pingMs }} ms ± {{ storage.settings().jitterMs }} · queueing {{ storage.settings().abilityQueueing ? 'on' : 'off' }}@if (storage.settings().loop) { · loop } · {{ prayerBook() === 'Curses' ? 'curses' : 'prayers' }} · <a routerLink="/settings">settings</a>
+        Ping {{ storage.settings().pingMs }} ms ± {{ storage.settings().jitterMs }} · Ability queueing {{ storage.settings().abilityQueueing ? 'on' : 'off' }}@if (storage.settings().loop) { · loop } · {{ prayerBook() === 'Curses' ? 'curses' : 'standard prayers' }} · <a routerLink="/settings">settings</a>
       </span>
       <button class="btn btn-sm popout" type="button" (click)="popout()" title="Open the compact focus view (rotation strip, tick and GCD bars, feedback, your bars) in a small window that you can keep next to the game – Chromium keeps it on top">Popout</button>
       <label class="pill adv" title="Advanced view: enemy attacks, pre-build, buff and prayer HUD, equipment panel, Revolution and Bone Shield options, layout editor. The simulation is the same either way.">
@@ -204,6 +217,7 @@
         Advanced
       </label>
     </div>
+    }
   </div>
 
   @if (advanced()) {
@@ -389,7 +403,11 @@
   @if (unreachable().length) {
     <div class="panel warning missing">
       <div class="missing-text">
-        Not on any keybound bar slot – drag them onto a slot of the bars below (or use the <a routerLink="/bars">Action bars</a> page); potions and weapons can also go into the backpack. Icons on the bars can be dragged to another slot too. Slots without a key are bound on <a routerLink="/keybinds">Keybinds</a>.
+        {{ unreachable().length }} {{ unreachable().length === 1 ? 'step of this rotation is' : 'steps of this rotation are' }} not on a keybound bar slot.
+        <div class="fixes">
+          <button class="btn btn-sm btn-primary" type="button" (click)="autoPlace()" [disabled]="running()">Auto-place on my bars</button>
+          <span class="muted small">or drag them onto a slot below · <a routerLink="/keybinds">Keybinds</a></span>
+        </div>
       </div>
       <div class="missing-list" cdkDropList id="unreachable" cdkDropListSortingDisabled [cdkDropListEnterPredicate]="never">
         @for (e of unreachable(); track e.key) {
@@ -408,7 +426,7 @@
   }
   @if (adrenalineShort(); as a) {
     <div class="panel warning">
-      {{ a.name }} opens the rotation and needs {{ a.need }}% adrenaline – the session starts with {{ a.have }}%, so the first press would be refused.
+      {{ a.name }} opens the rotation and needs {{ a.need }}% adrenaline – the session starts with {{ a.have }}%.
       <div class="fixes">
         <button class="btn btn-sm" (click)="setSetting('fullAdrenaline', true)" [disabled]="running()">Start with 100% adrenaline</button>
         @if (advanced()) { <span class="muted small">or set a starting adrenaline in the pre-build</span> }
@@ -428,7 +446,7 @@
           }
         </div>
       }
-      <a routerLink="/loadout">Change the loadout</a> or the rotation. You can still train; those steps will be refused like in game.
+      <span class="muted small">You can still train – those steps are refused like in game. <a routerLink="/loadout">Loadout</a></span>
     </div>
   }
 
@@ -453,11 +471,15 @@
                 <span class="warn">Missed {{ counts().missed }}</span>
                 @if (damage() > 0) { <span class="muted">{{ damage() | number: '1.0-0' }} damage · {{ dps() | number: '1.0-0' }} DPS</span> }
               </p>
+              @if (worst(); as w) { <p class="finish-worst warn">Worst: {{ w.name }}, {{ offText(w) }}</p> }
             } @else {
               <p class="muted">Nothing was cast.</p>
             }
             <div class="finish-actions">
-              <button class="btn btn-primary" (click)="restart()" [disabled]="!canStart()">↻ Restart</button>
+              <button class="btn btn-primary" (click)="restart()" [disabled]="!canStart()">Try again</button>
+              @if (next(); as n) {
+                <button class="btn" type="button" (click)="playNext(n.id)">Next: {{ nextLabel() }} ▸</button>
+              }
               <button class="btn" (click)="finishDismissed.set(true)">Close</button>
             </div>
             <p class="muted small">The full step list is in the session summary below.</p>
@@ -490,7 +512,7 @@
             />
             <span class="name">{{ s.entity.name }}</span>
             @if (s.offsetTicks !== undefined && s.offsetTicks > 0) {
-              <span class="tag">+{{ s.offsetTicks }}t</span>
+              <span class="tag">{{ s.offsetTicks }} {{ s.offsetTicks === 1 ? 'tick' : 'ticks' }} later</span>
             } @else if (s.sameTick && !(s.entity.ability?.triggersGcd || s.entity.spec)) {
               <span class="tag">same tick</span>
             }
@@ -506,7 +528,7 @@
     </div>
 
     <div class="feedback" [class]="'feedback ' + (feedback()?.cls ?? '')" [title]="feedback()?.text ?? ''">
-      {{ feedback()?.text ?? (canStart() ? 'Press Start, then press the keys of the highlighted slots. Weapon switches, prayers and potions have no cooldown.' : '') }}
+      {{ feedback()?.text ?? idleText() }}@if (feedback()?.detail; as d) { <small class="detail muted">{{ d }}</small> }
     </div>
 
     <!-- what the server made of every press, in order – compare with the rotation strip above; always rendered so nothing below moves -->
@@ -533,7 +555,7 @@
         <span class="bar-label">GCD <small>1.8 s</small></span>
         <div class="bar gcd">
           <div class="fill" [style.width.%]="(running() ? gcdPhase() : 0) * 100"></div>
-          <div class="window" [style.width.%]="storage.settings().abilityQueueing ? 100 : 100 / 3" title="press window"></div>
+          <div class="window" [style.width.%]="storage.settings().abilityQueueing ? 100 : 100 / 3"><span class="window-label">press</span></div>
         </div>
       </div>
       @if (channel(); as c) {
@@ -613,12 +635,18 @@
               <span class="muted none">none</span>
             }
           </div>
-          @if (carriedWeapons().length) {
-            <div class="weapons" title="carried weapons – the lit one is wielded">
+          @if (carriedWeapons().length || actionChips().length) {
+            <div class="weapons" title="carried weapons and client actions – the lit weapon is wielded">
               @for (w of carriedWeapons(); track w.entity.id) {
                 <div class="weapon" [class.active]="wielded().includes(w.entity.id)" [title]="w.entity.name" [entityTip]="w.entity" (click)="clickWeapon(w.entity.id)">
                   <img [src]="w.entity.icon" [alt]="w.entity.name" />
                   <span class="key">{{ w.key || '–' }}</span>
+                </div>
+              }
+              @for (a of actionChips(); track a.entity.id) {
+                <div class="weapon" [title]="a.entity.name" [entityTip]="a.entity" (click)="clickAction(a.entity.id)">
+                  <img [src]="a.entity.icon" [alt]="a.entity.name" />
+                  <span class="key">{{ a.key || '–' }}</span>
                 </div>
               }
             </div>
@@ -658,14 +686,20 @@
     </div>
     }
 
-    @if (!advanced() && carriedWeapons().length) {
-      <!-- simple view has no HUD: the weapon switches still need a place to click (touch) and show their keys -->
-      <div class="weapons simple-weapons" title="carried weapons – press the key or click to switch; the lit one is wielded">
+    @if (!advanced() && (carriedWeapons().length || actionChips().length)) {
+      <!-- simple view has no HUD: the weapon switches and client actions still need a place to tap and show their keys -->
+      <div class="weapons simple-weapons" title="carried weapons and client actions – press the key or tap; the lit weapon is wielded">
         <span class="muted small">Switches</span>
         @for (w of carriedWeapons(); track w.entity.id) {
           <div class="weapon" [class.active]="wielded().includes(w.entity.id)" [title]="w.entity.name" [entityTip]="w.entity" (click)="clickWeapon(w.entity.id)">
             <img [src]="w.entity.icon" [alt]="w.entity.name" />
             <span class="key">{{ w.key || '–' }}</span>
+          </div>
+        }
+        @for (a of actionChips(); track a.entity.id) {
+          <div class="weapon" [title]="a.entity.name" [entityTip]="a.entity" (click)="clickAction(a.entity.id)">
+            <img [src]="a.entity.icon" [alt]="a.entity.name" />
+            <span class="key">{{ a.key || '–' }}</span>
           </div>
         }
       </div>
@@ -745,7 +779,12 @@
 
   @if (finished() && (results().length || (enemy().enabled && prayerStats().attacks))) {
     <div class="panel summary">
-      <h2>Session summary{{ results().length ? ' – ' + accuracy() + '% clean' : '' }}</h2>
+      <div class="summary-head">
+        <h2>Session summary{{ results().length ? ' – ' + accuracy() + '% clean' : '' }}</h2>
+        @if (results().length) {
+          <button class="btn btn-sm" type="button" (click)="showAllResults.set(!showAllResults())">{{ showAllResults() ? 'Only the steps that were off' : 'Show all ' + results().length + ' steps' }}</button>
+        }
+      </div>
       @if (damage() > 0) {
         <p class="damage-summary">
           <b>{{ damage() | number: '1.0-0' }} damage</b> in {{ hits() }} hits · {{ dps() | number: '1.0-0' }} DPS
@@ -763,20 +802,19 @@
       }
       <table>
         <thead>
-          <tr><th>#</th><th>Step</th><th>Result</th><th>Offset</th><th>Adrenaline</th><th>Wrong</th></tr>
+          <tr><th>#</th><th>Step</th><th>Timing</th><th>Adrenaline</th><th>Wrong presses</th></tr>
         </thead>
         <tbody>
-          @for (r of results(); track $index) {
-            <tr>
+          @for (r of summaryRows(); track $index) {
+            <tr [class.off]="r.outcome !== 'perfect' && r.outcome !== 'done'">
               <td>{{ r.step + 1 }}</td>
               <td>{{ r.name }}@if (r.auto) { <small class="muted" title="cast by Revolution"> - auto</small> }</td>
-              <td [class]="r.outcome === 'perfect' || r.outcome === 'done' ? 'good' : 'warn'">
-                {{ r.outcome === 'late' ? 'late ' + r.lateTicks + (r.lateTicks === 1 ? ' tick' : ' ticks') : r.outcome }}
-              </td>
-              <td>{{ r.outcome === 'perfect' ? (r.offsetMs ? '-' + r.offsetMs + ' ms' : '–') : r.outcome === 'late' ? '+' + r.offsetMs + ' ms' : '' }}</td>
+              <td [class]="r.outcome === 'perfect' || r.outcome === 'done' ? 'good' : 'warn'">{{ timing(r) }}</td>
               <td>{{ r.adrenaline | number: '1.0-0' }}%</td>
               <td>{{ r.wrong || '' }}</td>
             </tr>
+          } @empty {
+            <tr><td colspan="5" class="good">Every step on tick.</td></tr>
           }
         </tbody>
       </table>

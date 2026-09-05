@@ -119,6 +119,16 @@ export class StorageService {
     this.ready.set(true);
   }
 
+  /**
+   * An explicit save (rotation Save, preset Add, keybind wizard Finish, "Load a demo") is the consent the banner asks
+   * for: accepts once so the save persists. True when it just accepted – the caller says "Saved in this browser".
+   */
+  async acceptConsentOnSave(): Promise<boolean> {
+    if (this.consent()) return false;
+    await this.acceptConsent();
+    return true;
+  }
+
   async acceptConsent(): Promise<void> {
     try {
       localStorage.setItem(CONSENT_KEY, '1');

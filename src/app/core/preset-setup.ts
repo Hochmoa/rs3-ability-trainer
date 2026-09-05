@@ -15,6 +15,29 @@ export interface BossPreset {
   /** items of the PvME preset the trainer does not model (food, brews, familiars ...) */
   unknown: string[];
   rotations: { name: string; text: string }[];
+  /** index into `rotations` that "Load a demo" opens; missing = the first playable fight rotation (demoRotationIndex) */
+  demoRotation?: number;
+}
+
+/**
+ * The rotation "Load a demo" lands on: the preset's `demoRotation` when set, else the first rotation that is a real
+ * fight – no note or phase steps and at least 8 steps –, else the one with the most playable steps (a pre-build with
+ * "enter instance" tiles is the wrong first impression).
+ */
+export function demoRotationIndex(p: Pick<BossPreset, 'demoRotation'>, parsed: { steps: RotationStep[] }[]): number {
+  if (p.demoRotation !== undefined && p.demoRotation >= 0 && p.demoRotation < parsed.length) return p.demoRotation;
+  const clean = parsed.findIndex((r) => r.steps.length >= 8 && !r.steps.some((s) => s.kind === 'note' || s.phase));
+  if (clean >= 0) return clean;
+  let best = 0;
+  let bestSteps = -1;
+  parsed.forEach((r, i) => {
+    const n = r.steps.filter((s) => s.kind !== 'note').length;
+    if (n > bestSteps) {
+      best = i;
+      bestSteps = n;
+    }
+  });
+  return best;
 }
 
 /** The loadout of a preset: every item re-slotted (a two-hander sits in the main-hand slot of the PvME preset), the backpack as-is. */

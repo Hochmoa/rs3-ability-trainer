@@ -11,7 +11,7 @@ Live at **https://rs3trainer.hochware.com** (GitHub Pages).
 - The *ability queue* shows the next step of your rotation with its keybind and a cooldown overlay. Press the key so
   that it is processed on the tick the GCD ends and the ability casts right then – **perfect**. Press later: it casts on
   that tick – **late by n ticks**.
-- The in-game **Ability queueing** setting is simulated (Settings page, off by default like for new accounts):
+- The in-game **Ability queueing** setting is simulated (Settings page, on by default – most players play with it on):
   - **Off:** presses during the GCD are ignored (*too early*); you have to press in the last tick (0.6 s) of the GCD.
   - **On:** a press any time during the GCD is queued and casts when the GCD ends. A later press replaces the queued
     ability; a different ability pressed on the last tick casts instead and the queued one stays queued for the next

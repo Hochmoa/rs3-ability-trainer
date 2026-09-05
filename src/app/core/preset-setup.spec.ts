@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { keybindLayout } from './keybind-layouts';
 import { BAR_SLOTS, EquipSlot, ItemRef, RotationStep, SPEC_KEY, defaultActionBars } from './models';
-import { BossPreset, presetBars, presetLoadout, presetSlotKeys } from './preset-setup';
+import { BossPreset, demoRotationIndex, presetBars, presetLoadout, presetSlotKeys } from './preset-setup';
 
 const preset: BossPreset = {
   id: 'demo-boss-necromancy',
@@ -85,5 +85,25 @@ describe('preset bars', () => {
     const { barsNeeded, left } = presetBars(preset, many, defaultActionBars(), keybindLayout('rows'), presetLoadout(preset, slotOf));
     expect(barsNeeded).toBe(5);
     expect(left).toBe(10);
+  });
+});
+
+describe('demo rotation', () => {
+  const ability = (n: number): RotationStep[] => Array.from({ length: n }, (_, i) => step('ability', 'a' + i));
+  const note: RotationStep = { kind: 'note', id: '', note: 'enter instance' };
+  const phase: RotationStep = { kind: 'note', id: '', note: 'Phase 4', phase: true };
+
+  it("takes the preset's demoRotation when it is set and valid", () => {
+    expect(demoRotationIndex({ demoRotation: 2 }, [{ steps: ability(9) }, { steps: ability(9) }, { steps: ability(3) }])).toBe(2);
+    expect(demoRotationIndex({ demoRotation: 7 }, [{ steps: ability(9) }, { steps: ability(3) }])).toBe(0);
+  });
+
+  it('skips a pre-build with note tiles and picks the first clean fight of at least 8 steps', () => {
+    expect(demoRotationIndex({}, [{ steps: [...ability(6), note] }, { steps: ability(5) }, { steps: ability(8) }, { steps: ability(20) }])).toBe(2);
+  });
+
+  it('falls back to the rotation with the most playable steps when every one has notes or a phase heading', () => {
+    expect(demoRotationIndex({}, [{ steps: [...ability(8), note] }, { steps: [phase, ...ability(30), note] }, { steps: [...ability(12), phase] }])).toBe(1);
+    expect(demoRotationIndex({}, [])).toBe(0);
   });
 });

@@ -10,6 +10,7 @@ import { Rotation, RotationStep, SPELLBOOKS, SPELLBOOK_NAMES, STYLES } from '../
 import { isObscureEntity } from '../../core/obscure';
 import { StorageService } from '../../core/storage.service';
 import { SupabaseService } from '../../core/supabase.service';
+import { ToastService } from '../../shared/toast';
 import { SyncService } from '../../core/sync.service';
 import { ruleFor } from '../../engine/rules';
 import { AbilityIcon } from '../../shared/ability-icon';
@@ -29,6 +30,7 @@ const TYPE_ORDER: Record<string, number> = { Basic: 0, Enhanced: 1, Threshold: 2
 export class Rotations {
   private dialogs = inject(DialogService);
   readonly storage = inject(StorageService);
+  private toast = inject(ToastService);
   readonly data = inject(DataService);
 
   constructor() {
@@ -227,6 +229,7 @@ export class Rotations {
   async save(): Promise<void> {
     const r = this.editing();
     if (!r) return;
+    if (await this.storage.acceptConsentOnSave()) this.toast.show('Saved in this browser', 'info', 2000);
     await this.storage.saveRotation({ ...r, name: r.name.trim() || 'Unnamed rotation' });
     this.editing.set(null);
   }
