@@ -1,5 +1,15 @@
+import { CdkTrapFocus } from '@angular/cdk/a11y';
 import { Component, ElementRef, HostListener, Injectable, effect, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+
+/**
+ * true when a key event comes from a text field – the session hotkeys (train, drill) leave those alone so
+ * typing into the feedback dialog, a search box or a prompt does not fire abilities.
+ */
+export function isTypingTarget(target: EventTarget | null): boolean {
+  const el = target as { closest?: (sel: string) => unknown } | null;
+  return typeof el?.closest === 'function' && !!el.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])');
+}
 
 interface DialogRequest {
   kind: 'alert' | 'confirm' | 'prompt';
@@ -71,15 +81,16 @@ export class DialogService {
 
 @Component({
   selector: 'app-dialog',
-  imports: [FormsModule],
+  imports: [FormsModule, CdkTrapFocus],
   template: `
     @if (dialogs.current(); as d) {
       <div class="backdrop" (click)="dialogs.close(null)">
-        <div class="dialog" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+        <!-- cdkTrapFocus keeps Tab inside and (autoCapture) puts the focus back where it was when the dialog closes -->
+        <div class="dialog" role="dialog" aria-modal="true" [attr.aria-labelledby]="d.title ? 'app-dialog-title' : null" aria-describedby="app-dialog-text" cdkTrapFocus [cdkTrapFocusAutoCapture]="true" (click)="$event.stopPropagation()">
           @if (d.title) {
-            <h3>{{ d.title }}</h3>
+            <h3 id="app-dialog-title">{{ d.title }}</h3>
           }
-          <p>{{ d.text }}</p>
+          <p id="app-dialog-text">{{ d.text }}</p>
           @if (d.kind === 'prompt') {
             <input #promptInput type="text" [(ngModel)]="d.value" [placeholder]="d.placeholder" (keydown.enter)="dialogs.close(d.value)" maxlength="200" />
           }

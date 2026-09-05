@@ -1,5 +1,5 @@
 import { CdkDragDrop, CdkDropList } from '@angular/cdk/drag-drop';
-import { Component, computed, inject, input, output } from '@angular/core';
+import { Component, OnDestroy, computed, inject, input, output } from '@angular/core';
 import { DataService, GearView } from '../core/data.service';
 import { EquipSlot, Equipment, GEAR_SLOTS, GearSlot, INVENTORY_SIZE, ItemRef, SLOT_NAMES } from '../core/models';
 import { GearDragService } from './gear-drag';
@@ -65,8 +65,13 @@ interface Cell {
             [title]="c.ref ? '' : SLOT_NAMES[c.gear]"
             [gearTip]="c.view"
             [id]="'equip-' + c.gear"
+            role="button"
+            [attr.tabindex]="c.ref && !c.blocked ? 0 : -1"
+            [attr.aria-label]="cellLabel(c)"
             (gear-drop)="onDropEquip($event, c)"
             (click)="clickCell(c)"
+            (keydown.enter)="clickCell(c)"
+            (keydown.space)="clickCell(c); $event.preventDefault()"
             (contextmenu)="menuCell($event, c)"
           >
             @if (c.ref && c.view) {
@@ -94,7 +99,12 @@ interface Cell {
             [cdkDropListDisabled]="!cdkDrops()"
             (cdkDropListDropped)="onCdkDrop($event, $index)"
             (gear-drop)="onDropInv($event, $index)"
+            role="button"
+            [attr.tabindex]="v ? 0 : -1"
+            [attr.aria-label]="v ? v.name + (keyOf()(v.ref) ? ', key ' + keyOf()(v.ref) : '') : 'empty backpack slot ' + ($index + 1)"
             (click)="clickInv($index)"
+            (keydown.enter)="clickInv($index)"
+            (keydown.space)="clickInv($index); $event.preventDefault()"
             (contextmenu)="menuInv($event, $index)"
           >
             @if (v) {
@@ -288,9 +298,11 @@ interface Cell {
       justify-content: center;
       cursor: grab;
     }
+    /* drag sources: a swipe still scrolls, the drag needs a 300 ms hold on touch (shared/gear-drag.ts) */
     .editable .item {
-      touch-action: none;
+      touch-action: pan-y;
       user-select: none;
+      -webkit-touch-callout: none;
     }
     /* the item being dragged stays in place, dimmed, until the drop */
     .item.dragging {
@@ -359,13 +371,24 @@ interface Cell {
     }
   `,
 })
-export class GearPanel {
+export class GearPanel implements OnDestroy {
   readonly data = inject(DataService);
   readonly gearDrag = inject(GearDragService);
 
   constructor() {
     // the cells resolve item refs against the catalogs; they fill in as the files arrive
     void this.data.ensure('gear', 'weapons', 'perks');
+  }
+
+  ngOnDestroy(): void {
+    this.gearDrag.cancel(); // a drag in flight would keep its window listeners and ghost after a route change
+  }
+
+  /** screen-reader name of a worn slot: "Head: Masterwork helm" / "Head: empty" */
+  cellLabel(c: Cell): string {
+    const slot = SLOT_NAMES[c.gear];
+    if (c.blocked) return slot + ': blocked by the two-handed weapon';
+    return slot + ': ' + (c.view?.name ?? (c.ref ? 'unknown item' : 'empty'));
   }
   readonly equipment = input.required<Equipment>();
   readonly inventory = input.required<(ItemRef | null)[]>();

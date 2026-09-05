@@ -117,6 +117,13 @@ export class CoachService {
       this.refreshVoices();
       speechSynthesis.addEventListener?.('voiceschanged', () => this.refreshVoices());
     }
+    // a call, the lock screen or a tab switch can leave the context "interrupted" / suspended (iOS): resume it when
+    // the page is back, otherwise every beep() until the next Start would be dropped
+    if (hasWindow && typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && this.enabled() && this.ctx && this.ctx.state !== 'running') void this.ctx.resume().catch(() => undefined);
+      });
+    }
   }
 
   /** volume, lead, voice – may be called any time, also while enabled */
@@ -134,8 +141,16 @@ export class CoachService {
    * Resolves false when the browser blocked audio.
    */
   async enable(): Promise<boolean> {
-    this.enabled.set(true);
     this.blocked.set(false);
+    // iOS unlocks speechSynthesis only when the first speak() happens inside a user gesture – an empty utterance
+    // now (synchronously, before any await) lets the real call-outs from their timers through later
+    if (SPEECH) {
+      try {
+        speechSynthesis.speak(new SpeechSynthesisUtterance(''));
+      } catch {
+        /* no voice – the beeps still work */
+      }
+    }
     if (AUDIO) {
       try {
         if (!this.ctx) {
@@ -150,6 +165,8 @@ export class CoachService {
         this.blocked.set(true);
       }
     }
+    // enabled only once the context runs: a beep() scheduled in between would be dropped (`state !== 'running'`)
+    this.enabled.set(true);
     return !this.blocked();
   }
 
@@ -237,7 +254,18 @@ export class CoachService {
 
   private utter(text: string): void {
     const synth = speechSynthesis;
-    if (synth.speaking || synth.pending) synth.cancel();
+    // cancel() right before speak() drops the new utterance on iOS / Chrome Android: only cancel when something is
+    // actually speaking, and then give the engine one macrotask before the next speak()
+    if (synth.speaking || synth.pending) {
+      synth.cancel();
+      window.setTimeout(() => this.enabled() && this.speakNow(text), 0);
+      return;
+    }
+    this.speakNow(text);
+  }
+
+  private speakNow(text: string): void {
+    const synth = speechSynthesis;
     const u = new SpeechSynthesisUtterance(text);
     u.rate = 1.3;
     u.pitch = 1;

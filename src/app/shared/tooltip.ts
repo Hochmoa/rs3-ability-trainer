@@ -12,29 +12,44 @@ interface TipState {
   gear?: GearView;
   x: number;
   y: number;
+  /** opened by touch: a bottom sheet with a close button that stays until dismissed (links work, text scrolls) */
+  pinned?: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
 export class TooltipService {
   readonly state = signal<TipState | null>(null);
+  /** a pointer drag is in flight (bars editor, gear drag): the long-press tooltip stays away */
+  dragging = false;
 }
 
-/** how long a finger has to rest on an icon before the tooltip opens (touch devices) */
-const LONG_PRESS_MS = 450;
+/** how long a finger has to rest on an icon before the details sheet opens (touch devices) */
+const LONG_PRESS_MS = 350;
+/** a long press released before the sheet was up this long is a slightly long tap – the tap's click goes through */
+const PRESS_SHOWN_MS = 150;
 /** emulated mouse / focus events arriving this soon after a touch are ignored */
 const TOUCH_SHADOW_MS = 1500;
+/** hosts that do something on a tap (press a slot, add to a bar, toggle, switch a weapon …): only a long press opens the sheet there */
+const PRESSABLE_HOST = 'button, a, label, input, [role="button"], [tabindex], .cell, .weapon, .item';
+const PRESSABLE_ANCESTOR = 'button, a, label, [role="button"]';
 
 /**
- * Hover tooltip on mouse devices; on touch devices the tooltip opens on a long press only and closes
- * when the finger lifts – a tap stays a tap (bar slots are pressed by tapping) and the big tooltip
- * does not pop up on every touch. The emulated mouse events a tap produces are ignored.
+ * Hover tooltip on mouse devices. On touch devices the details open as a pinned bottom sheet (close button,
+ * scrollable, links usable): with a long press anywhere, and with a plain tap on icons that do nothing else on
+ * a tap (`tipTap`: 'auto' = the host is not a button / link / slot …). A tap on a bar slot stays a press.
+ * The emulated mouse events a tap produces are ignored.
  */
 @Directive()
 abstract class TipBase {
   protected tips = inject(TooltipService);
+  protected host = inject(ElementRef<HTMLElement>);
+  /** touch: a plain tap opens the details sheet – 'auto': unless the host reacts to taps itself (see PRESSABLE_HOST) */
+  readonly tipTap = input<boolean | 'auto'>('auto');
   protected lastTouch = 0;
   private timer = 0;
   private pressed = false;
+  private shownAt = 0;
+  private moved = false;
 
   protected abstract stateAt(x: number, y: number): TipState | null;
 
@@ -44,7 +59,7 @@ abstract class TipBase {
   @HostListener('pointerdown')
   onPointerDown(): void {
     this.pointerDown = true;
-    this.tips.state.set(null);
+    if (!this.tips.state()?.pinned) this.tips.state.set(null);
     window.addEventListener('pointerup', () => (this.pointerDown = false), { once: true });
     window.addEventListener('pointercancel', () => (this.pointerDown = false), { once: true });
   }
@@ -52,30 +67,45 @@ abstract class TipBase {
   @HostListener('mouseenter', ['$event'])
   @HostListener('mousemove', ['$event'])
   show(e: MouseEvent): void {
-    if (this.pointerDown || Date.now() - this.lastTouch < TOUCH_SHADOW_MS) return;
+    if (this.pointerDown || Date.now() - this.lastTouch < TOUCH_SHADOW_MS || this.tips.state()?.pinned) return;
     const s = this.stateAt(e.clientX, e.clientY);
     if (s) this.tips.state.set(s);
   }
 
   @HostListener('mouseleave')
   hide(): void {
-    this.tips.state.set(null);
+    if (!this.tips.state()?.pinned) this.tips.state.set(null);
+  }
+
+  private tapOpens(): boolean {
+    const t = this.tipTap();
+    if (t !== 'auto') return t;
+    const el = this.host.nativeElement;
+    return !el.matches(PRESSABLE_HOST) && !el.parentElement?.closest(PRESSABLE_ANCESTOR);
+  }
+
+  private openSheet(x: number, y: number): boolean {
+    if (this.tips.dragging) return false;
+    const s = this.stateAt(x, y);
+    if (!s) return false;
+    this.tips.state.set({ ...s, pinned: true });
+    return true;
   }
 
   @HostListener('touchstart', ['$event'])
   onTouchStart(e: TouchEvent): void {
     this.lastTouch = Date.now();
     this.pressed = false;
+    this.moved = false;
     const t = e.touches[0];
     if (!t) return;
     const x = t.clientX;
     const y = t.clientY;
     window.clearTimeout(this.timer);
     this.timer = window.setTimeout(() => {
-      const s = this.stateAt(x, y);
-      if (s) {
+      if (this.openSheet(x, y)) {
         this.pressed = true;
-        this.tips.state.set(s);
+        this.shownAt = Date.now();
       }
     }, LONG_PRESS_MS);
   }
@@ -83,6 +113,7 @@ abstract class TipBase {
   @HostListener('touchmove')
   onTouchMove(): void {
     window.clearTimeout(this.timer); // scrolling is not a press
+    this.moved = true;
   }
 
   @HostListener('touchend', ['$event'])
@@ -92,9 +123,19 @@ abstract class TipBase {
     this.lastTouch = Date.now();
     if (this.pressed) {
       this.pressed = false;
-      this.tips.state.set(null);
-      e.preventDefault(); // the long press was for the tooltip, not a click
+      if (Date.now() - this.shownAt >= PRESS_SHOWN_MS) {
+        e.preventDefault(); // the long press was for the sheet – it stays, no click
+      } else {
+        this.tips.state.set(null); // a slightly long tap: no sheet, the click goes through
+      }
+      return;
     }
+    if (e.type !== 'touchend' || this.moved || !this.tapOpens()) return;
+    // a tap on a control inside the host (the × on a bars-page slot) is that control's tap, not a request for details
+    const inner = (e.target as Element | null)?.closest?.(PRESSABLE_ANCESTOR + ', input, select, textarea');
+    if (inner && inner !== this.host.nativeElement && this.host.nativeElement.contains(inner)) return;
+    const t = e.changedTouches[0];
+    if (t && this.openSheet(t.clientX, t.clientY)) e.preventDefault(); // no emulated mouse events / click for the tap
   }
 
   @HostListener('contextmenu', ['$event'])
@@ -110,7 +151,6 @@ export class EntityTip extends TipBase {
   /** rotation-step note to show in the tooltip (not on the icon itself) */
   readonly tipHint = input<string | null | undefined>(null);
   private data = inject(DataService);
-  private el = inject(ElementRef<HTMLElement>);
 
   private resolve(): Entity | undefined {
     const v = this.entityTip();
@@ -125,9 +165,9 @@ export class EntityTip extends TipBase {
 
   @HostListener('focus')
   focus(): void {
-    if (Date.now() - this.lastTouch < TOUCH_SHADOW_MS) return; // a tap focuses the slot – no tooltip for that
+    if (Date.now() - this.lastTouch < TOUCH_SHADOW_MS || this.tips.state()?.pinned) return; // a tap focuses the slot – no tooltip for that
     const entity = this.resolve();
-    const r = this.el.nativeElement.getBoundingClientRect();
+    const r = this.host.nativeElement.getBoundingClientRect();
     if (entity) this.tips.state.set({ entity, hint: this.tipHint() ?? undefined, x: r.right, y: r.top });
   }
 
@@ -162,7 +202,21 @@ interface Note {
   selector: 'entity-tooltip',
   template: `
     @if (tips.state(); as s) {
-      <div class="tip" [style.left.px]="pos().x" [style.top.px]="pos().y">
+      @if (s.pinned) {
+        <!-- touch: the details are a bottom sheet; a tap outside or the × closes it -->
+        <div class="tip-backdrop" (click)="close()"></div>
+      }
+      <div
+        class="tip"
+        [class.pinned]="s.pinned"
+        [style.left.px]="s.pinned ? null : pos().x"
+        [style.top.px]="s.pinned ? null : pos().y"
+        [attr.role]="s.pinned ? 'dialog' : null"
+        [attr.aria-label]="s.pinned ? (s.entity?.name ?? s.gear?.name ?? 'Details') : null"
+      >
+        @if (s.pinned) {
+          <button class="close" type="button" (click)="close()" aria-label="Close">×</button>
+        }
         @if (s.gear; as g) {
           <div class="head">
             @if (g.icon) { <img [src]="g.icon" [alt]="g.name" /> }
@@ -326,6 +380,57 @@ interface Note {
       pointer-events: none;
       color: var(--text);
     }
+    /* touch: pinned bottom sheet – scrollable, the wiki links can be tapped */
+    .tip-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 99;
+      background: rgba(0, 0, 0, 0.45);
+    }
+    .tip.pinned {
+      left: 8px;
+      right: 8px;
+      top: auto;
+      bottom: 8px;
+      width: auto;
+      max-width: 520px;
+      margin: 0 auto;
+      max-height: 70vh;
+      max-height: 70dvh;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      pointer-events: auto;
+      padding-bottom: calc(12px + env(safe-area-inset-bottom));
+      font-size: 14px;
+    }
+    .close {
+      position: sticky;
+      top: 0;
+      float: right;
+      width: 36px;
+      height: 36px;
+      margin: -4px -6px 0 8px;
+      padding: 0;
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      background: #26231c;
+      color: var(--text);
+      font: inherit;
+      font-size: 20px;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .tip.pinned .desc,
+    .tip.pinned .rule,
+    .tip.pinned .effects {
+      font-size: 13px;
+    }
+    .tip.pinned .rule .src {
+      display: inline-block;
+      padding: 4px 8px;
+      font-size: 12px;
+      color: var(--gold);
+    }
     .head {
       display: flex;
       gap: 10px;
@@ -455,6 +560,15 @@ export class EntityTooltip {
   readonly tips = inject(TooltipService);
   private data = inject(DataService);
   readonly seconds = seconds;
+
+  close(): void {
+    this.tips.state.set(null);
+  }
+
+  @HostListener('window:keydown.escape')
+  onEscape(): void {
+    if (this.tips.state()?.pinned) this.close();
+  }
 
   readonly pos = computed(() => {
     const s = this.tips.state();

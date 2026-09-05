@@ -12,12 +12,85 @@ html {
   --muted: #9a968c;
   --good: #4caf50;
   --bad: #e53935;
+  /* --bad is 4.1:1 on the panels – too little for 14 px text; text uses this one (5:1), borders and glows keep --bad */
+  --bad-text: #ef5350;
   --warn: #ffb300;
   color-scheme: dark;
 }
 
 * {
   box-sizing: border-box;
+}
+
+/* keyboard focus: one visible ring everywhere (mouse clicks do not show it) */
+:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+/* the checkbox inside a pill / chip label is hidden – the ring goes on the label (`:focus-within` for browsers without :has()) */
+.pill:focus-within,
+label.chip:focus-within {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+.pill:has(input:focus:not(:focus-visible)),
+label.chip:has(input:focus:not(:focus-visible)) {
+  outline: none;
+}
+
+/* without :has() the checked state of a pill is invisible (the box is hidden): show the native box instead */
+@supports not selector(:has(a)) {
+  .pill input[type='checkbox'],
+  .pill input[type='radio'] {
+    position: static !important;
+    opacity: 1 !important;
+    width: auto !important;
+    height: auto !important;
+    pointer-events: auto !important;
+  }
+}
+
+/* touch: no "save image" callout on a long press (the long press opens the details sheet), no text selection on the tiles */
+img,
+.slot,
+.cell,
+.tile,
+.drag-ghost {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* the infinite pulses / spinners stop after one cycle, transitions are instant */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-iteration-count: 1 !important;
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* coarse pointers: the things pressed during play get finger-sized tap targets */
+@media (pointer: coarse) {
+  .btn.btn-sm,
+  .pill,
+  .tab,
+  .act,
+  .chip {
+    min-height: 40px;
+  }
+  .btn.btn-sm {
+    padding: 8px 12px;
+  }
+  .weapons .weapon,
+  .simple-weapons .weapon {
+    width: 40px;
+    height: 40px;
+  }
 }
 
 html,
@@ -88,7 +161,7 @@ h3 {
 }
 
 .bad {
-  color: var(--bad);
+  color: var(--bad-text);
 }
 
 .btn {
@@ -144,9 +217,11 @@ select {
   color: var(--text);
   font: inherit;
 
+  /* text fields: the gold border plus a 1 px ring is the focus indicator (the outline ring would double it) */
   &:focus {
     outline: none;
     border-color: var(--gold);
+    box-shadow: 0 0 0 1px var(--gold);
   }
 }
 

@@ -1,7 +1,9 @@
 @if (focus()) {
 <!-- /focus popout (route data `focus`): the compact view for a small window next to the game – same session, no panels (styles: train-focus.scss) -->
 <div class="focus" [class.running]="running()">
-  @if (!storage.ready() || !data.loaded()) {
+  @if (data.loadError()) {
+    <p class="bad focus-msg">Could not load the ability data – check your connection. <button class="btn btn-sm" type="button" (click)="data.retry()">Retry</button></p>
+  } @else if (!storage.ready() || !data.loaded()) {
     <p class="muted focus-msg">Loading…</p>
   } @else if (!storage.rotations().length) {
     <p class="muted focus-msg">No rotation yet – create one on the <a routerLink="/" target="_blank">Train page</a>.</p>
@@ -92,7 +94,9 @@
 </div>
 } @else {
 <h1 class="sr-only">RS3 Ability Trainer – practise RuneScape 3 rotations</h1>
-@if (!storage.ready() || !data.loaded()) {
+@if (data.loadError()) {
+  <p class="bad" role="alert">Could not load the ability data – check your connection. <button class="btn btn-sm" type="button" (click)="data.retry()">Retry</button></p>
+} @else if (!storage.ready() || !data.loaded()) {
   <p class="muted">Loading…</p>
 } @else if (!storage.rotations().length) {
   <div class="panel empty">
@@ -198,7 +202,11 @@
       <span class="muted hint">
         Ping {{ storage.settings().pingMs }} ms ± {{ storage.settings().jitterMs }} · queueing {{ storage.settings().abilityQueueing ? 'on' : 'off' }}@if (storage.settings().loop) { · loop } · {{ prayerBook() === 'Curses' ? 'curses' : 'prayers' }} · <a routerLink="/settings">settings</a>
       </span>
-      <button class="btn btn-sm popout" type="button" (click)="popout()" title="Open the compact focus view (rotation strip, tick and GCD bars, feedback, your bars) in a small window that you can keep next to the game – Chromium keeps it on top">Popout</button>
+      @if (coarsePointer()) {
+        <a class="btn btn-sm popout" routerLink="/focus" [queryParams]="selectedId() ? { rotation: selectedId() } : {}" title="The compact view for a phone: rotation strip, tick and GCD bars, feedback and your bars on one screen – tap the slots to press them">Phone view</a>
+      } @else {
+        <button class="btn btn-sm popout" type="button" (click)="popout()" title="Open the compact focus view (rotation strip, tick and GCD bars, feedback, your bars) in a small window that you can keep next to the game – Chromium keeps it on top">Popout</button>
+      }
       <label class="pill adv" title="Advanced view: enemy attacks, pre-build, buff and prayer HUD, equipment panel, Revolution and Bone Shield options, layout editor. The simulation is the same either way.">
         <input type="checkbox" [checked]="advanced()" (change)="setUiMode(!advanced())" [disabled]="running()" />
         Advanced
@@ -393,7 +401,7 @@
       </div>
       <div class="missing-list" cdkDropList id="unreachable" cdkDropListSortingDisabled [cdkDropListEnterPredicate]="never">
         @for (e of unreachable(); track e.key) {
-          <div class="missing-item" cdkDrag [cdkDragData]="e" [entityTip]="e">
+          <div class="missing-item" cdkDrag [cdkDragData]="e" [cdkDragStartDelay]="{ touch: 250, mouse: 0 }" [entityTip]="e">
             <ability-icon [ability]="e" [px]="40" />
             <span class="missing-name">{{ e.name }}</span>
           </div>

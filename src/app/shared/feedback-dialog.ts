@@ -1,3 +1,4 @@
+import { CdkTrapFocus } from '@angular/cdk/a11y';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { FEEDBACK_MAX, FeedbackKind, FeedbackService, feedbackProblem } from '../core/feedback.service';
@@ -6,12 +7,13 @@ import { SupabaseService, errorText } from '../core/supabase.service';
 /** "Report a bug / suggest something" modal, opened through FeedbackService.show(). */
 @Component({
   selector: 'feedback-dialog',
-  imports: [FormsModule],
+  imports: [FormsModule, CdkTrapFocus],
   template: `
     @if (feedback.open()) {
       <div class="backdrop" (click)="close()"></div>
-      <div class="dialog" role="dialog" aria-label="Feedback" (keydown.escape)="close()">
-        <button class="close" (click)="close()" title="Close">×</button>
+      <!-- cdkTrapFocus keeps Tab inside and (autoCapture) puts the focus back on the opener when the dialog closes -->
+      <div class="dialog" role="dialog" aria-modal="true" aria-label="Feedback" cdkTrapFocus [cdkTrapFocusAutoCapture]="true" (keydown.escape)="close()">
+        <button class="close" type="button" (click)="close()" title="Close" aria-label="Close">×</button>
         @if (sent()) {
           <h2>Thanks!</h2>
           <p>Your {{ kind() === 'bug' ? 'bug report' : 'suggestion' }} is in. I read every one.</p>
@@ -20,17 +22,18 @@ import { SupabaseService, errorText } from '../core/supabase.service';
           </div>
         } @else {
           <h2>Feedback</h2>
-          <div class="kinds" role="radiogroup">
-            <button class="btn" [class.btn-primary]="kind() === 'bug'" (click)="kind.set('bug')">🐛 Report a bug</button>
-            <button class="btn" [class.btn-primary]="kind() === 'suggestion'" (click)="kind.set('suggestion')">💡 Suggest something</button>
+          <div class="kinds">
+            <button class="btn" type="button" [class.btn-primary]="kind() === 'bug'" [attr.aria-pressed]="kind() === 'bug'" (click)="kind.set('bug')">🐛 Report a bug</button>
+            <button class="btn" type="button" [class.btn-primary]="kind() === 'suggestion'" [attr.aria-pressed]="kind() === 'suggestion'" (click)="kind.set('suggestion')">💡 Suggest something</button>
           </div>
           <textarea
             rows="6"
+            aria-label="Your message"
             [placeholder]="kind() === 'bug' ? 'What happened, what did you expect? Which rotation / keys?' : 'What would make the trainer better?'"
             [ngModel]="message()"
             (ngModelChange)="message.set($event)"
             [maxlength]="max"
-            autofocus
+            cdkFocusInitial
           ></textarea>
           <div class="meta">
             <span class="muted small">{{ message().trim().length }} / {{ max }}</span>
@@ -74,6 +77,7 @@ import { SupabaseService, errorText } from '../core/supabase.service';
       width: 480px;
       max-width: calc(100vw - 32px);
       max-height: calc(100vh - 32px);
+      max-height: calc(100dvh - 32px); /* iOS: below the toolbar / above the keyboard, the Send button stays reachable */
       overflow: auto;
       box-sizing: border-box;
       padding: 18px 20px;
@@ -117,7 +121,6 @@ import { SupabaseService, errorText } from '../core/supabase.service';
       resize: vertical;
     }
     textarea:focus {
-      outline: none;
       border-color: var(--gold);
     }
     .meta {

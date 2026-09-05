@@ -5,7 +5,9 @@ import { DataService, Entity } from '../../core/data.service';
 import { Drill, DrillSource, DrillSummary, DrillTarget, WEAPON_POS, buildPool } from '../../core/drill';
 import { keybindFromEvent, keybindKey, keybindLabel } from '../../core/keybind.util';
 import { BAR_POSITIONS, BarShape, Style4, barLayout, entityKey, isStyle4, loadoutWeapons, visiblePresets } from '../../core/models';
+import { FeedbackService } from '../../core/feedback.service';
 import { StorageService } from '../../core/storage.service';
+import { DialogService, isTypingTarget } from '../../shared/dialog';
 import { slotAbilities } from '../../engine/morphs';
 import { AbilityIcon, IconState } from '../../shared/ability-icon';
 import { ActionBar, SlotView } from '../../shared/action-bar';
@@ -400,9 +402,15 @@ export class DrillPage implements OnDestroy {
     if (w) this.press({ key: w.key }, { pos: WEAPON_POS, slot: i });
   }
 
+  /** while a dialog / the feedback form is open the drill hotkeys stay quiet (see onKeydown) */
+  private dialogs = inject(DialogService);
+  private feedbackDialog = inject(FeedbackService);
+
   @HostListener('window:keydown', ['$event'])
   onKeydown(e: KeyboardEvent): void {
     if (!this.running()) return;
+    // typing into a text field (the feedback form, a prompt) or using an open dialog is not a key press for the drill
+    if (isTypingTarget(e.target) || this.dialogs.current() || this.feedbackDialog.open()) return;
     if (e.code === 'Escape') {
       e.preventDefault();
       this.stop();
