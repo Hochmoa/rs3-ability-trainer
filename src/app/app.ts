@@ -1,5 +1,7 @@
 import { Component, computed, inject } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { filter, map } from 'rxjs';
 import { BarsSyncService } from './core/bars-sync.service';
 import { FeedbackService } from './core/feedback.service';
 import { SetupSyncService } from './core/setup-sync.service';
@@ -29,6 +31,20 @@ export class App {
   private readonly storage = inject(StorageService);
   /** Settings.uiMode: the Loadout / Setups / Explore pages are only in the menu in the advanced view (routes stay reachable) */
   readonly advanced = computed(() => this.storage.settings().uiMode === 'advanced');
+  private readonly router = inject(Router);
+  /** route data `bare: true` (the /focus popout): no header, no footer, no page padding – only the routed view */
+  readonly bare = toSignal(
+    this.router.events.pipe(
+      filter((e) => e instanceof NavigationEnd),
+      map(() => {
+        let r = this.router.routerState.snapshot.root;
+        while (r.firstChild) r = r.firstChild;
+        return r.data['bare'] === true;
+      }),
+    ),
+    // before the first navigation settles: guess from the URL so the shell does not flash in the popout
+    { initialValue: typeof location !== 'undefined' && /(^|\/)focus\/?$/.test(location.pathname) },
+  );
   /** created at start-up so the login effect and the change hooks are wired immediately */
   private readonly sync = inject(SyncService);
   private readonly barsSync = inject(BarsSyncService);

@@ -1,5 +1,5 @@
 import { CdkDrag, CdkDropList, CdkDropListGroup } from '@angular/cdk/drag-drop';
-import { DecimalPipe } from '@angular/common';
+import { DecimalPipe, DOCUMENT } from '@angular/common';
 import { Component, ElementRef, HostListener, OnDestroy, afterNextRender, afterRenderEffect, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -7,6 +7,7 @@ import { DataService, EOF_ICON, Entity, SPEC_KEY } from '../../core/data.service
 import { applyWield, equip, unequip } from '../../core/equipment';
 import { keybindFromEvent, keybindKey, keybindLabel } from '../../core/keybind.util';
 import { ActionBarSetup, AttackPattern, BAR_POSITIONS, BONE_SHIELD_ABILITY, INVENTORY_SIZE, BAR_SLOTS, BarShape, barLayout, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, TARGET_TYPES, EquipSlot, ItemRef, Loadout, PrayerStats, Prebuild, REVOLUTION_MAX_SLOTS, REVOLUTION_MIN_SLOTS, RevolutionSettings, Rotation, STYLES4, Settings, StepResult, Style, Style4, WeaponSpec, emptyPrebuild, entityKey, isStyle4, loadoutWeapons, loadoutWield, parseEntityKey, prebuildIsEmpty, visiblePresets, RotationStep } from '../../core/models';
+import { alt1Announce, focusUrl, openFocusWindow } from '../../core/popout';
 import { PresetsService } from '../../core/presets.service';
 import { StorageService } from '../../core/storage.service';
 import { resolveLoadout } from '../../engine/loadout-resolver';
@@ -104,12 +105,15 @@ const EMPTY_PRAYER_STATS: PrayerStats = { ticks: 0, soulSplitTicks: 0, attacks: 
   selector: 'app-train',
   imports: [AbilityIcon, ActionBar, RouterLink, FormsModule, EntityTip, DecimalPipe, CdkDropListGroup, CdkDropList, CdkDrag, GearPanel],
   templateUrl: './train.html',
-  styleUrl: './train.scss',
+  styleUrls: ['./train.scss', './train-focus.scss'],
 })
 export class Train implements OnDestroy {
   readonly storage = inject(StorageService);
   readonly data = inject(DataService);
   private route = inject(ActivatedRoute);
+  private doc = inject(DOCUMENT);
+  /** route data `focus: true` (/focus): the compact popout branch of the template – same session logic, no panels */
+  readonly focus = signal(this.route.snapshot.data['focus'] === true);
   private toast = inject(ToastService);
   /** "Load a demo" on the empty state: the first PvME preset with default keys */
   readonly presets = inject(PresetsService);
@@ -655,6 +659,11 @@ export class Train implements OnDestroy {
     return out;
   });
 
+  /** focus view: the current step and the next three (no previous one) */
+  readonly focusSlots = computed(() => this.slots().filter((s) => s.kind !== 'prev').slice(0, 4));
+  /** focus view: only bars that hold something */
+  readonly focusBars = computed(() => this.bars().filter((b) => b.slots.some((s) => s.entity)));
+
   private engine: TrainerEngine | null = null;
   private raf = 0;
   private fallback = 0;
@@ -665,6 +674,8 @@ export class Train implements OnDestroy {
     // the gear and weapon catalogs (~1 MB each) come after the first paint; the resolved loadout, gear panel and
     // warnings recompute when they arrive
     afterNextRender(() => void this.data.ensure('gear', 'weapons', 'perks'));
+    // inside the Alt1 Toolkit the popout is an app window: name it (every call is feature-checked)
+    if (this.focus()) alt1Announce('RS3 Ability Trainer');
     effect(() => {
       const rotations = this.storage.rotations();
       const wanted = this.route.snapshot.queryParamMap.get('rotation');
@@ -688,6 +699,18 @@ export class Train implements OnDestroy {
 
   pickBars(id: string): void {
     void this.storage.switchBarProfile(id);
+  }
+
+  /**
+   * "Popout": the focus view for the selected rotation in a small window next to the game – a Document
+   * Picture-in-Picture window (Chromium, stays on top) or a plain popup (core/popout.ts).
+   */
+  async popout(): Promise<void> {
+    const url = new URL(focusUrl(this.selectedId()), this.doc.baseURI).toString();
+    const how = await openFocusWindow(url);
+    if (how === 'pip') this.toast.show('Focus view opened in a picture-in-picture window – it stays on top. Click into it, then press your keys.');
+    else if (how === 'popup') this.toast.show('Focus view opened in a popup window. Click into it, then press your keys.');
+    else this.toast.show('The browser blocked the popup – allow popups for this site, or open /focus in a new window yourself.', 'warn');
   }
 
   private async linkPreset(r: Rotation): Promise<void> {

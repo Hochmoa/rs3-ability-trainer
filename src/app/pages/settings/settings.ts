@@ -1,6 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HIT_CHANCE_MODES, Settings as SettingsModel } from '../../core/models';
+import { ALT1_ADD_URL } from '../../core/popout';
 import { StorageService } from '../../core/storage.service';
 import { DialogService } from '../../shared/dialog';
 
@@ -62,6 +63,15 @@ import { DialogService } from '../../shared/dialog';
     </div>
 
     <div class="panel">
+      <h2>Alt1</h2>
+      <p class="muted small">
+        Run the compact focus view as an app window inside the game client: install the <a href="https://runeapps.org/alt1" target="_blank" rel="noopener">Alt1 Toolkit</a>,
+        then click the link below – Alt1 opens it and asks to add the app. The same view opens in a browser popup with "Popout" on the Train page.
+      </p>
+      <a class="btn" [href]="ALT1_ADD_URL" title="alt1://addapp/… – needs the Alt1 Toolkit installed">Add to Alt1</a>
+    </div>
+
+    <div class="panel">
       <h2>Data</h2>
       <p class="muted small">
         Storage consent: <b>{{ storage.consent() ? 'accepted' : 'not given – nothing is saved' }}</b>
@@ -103,6 +113,7 @@ export class Settings {
   readonly storage = inject(StorageService);
   readonly s = this.storage.settings;
   readonly HIT_CHANCE_MODES = HIT_CHANCE_MODES;
+  readonly ALT1_ADD_URL = ALT1_ADD_URL;
 
   set<K extends keyof SettingsModel>(key: K, value: SettingsModel[K]): void {
     const next = { ...this.s(), [key]: value };

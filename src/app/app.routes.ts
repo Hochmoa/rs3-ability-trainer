@@ -5,6 +5,8 @@ import { Train } from './pages/train/train';
 // Only the Train page (the start page) is in the initial bundle; every other page is its own lazy chunk.
 export const routes: Routes = [
   { path: '', component: Train, title: 'RS3 Ability Trainer' },
+  // focus / popout view: the Train component in its compact branch (route data `focus`), without the app shell (`bare`)
+  { path: 'focus', loadComponent: () => import('./pages/train/train').then((m) => m.Train), data: { focus: true, bare: true }, title: 'Focus – RS3 Ability Trainer' },
   { path: 'rotations', loadComponent: () => import('./pages/rotations/rotations').then((m) => m.Rotations), title: 'Rotations – RS3 Ability Trainer' },
   { path: 'bars', loadComponent: () => import('./pages/bars/bars').then((m) => m.Bars), title: 'Action bars – RS3 Ability Trainer' },
   { path: 'keybinds', loadComponent: () => import('./pages/keybinds/keybinds').then((m) => m.Keybinds), title: 'Keybinds – RS3 Ability Trainer' },

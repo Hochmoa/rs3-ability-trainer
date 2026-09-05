@@ -1,3 +1,96 @@
+@if (focus()) {
+<!-- /focus popout (route data `focus`): the compact view for a small window next to the game – same session, no panels (styles: train-focus.scss) -->
+<div class="focus" [class.running]="running()">
+  @if (!storage.ready() || !data.loaded()) {
+    <p class="muted focus-msg">Loading…</p>
+  } @else if (!storage.rotations().length) {
+    <p class="muted focus-msg">No rotation yet – create one on the <a routerLink="/" target="_blank">Train page</a>.</p>
+  } @else {
+    <div class="focus-head">
+      <select [ngModel]="selectedId()" (ngModelChange)="pickRotation($event)" [disabled]="running()" title="Rotation">
+        @for (r of storage.rotations(); track r.id) {
+          <option [value]="r.id">{{ r.name }}</option>
+        }
+      </select>
+      @if (!running()) {
+        <button class="btn btn-primary btn-sm" (click)="start()" [disabled]="!canStart()">Start</button>
+      } @else {
+        <button class="btn btn-sm" (click)="stop()" title="Esc stops too">Stop</button>
+      }
+      <span class="focus-hint muted">{{ running() ? 'Esc stops' : 'Click into this window, then press your keys' }}</span>
+    </div>
+    @if (!canStart()) {
+      <p class="focus-warn">Cannot start: some steps are not on a keybound bar (or unknown). Fix it on the main Train page.</p>
+    }
+    <div class="focus-strip">
+      @for (s of focusSlots(); track s.stepIndex + '-' + s.kind) {
+        @if (s.note !== undefined) {
+          <div class="fslot note" [class.current]="s.kind === 'current'" [title]="s.note"><div class="note-card">{{ s.note }}</div></div>
+        } @else {
+          <div class="fslot" [class.current]="s.kind === 'current'" [title]="s.entity.name + (s.hint ? ' – ' + s.hint : '')">
+            <ability-icon
+              [ability]="s.entity"
+              [keyLabel]="s.key"
+              [px]="s.kind === 'current' ? 56 : 36"
+              [gcdPhase]="queuePhase(s)"
+              [remainingMs]="queueRemaining(s)"
+              [state]="s.done ? 'done' : s.kind === 'current' && running() ? iconState() : 'idle'"
+            />
+            <span class="name">{{ s.entity.name }}</span>
+          </div>
+        }
+        @if (s.kind === 'current') {
+          <div class="arrow">›</div>
+        }
+      }
+    </div>
+    <div class="feedback" [class]="'feedback ' + (feedback()?.cls ?? '')" [title]="feedback()?.text ?? ''">
+      {{ feedback()?.text ?? (canStart() ? 'Press Start, then the keys of the highlighted slots.' : '') }}
+    </div>
+    <div class="focus-timers">
+      <div class="bar-row">
+        <span class="bar-label">Tick</span>
+        <div class="bar tick"><div class="fill" [style.width.%]="tickPhase() * 100"></div></div>
+      </div>
+      <div class="bar-row">
+        <span class="bar-label">GCD</span>
+        <div class="bar gcd">
+          <div class="fill" [style.width.%]="(running() ? gcdPhase() : 0) * 100"></div>
+          <div class="window" [style.width.%]="storage.settings().abilityQueueing ? 100 : 100 / 3" title="press window"></div>
+        </div>
+      </div>
+    </div>
+    <div class="history" title="Everything that really cast, in order: green = on time, yellow = late, red = wrong, blue = Revolution, grey = prayer / weapon switch">
+      <span class="bar-label">Pressed</span>
+      <div class="history-strip" #historyStrip>
+        @for (h of history(); track h.id) {
+          <div [class]="'hist ' + h.kind + (h.key.startsWith('special:') || h.key.startsWith('weapon:') ? ' item' : '')" [title]="h.text">
+            @if (h.icon) { <img [src]="h.icon" [alt]="h.name" /> } @else { <span class="hist-name">{{ h.name }}</span> }
+            @if (h.step !== undefined) { <span class="step">{{ h.step + 1 }}</span> }
+          </div>
+        } @empty {
+          <span class="muted none">–</span>
+        }
+      </div>
+    </div>
+    <div class="focus-bars">
+      @for (b of focusBars(); track b.position) {
+        <action-bar [position]="b.position" [presetName]="b.presetName" [slots]="b.slots" [revolutionSlots]="revolutionSlots()" (slotClick)="slotClick(b.position, $event)" />
+      } @empty {
+        <p class="muted focus-msg">No abilities on your bars – set them up on the main Train page.</p>
+      }
+    </div>
+    <div class="focus-counts">
+      <span class="good">Perfect {{ counts().perfect }}</span>
+      <span class="warn">Late {{ counts().late }}</span>
+      <span class="bad">Wrong {{ counts().wrong }}</span>
+      <span class="warn">Missed {{ counts().missed }}</span>
+      @if (revolution()) { <span class="muted">Auto {{ counts().auto }}</span> }
+      @if (damage() > 0) { <span class="muted">{{ dps() | number: '1.0-0' }} DPS</span> }
+    </div>
+  }
+</div>
+} @else {
 <h1 class="sr-only">RS3 Ability Trainer – practise RuneScape 3 rotations</h1>
 @if (!storage.ready() || !data.loaded()) {
   <p class="muted">Loading…</p>
@@ -90,6 +183,7 @@
       <span class="muted hint">
         Ping {{ storage.settings().pingMs }} ms ± {{ storage.settings().jitterMs }} · queueing {{ storage.settings().abilityQueueing ? 'on' : 'off' }}@if (storage.settings().loop) { · loop } · {{ prayerBook() === 'Curses' ? 'curses' : 'prayers' }} · <a routerLink="/settings">settings</a>
       </span>
+      <button class="btn btn-sm popout" type="button" (click)="popout()" title="Open the compact focus view (rotation strip, tick and GCD bars, feedback, your bars) in a small window that you can keep next to the game – Chromium keeps it on top">Popout</button>
       <label class="pill adv" title="Advanced view: enemy attacks, pre-build, buff and prayer HUD, equipment panel, Revolution and Bone Shield options, layout editor. The simulation is the same either way.">
         <input type="checkbox" [checked]="advanced()" (change)="setUiMode(!advanced())" [disabled]="running()" />
         Advanced
@@ -645,4 +739,5 @@
       </table>
     </div>
   }
+}
 }
