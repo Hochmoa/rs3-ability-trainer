@@ -276,7 +276,26 @@ export interface Settings {
    * is the same in both. Missing = 'simple'.
    */
   uiMode: UiMode;
+  /** voice call-outs, coach mode and metronome on the Train page (core/coach.service.ts). Missing = all off. */
+  coach: CoachSettings;
 }
+
+export interface CoachSettings {
+  /** after every cast the keys of the next group are said out loud ("3, then Q") */
+  callouts: boolean;
+  /** coach mode: every step is called at the tick it should be pressed (minus the lead), on the engine's timeline */
+  lead: boolean;
+  /** Web Audio click on every game tick and a higher beep when the global cooldown ends */
+  metronome: boolean;
+  /** 0..100 */
+  volume: number;
+  /** how many ms before the tick the voice is fired (browser TTS needs a head start), 0..1000 */
+  leadMs: number;
+  /** SpeechSynthesisVoice.voiceURI; '' = automatic (an English voice) */
+  voice: string;
+}
+
+export const DEFAULT_COACH: CoachSettings = { callouts: false, lead: false, metronome: false, volume: 80, leadMs: 250, voice: '' };
 
 export type UiMode = 'simple' | 'advanced';
 export type HitChanceMode = 'scaled' | 'roll' | 'off';
@@ -342,6 +361,7 @@ export const DEFAULT_SETTINGS: Settings = {
   revolution: { ...DEFAULT_REVOLUTION },
   hitChance: 'scaled',
   uiMode: 'simple',
+  coach: { ...DEFAULT_COACH },
 };
 
 // ---------------------------------------------------------------- equipment data (public/data/*.json)

@@ -6,7 +6,8 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DataService, EOF_ICON, Entity, SPEC_KEY } from '../../core/data.service';
 import { applyWield, equip, unequip } from '../../core/equipment';
 import { keybindFromEvent, keybindKey, keybindLabel } from '../../core/keybind.util';
-import { ActionBarSetup, AttackPattern, BAR_POSITIONS, BONE_SHIELD_ABILITY, INVENTORY_SIZE, BAR_SLOTS, BarShape, barLayout, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, TARGET_TYPES, EquipSlot, ItemRef, Loadout, PrayerStats, Prebuild, REVOLUTION_MAX_SLOTS, REVOLUTION_MIN_SLOTS, RevolutionSettings, Rotation, STYLES4, Settings, StepResult, Style, Style4, WeaponSpec, emptyPrebuild, entityKey, isStyle4, loadoutWeapons, loadoutWield, parseEntityKey, prebuildIsEmpty, visiblePresets, RotationStep } from '../../core/models';
+import { CoachService, spokenLabel, spokenSequence } from '../../core/coach.service';
+import { ActionBarSetup, AttackPattern, BAR_POSITIONS, BONE_SHIELD_ABILITY, INVENTORY_SIZE, BAR_SLOTS, BarShape, barLayout, CoachSettings, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, TARGET_TYPES, EquipSlot, ItemRef, Loadout, PrayerStats, Prebuild, REVOLUTION_MAX_SLOTS, REVOLUTION_MIN_SLOTS, RevolutionSettings, Rotation, STYLES4, Settings, StepResult, Style, Style4, WeaponSpec, emptyPrebuild, entityKey, isStyle4, loadoutWeapons, loadoutWield, parseEntityKey, prebuildIsEmpty, visiblePresets, RotationStep } from '../../core/models';
 import { PresetsService } from '../../core/presets.service';
 import { StorageService } from '../../core/storage.service';
 import { resolveLoadout } from '../../engine/loadout-resolver';
@@ -111,6 +112,7 @@ export class Train implements OnDestroy {
   readonly data = inject(DataService);
   private route = inject(ActivatedRoute);
   private toast = inject(ToastService);
+  readonly coach = inject(CoachService);
   /** "Load a demo" on the empty state: the first PvME preset with default keys */
   readonly presets = inject(PresetsService);
 
@@ -857,6 +859,8 @@ export class Train implements OnDestroy {
     this.syncWield(this.engine);
     this.adrenaline.set(this.engine.adrenaline);
     this.expectedKey.set(this.engine.currentStep?.key ?? null);
+    this.coachStart();
+    this.coachTick(this.engine, performance.now());
     this.raf = requestAnimationFrame(this.frame);
     this.fallback = window.setInterval(() => this.tick(performance.now()), 100);
   }
@@ -879,6 +883,7 @@ export class Train implements OnDestroy {
   stop(): void {
     if (!this.running()) return;
     this.stopLoops();
+    this.coach.disable();
     this.engine?.stop();
     this.running.set(false);
     this.finished.set(true);
@@ -960,6 +965,7 @@ export class Train implements OnDestroy {
     if (elapsedS >= 1) this.dps.set(e.damageDealt / elapsedS);
     this.syncWield(e);
     this.expectedKey.set(e.currentStep?.key ?? null);
+    this.coachTick(e, now);
     this.queuedKey.set(e.queuedKey);
     const pressed = new Set(e.inflightKeys);
     for (const [key, until] of this.pressedUntil) {
@@ -1017,6 +1023,7 @@ export class Train implements OnDestroy {
     if (morphs.size !== cur.size || [...morphs].some(([k, v]) => cur.get(k)?.entity.key !== v.entity.key || cur.get(k)?.stage !== v.stage)) this.morphs.set(morphs);
     if (e.state !== 'running') {
       this.stopLoops();
+      this.coach.disable();
       this.running.set(false);
       this.finished.set(true);
       if (!this.finishReason()) this.finishReason.set('finished');
@@ -1025,6 +1032,102 @@ export class Train implements OnDestroy {
       return false;
     }
     return true;
+  }
+
+  // ---------------------------------------------------------------- coach: voice call-outs + metronome (core/coach.service.ts)
+
+  /** "<group end>:<cast tick>" of the last announced group – a new group or a new cast (also a wrong one) re-announces */
+  private calloutKey = '';
+  private beepTick = 0;
+  private beepPressTick: number | null = null;
+
+  readonly coachOn = computed(() => {
+    const c = this.storage.settings().coach;
+    return c.callouts || c.lead || c.metronome;
+  });
+
+  setCoach<K extends keyof CoachSettings>(key: K, value: CoachSettings[K]): void {
+    this.setSetting('coach', { ...this.storage.settings().coach, [key]: value });
+  }
+
+  /** runs inside the Start click: browsers only start audio from a user gesture */
+  private coachStart(): void {
+    this.calloutKey = '';
+    this.beepTick = 0;
+    this.beepPressTick = null;
+    const cs = this.storage.settings().coach;
+    if (!cs.callouts && !cs.lead && !cs.metronome) return;
+    this.coach.configure(cs);
+    void this.coach.enable().then((ok) => {
+      if (!ok) this.toast.show('The browser blocked the sound – allow audio for this site and press Start again.', 'warn');
+    });
+  }
+
+  /**
+   * Schedules the voice and the metronome against the engine's clock (`tickTime`). The coach never advances the
+   * queue: it says the key of every open step of the current group at the tick the engine expects it – the next GCD
+   * ability at cast tick + GCD (or at the end of a channel the cast started, pressing earlier would cut it), off-GCD
+   * steps on the ticks after the cast or at their PvME offset ("+", "2t"). When the player falls behind, nothing is
+   * said until the actual cast: the voice waits for the engine's queue instead of running ahead of the player, so the
+   * scoring (perfect / late / early per press) stays exactly what it is without the coach.
+   */
+  private coachTick(e: TrainerEngine, now: number): void {
+    if (!this.coach.enabled()) return;
+    const cs = this.storage.settings().coach;
+    const tick = e.currentTick(now);
+    const gcdEnd = e.gcdEndTick;
+    const ch = e.channel;
+    const channelEnd = ch && !ch.cancelled && ch.castTick === e.castTick ? ch.endTick : null;
+    const pressTick = gcdEnd === null ? null : Math.max(gcdEnd, channelEnd ?? 0);
+    if (cs.metronome) {
+      while (this.beepTick <= tick + 2) this.coach.beep('tick', e.tickTime(this.beepTick++));
+      if (pressTick !== null && pressTick !== this.beepPressTick) {
+        this.beepPressTick = pressTick;
+        this.coach.beep('press', e.tickTime(pressTick));
+      }
+    }
+    if (!cs.callouts && !cs.lead) return;
+    // the group: open steps from the queue index up to and including the next GCD ability (or to the end)
+    let target = e.steps.length;
+    for (let i = e.index; i < e.steps.length; i++) {
+      if (e.isGcdStep(e.steps[i])) {
+        target = i;
+        break;
+      }
+    }
+    const key = target + ':' + e.castTick;
+    if (key === this.calloutKey) return;
+    this.calloutKey = key;
+    const group: { s: EngineEntity; gcd: boolean }[] = [];
+    for (let i = e.index; i <= target && i < e.steps.length; i++) {
+      const s = e.steps[i];
+      if (!s.isNote && !e.isDone(i)) group.push({ s, gcd: i === target });
+    }
+    if (!group.length) return;
+    const reach = this.reachable();
+    const label = (s: EngineEntity): string => {
+      const k = spokenLabel(reach.get(s.key) ?? '');
+      return k && k !== 'click' ? k : 'click ' + s.name;
+    };
+    if (!cs.lead || e.castTick === null || pressTick === null) {
+      // call-outs: the whole group right after the cast, ~1.8 s before the next press ("Q, then 3")
+      this.coach.speak(spokenSequence(group.map((g) => label(g.s))), now);
+      return;
+    }
+    // coach mode: every step at its own tick (minus the lead); steps that land on the same tick share one phrase
+    const byTick = new Map<number, string[]>();
+    let ref = e.castTick;
+    for (const g of group) {
+      let t: number;
+      if (g.gcd) t = pressTick;
+      else {
+        t = g.s.offsetTicks !== undefined ? ref + g.s.offsetTicks : Math.min(ref + 1, pressTick - 1);
+        ref = Math.max(ref, t);
+      }
+      t = Math.max(t, tick);
+      byTick.set(t, [...(byTick.get(t) ?? []), label(g.s)]);
+    }
+    for (const [t, labels] of [...byTick].sort((a, b) => a[0] - b[0])) this.coach.speak(spokenSequence(labels), e.tickTime(t));
   }
 
   private syncPrayers(e: TrainerEngine, now: number): void {

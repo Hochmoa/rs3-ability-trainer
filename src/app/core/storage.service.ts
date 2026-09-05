@@ -377,7 +377,7 @@ function mergeActionBars(stored: Partial<ActionBarSetup>): ActionBarSetup {
 function migrateSettings(stored: Partial<Settings> & { queueWindowTicks?: number }): Settings {
   const { queueWindowTicks, ...rest } = stored;
   // builds before the Revolution mode have no combatMode / revolution; a partial revolution object gets the missing toggles
-  const s: Settings = { ...DEFAULT_SETTINGS, ...rest, revolution: { ...DEFAULT_SETTINGS.revolution, ...(rest.revolution ?? {}) } };
+  const s: Settings = { ...DEFAULT_SETTINGS, ...rest, revolution: { ...DEFAULT_SETTINGS.revolution, ...(rest.revolution ?? {}) }, coach: { ...DEFAULT_SETTINGS.coach, ...(rest.coach ?? {}) } };
   if (typeof queueWindowTicks === 'number' && typeof stored.abilityQueueing !== 'boolean') s.abilityQueueing = queueWindowTicks >= 3;
   return s;
 }
