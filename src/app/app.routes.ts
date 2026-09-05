@@ -1,33 +1,22 @@
 import { Routes } from '@angular/router';
-import { Account } from './pages/account/account';
-import { Admin, staffGuard } from './pages/admin/admin';
-import { Bars } from './pages/bars/bars';
-import { DrillPage } from './pages/drill/drill';
-import { AuthCallback } from './pages/auth-callback/auth-callback';
-import { Explore } from './pages/explore/explore';
-import { Keybinds } from './pages/keybinds/keybinds';
-import { Loadout } from './pages/loadout/loadout';
-import { Presets } from './pages/presets/presets';
-import { Privacy } from './pages/privacy/privacy';
-import { Rotations } from './pages/rotations/rotations';
-import { Settings } from './pages/settings/settings';
-import { Setups } from './pages/setups/setups';
+import { staffGuard } from './core/staff.guard';
 import { Train } from './pages/train/train';
 
+// Only the Train page (the start page) is in the initial bundle; every other page is its own lazy chunk.
 export const routes: Routes = [
   { path: '', component: Train, title: 'RS3 Ability Trainer' },
-  { path: 'rotations', component: Rotations, title: 'Rotations – RS3 Ability Trainer' },
-  { path: 'bars', component: Bars, title: 'Action bars – RS3 Ability Trainer' },
-  { path: 'keybinds', component: Keybinds, title: 'Keybinds – RS3 Ability Trainer' },
-  { path: 'drill', component: DrillPage, title: 'Keybind drill – RS3 Ability Trainer' },
-  { path: 'loadout', component: Loadout, title: 'Loadout – RS3 Ability Trainer' },
-  { path: 'settings', component: Settings, title: 'Settings – RS3 Ability Trainer' },
-  { path: 'explore', component: Explore, title: 'Explore – RS3 Ability Trainer' },
-  { path: 'setups', component: Setups, title: 'Setups – RS3 Ability Trainer' },
-  { path: 'presets', component: Presets, title: 'Boss presets – RS3 Ability Trainer' },
-  { path: 'account', component: Account, title: 'Account – RS3 Ability Trainer' },
-  { path: 'admin', component: Admin, canActivate: [staffGuard], title: 'Admin – RS3 Ability Trainer' },
-  { path: 'auth/callback', component: AuthCallback, title: 'RS3 Ability Trainer' },
-  { path: 'privacy', component: Privacy, title: 'Privacy – RS3 Ability Trainer' },
+  { path: 'rotations', loadComponent: () => import('./pages/rotations/rotations').then((m) => m.Rotations), title: 'Rotations – RS3 Ability Trainer' },
+  { path: 'bars', loadComponent: () => import('./pages/bars/bars').then((m) => m.Bars), title: 'Action bars – RS3 Ability Trainer' },
+  { path: 'keybinds', loadComponent: () => import('./pages/keybinds/keybinds').then((m) => m.Keybinds), title: 'Keybinds – RS3 Ability Trainer' },
+  { path: 'drill', loadComponent: () => import('./pages/drill/drill').then((m) => m.DrillPage), title: 'Keybind drill – RS3 Ability Trainer' },
+  { path: 'loadout', loadComponent: () => import('./pages/loadout/loadout').then((m) => m.Loadout), title: 'Loadout – RS3 Ability Trainer' },
+  { path: 'settings', loadComponent: () => import('./pages/settings/settings').then((m) => m.Settings), title: 'Settings – RS3 Ability Trainer' },
+  { path: 'explore', loadComponent: () => import('./pages/explore/explore').then((m) => m.Explore), title: 'Explore – RS3 Ability Trainer' },
+  { path: 'setups', loadComponent: () => import('./pages/setups/setups').then((m) => m.Setups), title: 'Setups – RS3 Ability Trainer' },
+  { path: 'presets', loadComponent: () => import('./pages/presets/presets').then((m) => m.Presets), title: 'Boss presets – RS3 Ability Trainer' },
+  { path: 'account', loadComponent: () => import('./pages/account/account').then((m) => m.Account), title: 'Account – RS3 Ability Trainer' },
+  { path: 'admin', loadComponent: () => import('./pages/admin/admin').then((m) => m.Admin), canActivate: [staffGuard], title: 'Admin – RS3 Ability Trainer' },
+  { path: 'auth/callback', loadComponent: () => import('./pages/auth-callback/auth-callback').then((m) => m.AuthCallback), title: 'RS3 Ability Trainer' },
+  { path: 'privacy', loadComponent: () => import('./pages/privacy/privacy').then((m) => m.Privacy), title: 'Privacy – RS3 Ability Trainer' },
   { path: '**', redirectTo: '' },
 ];

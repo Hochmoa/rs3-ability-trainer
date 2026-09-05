@@ -40,6 +40,11 @@ export class Keybinds {
   readonly storage = inject(StorageService);
   readonly data = inject(DataService);
 
+  constructor() {
+    // the carried weapons and weapons sitting on bars are looked up by entity key
+    void this.data.ensure('weapons');
+  }
+
   readonly POSITIONS = BAR_POSITION_NAMES;
   readonly ACTIONS = ACTIONS;
   readonly LAYOUTS = KEYBIND_LAYOUTS;

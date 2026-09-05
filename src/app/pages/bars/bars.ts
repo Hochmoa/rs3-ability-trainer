@@ -27,6 +27,11 @@ export class Bars {
   readonly storage = inject(StorageService);
   readonly data = inject(DataService);
 
+  constructor() {
+    // weapons are entities of the catalog (a bar slot can wield one)
+    void this.data.ensure('weapons');
+  }
+
   readonly TABS = TABS;
   readonly STYLES4 = STYLES4;
   readonly WEAPON_TYPES = WEAPON_TYPES;

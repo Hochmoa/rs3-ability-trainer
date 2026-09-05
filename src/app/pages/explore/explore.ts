@@ -35,6 +35,7 @@ export class Explore {
   private timer = 0;
 
   constructor() {
+    void this.data.ensure('weapons'); // steps of public rotations can wield a weapon
     effect(() => {
       this.search();
       this.style();

@@ -345,6 +345,11 @@ export const DEFAULT_SETTINGS: Settings = {
 };
 
 // ---------------------------------------------------------------- equipment data (public/data/*.json)
+//
+// gear.json, weapons.json and perks.json are written slimmed by tools/slim_data.py (one record per line, integral
+// floats as ints, the `icon` left out when it is the default assets/<dir>/<id>.png – DataService fills it in when
+// the file arrives; wiki columns nobody reads – weapon speed, range, auto-attack damage, charges, innate mastery – are
+// not stored).
 
 export interface Weapon {
   id: string;
@@ -355,20 +360,17 @@ export interface Weapon {
   tier: number;
   tierDamage: number;
   tierAccuracy: number;
-  speed: number | null;
+  /** ammunition kind of a ranged weapon ("arrows", "bolts"); null for the rest */
   attackStyle: string | null;
-  range: number | null;
-  damage: number;
   accuracy: number;
   abilityDamage: number | null;
   armour: number;
   lifePoints: number;
   /** damage bonus per style (shields / off-hands with one); null = the wiki lists none */
   bonus?: DamageBonus | null;
-  charges: string | null;
   /** weapon special attack id (specs.json) */
   spec: string | null;
-  innateMastery: boolean;
+  /** assets/weapons/<id>.png, null when the wiki has none; absent in the file when it is that default */
   icon: string | null;
   role: 'siphon' | 'conduit' | 'shield' | 'defender' | null;
 }
@@ -518,6 +520,22 @@ export interface ItemRef {
 }
 
 export type Equipment = Partial<Record<EquipSlot, ItemRef | null>>;
+
+/** One PvME boss setup (public/data/presets.json, built by tools/fetch-presets.py; loaded with DataService.ensure('presets')). */
+export interface BossPreset {
+  id: string;
+  boss: string;
+  style: string;
+  title: string;
+  guide: string;
+  presetUrl: string | null;
+  notes: string;
+  equipment: Partial<Record<EquipSlot | 'aura', ItemRef>>;
+  inventory: (ItemRef | null)[];
+  /** items of the PvME preset the trainer does not model (food, brews, familiars ...) */
+  unknown: string[];
+  rotations: { name: string; text: string }[];
+}
 
 export function sameRef(a: ItemRef | null | undefined, b: ItemRef | null | undefined): boolean {
   return !!a && !!b && a.kind === b.kind && a.id === b.id;

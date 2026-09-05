@@ -1,22 +1,10 @@
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { CanActivateFn, Router } from '@angular/router';
 import { AdminRotation, AdminService, AdminUser, ErrorRow, FeedbackRow } from '../../core/admin.service';
 import { DISPLAY_NAME_RE, Role, SupabaseService, errorText } from '../../core/supabase.service';
 import { DialogService } from '../../shared/dialog';
 import { ToastService } from '../../shared/toast';
-
-/** Only signed-in staff may open /admin; the database checks every action again. */
-export const staffGuard: CanActivateFn = async () => {
-  const supabase = inject(SupabaseService);
-  const router = inject(Router);
-  // wait for the session lookup and the profile (role) to arrive
-  for (let i = 0; i < 50 && (!supabase.ready() || (supabase.user() && !supabase.profile())); i++) {
-    await new Promise((r) => setTimeout(r, 100));
-  }
-  return supabase.isStaff() ? true : router.createUrlTree(['/']);
-};
 
 @Component({
   selector: 'app-admin',

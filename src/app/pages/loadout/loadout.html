@@ -56,7 +56,7 @@
           <span class="imeta">{{ meta(v) }}</span>
         </div>
       } @empty {
-        <p class="muted">{{ data.loaded() ? 'Nothing matches.' : 'Loading…' }}</p>
+        <p class="muted">{{ data.loadoutReady() ? 'Nothing matches.' : 'Loading…' }}</p>
       }
     </div>
     <p class="muted small">Up to 200 results; items with a special attack, set effect or passive always appear regardless of the tier filter.{{ hideObscure() ? ' Obscure gear is hidden (checkbox at the top).' : '' }} Drop an item back here to remove it from the loadout.</p>

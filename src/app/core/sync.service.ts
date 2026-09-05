@@ -88,7 +88,7 @@ export class SyncService {
   }
 
   private async mergeRotations(uid: string): Promise<void> {
-    const { data, error } = await this.supabase.client.from('rotations').select('*').eq('owner_id', uid);
+    const { data, error } = await (await this.supabase.db()).from('rotations').select('*').eq('owner_id', uid);
     if (error) throw error;
     const server = new Map((data as RotationRow[]).map((r) => [r.id, r]));
     const local = new Map(this.storage.rotations().map((r) => [r.id, r]));
@@ -118,7 +118,7 @@ export class SyncService {
   }
 
   private async mergeKeybinds(uid: string): Promise<void> {
-    const { data, error } = await this.supabase.client.from('keybinds').select('entity_key, keybind, updated_at').eq('user_id', uid);
+    const { data, error } = await (await this.supabase.db()).from('keybinds').select('entity_key, keybind, updated_at').eq('user_id', uid);
     if (error) throw error;
     const server = new Map((data as { entity_key: string; keybind: Keybind }[]).map((k) => [k.entity_key, k.keybind]));
     const local = this.storage.keybinds();
@@ -126,7 +126,7 @@ export class SyncService {
     const missing = Object.entries(local).filter(([key]) => !server.has(key));
     if (missing.length) {
       const rows = missing.map(([entity_key, keybind]) => ({ user_id: uid, entity_key, keybind }));
-      const res = await this.supabase.client.from('keybinds').upsert(rows);
+      const res = await (await this.supabase.db()).from('keybinds').upsert(rows);
       if (res.error) throw res.error;
     }
   }
@@ -145,14 +145,14 @@ export class SyncService {
       source_id: r.sourceId ?? null,
       styles: this.stylesOf(r),
     };
-    const { data, error } = await this.supabase.client.from('rotations').upsert(row).select('updated_at, copies').single();
+    const { data, error } = await (await this.supabase.db()).from('rotations').upsert(row).select('updated_at, copies').single();
     if (error) throw error;
     const ms = Date.parse((data as { updated_at: string }).updated_at);
     await this.storage.putRotation({ ...r, updatedAt: ms, syncedAt: ms, copies: (data as { copies: number }).copies });
   }
 
   async deleteRotation(id: string): Promise<void> {
-    const { error } = await this.supabase.client.from('rotations').delete().eq('id', id);
+    const { error } = await (await this.supabase.db()).from('rotations').delete().eq('id', id);
     if (error) throw error;
   }
 
@@ -160,8 +160,8 @@ export class SyncService {
     const uid = this.uid;
     if (!uid) return;
     const q = kb
-      ? this.supabase.client.from('keybinds').upsert({ user_id: uid, entity_key: key, keybind: kb, updated_at: new Date().toISOString() })
-      : this.supabase.client.from('keybinds').delete().eq('user_id', uid).eq('entity_key', key);
+      ? (await this.supabase.db()).from('keybinds').upsert({ user_id: uid, entity_key: key, keybind: kb, updated_at: new Date().toISOString() })
+      : (await this.supabase.db()).from('keybinds').delete().eq('user_id', uid).eq('entity_key', key);
     const { error } = await q;
     if (error) throw error;
   }
@@ -170,11 +170,11 @@ export class SyncService {
   async replaceKeybinds(keybinds: Record<string, Keybind>): Promise<void> {
     const uid = this.uid;
     if (!uid) return;
-    const del = await this.supabase.client.from('keybinds').delete().eq('user_id', uid);
+    const del = await (await this.supabase.db()).from('keybinds').delete().eq('user_id', uid);
     if (del.error) throw del.error;
     const rows = Object.entries(keybinds).map(([entity_key, keybind]) => ({ user_id: uid, entity_key, keybind }));
     if (rows.length) {
-      const { error } = await this.supabase.client.from('keybinds').upsert(rows);
+      const { error } = await (await this.supabase.db()).from('keybinds').upsert(rows);
       if (error) throw error;
     }
   }
@@ -200,14 +200,14 @@ export class SyncService {
       started_at: new Date(s.startedAt).toISOString(),
       ended_at: new Date(s.endedAt).toISOString(),
     };
-    const { error } = await this.supabase.client.from('sessions').insert(row);
+    const { error } = await (await this.supabase.db()).from('sessions').insert(row);
     if (error) throw error;
   }
 
   // ------------------------------------------------------------------ explorer
 
   async explore(opts: { search?: string; style?: string; sort: 'new' | 'copies' }): Promise<RotationRow[]> {
-    let q = this.supabase.client.from('public_rotations').select('*').limit(60);
+    let q = (await this.supabase.db()).from('public_rotations').select('*').limit(60);
     if (opts.search?.trim()) q = q.ilike('name', '%' + opts.search.trim().replace(/[%_]/g, '') + '%');
     if (opts.style) q = q.contains('styles', [opts.style]);
     q = opts.sort === 'copies' ? q.order('copies', { ascending: false }).order('updated_at', { ascending: false }) : q.order('updated_at', { ascending: false });
@@ -220,7 +220,7 @@ export class SyncService {
   async copyFromExplorer(row: RotationRow): Promise<Rotation> {
     const id = crypto.randomUUID();
     if (this.uid) {
-      const { data, error } = await this.supabase.client.rpc('copy_rotation', { source: row.id, new_id: id });
+      const { data, error } = await (await this.supabase.db()).rpc('copy_rotation', { source: row.id, new_id: id });
       if (error) throw error;
       const copy = this.fromRow(data as RotationRow, undefined);
       copy.sourceName = row.name;

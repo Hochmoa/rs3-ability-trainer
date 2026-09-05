@@ -92,6 +92,8 @@ python tools/fetch-specs.py       # public/data/specs.json (weapon special attac
 python tools/fetch-weapons.py     # public/data/weapons.json (all weapons/shields/defenders), icons in public/assets/weapons
 python tools/fetch-perks.py       # public/data/perks.json (Invention perks), icons in public/assets/perks
 python tools/fetch-pvme-aliases.py # public/data/pvme-aliases.json (PvME emoji alias -> entity key), run last
+python tools/slim_data.py          # re-slim the checked-in files (every fetcher writes slim files already: one record per line,
+                                   # default icons left out, unread weapon columns dropped – see the docstring)
 ```
 `public/data/set-effects.json` (armour sets and item passives) is hand-written from the wiki with a source URL per entry.
 

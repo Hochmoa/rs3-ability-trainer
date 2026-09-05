@@ -107,7 +107,7 @@ export class ErrorReportService implements ErrorHandler {
           lang: navigator.language,
         },
       };
-      await this.supabase.client.from('client_errors').insert(row);
+      await (await this.supabase.db()).from('client_errors').insert(row);
     } catch {
       // never let the reporter itself throw
     } finally {

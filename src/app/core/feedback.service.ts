@@ -69,7 +69,7 @@ export class FeedbackService {
       page: location.pathname,
       userAgent: navigator.userAgent,
     });
-    const { error } = await this.supabase.client.from('feedback').insert(row);
+    const { error } = await (await this.supabase.db()).from('feedback').insert(row);
     if (error) throw error;
   }
 }

@@ -1,6 +1,6 @@
 import { CdkDrag, CdkDropList, CdkDropListGroup } from '@angular/cdk/drag-drop';
 import { DecimalPipe } from '@angular/common';
-import { Component, ElementRef, HostListener, OnDestroy, afterRenderEffect, computed, effect, inject, signal, viewChild } from '@angular/core';
+import { Component, ElementRef, HostListener, OnDestroy, afterNextRender, afterRenderEffect, computed, effect, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DataService, EOF_ICON, Entity, SPEC_KEY } from '../../core/data.service';
@@ -145,7 +145,7 @@ export class Train implements OnDestroy {
   readonly stepEntities = computed<(Entity | null)[]>(
     () => this.rotation()?.steps.map((s, i) => (s.kind === 'note' ? noteEntity(s, i) : this.data.step(s) ?? null)) ?? [],
   );
-  readonly unknownSteps = computed(() => (this.data.loaded() ? this.stepEntities().filter((e) => !e).length : 0));
+  readonly unknownSteps = computed(() => (this.data.loadoutReady() ? this.stepEntities().filter((e) => !e).length : 0));
 
   /** the active loadout resolved for the weapons in hand at the start */
   readonly resolved = computed(() => resolveLoadout(this.storage.loadout(), this.loadoutData()));
@@ -288,7 +288,7 @@ export class Train implements OnDestroy {
   private slotOf = (r: ItemRef): EquipSlot | null => this.data.slotOf(r);
   /** steps the active loadout cannot perform (no 2h, no shield, no spec weapon ...) */
   readonly equipmentWarnings = computed<string[]>(() => {
-    if (!this.data.loaded()) return [];
+    if (!this.data.loadoutReady()) return [];
     // the probe starts with the chosen Bone Shield up, like a real session does
     const pb = this.effectivePrebuild();
     const probeCatalog = new Map<string, EngineEntity>();
@@ -662,6 +662,9 @@ export class Train implements OnDestroy {
   private startedAt = 0;
 
   constructor() {
+    // the gear and weapon catalogs (~1 MB each) come after the first paint; the resolved loadout, gear panel and
+    // warnings recompute when they arrive
+    afterNextRender(() => void this.data.ensure('gear', 'weapons', 'perks'));
     effect(() => {
       const rotations = this.storage.rotations();
       const wanted = this.route.snapshot.queryParamMap.get('rotation');

@@ -69,7 +69,7 @@ export class SetupSyncService {
     if (!uid) return;
     this.syncing.set(true);
     try {
-      const { data, error } = await this.supabase.client.from('setups').select('settings, loadouts, enemy, is_public, updated_at').eq('user_id', uid).maybeSingle();
+      const { data, error } = await (await this.supabase.db()).from('setups').select('settings, loadouts, enemy, is_public, updated_at').eq('user_id', uid).maybeSingle();
       if (error) throw error;
       const row = data as { settings: Settings; loadouts: { loadouts: Loadout[]; active: string }; enemy: EnemyConfig | null; is_public: boolean; updated_at: string } | null;
       if (!row) {
@@ -119,7 +119,7 @@ export class SetupSyncService {
       loadouts: { loadouts: this.storage.loadouts(), active: this.storage.activeLoadoutId() },
       enemy: this.storage.enemy(),
     };
-    const { data, error } = await this.supabase.client.from('setups').upsert(row).select('updated_at').single();
+    const { data, error } = await (await this.supabase.db()).from('setups').upsert(row).select('updated_at').single();
     if (error) throw error;
     const serverMs = Date.parse((data as { updated_at: string }).updated_at);
     await this.storage.putSetupMeta({ ...this.storage.setupMeta(), syncedAt: serverMs });
@@ -129,7 +129,7 @@ export class SetupSyncService {
   async setPublic(value: boolean): Promise<void> {
     const uid = this.uid;
     if (!uid) return;
-    const { error } = await this.supabase.client.from('setups').update({ is_public: value }).eq('user_id', uid);
+    const { error } = await (await this.supabase.db()).from('setups').update({ is_public: value }).eq('user_id', uid);
     if (error) throw error;
     this.isPublic.set(value);
   }
@@ -137,13 +137,13 @@ export class SetupSyncService {
   // ------------------------------------------------------------------ public overview
 
   async list(): Promise<PublicSetupRow[]> {
-    const { data, error } = await this.supabase.client.rpc('list_public_setups');
+    const { data, error } = await (await this.supabase.db()).rpc('list_public_setups');
     if (error) throw error;
     return (data ?? []) as PublicSetupRow[];
   }
 
   async get(userId: string): Promise<PublicSetup | null> {
-    const { data, error } = await this.supabase.client.rpc('get_public_setup', { target: userId });
+    const { data, error } = await (await this.supabase.db()).rpc('get_public_setup', { target: userId });
     if (error) throw error;
     return (data as PublicSetup | null) ?? null;
   }

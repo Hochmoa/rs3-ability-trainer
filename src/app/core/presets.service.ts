@@ -44,10 +44,14 @@ export class PresetsService {
 
   /** all presets (fetched once) */
   list(): Promise<BossPreset[]> {
-    this.presets ??= firstValueFrom(this.http.get<BossPreset[]>('data/presets.json')).catch((e) => {
-      this.presets = null;
-      throw e;
-    });
+    // the presets plus everything their items and rotations resolve against (lazy catalogs, DataService.ensure)
+    this.presets ??= this.data.ensure('presets', 'gear', 'weapons', 'perks', 'aliases').then(
+      () => this.data.presets() as BossPreset[],
+      (e) => {
+        this.presets = null;
+        throw e;
+      },
+    );
     return this.presets;
   }
 

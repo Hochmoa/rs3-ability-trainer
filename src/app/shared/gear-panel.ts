@@ -362,6 +362,11 @@ interface Cell {
 export class GearPanel {
   readonly data = inject(DataService);
   readonly gearDrag = inject(GearDragService);
+
+  constructor() {
+    // the cells resolve item refs against the catalogs; they fill in as the files arrive
+    void this.data.ensure('gear', 'weapons', 'perks');
+  }
   readonly equipment = input.required<Equipment>();
   readonly inventory = input.required<(ItemRef | null)[]>();
   readonly editable = input(false);

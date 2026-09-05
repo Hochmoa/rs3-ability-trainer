@@ -42,7 +42,7 @@ export class Presets {
   readonly styleFilter = signal<string>('all');
 
   readonly views = computed<PresetView[]>(() => {
-    if (!this.data.loaded()) return [];
+    if (!this.data.loadoutReady()) return [];
     const f = this.styleFilter();
     return this.presets()
       .filter((p) => f === 'all' || p.style === f)

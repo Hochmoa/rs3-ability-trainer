@@ -56,7 +56,7 @@ export class BarsSyncService {
     if (!uid) return;
     this.syncing.set(true);
     try {
-      const { data, error } = await this.supabase.client.from('action_bars').select('setup, updated_at').eq('user_id', uid).maybeSingle();
+      const { data, error } = await (await this.supabase.db()).from('action_bars').select('setup, updated_at').eq('user_id', uid).maybeSingle();
       if (error) throw error;
       const row = data as { setup: ActionBarSetup; updated_at: string } | null;
       const serverMs = row ? Date.parse(row.updated_at) : null;
@@ -99,7 +99,7 @@ export class BarsSyncService {
     const uid = this.uid;
     if (!uid) return;
     const { syncedAt: _synced, ...doc } = setup;
-    const { data, error } = await this.supabase.client
+    const { data, error } = await (await this.supabase.db())
       .from('action_bars')
       .upsert({ user_id: uid, setup: doc })
       .select('updated_at')

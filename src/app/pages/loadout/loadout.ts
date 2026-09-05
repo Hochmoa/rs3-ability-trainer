@@ -101,7 +101,7 @@ export class Loadout {
   }
 
   readonly catalog = computed<GearView[]>(() => {
-    if (!this.data.loaded()) return [];
+    if (!this.data.loadoutReady()) return [];
     const tab = this.tab();
     const q = this.search().trim().toLowerCase();
     const style = this.style();
@@ -165,7 +165,7 @@ export class Loadout {
   }));
   /** the loadout's familiar with its scroll, for the summary next to the select */
   readonly familiar = computed(() => (this.l().familiar ? this.data.familiarById().get(this.l().familiar!) ?? null : null));
-  readonly warnings = computed(() => (this.data.loaded() ? loadoutWarnings(this.l(), this.loadoutData()) : []));
+  readonly warnings = computed(() => (this.data.loadoutReady() ? loadoutWarnings(this.l(), this.loadoutData()) : []));
   /** set thresholds / passives the simulation ignores: "<id>:<kind>" → reason */
   readonly notSimulated = computed<Map<string, string>>(() => {
     const out = new Map<string, string>();
@@ -173,7 +173,7 @@ export class Loadout {
     return out;
   });
   /** the engine's numbers for the worn gear (ability damage, damage bonus, life points, ignored effects) */
-  readonly resolved = computed<ResolvedLoadout | null>(() => (this.data.loaded() ? resolveLoadout(this.l(), this.loadoutData()) : null));
+  readonly resolved = computed<ResolvedLoadout | null>(() => (this.data.loadoutReady() ? resolveLoadout(this.l(), this.loadoutData()) : null));
   readonly STYLES4 = STYLES4;
   readonly levelPart = levelPart;
 
@@ -195,11 +195,11 @@ export class Loadout {
   ignoredReason(id: string, kind: string | undefined): string | null {
     return kind ? this.notSimulated().get(id + ':' + kind) ?? null : null;
   }
-  readonly sets = computed(() => (this.data.loaded() ? wornSets(this.l(), this.loadoutData()) : []));
-  readonly passives = computed(() => (this.data.loaded() ? wornPassives(this.l(), this.loadoutData()).filter((p) => p.slot !== 'talent') : []));
-  readonly wieldedStyle = computed(() => (this.data.loaded() ? mainStyle(this.l(), this.loadoutData()) : null));
+  readonly sets = computed(() => (this.data.loadoutReady() ? wornSets(this.l(), this.loadoutData()) : []));
+  readonly passives = computed(() => (this.data.loadoutReady() ? wornPassives(this.l(), this.loadoutData()).filter((p) => p.slot !== 'talent') : []));
+  readonly wieldedStyle = computed(() => (this.data.loadoutReady() ? mainStyle(this.l(), this.loadoutData()) : null));
   readonly weaponSpec = computed(() => {
-    if (!this.data.loaded()) return null;
+    if (!this.data.loadoutReady()) return null;
     const eq = this.l().equipment;
     for (const r of [eq.twoHand, eq.mainHand, eq.offHand]) {
       const w = r?.kind === 'weapon' ? this.data.weaponById().get(r.id) : null;
@@ -232,9 +232,10 @@ export class Loadout {
   }
 
   constructor() {
+    void this.data.ensure('gear', 'weapons', 'perks');
     // loadouts saved before the inventory: flags (Ring of vigour, armour set + pieces, EoF spec) become worn items, once
     effect(() => {
-      if (!this.data.loaded() || !this.storage.ready()) return;
+      if (!this.data.loadoutReady() || !this.storage.ready()) return;
       for (const l of this.storage.loadouts()) {
         const migrated = this.migrateLegacy(l);
         if (migrated) void this.storage.saveLoadout(migrated);

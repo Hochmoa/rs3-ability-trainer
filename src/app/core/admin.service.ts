@@ -62,43 +62,43 @@ export interface FeedbackRow {
 @Injectable({ providedIn: 'root' })
 export class AdminService {
   private supabase = inject(SupabaseService);
-  private get client() {
-    return this.supabase.client;
+  private db() {
+    return this.supabase.db();
   }
 
   async listUsers(): Promise<AdminUser[]> {
-    const { data, error } = await this.client.rpc('admin_list_users');
+    const { data, error } = await (await this.db()).rpc('admin_list_users');
     if (error) throw error;
     return (data ?? []) as AdminUser[];
   }
 
   async blockUser(id: string, reason: string): Promise<void> {
-    const { error } = await this.client.rpc('admin_block_user', { target: id, reason: reason || null });
+    const { error } = await (await this.db()).rpc('admin_block_user', { target: id, reason: reason || null });
     if (error) throw error;
   }
 
   async unblockUser(id: string): Promise<void> {
-    const { error } = await this.client.rpc('admin_unblock_user', { target: id });
+    const { error } = await (await this.db()).rpc('admin_unblock_user', { target: id });
     if (error) throw error;
   }
 
   async setRole(id: string, role: Role): Promise<void> {
-    const { error } = await this.client.rpc('admin_set_role', { target: id, new_role: role });
+    const { error } = await (await this.db()).rpc('admin_set_role', { target: id, new_role: role });
     if (error) throw error;
   }
 
   async renameUser(id: string, name: string): Promise<void> {
-    const { error } = await this.client.rpc('admin_rename_user', { target: id, new_name: name });
+    const { error } = await (await this.db()).rpc('admin_rename_user', { target: id, new_name: name });
     if (error) throw error;
   }
 
   async deleteUser(id: string): Promise<void> {
-    const { error } = await this.client.rpc('admin_delete_user', { target: id });
+    const { error } = await (await this.db()).rpc('admin_delete_user', { target: id });
     if (error) throw error;
   }
 
   async listRotations(ownerId: string): Promise<AdminRotation[]> {
-    const { data, error } = await this.client
+    const { data, error } = await (await this.db())
       .from('rotations')
       .select('id, name, is_public, steps, copies, created_at, updated_at')
       .eq('owner_id', ownerId)
@@ -108,42 +108,42 @@ export class AdminService {
   }
 
   async updateRotation(id: string, patch: { name?: string; is_public?: boolean }): Promise<void> {
-    const { error } = await this.client.from('rotations').update(patch).eq('id', id);
+    const { error } = await (await this.db()).from('rotations').update(patch).eq('id', id);
     if (error) throw error;
   }
 
   async deleteRotation(id: string): Promise<void> {
-    const { error } = await this.client.from('rotations').delete().eq('id', id);
+    const { error } = await (await this.db()).from('rotations').delete().eq('id', id);
     if (error) throw error;
   }
 
   async listFeedback(): Promise<FeedbackRow[]> {
-    const { data, error } = await this.client.from('feedback').select('*').order('created_at', { ascending: false }).limit(200);
+    const { data, error } = await (await this.db()).from('feedback').select('*').order('created_at', { ascending: false }).limit(200);
     if (error) throw error;
     return (data ?? []) as FeedbackRow[];
   }
 
   async deleteFeedback(id: string): Promise<void> {
-    const { error } = await this.client.from('feedback').delete().eq('id', id);
+    const { error } = await (await this.db()).from('feedback').delete().eq('id', id);
     if (error) throw error;
   }
 
   /** newest 1000 front-end error reports (staff) */
   async listErrors(): Promise<ErrorRow[]> {
-    const { data, error } = await this.client.from('client_errors').select('*').order('created_at', { ascending: false }).limit(1000);
+    const { data, error } = await (await this.db()).from('client_errors').select('*').order('created_at', { ascending: false }).limit(1000);
     if (error) throw error;
     return (data ?? []) as ErrorRow[];
   }
 
   /** delete every report of one fingerprint (admin) */
   async deleteErrorGroup(fingerprint: string): Promise<void> {
-    const { error } = await this.client.from('client_errors').delete().eq('fingerprint', fingerprint);
+    const { error } = await (await this.db()).from('client_errors').delete().eq('fingerprint', fingerprint);
     if (error) throw error;
   }
 
   /** delete all reports (admin) */
   async clearErrors(): Promise<void> {
-    const { error } = await this.client.from('client_errors').delete().gte('created_at', '1970-01-01');
+    const { error } = await (await this.db()).from('client_errors').delete().gte('created_at', '1970-01-01');
     if (error) throw error;
   }
 }
