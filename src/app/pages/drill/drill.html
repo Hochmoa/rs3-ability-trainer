@@ -1,0 +1,203 @@
+<h1 class="sr-only">Keybind drill – burn your RS3 keybinds into muscle memory</h1>
+@if (!storage.ready() || !data.loaded()) {
+  <p class="muted">Loading…</p>
+} @else if (!anyKeys()) {
+  <div class="panel empty">
+    <h2>No keybinds yet</h2>
+    <p>The drill asks for random abilities from your bars and scores the key you press – it needs bound keys.</p>
+    <p class="muted">Put abilities on your bars, then bind keys to the slots.</p>
+    <a class="btn btn-primary" routerLink="/keybinds">Bind keys</a>
+    <a class="btn" routerLink="/bars">Action bars</a>
+  </div>
+} @else {
+  <div class="panel controls">
+    <div class="setup-row">
+      <div class="field">
+        <span>Bars</span>
+        <div class="pills">
+          @for (b of BAR_LABELS; track $index) {
+            <label class="pill" [title]="$index === 0 ? 'Main bar' : 'Additional bar ' + $index">
+              <input type="checkbox" [checked]="options().bars[$index]" (change)="toggleBar($index)" [disabled]="running()" />
+              {{ b }}
+            </label>
+          }
+        </div>
+      </div>
+      <div class="field">
+        <span>Also</span>
+        <div class="pills">
+          <label class="pill" title="The weapon switch keys of the active loadout">
+            <input type="checkbox" [checked]="options().weapons" (change)="set('weapons', !options().weapons)" [disabled]="running()" />
+            weapon switches
+          </label>
+          <label class="pill" title="Prayers and curses sitting on the bars">
+            <input type="checkbox" [checked]="options().prayers" (change)="set('prayers', !options().prayers)" [disabled]="running()" />
+            prayers
+          </label>
+        </div>
+      </div>
+      <label class="field grow" title="All keybound slots, or only the ones a rotation uses">
+        <span>Pool</span>
+        <select [ngModel]="options().rotation ?? ''" (ngModelChange)="pickRotation($event)" [disabled]="running()">
+          <option value="">all keybound slots</option>
+          @for (r of storage.rotations(); track r.id) {
+            <option [value]="r.id">only rotation: {{ r.name }}</option>
+          }
+        </select>
+      </label>
+      <label class="field pace" title="Wait until you press the right key, or move on at a fixed cadence (a missed prompt counts as a miss)">
+        <span>Pace</span>
+        <select [ngModel]="options().paceMs" (ngModelChange)="set('paceMs', +$event)" [disabled]="running()">
+          @for (p of PACES; track p.ms) {
+            <option [ngValue]="p.ms">{{ p.label }}</option>
+          }
+        </select>
+      </label>
+      <label class="field rounds">
+        <span>Rounds</span>
+        <select [ngModel]="options().rounds" (ngModelChange)="set('rounds', +$event)" [disabled]="running()">
+          @for (r of ROUNDS; track r.n) {
+            <option [ngValue]="r.n">{{ r.label }}</option>
+          }
+        </select>
+      </label>
+    </div>
+    <div class="options-row">
+      <label class="pill" title="The key appears on the prompt when you have not found it after two seconds">
+        <input type="checkbox" [checked]="options().hint" (change)="set('hint', !options().hint)" [disabled]="running()" />
+        show key hint after {{ HINT_AFTER_S }} s
+      </label>
+      <span class="hint muted">
+        {{ pool().length }} slot{{ pool().length === 1 ? '' : 's' }}, {{ poolEntities() }} abilit{{ poolEntities() === 1 ? 'y' : 'ies' }} in the pool
+        @if (rotation() && !pool().length) {
+          – none of this rotation's abilities sits on a keybound slot
+        }
+      </span>
+      <div class="actions">
+        @if (running()) {
+          <button class="btn btn-start" (click)="stop()" title="Esc">Stop</button>
+        } @else {
+          <button class="btn btn-primary btn-start" (click)="start()" [disabled]="!pool().length">Start</button>
+        }
+      </div>
+    </div>
+  </div>
+
+  <div class="panel arena">
+    <div class="prompt" [class.live]="running()">
+      @if (currentEntity(); as e) {
+        <ability-icon [ability]="e" [px]="96" [state]="promptState()" [keyLabel]="hintVisible() ? current()!.keyLabel : ''" [entityTip]="e" />
+        <div class="what">
+          <div class="name">{{ e.name }}</div>
+          <div class="where muted">
+            @if (current()!.pos < 0) {
+              weapon switch
+            } @else {
+              {{ current()!.pos === 0 ? 'main bar' : 'bar ' + current()!.pos }}, slot {{ current()!.slot + 1 }}
+            }
+            @if (hintVisible()) {
+              · <span class="keyhint">{{ current()!.keyLabel }}</span>
+            }
+          </div>
+          @if (options().paceMs) {
+            <div class="track"><div class="fill" [style.width.%]="cadenceLeft() * 100"></div></div>
+          }
+        </div>
+      } @else {
+        <div class="idle">
+          <div class="name muted">Press Start, then hit the key of whatever lights up.</div>
+          <div class="where muted small">No cooldowns, no adrenaline, no rotation – only key → slot. Esc stops. Clicking a slot counts too.</div>
+        </div>
+      }
+    </div>
+
+    <div class="counts">
+      <span title="Correct presses"><b class="good">{{ stats().hits }}</b> hits</span>
+      <span title="Wrong keys and prompts that ran out"><b class="bad">{{ stats().misses }}</b> misses</span>
+      <span title="Average time from the prompt to the correct key">Ø <b>{{ ms(stats().avgMs) }}</b></span>
+      <span title="Correct presses in a row (best this session in brackets)">streak <b>{{ stats().streak }}</b> <span class="muted">({{ stats().best }})</span></span>
+      @if (running()) {
+        <span class="muted">{{ stats().rounds ? stats().round + ' / ' + stats().rounds : 'prompt ' + stats().round }} · {{ elapsedS() }} s</span>
+      }
+    </div>
+
+    @if (weapons().length) {
+      <div class="weapons" [class.off]="!options().weapons">
+        <span class="opt-label">Weapons</span>
+        @for (w of weapons(); track w.entity.key) {
+          <button
+            type="button"
+            [class]="'weapon' + (w.expected ? ' expected' : '') + (w.flash ? ' flash-' + w.flash : '')"
+            [entityTip]="w.entity"
+            (click)="weaponClick($index)"
+          >
+            <img [src]="w.entity.icon" [alt]="w.entity.name" draggable="false" />
+            @if (w.keyLabel) {
+              <span class="key">{{ w.keyLabel }}</span>
+            }
+          </button>
+        }
+      </div>
+    }
+
+    <div class="action-bars">
+      @for (b of bars(); track b.position) {
+        <div class="bar-cell" [class]="'bar-cell ' + b.shape + (b.on ? '' : ' off')">
+          <action-bar [position]="b.position" [presetName]="b.presetName" [slots]="b.slots" [compact]="b.shape === 'compact'" (slotClick)="slotClick(b.position, $event)" />
+        </div>
+      }
+    </div>
+
+    @if (finish(); as f) {
+      <div class="finish-overlay">
+        <div class="finish-card" [class.stopped]="f.stopped">
+          <h2>{{ f.stopped ? 'Stopped' : 'Done' }}</h2>
+          <p class="finish-score">{{ f.summary.accuracy }}% · Ø {{ ms(f.summary.avgMs) }}</p>
+          <div class="finish-counts">
+            <span><b class="good">{{ f.summary.hits }}</b> hits</span>
+            <span><b class="bad">{{ f.summary.misses }}</b> misses</span>
+            <span><b>{{ f.summary.rounds }}</b> prompts</span>
+            <span>best streak <b>{{ f.summary.bestStreak }}</b></span>
+          </div>
+          @if (f.summary.targets.length) {
+            <table class="offenders">
+              <thead>
+                <tr>
+                  <th>Ability</th>
+                  <th>Key</th>
+                  <th>Asked</th>
+                  <th>Missed</th>
+                  <th>Ø</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (t of f.summary.targets.slice(0, 8); track t.key) {
+                  <tr [class.bad]="t.missRate >= 0.5">
+                    <td class="ability">
+                      @if (icon(t.key); as ic) {
+                        <img [src]="ic" [alt]="" />
+                      }
+                      {{ name(t.key) }}
+                    </td>
+                    <td class="key">{{ t.keyLabel }}</td>
+                    <td>{{ t.asked }}</td>
+                    <td>{{ t.misses }} <span class="muted">({{ pct(t.missRate) }})</span></td>
+                    <td>{{ ms(t.avgMs) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+          <div class="finish-actions">
+            <button class="btn btn-primary" (click)="again()">Again</button>
+            @if (rotation(); as r) {
+              <a class="btn" routerLink="/" [queryParams]="{ rotation: r.id }">Train this rotation</a>
+            }
+            <button class="btn" (click)="closeSummary()">Close</button>
+          </div>
+          <p class="small muted">Worst offenders first: highest miss rate, then the slowest.</p>
+        </div>
+      </div>
+    }
+  </div>
+}

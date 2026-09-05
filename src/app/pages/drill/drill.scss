@@ -1,0 +1,416 @@
+/* ---- top panel: which slots, how fast, how many (same look as the trainer's controls) */
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.setup-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px 14px;
+
+  .field {
+    flex: 0 1 auto;
+    min-width: 0;
+
+    &.grow {
+      flex: 1 1 220px;
+      max-width: 420px;
+    }
+    &.pace {
+      flex: 0 1 190px;
+    }
+    &.rounds {
+      flex: 0 1 130px;
+    }
+  }
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  > span:first-child,
+  .opt-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  select {
+    width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  /* same height as a select so the row lines up */
+  min-height: 34px;
+  align-items: center;
+}
+
+.options-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 18px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+
+  .hint {
+    font-size: 12px;
+  }
+
+  .actions {
+    margin-left: auto;
+  }
+
+  .btn-start {
+    min-width: 110px;
+  }
+}
+
+/* toggle pill: the native box is hidden, the pill lights up when checked */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.3;
+  cursor: pointer;
+  user-select: none;
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
+
+  input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    margin: 0;
+    pointer-events: none;
+  }
+
+  &:hover {
+    border-color: var(--muted);
+    color: var(--text);
+  }
+  &:has(input:checked) {
+    border-color: var(--gold);
+    background: rgba(201, 162, 39, 0.16);
+    color: var(--text);
+  }
+  &:has(input:disabled) {
+    cursor: default;
+    opacity: 0.7;
+  }
+}
+
+.empty {
+  text-align: center;
+  padding: 40px 20px;
+
+  .btn {
+    margin: 6px 4px 0;
+  }
+}
+
+/* ---- the arena: prompt, counts, weapons, bars */
+.arena {
+  position: relative;
+}
+
+.prompt {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 22px;
+  min-height: 130px;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: linear-gradient(#1f1d16, #141310);
+
+  &.live {
+    border-color: rgba(201, 162, 39, 0.5);
+  }
+
+  .what {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 220px;
+  }
+
+  .name {
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1.15;
+  }
+
+  .where {
+    font-size: 14px;
+  }
+
+  .keyhint {
+    display: inline-block;
+    padding: 1px 8px;
+    border: 1px solid #ffe27a;
+    border-radius: 4px;
+    color: #ffe27a;
+    font-weight: 700;
+    animation: hint-in 0.2s ease-out;
+  }
+
+  .idle {
+    text-align: center;
+
+    .name {
+      font-size: 18px;
+      font-weight: 600;
+    }
+  }
+
+  /* cadence: time left on the prompt */
+  .track {
+    height: 6px;
+    margin-top: 6px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+
+    .fill {
+      height: 100%;
+      background: var(--gold);
+      transition: width 40ms linear;
+    }
+  }
+}
+
+@keyframes hint-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.counts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 22px;
+  margin: 10px 0 12px;
+  font-size: 14px;
+}
+
+/* weapon switches: small icons like the trainer's queue strip, the expected one lit up in gold */
+.weapons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+
+  .opt-label {
+    margin-right: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  &.off {
+    opacity: 0.4;
+  }
+
+  .weapon {
+    position: relative;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: #000;
+    cursor: pointer;
+    overflow: hidden;
+
+    img {
+      width: 100%;
+      height: 100%;
+      padding: 4px;
+      box-sizing: border-box;
+      display: block;
+    }
+
+    .key {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      font-size: 9px;
+      text-align: center;
+      color: #ffe27a;
+      background: rgba(0, 0, 0, 0.7);
+    }
+
+    &.expected {
+      border-color: var(--gold);
+      box-shadow: 0 0 6px var(--gold), inset 0 0 4px rgba(201, 162, 39, 0.6);
+    }
+    &.flash-fired {
+      border-color: #4caf50;
+      box-shadow: 0 0 8px #4caf50;
+    }
+    &.flash-wrong {
+      border-color: #e53935;
+      box-shadow: 0 0 8px #e53935;
+    }
+  }
+}
+
+.action-bars {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  grid-auto-flow: dense;
+
+  .bar-cell {
+    position: relative;
+    min-width: 0;
+
+    &.wide {
+      grid-column: span 2;
+    }
+    /* bars outside the pool stay visible but dim */
+    &.off {
+      opacity: 0.35;
+    }
+  }
+}
+
+/* ---- summary card over the arena, like the trainer's */
+.finish-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 24px;
+  background: rgba(0, 0, 0, 0.62);
+  backdrop-filter: blur(2px);
+  border-radius: 6px;
+}
+
+.finish-card {
+  position: sticky;
+  top: 80px;
+  min-width: 320px;
+  max-width: 92%;
+  padding: 22px 28px;
+  text-align: center;
+  background: linear-gradient(#2a2718, #16150f);
+  border: 2px solid var(--gold);
+  border-radius: 8px;
+  box-shadow: 0 0 24px rgba(201, 162, 39, 0.5), 0 8px 30px rgba(0, 0, 0, 0.7);
+  animation: finish-pop 0.25s ease-out;
+
+  h2 {
+    margin: 0 0 6px;
+    font-size: 26px;
+    color: var(--gold);
+  }
+  &.stopped {
+    border-color: var(--muted);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
+    h2 {
+      color: var(--text);
+    }
+  }
+  .finish-score {
+    margin: 0 0 6px;
+    font-size: 20px;
+    font-weight: 700;
+  }
+  .finish-counts {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px 14px;
+    margin: 0 0 14px;
+  }
+  .finish-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin: 14px 0 8px;
+  }
+  .small {
+    margin: 0;
+  }
+}
+
+.offenders {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  text-align: left;
+
+  th,
+  td {
+    padding: 4px 8px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  th {
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .ability {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    img {
+      width: 22px;
+      height: 22px;
+      border-radius: 3px;
+      background: #000;
+    }
+  }
+  .key {
+    color: #ffe27a;
+    font-weight: 600;
+  }
+  tr.bad td {
+    color: #ff8a80;
+  }
+}
+
+@keyframes finish-pop {
+  from {
+    transform: scale(0.92);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
