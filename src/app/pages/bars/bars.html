@@ -16,7 +16,7 @@
         <input type="text" [ngModel]="activeProfile()?.name ?? ''" (ngModelChange)="renameProfile($event)" maxlength="40" />
       </label>
     </div>
-    <p class="muted small">A bar setup holds all 18 presets, the positions, the style bindings and the keys. Switch it on the Train page before you practise; PvME boss presets bring their own.</p>
+    <p class="muted small">Five bars like in game, 18 presets to fill them; boss setups bring their own bar setup.</p>
   </div>
   <div class="layout">
     <div class="panel presets">
@@ -43,7 +43,7 @@
           <span class="muted small">{{ usage(preset().id) || 'not shown anywhere yet' }}</span>
           <label class="copy">
             <span class="muted small">Copy from</span>
-            <select #copySel (change)="copyFrom(copySel.value); copySel.value = ''">
+            <select [value]="copyPick()" (change)="pickCopy($any($event.target).value)">
               <option value="">– preset –</option>
               @for (p of setup().presets; track p.id) {
                 @if (p.id !== preset().id && filled(p.id)) {
@@ -109,6 +109,8 @@
         </div>
       </div>
 
+      <details class="advanced">
+        <summary>Match my in-game bars (advanced)</summary>
       <div class="panel">
         <h2>Positions</h2>
         <p class="muted small">Which preset each of the five visible bars shows when no style binding applies.</p>
@@ -158,6 +160,7 @@
         <h2>Weapons</h2>
         <p class="muted small">The weapons you wield and carry are part of the <a routerLink="/loadout">loadout</a>; bars are bound per combat style, the wielded weapon's style decides which set is shown.</p>
       </div>
+      </details>
     </div>
   </div>
 }

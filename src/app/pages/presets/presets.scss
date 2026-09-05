@@ -126,3 +126,27 @@
     margin: 0 0 6px;
   }
 }
+
+.left-out {
+  summary {
+    cursor: pointer;
+    list-style: none;
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+
+    .toggle {
+      color: var(--gold);
+      text-decoration: underline dotted;
+    }
+  }
+
+  &[open] .toggle {
+    text-decoration: none;
+  }
+
+  p {
+    margin: 4px 0 0;
+  }
+}

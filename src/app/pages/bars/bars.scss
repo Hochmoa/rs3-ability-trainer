@@ -391,6 +391,15 @@
   }
 }
 
+.advanced {
+  > summary {
+    cursor: pointer;
+    margin: 4px 0 12px;
+    color: var(--gold);
+    font-weight: 600;
+  }
+}
+
 .positions,
 .weapons {
   display: grid;

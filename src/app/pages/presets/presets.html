@@ -1,9 +1,7 @@
 <div class="panel controls">
-  <h1>Boss presets</h1>
+  <h1>Boss setups</h1>
   <p class="muted small">
-    Gear and rotations from the <a href="https://github.com/pvme/pvme-guides" target="_blank" rel="noopener">PvME boss guides</a> (PvM Encyclopedia Discord).
-    "Add" creates a loadout with the preset's worn gear and backpack, imports the guide's rotations and puts the abilities they use on free action bars bound to the style, with keys from the default keyboard layout wherever you have none – nothing of yours is replaced, and it is playable right away.
-    Food, brews, familiars and other things the trainer does not simulate are left out.
+    <a href="https://github.com/pvme/pvme-guides" target="_blank" rel="noopener">PvME</a> boss setups. One click gives you the gear, the rotations, the bars and the keys.
   </p>
   <div class="chips">
     <button class="chip" [class.active]="styleFilter() === 'all'" (click)="styleFilter.set('all')">All styles</button>
@@ -28,7 +26,7 @@
       </div>
       <span class="actions">
         <button class="btn btn-sm" (click)="toggle(v.preset.id)">{{ open() === v.preset.id ? 'Hide' : 'Details' }}</button>
-        <button class="btn btn-sm btn-primary" (click)="load(v.preset)" [disabled]="busy() === v.preset.id">Add</button>
+        <button class="btn btn-sm btn-primary" (click)="load(v.preset)" [disabled]="busy() === v.preset.id">Use this setup</button>
       </span>
     </div>
     <div class="gear-row">
@@ -47,7 +45,7 @@
           <ul>
             @for (r of parse(v.preset); track r.name) {
               <li>
-                <b>{{ r.name }}</b> <span class="muted small">{{ r.steps.length }} steps{{ r.unknown.length ? ' · unknown: ' + r.unknown.join(', ') : '' }}</span>
+                <b>{{ r.name }}</b>&ngsp;<span class="muted small" [title]="r.unknown.length ? 'Kept as notes: ' + r.unknown.join(', ') : ''">{{ r.steps.length }} steps</span>
               </li>
             }
           </ul>
@@ -55,14 +53,17 @@
         <div>
           <h4>Source</h4>
           <p class="small"><a [href]="v.preset.guide" target="_blank" rel="noopener">PvME guide</a>@if (v.preset.presetUrl) { · <a [href]="v.preset.presetUrl" target="_blank" rel="noopener">PvME preset</a> }</p>
-          @if (v.preset.notes) { <p class="muted small">{{ v.preset.notes }}</p> }
+          @if (notes(v.preset); as n) { <p class="muted small">{{ n }}</p> }
           @if (v.preset.unknown.length) {
-            <p class="muted small">Not in the trainer: {{ v.preset.unknown.join(', ') }}</p>
+            <details class="left-out">
+              <summary class="muted small">Food, potions, auras and familiars are not simulated. <span class="toggle">what is left out</span></summary>
+              <p class="muted small">{{ v.preset.unknown.join(', ') }}</p>
+            </details>
           }
         </div>
       </div>
     }
   </div>
 } @empty {
-  @if (!loading() && data.loaded()) { <p class="muted">No presets for this style.</p> }
+  @if (!loading() && data.loaded()) { <p class="muted">No setups for this style.</p> }
 }

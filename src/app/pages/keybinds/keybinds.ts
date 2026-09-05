@@ -48,6 +48,8 @@ export class Keybinds {
   readonly POSITIONS = BAR_POSITION_NAMES;
   readonly ACTIONS = ACTIONS;
   readonly LAYOUTS = KEYBIND_LAYOUTS;
+  /** phones and tablets: no physical keyboard, so the "bind by pressing" wizard is hidden */
+  readonly coarse = typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches;
   readonly setup = this.storage.actionBars;
   readonly capturing = signal<Target | null>(null);
   /** target whose keybind was just taken away – highlighted red for two seconds */
@@ -260,7 +262,7 @@ export class Keybinds {
     }
     for (const w of this.carried()) stops.push({ target: { weapon: w.id }, entity: w, where: 'Weapon switch' });
     if (!stops.length) {
-      await this.dialogs.alert('The bars of this setup are empty – put abilities on them on the Action bars page (or add a boss preset) and come back.', 'Nothing to bind');
+      await this.dialogs.alert('The bars of this setup are empty – put abilities on them on the Action bars page (or add a boss setup) and come back.', 'Nothing to bind');
       return;
     }
     this.capturing.set(null);

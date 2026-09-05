@@ -5,6 +5,7 @@ import { DataService, Entity } from '../../core/data.service';
 import { Drill, DrillSource, DrillSummary, DrillTarget, WEAPON_POS, buildPool } from '../../core/drill';
 import { keybindFromEvent, keybindKey, keybindLabel } from '../../core/keybind.util';
 import { BAR_POSITIONS, BarShape, Style4, barLayout, entityKey, isStyle4, loadoutWeapons, visiblePresets } from '../../core/models';
+import { PresetsService } from '../../core/presets.service';
 import { StorageService } from '../../core/storage.service';
 import { slotAbilities } from '../../engine/morphs';
 import { AbilityIcon, IconState } from '../../shared/ability-icon';
@@ -111,6 +112,7 @@ function saveOptions(o: DrillOptions): void {
 export class DrillPage implements OnDestroy {
   readonly storage = inject(StorageService);
   readonly data = inject(DataService);
+  readonly presets = inject(PresetsService);
   private toast = inject(ToastService);
 
   readonly PACES = PACES;
