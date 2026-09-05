@@ -406,6 +406,15 @@
       {{ unknownSteps() }} step(s) of this rotation refer to abilities that were removed from the game. <a routerLink="/rotations">Edit the rotation</a> to fix it.
     </div>
   }
+  @if (adrenalineShort(); as a) {
+    <div class="panel warning">
+      {{ a.name }} opens the rotation and needs {{ a.need }}% adrenaline – the session starts with {{ a.have }}%, so the first press would be refused.
+      <div class="fixes">
+        <button class="btn btn-sm" (click)="setSetting('fullAdrenaline', true)" [disabled]="running()">Start with 100% adrenaline</button>
+        @if (advanced()) { <span class="muted small">or set a starting adrenaline in the pre-build</span> }
+      </div>
+    </div>
+  }
   @if (equipmentWarnings().length) {
     <div class="panel warning">
       The active loadout cannot perform:

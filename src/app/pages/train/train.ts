@@ -367,6 +367,19 @@ export class Train implements OnDestroy {
     const r = this.reachable();
     return this.stepEntities().filter((e): e is Entity => !!e && !e.key.startsWith('note:') && !r.has(e.key) && !seen.has(e.key) && !!seen.add(e.key));
   });
+  /** the first ability of the rotation needs more adrenaline than the session starts with (a rotation that opens with an ultimate at 0%) */
+  readonly adrenalineShort = computed<{ name: string; need: number; have: number } | null>(() => {
+    if (!this.data.loaded() || !this.data.loadoutReady()) return null;
+    const first = this.stepEntities().find((e) => e && (e.kind === 'ability' || e.kind === 'spec'));
+    if (!first) return null;
+    const settings = this.storage.settings();
+    const have = settings.fullAdrenaline ? 100 : (this.prebuild().adrenaline ?? this.storage.loadout().startAdrenaline ?? 0);
+    const probe = new TrainerEngine([], new Map(), { ...settings, loadout: this.resolved(), prebuild: this.effectivePrebuild() });
+    probe.start(0);
+    const need = probe.costOf(this.data.toEngineEntity(first)).need;
+    return need > have ? { name: first.name, need, have } : null;
+  });
+
   /** potions / bombs the rotation presses that are not in the backpack – one click puts them there */
   readonly missingSpecials = computed<Entity[]>(() => {
     if (!this.data.loadoutReady()) return [];
