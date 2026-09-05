@@ -3,7 +3,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { firstValueFrom, forkJoin } from 'rxjs';
 import { ruleFor } from '../engine/rules';
 import { EngineBuff, EngineEntity } from '../engine/trainer-engine';
-import { ACTIONS, Ability, Action, BossPreset, Buff, EntityKind, EquipSlot, Familiar, GearItem, ItemRef, Perk, Prayer, RotationStep, SPEC_KEY, SPELLBOOK_NAMES, SetEffect, Special, Spell, Style, Weapon, WeaponSpec, entityKey, scrollSpecial, weaponSlot } from './models';
+import { ACTIONS, Ability, Action, BossPreset, Buff, EntityKind, EquipSlot, Familiar, GearItem, ItemRef, Loadout, Perk, Prayer, RotationStep, SPEC_KEY, SPELLBOOK_NAMES, SetEffect, Special, Spell, Style, Weapon, WeaponSpec, entityKey, loadoutWeapons, scrollSpecial, weaponSlot } from './models';
 
 /**
  * The heavy data files, loaded on demand with `DataService.ensure()`: the full gear and weapon catalogs (~1 MB each),
@@ -285,6 +285,13 @@ export class DataService {
     const sp = this.specialById().get(ref.id);
     if (!sp) return null;
     return { ref, name: sp.name, icon: sp.icon, slot: null, tier: 0, style: null, gizmoSlots: 0, set: null, passive: null, special: sp, entityKey: entityKey('special', sp.id) };
+  }
+
+  /** the weapons a loadout carries (in hand + backpack) as entities, in `loadoutWeapons` order – unknown items are skipped */
+  carriedWeapons(l: Loadout): Entity[] {
+    return loadoutWeapons(l)
+      .map((id) => this.get('weapon:' + id))
+      .filter((e): e is Entity => !!e);
   }
 
   /** Entity of a rotation step; undefined for notes and for things that left the game. */

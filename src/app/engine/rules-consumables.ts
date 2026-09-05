@@ -16,9 +16,9 @@ export const POWERBURST_TICKS = 10;
 /** Surge / Dive / Bladed Dive cooldown while the Powerburst of acceleration runs */
 export const ACCELERATION_COOLDOWN_TICKS = 2;
 /** the combat dummy stands for 60 seconds */
-export const COMBAT_DUMMY_TICKS = 100;
+const COMBAT_DUMMY_TICKS = 100;
 /** adrenaline per tick while hitting the dummy – the engine's "recharge adrenaline" rate (trainer-engine.ts RECHARGE_PER_TICK) */
-export const COMBAT_DUMMY_ADRENALINE_PER_TICK = 10;
+const COMBAT_DUMMY_ADRENALINE_PER_TICK = 10;
 
 export const CONSUMABLE_BUFFS: BuffDef[] = [
   { id: 'powerburst-of-vitality', name: 'Powerburst of vitality', kind: 'Buff', on: 'self', durationTicks: POWERBURST_TICKS, maxLifePointsMult: 2, icon: 'assets/specials/powerburst-of-vitality.png',

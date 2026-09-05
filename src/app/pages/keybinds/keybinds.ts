@@ -3,7 +3,7 @@ import { RouterLink } from '@angular/router';
 import { DataService, Entity } from '../../core/data.service';
 import { DEFAULT_LAYOUT_ID, KEYBIND_LAYOUTS, applyLayout, keybindLayout } from '../../core/keybind-layouts';
 import { isReservedKeybind, keybindFromEvent, keybindKey, keybindLabel } from '../../core/keybind.util';
-import { ACTIONS, ActionBarSetup, BAR_POSITION_NAMES, Keybind, loadoutWeapons } from '../../core/models';
+import { ACTIONS, ActionBarSetup, BAR_POSITION_NAMES, Keybind } from '../../core/models';
 import { StorageService } from '../../core/storage.service';
 import { DialogService } from '../../shared/dialog';
 import { ToastService } from '../../shared/toast';
@@ -104,11 +104,7 @@ export class Keybinds {
   }
 
   /** weapons of the active loadout (in hand + switches) */
-  readonly carried = computed<Entity[]>(() =>
-    loadoutWeapons(this.storage.loadout())
-      .map((id) => this.data.get('weapon:' + id))
-      .filter((e): e is Entity => !!e),
-  );
+  readonly carried = computed<Entity[]>(() => this.data.carriedWeapons(this.storage.loadout()));
 
   weaponLabel(id: string): string {
     return keybindLabel(this.setup().weaponKeybinds[id]);

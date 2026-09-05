@@ -11,8 +11,8 @@ function make(responder: { get: (url: string) => Observable<unknown> }): DataSer
   return Injector.create({ providers: [DataService, { provide: HttpClient, useValue: http }] }).get(DataService);
 }
 
-const ok = { get: () => of([]) };
-const down = { get: () => throwError(() => new Error('offline')) };
+const ok: { get: (url: string) => Observable<unknown> } = { get: () => of([]) };
+const down: { get: (url: string) => Observable<unknown> } = { get: () => throwError(() => new Error('offline')) };
 
 describe('DataService load errors', () => {
   it('sets loaded on success and no error', () => {

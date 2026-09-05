@@ -21,6 +21,23 @@ export interface RotationRow {
 /** clock skew we tolerate before calling a local edit "newer" than the server copy */
 const SKEW_MS = 5000;
 
+export type RotationMergeDecision = 'upload' | 'download' | 'delete';
+
+/**
+ * What happens to one local rotation on login, given the server's `updated_at` (ms) of the same id – or null when
+ * the server has no such row:
+ * - not on the server: synced before → it was deleted on another device → delete locally; never synced → upload
+ * - synced before and edited after that sync, clearly newer than the server copy → upload
+ * - never synced but edited clearly after the server copy → upload
+ * - otherwise the server copy wins → download
+ */
+export function decideRotationMerge(mine: Pick<Rotation, 'updatedAt' | 'syncedAt'>, serverMs: number | null): RotationMergeDecision {
+  if (serverMs === null) return mine.syncedAt !== undefined ? 'delete' : 'upload';
+  if (mine.syncedAt !== undefined && mine.updatedAt > mine.syncedAt && mine.updatedAt > serverMs + SKEW_MS) return 'upload';
+  if (mine.syncedAt === undefined && mine.updatedAt > serverMs + SKEW_MS) return 'upload';
+  return 'download';
+}
+
 /**
  * Mirrors rotations, keybinds and session summaries to Supabase while logged in.
  * Local IndexedDB stays the cache; the server is the truth once a user is signed in:
@@ -95,25 +112,13 @@ export class SyncService {
 
     for (const [id, row] of server) {
       const mine = local.get(id);
-      const serverMs = Date.parse(row.updated_at);
-      if (!mine) {
-        await this.storage.putRotation(this.fromRow(row, mine));
-      } else if (mine.updatedAt > serverMs + SKEW_MS && mine.syncedAt !== undefined && mine.updatedAt > mine.syncedAt) {
-        await this.upsertRotation(mine); // local edit is newer
-      } else if (mine.syncedAt === undefined && mine.updatedAt > serverMs + SKEW_MS) {
-        await this.upsertRotation(mine); // never synced but edited after the server copy
-      } else {
-        await this.storage.putRotation(this.fromRow(row, mine));
-      }
+      if (mine && decideRotationMerge(mine, Date.parse(row.updated_at)) === 'upload') await this.upsertRotation(mine);
+      else await this.storage.putRotation(this.fromRow(row, mine));
     }
     for (const [id, mine] of local) {
-      if (!server.has(id)) {
-        if (mine.syncedAt !== undefined) {
-          await this.storage.removeRotation(id); // was deleted on another device
-        } else {
-          await this.upsertRotation(mine); // local-only → upload
-        }
-      }
+      if (server.has(id)) continue;
+      if (decideRotationMerge(mine, null) === 'delete') await this.storage.removeRotation(id);
+      else await this.upsertRotation(mine);
     }
   }
 

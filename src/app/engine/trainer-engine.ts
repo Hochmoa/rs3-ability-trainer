@@ -116,7 +116,7 @@ export interface RevolutionConfig extends RevolutionSettings {
 }
 
 /** abilities Revolution never triggers although they are GCD abilities (wiki patch notes) */
-export const REVOLUTION_NEVER = new Set(['weapon-special-attack', 'essence-of-finality', 'regenerate']);
+const REVOLUTION_NEVER = new Set(['weapon-special-attack', 'essence-of-finality', 'regenerate']);
 
 export type UsableReason = 'ok' | 'weapon' | 'book' | 'adrenaline' | 'cooldown' | 'requirement';
 
@@ -1692,7 +1692,6 @@ export class TrainerEngine {
 
   /** Rolls and applies the damage of one hit (engine/damage.ts). Returns what the hit would have dealt without its critical strike (Perfect Equilibrium stores that). `hitScale`: the hit chance the damage potential is scaled by. */
   private dealHit(h: ScheduledHit, crit: boolean, hitScale = 1): number {
-    const l = this.loadout;
     const rules = (h.rule?.damageRules ?? []).filter((d) => this.conditionMet(d.when, h.tick, h.index, h.flags));
     let critFactor = 1;
     let amount: number;

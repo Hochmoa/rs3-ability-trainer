@@ -55,7 +55,8 @@ Live at **https://rs3trainer.hochware.com** (GitHub Pages).
   Zamorak and Raksha use the wiki's auto-attack styles and 5-tick rate (specials are not simulated).
 - Two bars above the queue show the tick (0.6 s) and the GCD (1.8 s) progress, a third one the adrenaline.
 - Rotations, keybinds (with Ctrl/Shift/Alt), loadout, settings and session results are stored in IndexedDB after you
-  accept the storage banner.
+  accept the storage banner. Only the newest 50 session results are kept locally (each carries a copy of the settings
+  and the loadout); older ones are dropped when a new session is saved.
 
 - **Ability interactions** are simulated the way the wiki documents them (`docs/research/*.md`, ~190 rules,
   `src/app/engine/rules-*.ts`): style resources (Bloodlust, Necrosis, Residual Souls, Storm Shards), cooldown

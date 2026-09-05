@@ -4,7 +4,7 @@ import { AbilityRule, BuffDef, Effect } from './rules-model';
 const W = 'https://runescape.wiki/w/';
 
 /** the trainer assumes level 99 in every combat skill (engine/damage.ts); the bone shields scale with the Necromancy level */
-export const NECROMANCY_LEVEL = 99;
+const NECROMANCY_LEVEL = 99;
 /** Zemouregal's nexus passive Fortified Bones: +15 levels on the Bone Shield */
 export const FORTIFIED_BONES_BONUS = 15;
 

@@ -45,8 +45,11 @@ export class App {
     // before the first navigation settles: guess from the URL so the shell does not flash in the popout
     { initialValue: typeof location !== 'undefined' && /(^|\/)focus\/?$/.test(location.pathname) },
   );
-  /** created at start-up so the login effect and the change hooks are wired immediately */
-  private readonly sync = inject(SyncService);
-  private readonly barsSync = inject(BarsSyncService);
-  private readonly setupSync = inject(SetupSyncService);
+
+  constructor() {
+    // the sync services are created at start-up so their login effects and change hooks are wired immediately
+    inject(SyncService);
+    inject(BarsSyncService);
+    inject(SetupSyncService);
+  }
 }

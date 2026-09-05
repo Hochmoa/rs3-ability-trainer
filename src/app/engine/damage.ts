@@ -16,7 +16,7 @@ export function levelPart(level = 99): number {
 }
 
 /** the trainer's base level in every combat skill */
-export const BASE_LEVEL = 99;
+const BASE_LEVEL = 99;
 
 /**
  * Overloads boost every combat level by ⌊level × pct⌋ + flat for the whole session (36 min per flask, reapplied every 15 s):
@@ -37,7 +37,7 @@ export function boostedLevel(choice: OverloadChoice | undefined, base = BASE_LEV
 }
 
 /** skills an overload boosts (Constitution and Prayer are not combat-boosted by overloads) */
-export const OVERLOAD_SKILLS: CombatSkill[] = ['attack', 'strength', 'ranged', 'magic', 'necromancy', 'defence'];
+const OVERLOAD_SKILLS: CombatSkill[] = ['attack', 'strength', 'ranged', 'magic', 'necromancy', 'defence'];
 
 /** every skill's level with the overload applied */
 export function boostedLevels(levels: Record<CombatSkill, number>, choice: OverloadChoice | undefined): Record<CombatSkill, number> {
@@ -99,7 +99,7 @@ export function abilityDamageOf(main: Weapon | null, off: Weapon | null, two: We
  * (tier 90: 22.5 / 33.7 / 28.1 / 14.0 / 14.0 = 112.3). Only the fallback for items whose wiki row has no bonus fields –
  * gear.json carries the wiki's numbers (Vestments of havoc hood 27.5 = damage tier 110 × 25%).
  */
-export const POWER_ARMOUR_SHARE: Partial<Record<GearItem['slot'], number>> = { head: 0.25, body: 0.375, legs: 0.3125, hands: 0.15625, feet: 0.15625, neck: 0.575, ring: 0.375 };
+const POWER_ARMOUR_SHARE: Partial<Record<GearItem['slot'], number>> = { head: 0.25, body: 0.375, legs: 0.3125, hands: 0.15625, feet: 0.15625, neck: 0.575, ring: 0.375 };
 
 /** gear.json / weapons.json `bonus` key of a style */
 export const BONUS_KEY: Record<Style4, keyof DamageBonus> = { Melee: 'melee', Ranged: 'ranged', Magic: 'magic', Necromancy: 'necromancy' };
@@ -125,7 +125,7 @@ export function critMultiplier(level = 99): number {
 }
 
 /** maximum life points from Constitution – runescape.wiki/w/Life_points: 100 per level (1,000 at level 10, 9,900 at 99); worn armour adds its life point bonus */
-export const LP_PER_CONSTITUTION_LEVEL = 100;
+const LP_PER_CONSTITUTION_LEVEL = 100;
 export function baseLifePoints(constitution: number): number {
   return LP_PER_CONSTITUTION_LEVEL * Math.max(10, Math.floor(constitution));
 }

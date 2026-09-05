@@ -13,7 +13,7 @@ interface Group {
 
 const STANDARD_STAT_GROUPS = ['defence', 'strength', 'melee-accuracy', 'ranged-accuracy', 'ranged-damage', 'magic-accuracy', 'magic-damage', 'necro-accuracy', 'necro-damage'];
 
-export const PRAYER_GROUPS: Group[] = [
+const PRAYER_GROUPS: Group[] = [
   // ---- standard book
   { book: 'Prayers', name: 'overhead', ids: ['protect-from-melee', 'protect-from-ranged', 'protect-from-magic', 'protect-from-necromancy', 'retribution', 'redemption', 'smite'] },
   { book: 'Prayers', name: 'defence', ids: ['thick-skin', 'rock-skin', 'steel-skin'] },
@@ -59,7 +59,7 @@ const BOOK_HINT = new Map<string, PrayerBook>([
   ['deflect-summoning', 'Curses'], ['berserker', 'Curses'], ['chronicle-attraction', 'Curses'], ['superheat-form', 'Curses'],
 ]);
 
-export function groupsOf(prayerId: string): Group[] {
+function groupsOf(prayerId: string): Group[] {
   return PRAYER_GROUPS.filter((g) => g.ids.includes(prayerId));
 }
 

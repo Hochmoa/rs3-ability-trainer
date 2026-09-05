@@ -4,7 +4,7 @@ import { RouterLink } from '@angular/router';
 import { groupCatalog } from '../../core/catalog-groups';
 import { DataService, Entity } from '../../core/data.service';
 import { keybindLabel } from '../../core/keybind.util';
-import { ActionBarSetup, BAR_POSITION_NAMES, RotationStep, SPELLBOOKS, SPELLBOOK_NAMES, STYLES, STYLES4, Style4, WEAPON_TYPES, WeaponType } from '../../core/models';
+import { ActionBarSetup, BAR_POSITION_NAMES, RotationStep, SPELLBOOKS, SPELLBOOK_NAMES, STYLES, STYLES4, Style4, WEAPON_TYPES } from '../../core/models';
 import { isObscureEntity } from '../../core/obscure';
 import { StorageService } from '../../core/storage.service';
 import { AbilityIcon } from '../../shared/ability-icon';

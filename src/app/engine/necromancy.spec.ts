@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import ABILITIES from '../../../public/data/abilities.json';
-import { Ability } from '../core/models';
+import { Ability, enemyWithStats } from '../core/models';
 import { ResolvedLoadout, defaultResolvedLoadout } from './loadout-resolved';
 import { EngineConfig, EngineEntity, TICK_MS, TrainerEngine } from './trainer-engine';
 
@@ -194,7 +194,7 @@ describe('necromancy: spirits', () => {
     e.update(6 * T);
     expect(hits(e, 'ability:command-phantom-guardian')).toEqual([{ amount: 3000, tick: 5, crit: false, dot: false }]);
     expect(e.stack('valour')).toBe(0);
-    const v = make(['necromancy'], {}, { prebuild: { stacks: {}, spirits: ['phantom-guardian'], abilities: [], prayers: [] }, enemy: { enabled: true, preset: null, name: 'x', styles: ['Melee'], pattern: 'cycle', streak: 1, intervalTicks: 5, warningTicks: 3, firstAttackTicks: 8, lifePoints: 0 } });
+    const v = make(['necromancy'], {}, { prebuild: { stacks: {}, spirits: ['phantom-guardian'], abilities: [], prayers: [] }, enemy: enemyWithStats({ enabled: true, preset: null, name: 'x', styles: ['Melee'], pattern: 'cycle', streak: 1, intervalTicks: 5, warningTicks: 3, firstAttackTicks: 8, lifePoints: 0 }) });
     v.update(28 * T);
     expect(v.stack('valour')).toBe(5); // attacks at 8, 13, 18, 23, 28
   });

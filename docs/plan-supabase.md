@@ -134,3 +134,26 @@ Resend-SMTP, Account löschen, Likes/Rating, "Train directly from explorer" ohne
 2. **Anzeigename ist Pflicht bei der Registrierung.**
 3. Lokale Rotationen werden beim Login **automatisch hochgeladen**.
 4. **Keybinds werden synchronisiert** (Tabelle `keybinds`, siehe oben).
+
+## 9. Stand 2026-09-05 (Kurzfassung – die Abschnitte oben sind der Plan von 0001, nicht der Ist-Zustand)
+
+- Projekt: Supabase Free Tier, Region **eu-west-1 (Irland)** – nicht Frankfurt (siehe `environment.ts`, Privacy-Seite).
+- Migrationen 0001–0010 (`supabase/migrations/`): 0001 profiles/rotations/keybinds/sessions + `public_rotations`,
+  0002/0004/0008 Step-Arten (`weapon`, `spec`, `special`, `action`, `spell`, `note` …, heute 8), 0003 `action_bars`,
+  0005 `feedback` (anon-Insert), 0006 Rollen user/moderator/admin, Sperren, `admin_*`-RPCs, 0007 `setups` +
+  `list_public_setups` / `get_public_setup` (definer, anon-aufrufbar), 0009 `client_errors` (anon-Insert, Staff liest),
+  0010 Härtung (unten).
+- `copy_rotation(source, new_id)` – der Client vergibt die UUID; die Kopie ist privat.
+- Synchronisiert werden Rotationen, Keybinds, Action Bars **und** Settings + Loadouts + Enemy (`setups`); Sessions
+  werden als Zusammenfassung hochgeladen, lokal bleiben die neuesten 50. Account löschen ist ausgeliefert
+  (`delete_my_account`).
+- Anon darf: `public_rotations` lesen, `display_name_taken`, `list_public_setups`, `get_public_setup` aufrufen,
+  `feedback` und `client_errors` einfügen (seit 0010 gedrosselt). Sonst nichts – seit 0010 auch keine
+  Tabellenrechte mehr auf sessions/setups/keybinds/action_bars.
+- 0010: `profiles` nur eigene Zeile oder Staff lesbar, Anzeigenamen über die View `public_profiles`
+  (`public_rotations` joint darauf); `client_errors.extra` ≤ 4 kB und max. 60 Inserts pro Fingerprint und Stunde;
+  `feedback` max. 20 pro User-Agent und Stunde; `admin_set_role` meldet unbekannte User; `keybinds.updated_at`
+  ist Serverzeit (Trigger); `admin_*` nur für angemeldete User ausführbar.
+- Offen: `setups.is_public` ist weiterhin default **true** (Setup wird beim ersten Login ohne Nachfrage
+  veröffentlicht) – Produktentscheidung steht aus. Keybind-Merge: Server gewinnt immer (kein "neueres updated_at
+  gewinnt" wie in §4 geplant).

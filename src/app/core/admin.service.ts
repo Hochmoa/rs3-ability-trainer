@@ -107,14 +107,17 @@ export class AdminService {
     return (data ?? []) as AdminRotation[];
   }
 
+  /** RLS lets only admins write other users' rotations: a moderator gets 0 rows and no error, so the write is verified */
   async updateRotation(id: string, patch: { name?: string; is_public?: boolean }): Promise<void> {
-    const { error } = await (await this.db()).from('rotations').update(patch).eq('id', id);
+    const { data, error } = await (await this.db()).from('rotations').update(patch).eq('id', id).select('id');
     if (error) throw error;
+    if (!data?.length) throw new Error('Not changed – only admins may edit rotations of other users');
   }
 
   async deleteRotation(id: string): Promise<void> {
-    const { error } = await (await this.db()).from('rotations').delete().eq('id', id);
+    const { data, error } = await (await this.db()).from('rotations').delete().eq('id', id).select('id');
     if (error) throw error;
+    if (!data?.length) throw new Error('Not deleted – only admins may delete rotations of other users');
   }
 
   async listFeedback(): Promise<FeedbackRow[]> {

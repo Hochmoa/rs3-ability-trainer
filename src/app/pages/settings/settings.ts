@@ -20,6 +20,7 @@ import { ToastService } from '../../shared/toast';
           <span>Ability queueing</span>
         </label>
         <small class="indent">Same as the in-game option: on, a press during the global cooldown is queued; off, it is ignored and you press in the last tick.</small>
+        <label class="check"><input type="checkbox" [ngModel]="s().autoAttacks" (ngModelChange)="set('autoAttacks', $event)" /><span>Auto basic attacks – when the global cooldown ends with nothing pressed, the wielded style's basic attack fires and a late press waits a whole GCD</span></label>
         <label class="check">
           <input type="checkbox" [ngModel]="s().loop" (ngModelChange)="set('loop', $event)" />
           <span>Loop the rotation until stopped (Esc)</span>
