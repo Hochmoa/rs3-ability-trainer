@@ -111,8 +111,8 @@ describe('revolution: picking the next ability', () => {
     e.update(4 * T); // GCD ended at tick 4, but the channel's last hit lands on tick 5
     expect(e.results.length).toBe(1);
     expect(e.channel?.key).toBe('ability:chan');
-    e.update(5 * T); // last hit landed: the channel is over, Revolution moves on (chan is on cooldown)
-    expect(e.results[1]).toMatchObject({ key: 'ability:a', auto: true, firedAtTick: 5, outcome: 'late', lateTicks: 1 });
+    e.update(5 * T); // last hit landed: the channel is over, Revolution moves on (chan is on cooldown) – on time, the ability is due at the channel's end
+    expect(e.results[1]).toMatchObject({ key: 'ability:a', auto: true, firedAtTick: 5, outcome: 'perfect', lateTicks: 0 });
   });
 
   it('re-reads the bar after a weapon switch through resolveBar', () => {
