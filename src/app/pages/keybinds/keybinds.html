@@ -7,6 +7,49 @@
   </p>
 </div>
 
+<div class="panel tools">
+  <div class="tool">
+    <label class="field">
+      <span>Layout</span>
+      <select [value]="layoutId()" (change)="layoutId.set($any($event.target).value)" [disabled]="!!wizard()">
+        @for (l of LAYOUTS; track l.id) {
+          <option [value]="l.id">{{ l.name }}</option>
+        }
+      </select>
+    </label>
+    <button class="btn btn-sm btn-primary" (click)="applyLayout(true)" [disabled]="!!wizard()" title="Every slot key, weapon switch and client action of the bar setup is replaced">Apply layout</button>
+    <button class="btn btn-sm" (click)="applyLayout(false)" [disabled]="!!wizard()" title="Keeps your keys and only fills slots that have none (with keys nobody else uses)">Fill empty slots only</button>
+  </div>
+  <p class="muted small">Bar setup "{{ profileName() }}". {{ layout().description }}</p>
+  <div class="tool">
+    <button class="btn btn-sm" (click)="startWizard()" [disabled]="!!wizard()">Bind by pressing…</button>
+    <span class="muted small">Walks through every filled slot of every bar (then the weapon switches): press the key you want for each one. Esc skips a slot, Backspace clears it. Keys used twice are listed at the end.</span>
+  </div>
+</div>
+
+@if (wizard(); as w) {
+  <div class="panel wizard">
+    @if (wizardStop(); as stop) {
+      <div class="wizard-row">
+        @if (stop.entity) {
+          <img class="wizard-icon" [src]="stop.entity.icon" [alt]="stop.entity.name" [entityTip]="stop.entity" />
+        }
+        <div class="wizard-text">
+          <div class="wizard-name">{{ stop.entity?.name ?? 'Slot' }}</div>
+          <div class="muted small">{{ stop.where }}@if (wizardCurrentKey()) { · currently <b>{{ wizardCurrentKey() }}</b> }</div>
+        </div>
+        <div class="wizard-press">Press a key…</div>
+        <div class="wizard-progress">{{ w.index + 1 }} / {{ w.stops.length }}</div>
+      </div>
+      <div class="wizard-actions">
+        <span class="muted small">Esc = skip · Backspace = clear · bound {{ w.bound }}, skipped {{ w.skipped }}</span>
+        <button class="btn btn-sm" (click)="finishWizard(true)">Finish now</button>
+        <button class="btn btn-sm" (click)="finishWizard(false)">Cancel</button>
+      </div>
+    }
+  </div>
+}
+
 @for (name of POSITIONS; track $index; let pos = $index) {
   <div class="panel bar-keys">
     <div class="bar-head">
@@ -20,6 +63,7 @@
           [class.capturing]="isCapturing({ pos: pos, slot: i })"
           [class.conflict]="slotConflicts(pos, i).length > 0"
           [class.flash]="isFlashing({ pos: pos, slot: i })"
+          [class.current]="isWizardCurrent({ pos: pos, slot: i })"
           (click)="capture({ pos: pos, slot: i })"
           [title]="slotConflicts(pos, i).length ? 'Also used by ' + slotConflicts(pos, i).join(', ') : 'Slot ' + (i + 1)"
         >
@@ -52,6 +96,7 @@
         class="weapon"
         [class.capturing]="isCapturing({ weapon: w.id })"
         [class.conflict]="weaponConflicts(w).length > 0"
+        [class.current]="isWizardCurrent({ weapon: w.id })"
         (click)="capture({ weapon: w.id })"
         [title]="weaponConflicts(w).length ? 'Also used by ' + weaponConflicts(w).join(', ') : w.name"
         [entityTip]="w"

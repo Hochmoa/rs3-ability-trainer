@@ -1,6 +1,7 @@
 import { Injectable, computed, signal } from '@angular/core';
 import { IDBPDatabase, deleteDB, openDB } from 'idb';
 import { Subject } from 'rxjs';
+import { DEFAULT_LAYOUT_ID, applyLayout, defaultActionBarsWithKeys, hasNoSlotKeys, keybindLayout } from './keybind-layouts';
 import { ActionBarSetup, BarProfile, BarProfileData, DEFAULT_BAR_PROFILE_ID, DEFAULT_ENEMY, enemyWithStats, activateProfile, profileData, snapshotActiveProfile, DEFAULT_SETTINGS, EnemyConfig, Equipment, INVENTORY_SIZE, ItemRef, Keybind, LegacyLoadout, Loadout, Prebuild, Rotation, RotationStep, Session, SetupBundle, SetupMeta, Settings, defaultActionBars, migrateLegacyLoadout, newLoadout } from './models';
 
 const DB_NAME = 'rs3trainer';
@@ -24,7 +25,7 @@ export class StorageService {
   /** rotation id → pre-built state the session starts with */
   readonly prebuilds = signal<Record<string, Prebuild>>({});
   /** action bar presets, positions, style bindings, slot + weapon keybinds (the active bar profile) */
-  readonly actionBars = signal<ActionBarSetup>(defaultActionBars());
+  readonly actionBars = signal<ActionBarSetup>(defaultActionBarsWithKeys());
   /** named bar setups, switchable on the Train page */
   readonly barProfiles = computed<BarProfile[]>(() => this.actionBars().profiles ?? []);
   readonly activeBarProfileId = computed(() => this.actionBars().activeProfileId ?? DEFAULT_BAR_PROFILE_ID);
@@ -200,7 +201,7 @@ export class StorageService {
     }
     this.keybindsReplaced.next(keybinds);
 
-    const bars = b.actionBars ? mergeActionBars(b.actionBars) : defaultActionBars();
+    const bars = b.actionBars ? mergeActionBars(b.actionBars) : defaultActionBarsWithKeys();
     delete bars.syncedAt;
     await this.saveActionBars(bars);
   }
@@ -243,10 +244,14 @@ export class StorageService {
     await this.saveActionBars(activateProfile(this.actionBars(), id));
   }
 
-  /** Adds a profile (default: the current keys with empty bars) and returns its id. */
+  /**
+   * Adds a profile (default: empty bars with the current keys – or, when the current profile has no slot keys at
+   * all, the default keyboard layout) and returns its id.
+   */
   async addBarProfile(name: string, data?: BarProfileData, presetId?: string): Promise<string> {
     const cur = snapshotActiveProfile(this.actionBars());
-    const base = data ?? { ...profileData(cur), ...profileData(defaultActionBars()), slotKeybinds: structuredClone(cur.slotKeybinds), weaponKeybinds: structuredClone(cur.weaponKeybinds), actionKeybinds: structuredClone(cur.actionKeybinds), layout: cur.layout };
+    let base = data ?? { ...profileData(cur), ...profileData(defaultActionBars()), slotKeybinds: structuredClone(cur.slotKeybinds), weaponKeybinds: structuredClone(cur.weaponKeybinds), actionKeybinds: structuredClone(cur.actionKeybinds), layout: cur.layout };
+    if (!data && hasNoSlotKeys(base)) base = applyLayout(base, keybindLayout(DEFAULT_LAYOUT_ID), { overwrite: false }).data;
     const profile: BarProfile = { ...profileData(base), id: crypto.randomUUID(), name: name.slice(0, 40) || 'Bar setup', presetId };
     await this.saveActionBars({ ...cur, profiles: [...cur.profiles!, profile] });
     return profile.id;
@@ -339,7 +344,7 @@ export class StorageService {
     this.loadouts.set([newLoadout()]);
     this.activeLoadoutId.set(this.loadouts()[0].id);
     this.enemy.set({ ...DEFAULT_ENEMY });
-    this.actionBars.set(defaultActionBars());
+    this.actionBars.set(defaultActionBarsWithKeys());
     this.setupMeta.set({});
     this.keybinds.set({});
     this.rotations.set([]);

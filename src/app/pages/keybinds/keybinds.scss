@@ -3,6 +3,98 @@
   margin-bottom: 6px;
 }
 
+.tools {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  p {
+    margin: 0;
+  }
+}
+
+.tool {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+
+  .field {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+  }
+}
+
+.wizard {
+  border-color: var(--gold);
+  box-shadow: 0 0 8px rgba(255, 226, 122, 0.25);
+}
+
+.wizard-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.wizard-icon {
+  width: 40px;
+  height: 40px;
+  border: 1px solid #3a3730;
+  border-radius: 4px;
+  background: #0a0a0c;
+}
+
+.wizard-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.wizard-name {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.wizard-press {
+  padding: 4px 12px;
+  border: 1px dashed var(--gold);
+  border-radius: 4px;
+  color: #ffe27a;
+  font-family: ui-monospace, Consolas, monospace;
+  animation: blink 1s infinite;
+}
+
+.wizard-progress {
+  min-width: 64px;
+  text-align: right;
+  color: var(--gold);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.wizard-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+
+  .muted {
+    flex: 1;
+  }
+}
+
+.slot.current,
+.weapon.current {
+  border-color: var(--gold);
+  box-shadow: 0 0 6px var(--gold);
+}
+
 .bar-keys {
   padding: 10px 14px;
 }

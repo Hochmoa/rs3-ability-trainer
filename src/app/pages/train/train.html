@@ -7,6 +7,7 @@
     <p>Build one or paste PvME notation, drop the abilities onto your bars, bind your keys, press Start.</p>
     <p class="muted">The trainer plays it back on the game clock (ticks, global cooldown, adrenaline, cooldowns, a bit of ping) and tells you after every press whether you were on the tick, early or late.</p>
     <a class="btn btn-primary" routerLink="/rotations">Create a rotation</a>
+    <button class="btn" (click)="presets.addDemo()" title="Adds the Rasial preset from PvME with gear, rotations, bars and a default keyboard layout – nothing to configure">Load a demo</button>
   </div>
 } @else {
   <div class="panel controls">
