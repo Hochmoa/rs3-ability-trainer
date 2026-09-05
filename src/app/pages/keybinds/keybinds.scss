@@ -118,6 +118,17 @@
   gap: 3px;
 }
 
+.caption {
+  margin: -6px 0 14px 4px;
+}
+
+/* phones: two rows of seven per bar, like the bars on the Train page */
+@media (max-width: 640px) {
+  .slots {
+    grid-template-columns: repeat(7, 1fr);
+  }
+}
+
 .slot {
   position: relative;
   aspect-ratio: 1;

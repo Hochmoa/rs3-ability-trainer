@@ -4,10 +4,9 @@
 } @else if (!anyKeys()) {
   <div class="panel empty">
     <h2>No keybinds yet</h2>
-    <p>The drill asks for random abilities from your bars and scores the key you press – it needs bound keys.</p>
-    <p class="muted">Put abilities on your bars, then bind keys to the slots.</p>
-    <a class="btn btn-primary" routerLink="/keybinds">Bind keys</a>
-    <a class="btn" routerLink="/bars">Action bars</a>
+    <p>The drill asks for random abilities from your bars and scores the key you press.</p>
+    <button class="btn btn-primary" (click)="presets.addDemo()">Load a demo setup</button>
+    <p class="muted small">or <a routerLink="/bars">set up your own bars</a></p>
   </div>
 } @else {
   <div class="panel controls">
@@ -24,7 +23,7 @@
         </div>
       </div>
       <div class="field">
-        <span>Also</span>
+        <span>Include</span>
         <div class="pills">
           <label class="pill" title="The weapon switch keys of the active loadout">
             <input type="checkbox" [checked]="options().weapons" (change)="set('weapons', !options().weapons)" [disabled]="running()" />
@@ -37,7 +36,7 @@
         </div>
       </div>
       <label class="field grow" title="All keybound slots, or only the ones a rotation uses">
-        <span>Pool</span>
+        <span>Which abilities</span>
         <select [ngModel]="options().rotation ?? ''" (ngModelChange)="pickRotation($event)" [disabled]="running()">
           <option value="">all keybound slots</option>
           @for (r of storage.rotations(); track r.id) {
@@ -46,7 +45,7 @@
         </select>
       </label>
       <label class="field pace" title="Wait until you press the right key, or move on at a fixed cadence (a missed prompt counts as a miss)">
-        <span>Pace</span>
+        <span>Speed</span>
         <select [ngModel]="options().paceMs" (ngModelChange)="set('paceMs', +$event)" [disabled]="running()">
           @for (p of PACES; track p.ms) {
             <option [ngValue]="p.ms">{{ p.label }}</option>
@@ -54,7 +53,7 @@
         </select>
       </label>
       <label class="field rounds">
-        <span>Rounds</span>
+        <span>How many</span>
         <select [ngModel]="options().rounds" (ngModelChange)="set('rounds', +$event)" [disabled]="running()">
           @for (r of ROUNDS; track r.n) {
             <option [ngValue]="r.n">{{ r.label }}</option>
@@ -114,7 +113,7 @@
     <div class="counts">
       <span title="Correct presses"><b class="good">{{ stats().hits }}</b> hits</span>
       <span title="Wrong keys and prompts that ran out"><b class="bad">{{ stats().misses }}</b> misses</span>
-      <span title="Average time from the prompt to the correct key">Ø <b>{{ ms(stats().avgMs) }}</b></span>
+      <span title="Average time from the prompt to the correct key">avg <b>{{ ms(stats().avgMs) }}</b></span>
       <span title="Correct presses in a row (best this session in brackets)">streak <b>{{ stats().streak }}</b> <span class="muted">({{ stats().best }})</span></span>
       @if (running()) {
         <span class="muted">{{ stats().rounds ? stats().round + ' / ' + stats().rounds : 'prompt ' + stats().round }} · {{ elapsedS() }} s</span>
@@ -152,7 +151,7 @@
       <div class="finish-overlay">
         <div class="finish-card" [class.stopped]="f.stopped">
           <h2>{{ f.stopped ? 'Stopped' : 'Done' }}</h2>
-          <p class="finish-score">{{ f.summary.accuracy }}% · Ø {{ ms(f.summary.avgMs) }}</p>
+          <p class="finish-score">{{ f.summary.accuracy }}% · avg {{ ms(f.summary.avgMs) }}</p>
           <div class="finish-counts">
             <span><b class="good">{{ f.summary.hits }}</b> hits</span>
             <span><b class="bad">{{ f.summary.misses }}</b> misses</span>
@@ -167,7 +166,7 @@
                   <th>Key</th>
                   <th>Asked</th>
                   <th>Missed</th>
-                  <th>Ø</th>
+                  <th>avg</th>
                 </tr>
               </thead>
               <tbody>

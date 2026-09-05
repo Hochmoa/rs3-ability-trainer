@@ -1,6 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { DataService, GearView } from '../../core/data.service';
+import { cleanNotes } from './preset-notes';
 import { BossPreset, ParsedRotation, PresetsService } from '../../core/presets.service';
 import { StorageService } from '../../core/storage.service';
 import { DialogService } from '../../shared/dialog';
@@ -76,6 +77,10 @@ export class Presets {
   /** the rotation steps of a preset, resolved with the PvME parser (for the preview) */
   parse(p: BossPreset): ParsedRotation[] {
     return this.service.parse(p);
+  }
+
+  notes(p: BossPreset): string {
+    return cleanNotes(p.notes);
   }
 
   stepCount(p: BossPreset): number {

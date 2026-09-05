@@ -6,15 +6,13 @@
     <a routerLink="/rotations" routerLinkActive="active">Rotations</a>
     <a routerLink="/bars" routerLinkActive="active">Action bars</a>
     <a routerLink="/keybinds" routerLinkActive="active">Keybinds</a>
-    <a routerLink="/drill" routerLinkActive="active">Drill</a>
-    @if (advanced()) {
-      <a routerLink="/loadout" routerLinkActive="active">Loadout</a>
-    }
-    <a routerLink="/presets" routerLinkActive="active">Presets</a>
+    <a routerLink="/drill" routerLinkActive="active">Key drill</a>
+    <a routerLink="/presets" routerLinkActive="active">Boss setups</a>
     <a routerLink="/settings" routerLinkActive="active">Settings</a>
     @if (advanced()) {
+      <a routerLink="/loadout" routerLinkActive="active">Loadout</a>
       <a routerLink="/explore" routerLinkActive="active">Explore</a>
-      <a routerLink="/setups" routerLinkActive="active">Setups</a>
+      <a routerLink="/setups" routerLinkActive="active">Shared setups</a>
     }
     @if (supabase.isStaff()) {
       <a routerLink="/admin" routerLinkActive="active" class="admin-link">Admin</a>
@@ -36,16 +34,19 @@
 
 @if (!bare()) {
 <footer>
-  Not affiliated with Jagex. Ability, prayer and item icons and names are © Jagex Ltd, taken from the
-  <a href="https://runescape.wiki" target="_blank" rel="noopener">RuneScape Wiki</a> (CC BY-NC-SA 3.0). Non-commercial fan tool ·
-  <a href="https://github.com/Hochmoa/rs3-ability-trainer" target="_blank" rel="noopener">source</a> ·
-  <a href="https://hochware.com" target="_blank" rel="noopener">hochware.com</a> ·
-  <a routerLink="/privacy">privacy</a> ·
-  <span class="muted" title="build">{{ build }}</span> ·
-  <a href="#" (click)="$event.preventDefault(); feedback.show()">report a bug / suggest something</a>
-  @if (supportUrl) {
-    · <a class="support" [href]="supportUrl" target="_blank" rel="noopener">☕ {{ supportLabel }}</a>
-  }
+  <p class="legal">
+    RS3 Ability Trainer is a non-commercial fan tool, not affiliated with Jagex. Icons, names and ability data are © Jagex Ltd, from the
+    <a href="https://runescape.wiki" target="_blank" rel="noopener">RuneScape Wiki</a> (CC BY-NC-SA 3.0), state after the Combat Style Modernisation (March 2026).
+  </p>
+  <p class="links">
+    <a href="https://github.com/Hochmoa/rs3-ability-trainer" target="_blank" rel="noopener">source</a> ·
+    <a href="https://hochware.com" target="_blank" rel="noopener">hochware.com</a> ·
+    <a routerLink="/privacy">privacy</a> ·
+    <span class="muted" title="build">{{ build }}</span>
+    @if (supportUrl) {
+      · <a class="support" [href]="supportUrl" target="_blank" rel="noopener">☕ {{ supportLabel }}</a>
+    }
+  </p>
 </footer>
 }
 

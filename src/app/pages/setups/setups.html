@@ -1,8 +1,7 @@
 <div class="panel controls">
-  <h2>Setups</h2>
+  <h2>Shared setups</h2>
   <p class="muted small">
-    Settings, loadouts, keybinds and action bars other players share. "Load" replaces everything of yours except the rotations –
-    handy to start from a working setup.
+    Settings, loadouts, keybinds and action bars other players share.
     @if (!supabase.user()) { <a routerLink="/account">Sign in</a> to share your own. }
     @else if (setups.isPublic() === false) { Your own setup is hidden – change that on the <a routerLink="/account">account page</a>. }
   </p>

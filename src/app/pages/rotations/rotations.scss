@@ -425,6 +425,23 @@ textarea {
   margin-top: 8px;
 }
 
+.notation {
+  margin-top: 8px;
+
+  summary {
+    cursor: pointer;
+    color: var(--gold);
+  }
+
+  p {
+    margin: 6px 0 0;
+  }
+}
+
+.empty .btn {
+  margin: 6px 0;
+}
+
 code {
   color: var(--gold);
 }

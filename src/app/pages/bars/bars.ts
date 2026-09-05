@@ -10,6 +10,7 @@ import { StorageService } from '../../core/storage.service';
 import { AbilityIcon } from '../../shared/ability-icon';
 import { EntityTip } from '../../shared/tooltip';
 import { DialogService } from '../../shared/dialog';
+import { ToastService } from '../../shared/toast';
 
 const TABS = [...STYLES, 'Prayers', 'Curses', 'Spells', 'Special', 'Weapons'] as const;
 type Tab = (typeof TABS)[number];
@@ -24,8 +25,11 @@ const TYPE_ORDER: Record<string, number> = { Basic: 0, Enhanced: 1, Threshold: 2
 })
 export class Bars {
   private dialogs = inject(DialogService);
+  private toast = inject(ToastService);
   readonly storage = inject(StorageService);
   readonly data = inject(DataService);
+  /** the "Copy from" select: shows the pick while the copy runs, then the placeholder again */
+  readonly copyPick = signal('');
 
   constructor() {
     // weapons are entities of the catalog (a bar slot can wield one)
@@ -257,6 +261,16 @@ export class Bars {
     });
   }
 
+  async pickCopy(sourceId: string): Promise<void> {
+    if (!sourceId) return;
+    this.copyPick.set(sourceId);
+    try {
+      await this.copyFrom(sourceId);
+    } finally {
+      this.copyPick.set('');
+    }
+  }
+
   /** overwrite the selected preset with the slots of another one */
   async copyFrom(sourceId: string | number | null): Promise<void> {
     const src = this.setup().presets.find((p) => p.id === Number(sourceId));
@@ -264,6 +278,7 @@ export class Bars {
     if (!src || !target || src.id === target.id) return;
     if (target.slots.some(Boolean) && !(await this.dialogs.confirm('Replace the slots of "' + target.name + '" with a copy of "' + src.name + '"?', { title: 'Copy preset', ok: 'Replace' }))) return;
     this.mutatePreset((slots) => src.slots.forEach((s, i) => (slots[i] = s ? { ...s } : null)));
+    this.toast.show('Copied preset ' + src.id + ' into ' + target.id);
   }
 
   async clearAll(): Promise<void> {

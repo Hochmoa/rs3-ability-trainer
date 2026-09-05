@@ -6,7 +6,7 @@
     "name": "Martin Hochmair",
     "url": "https://hochware.com"
   },
-  "description": "Free RuneScape 3 rotation trainer: real 0.6 s ticks, 1.8 s global cooldown, adrenaline, ability queueing and ping simulation. Import PvME rotations and practise them.",
+  "description": "Practise RuneScape 3 rotations on the real tick clock. Paste a PvME rotation, press the keys, see if you were on tick.",
   "routes": [
     {
       "path": "focus",
@@ -19,7 +19,7 @@
       "path": "",
       "title": "RS3 Ability Trainer – Practise RuneScape 3 Rotations",
       "h1": "RS3 Ability Trainer",
-      "description": "Free RuneScape 3 rotation trainer: real 0.6 s ticks, 1.8 s global cooldown, adrenaline, ability queueing and ping simulation. Import PvME rotations and practise them.",
+      "description": "Practise RuneScape 3 rotations on the real tick clock. Paste a PvME rotation, press the keys, see if you were on tick.",
       "priority": 1.0,
       "changefreq": "weekly"
     },
@@ -65,8 +65,8 @@
     },
     {
       "path": "presets",
-      "title": "Boss presets – RS3 Ability Trainer",
-      "h1": "Boss presets",
+      "title": "Boss setups – RS3 Ability Trainer",
+      "h1": "Boss setups",
       "description": "PvME boss setups for RuneScape 3: gear, backpack, rotations and action bars for Rasial, Zamorak, Nakatra, Kerapac, Nex, Telos and more – added to the trainer in one click.",
       "priority": 0.7,
       "changefreq": "monthly"
@@ -75,7 +75,7 @@
       "path": "settings",
       "title": "Trainer Settings – RS3 Ability Trainer",
       "h1": "Settings",
-      "description": "Trainer settings: simulated ping and jitter, the in-game 'Allow ability queueing' option, looping and enemy behaviour.",
+      "description": "Trainer settings: ability queueing like in game, simulated ping and jitter, hit delay, the coach voice and metronome, hit chance model, Alt1.",
       "priority": 0.4,
       "changefreq": "monthly"
     },

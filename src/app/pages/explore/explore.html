@@ -24,7 +24,7 @@
 } @else if (!rows().length) {
   <div class="panel empty">
     <p>No public rotations yet{{ search() || style() ? ' for this filter' : '' }}.</p>
-    <p class="muted small">Sign in, create a rotation and leave "Public" ticked – it shows up here.</p>
+    <p class="muted small">Sign in and tick "Public" on one of your rotations to list it here.</p>
   </div>
 }
 
@@ -45,7 +45,7 @@
           <span class="good small">copied</span>
           <button class="btn btn-sm btn-primary" (click)="train(id)">Train</button>
         } @else {
-          <button class="btn btn-sm btn-primary" (click)="copy(row)">Copy to my rotations</button>
+          <button class="btn btn-sm btn-primary" (click)="copy(row)" title="Copy to my rotations">Copy</button>
         }
       </span>
     </div>

@@ -1,4 +1,5 @@
 import { CdkDrag, CdkDragDrop, CdkDropList, moveItemInArray } from '@angular/cdk/drag-drop';
+import { NgTemplateOutlet } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -8,6 +9,7 @@ import { keybindLabel } from '../../core/keybind.util';
 import { parsePvme } from '../../core/pvme';
 import { Rotation, RotationStep, SPELLBOOKS, SPELLBOOK_NAMES, STYLES } from '../../core/models';
 import { isObscureEntity } from '../../core/obscure';
+import { PresetsService } from '../../core/presets.service';
 import { StorageService } from '../../core/storage.service';
 import { SupabaseService } from '../../core/supabase.service';
 import { SyncService } from '../../core/sync.service';
@@ -22,7 +24,7 @@ const TYPE_ORDER: Record<string, number> = { Basic: 0, Enhanced: 1, Threshold: 2
 
 @Component({
   selector: 'app-rotations',
-  imports: [AbilityIcon, FormsModule, RouterLink, EntityTip, CdkDropList, CdkDrag],
+  imports: [AbilityIcon, FormsModule, RouterLink, EntityTip, CdkDropList, CdkDrag, NgTemplateOutlet],
   templateUrl: './rotations.html',
   styleUrl: './rotations.scss',
 })
@@ -37,6 +39,7 @@ export class Rotations {
   }
   readonly supabase = inject(SupabaseService);
   readonly sync = inject(SyncService);
+  readonly presets = inject(PresetsService);
   private router = inject(Router);
 
   readonly TABS = TABS;
@@ -146,6 +149,24 @@ export class Rotations {
     this.importText.set('');
   }
 
+  /** The list page's import box: the pasted text becomes a rotation of its own, named after the first heading. */
+  async importNew(): Promise<void> {
+    const text = this.importText().trim();
+    if (!text) return;
+    await this.data.ensure('aliases', 'weapons');
+    const { steps, unknown } = parsePvme(text, (alias) => this.data.resolvePvmeAlias(alias));
+    const inputs = steps.filter((s) => s.kind !== 'note').length;
+    if (!inputs) {
+      this.importReport.set('Nothing recognised.');
+      return;
+    }
+    const heading = steps.find((s) => s.kind === 'note' && s.phase)?.note?.trim();
+    const name = (heading || 'Imported rotation').slice(0, 60);
+    await this.storage.saveRotation({ id: crypto.randomUUID(), name, steps, updatedAt: Date.now(), isPublic: false });
+    this.importReport.set('"' + name + '" saved: ' + inputs + ' input' + (inputs === 1 ? '' : 's') + (unknown.length ? ', kept as notes: ' + unknown.join(' · ') : '') + '.');
+    this.importText.set('');
+  }
+
   async addNote(): Promise<void> {
     const text = await this.dialogs.prompt('Note text (shown in the queue, not an input):', { title: 'Add note', placeholder: 'e.g. wait for the boss to move' });
     if (text?.trim()) this.editing.update((r) => (r ? { ...r, steps: [...r.steps, { kind: 'note', id: '', note: text.trim() }] } : r));
@@ -170,7 +191,7 @@ export class Rotations {
   }
 
   newRotation(): void {
-    this.editing.set({ id: crypto.randomUUID(), name: 'New rotation', steps: [], updatedAt: Date.now() });
+    this.editing.set({ id: crypto.randomUUID(), name: 'New rotation', steps: [], updatedAt: Date.now(), isPublic: false });
   }
 
   edit(r: Rotation): void {

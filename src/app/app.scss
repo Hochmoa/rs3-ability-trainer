@@ -86,6 +86,15 @@ footer {
   color: var(--muted);
   text-align: center;
   border-top: 1px solid var(--border);
+
+  p {
+    margin: 0;
+  }
+
+  .legal {
+    max-width: 720px;
+    margin: 0 auto 6px;
+  }
 }
 
 footer .support {
@@ -101,13 +110,18 @@ footer .support {
   margin-bottom: 16px;
 }
 
-/* phones: the menu stays one row and scrolls sideways instead of stacking four rows */
+/* phones: the menu stays one row and scrolls sideways instead of stacking four rows; the right edge fades out so the scroll is visible */
 @media (max-width: 640px) {
   .topbar nav {
+    flex: 1 1 100%;
+    min-width: 0;
     flex-wrap: nowrap;
     overflow-x: auto;
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
+    padding-right: 48px;
+    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 48px), transparent);
+    mask-image: linear-gradient(90deg, #000 calc(100% - 48px), transparent);
 
     &::-webkit-scrollbar {
       display: none;

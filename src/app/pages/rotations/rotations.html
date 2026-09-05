@@ -4,11 +4,13 @@
       Name
       <input type="text" [ngModel]="r.name" (ngModelChange)="setName($event)" maxlength="60" />
     </label>
-    <label class="public">
-      <input type="checkbox" [checked]="r.isPublic ?? true" (change)="setPublic(!(r.isPublic ?? true))" />
-      Public
-      <small class="muted">{{ supabase.user() ? '– listed in the explorer' : '– needs an account to be listed' }}</small>
-    </label>
+    @if (supabase.user()) {
+      <label class="public">
+        <input type="checkbox" [checked]="r.isPublic ?? true" (change)="setPublic(!(r.isPublic ?? true))" />
+        Public
+        <small class="muted">– listed in the explorer</small>
+      </label>
+    }
     <div class="actions">
       <button class="btn btn-primary" (click)="save()" [disabled]="!r.steps.length">Save</button>
       <button class="btn" (click)="cancel()">Cancel</button>
@@ -25,10 +27,7 @@
   }
   <div class="panel">
     <h1>Rotation <span class="muted">({{ r.steps.length }} steps)</span></h1>
-    @if (!r.steps.length) {
-      <p class="muted">Click abilities, prayers or potions in the catalog below to append them. Prayers and potions don't use the global cooldown – put them right before the ability they belong to.</p>
-    }
-    <p class="muted small steps-hint">Drag a tile to reorder. Hover a tile for its name, the tick toggle (prayers, potions, switches: same tick as the previous input or not) and remove.</p>
+    <p class="muted small steps-hint">Click the catalog below to add steps, drag a tile to move it, hover it to remove it.</p>
     <div class="steps" cdkDropList cdkDropListOrientation="mixed" (cdkDropListDropped)="reorder($event)">
       @for (s of r.steps; track $index) {
         @if (s.kind === 'note') {
@@ -65,18 +64,14 @@
   </div>
 
   <div class="panel">
-    <h2>Import from PvME notation</h2>
-    <p class="muted small">
-      Paste a rotation as written on <a href="https://pvme.io" target="_blank" rel="noopener">pvme.io</a> or Discord, e.g.
-      <code>(tc) bloat + vulnbomb → deathskulls → necrobasic</code>. <code>→</code> = next tick, <code>+</code> = same tick,
-      <code>2t x</code> = two ticks later, <code>omniguard spec</code> = weapon switch + its special. Unknown words become notes.
-    </p>
-    <textarea rows="4" [ngModel]="importText()" (ngModelChange)="importText.set($event)" placeholder="deathskulls + 2t undeadslayer → volleyofsouls → fingerofdeath"></textarea>
+    <h2>Import from PvME</h2>
+    <textarea rows="4" [ngModel]="importText()" (ngModelChange)="importText.set($event)" placeholder="Paste a rotation from pvme.io or Discord: deathskulls + 2t undeadslayer → volleyofsouls → fingerofdeath"></textarea>
     <div class="import-actions">
-      <button class="btn btn-primary" (click)="importPvme()" [disabled]="!importText().trim()">Append steps</button>
+      <button class="btn btn-primary" (click)="importPvme()" [disabled]="!importText().trim()">Import</button>
       <button class="btn" (click)="addNote()">Add note</button>
       @if (importReport(); as rep) { <span class="muted small">{{ rep }}</span> }
     </div>
+    <ng-container *ngTemplateOutlet="notation" />
   </div>
 
   <div class="panel">
@@ -109,7 +104,7 @@
         <p class="muted small">Nothing matches.</p>
       }
     </div>
-    <p class="muted small">Hover an icon for cooldown, adrenaline, damage and effects. Data from the RuneScape Wiki, state after the Combat Style Modernisation (March 2026).</p>
+    <p class="muted small">Hover an icon for cooldown, adrenaline, damage and effects.</p>
   </div>
 } @else {
   <div class="panel list-head">
@@ -124,16 +119,27 @@
       }
     </span>
   </div>
+  <div class="panel">
+    <h2>Import from PvME</h2>
+    <textarea rows="3" [ngModel]="importText()" (ngModelChange)="importText.set($event)" placeholder="Paste a rotation from pvme.io or Discord: deathskulls + 2t undeadslayer → volleyofsouls → fingerofdeath"></textarea>
+    <div class="import-actions">
+      <button class="btn btn-primary" (click)="importNew()" [disabled]="!importText().trim()">Import</button>
+      @if (importReport(); as rep) { <span class="muted small">{{ rep }}</span> }
+    </div>
+    <ng-container *ngTemplateOutlet="notation" />
+  </div>
   @if (!storage.rotations().length) {
     <div class="panel empty">
-      <p>No rotations yet. Create one, then <a routerLink="/keybinds">bind keys</a> to its abilities.</p>
+      <p>No rotations yet.</p>
+      <button class="btn btn-primary" (click)="presets.addDemo()">Try the demo</button>
+      <p class="muted small">or paste a PvME rotation above, or build one with "New rotation"</p>
     </div>
   }
   @for (r of storage.rotations(); track r.id) {
     <div class="panel rotation">
       <div class="rotation-head">
         <h3>{{ r.name }}</h3>
-        <span class="muted">{{ r.steps.length }} steps{{ supabase.user() ? ((r.isPublic ?? true) ? ' · public' : ' · private') : '' }}{{ r.copies ? ' · copied ' + r.copies + 'x' : '' }}</span>
+        <span class="muted">{{ r.steps.length }} steps{{ supabase.user() ? ((r.isPublic ?? true) ? ' · public' : ' · private') : '' }}{{ r.copies ? ' · ' + r.copies + (r.copies === 1 ? ' copy' : ' copies') : '' }}</span>
         <span class="actions">
           <button class="btn btn-primary btn-sm" (click)="train(r)" [disabled]="!r.steps.length">Train</button>
           <button class="btn btn-sm" (click)="edit(r)">Edit</button>
@@ -143,7 +149,7 @@
       <div class="preview">
         @for (s of r.steps; track $index) {
           @if (s.kind === 'note') {
-            <span class="note-chip" [title]="s.note">{{ s.phase ? '§ ' : '' }}{{ s.note }}</span>
+            <span class="note-chip" [title]="(s.phase ? 'Phase: ' : 'Note: ') + s.note">{{ s.phase ? '§ ' : '' }}{{ s.note }}</span>
           } @else if (entity(s); as e) {
             <span [entityTip]="e"><ability-icon [ability]="e" [px]="40" [keyLabel]="keyOf(e)" /></span>
           } @else {
@@ -154,3 +160,14 @@
     </div>
   }
 }
+
+<ng-template #notation>
+  <details class="notation">
+    <summary class="muted small">notation help</summary>
+    <p class="muted small">
+      As written on <a href="https://pvme.io" target="_blank" rel="noopener">pvme.io</a>, e.g. <code>(tc) bloat + vulnbomb → deathskulls → necrobasic</code>.
+      <code>→</code> = next tick, <code>+</code> = same tick, <code>2t x</code> = two ticks later, <code>omniguard spec</code> = weapon switch + its special.
+      Words the trainer does not know become notes.
+    </p>
+  </details>
+</ng-template>

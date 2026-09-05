@@ -59,9 +59,8 @@
     </div>
 
     <p class="muted small">
-      An account is only needed to publish rotations and keep them (plus your keybinds, action bars, loadouts and settings) synced across browsers.
-      Browsing the <a routerLink="/explore">explorer</a>, loading a shared <a routerLink="/setups">setup</a> and training work without one.
-      @if (ownRotations()) { Your {{ ownRotations() }} local rotation(s) will be uploaded when you sign in. }
+      An account syncs your rotations, keybinds, action bars, loadouts and settings across browsers and lets you publish rotations. Training works without one.
+      @if (ownRotations(); as n) { Your {{ n }} local {{ n === 1 ? 'rotation is' : 'rotations are' }} uploaded when you sign in. }
     </p>
 
     <form class="form" (ngSubmit)="submit()">
