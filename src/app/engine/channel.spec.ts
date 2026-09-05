@@ -138,3 +138,24 @@ describe('channelled abilities', () => {
     expect(r.buffCritAdd['dracolich-infusion']).toEqual({ add: 0.4, style: 'Ranged' });
   });
 });
+
+describe('scoring after a full channel', () => {
+  it('the ability after a completed channel is on time at the channel end and late only after it', () => {
+    const run = (pressTick: number) => {
+      const steps = [ability('asphyxiate'), ability('dragon-breath')];
+      const catalog = new Map(steps.map((e) => [e.key, e]));
+      const e = new TrainerEngine(steps, catalog, { pingMs: 0, jitterMs: 0, abilityQueueing: false, loop: false, fullAdrenaline: true, hitChanceDisabled: true, loadout: { ...defaultResolvedLoadout(), style: 'Magic', abilityDamage: 1000, items: new Set() } });
+      e.random = () => 0.5;
+      e.start(0);
+      e.press('ability:asphyxiate', 1);
+      e.update(TICK_MS + 1);
+      e.press('ability:dragon-breath', (pressTick - 1) * TICK_MS + 1);
+      e.update((pressTick + 1) * TICK_MS);
+      const r = e.results.find((x) => x.name === 'Dragon Breath')!;
+      return r.outcome + ':' + r.lateTicks;
+    };
+    expect(run(8)).toBe('perfect:0'); // channel of 7 ticks ends at tick 8
+    expect(run(5)).toBe('perfect:0'); // early cancel at the GCD end – the player's choice, not late
+    expect(run(10)).toBe('late:2');
+  });
+});

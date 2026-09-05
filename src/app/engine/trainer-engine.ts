@@ -324,6 +324,8 @@ export class TrainerEngine {
   /** flags set by the cast being activated (consume-stack → flag) */
   private castFlags = new Set<string>();
   channel: ActiveChannel | null = null;
+  /** end tick of the channel the last GCD cast started (null once it was cancelled or another ability cast): the next ability is due there */
+  private lastChannelEnd: number | null = null;
   /** weapons in hand */
   wield: Wield = { mainHand: null, offHand: null, twoHand: null };
   /** ids of the active prayers (e.g. "soul-split") */
@@ -995,6 +997,10 @@ export class TrainerEngine {
     this.pending = p.bypassed ? { ...p.bypassed, tick: p.tick + GCD_TICKS } : null;
     const expected = this.expectedAbility;
     const gcdEnd = this.gcdEndTick;
+    // a channel the previous cast started: the rotation means "after the channel", so the next ability is on time
+    // anywhere from the GCD end (an early cancel) up to the channel's end; only presses after that are late
+    const channelEnd = this.lastChannelEnd;
+    this.lastChannelEnd = null;
     this.castTick = p.tick;
     this.lastInputTick = p.tick;
     this.activate(entity, p.tick, { offGcd: false, noGain: false });
@@ -1026,7 +1032,8 @@ export class TrainerEngine {
     }
     if (missed.length) this.events.push({ kind: 'missed', keys: missed });
 
-    const lateTicks = gcdEnd === null ? 0 : Math.max(0, p.tick - gcdEnd);
+    const dueTick = gcdEnd === null ? null : channelEnd !== null && channelEnd > gcdEnd ? channelEnd : gcdEnd;
+    const lateTicks = dueTick === null ? 0 : Math.max(0, p.tick - dueTick);
     const result: StepResult = {
       step: expectedIndex,
       key: entity.key,
@@ -1034,7 +1041,7 @@ export class TrainerEngine {
       kind: entity.kind,
       outcome: lateTicks ? 'late' : 'perfect',
       lateTicks,
-      offsetMs: gcdEnd === null ? 0 : Math.round(Math.abs(this.tickTime(gcdEnd) - p.arrival)),
+      offsetMs: dueTick === null ? 0 : Math.round(Math.abs(this.tickTime(dueTick) - p.arrival)),
       tooEarly: this.tooEarly,
       wrong: this.wrong,
       firedAtTick: p.tick,
@@ -1290,6 +1297,7 @@ export class TrainerEngine {
       this.lastAttackTick = tick;
     } else if (channel) {
       this.channel = { key: entity.key, castTick: tick, endTick: tick + channel.ticks, hits: channel.hits.length, hitsDone: 0, cancelled: false, dealt: 0 };
+      this.lastChannelEnd = this.channel.endTick;
       channel.hits.forEach((offset, i) =>
         this.scheduled.push({ key: entity.key, entity: acting, rule, tick: tick + offset, index: i, total: channel.hits.length, channel: this.channel, guaranteedCrit: !!channel.guaranteedCrit || !!rule?.guaranteedCrit, damage: hitDamage(i), mult, flat, castMult: multAt(i), flags, critAdd: consumedCritAdd, castTick: tick }),
       );
@@ -1789,6 +1797,7 @@ export class TrainerEngine {
     const ch = this.channel;
     if (!ch || ch.cancelled) return;
     ch.cancelled = true;
+    this.lastChannelEnd = null; // cancelled on purpose: the next ability is due at the GCD end again
     const lost = this.scheduled.filter((h) => h.channel === ch).length;
     this.scheduled = this.scheduled.filter((h) => h.channel !== ch);
     this.events.push({ kind: 'channel-cancelled', key: ch.key, hitsLost: lost });
