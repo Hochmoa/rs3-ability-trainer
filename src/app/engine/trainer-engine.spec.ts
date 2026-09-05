@@ -14,7 +14,7 @@ function resolved(l: Loadout): ResolvedLoadout {
   return r;
 }
 
-const off: EngineConfig = { pingMs: 0, jitterMs: 0, abilityQueueing: false, loop: false, loadout: defaultResolvedLoadout(), hitChanceDisabled: true };
+const off: EngineConfig = { pingMs: 0, jitterMs: 0, autoAttacks: false, abilityQueueing: false, loop: false, loadout: defaultResolvedLoadout(), hitChanceDisabled: true };
 const on: EngineConfig = { ...off, abilityQueueing: true };
 
 function ability(key: string, extra: Partial<EngineEntity> = {}): EngineEntity {
@@ -208,15 +208,27 @@ describe('ability queueing ON', () => {
     expect(e.events.at(-1)).toMatchObject({ kind: 'wrong-fired', key: 'c', tick: 4 });
   });
 
-  it('bypass: another ability on the last tick casts now, the queued one waits for the next GCD end', () => {
+  it('bypass: another ability on the tick before the cast casts instead, the queued one stays queued for the next GCD end', () => {
     const e = afterFirstFire(on);
-    e.press('b', 700);
-    e.press('c', 2000);
+    e.press('b', 700); // queued for tick 4
+    e.press('c', 1300); // tick 3 – "on the tick before the queued ability is set to be cast"
     e.update(2400);
     expect(e.events.at(-1)).toMatchObject({ kind: 'wrong-fired', key: 'c', tick: 4 });
     expect(e.queuedKey).toBe('b');
     e.update(4200);
     expect(e.results[1]).toMatchObject({ key: 'b', outcome: 'perfect', firedAtTick: 7, wrong: 1 });
+  });
+
+  it('a different ability pressed on the cast tick itself does not bypass: the queued one casts, the press queues behind it', () => {
+    const e = afterFirstFire(on);
+    e.press('b', 700);
+    e.press('c', 2000); // tick 4 = the cast tick
+    e.update(2400);
+    expect(e.results[1]).toMatchObject({ key: 'b', outcome: 'perfect', firedAtTick: 4 });
+    expect(e.events.some((x) => x.kind === 'queued' && x.key === 'c' && x.fireTick === 7)).toBe(true);
+    expect(e.queuedKey).toBe('c');
+    e.update(4200);
+    expect(e.results[2]).toMatchObject({ key: 'c', outcome: 'perfect', firedAtTick: 7 });
   });
 
   it('keeps an ability queued until there is enough adrenaline', () => {

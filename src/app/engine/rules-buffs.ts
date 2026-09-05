@@ -121,7 +121,7 @@ export const BUFFS: BuffDef[] = [
 
   // ---------------------------------------------------------------- necromancy
   { id: 'invoke-death', name: 'Invoke Death', kind: 'Buff', on: 'self', durationTicks: 20,
-    text: 'Your next necromancy attack applies Death Mark to the target (executes it below 25% life points, 12 s).', source: W + 'Invoke_Death' },
+    text: 'Your next necromancy attack applies Death Mark to the target (executes it below 20% of its life points or 30,000, whichever is lower; 12 s).', source: W + 'Invoke_Death' },
   { id: 'invoke-lord-of-bones', name: 'Invoke Lord of Bones', kind: 'Buff', on: 'self', durationTicks: 100,
     text: 'Skeletal spirit attacks apply Shattering Bones (armour reduction) for 1 minute.', source: W + 'Invoke_Lord_of_Bones' },
   { id: 'split-soul', name: 'Split Soul', kind: 'Buff', on: 'self', durationTicks: 34,
@@ -135,7 +135,7 @@ export const BUFFS: BuffDef[] = [
   { id: 'bloated', name: 'Bloated', kind: 'Debuff', on: 'target', durationTicks: 30, wikiId: 48338,
     text: 'DoT: 10 hits of 25% of the initial hit every 3 ticks. Recasting resets it. Spreads on death. Removed by Freedom.', source: W + 'Bloat' },
   { id: 'haunted', name: 'Haunted', kind: 'Debuff', on: 'target', durationTicks: 7, wikiId: 48344,
-    text: '+10% damage taken from all player sources (capped). Every hit of the commanded Vengeful Ghost refreshes it, so it lasts as long as the ghost.', source: W + 'Command_Vengeful_Ghost' },
+    text: '+10% damage taken from all player sources (capped). Applied by the commanded Vengeful Ghost\'s hits, from its first hit after the Command on; it lasts as long as the ghost.', source: W + 'Command_Vengeful_Ghost' },
   { id: 'spirit-skeleton-warrior', name: 'Skeleton Warrior', kind: 'Buff', on: 'self', durationTicks: 70, wikiId: 48335,
     text: 'Conjured spirit (42 s base, longer with Spirit Pact / Robes of the First Necromancer). Command Skeleton Warrior available 6 ticks after the conjure.', source: W + 'Conjure_Skeleton_Warrior' },
   { id: 'spirit-putrid-zombie', name: 'Putrid Zombie', kind: 'Buff', on: 'self', durationTicks: 70, wikiId: 48336,

@@ -91,7 +91,7 @@ The elemental lines replace the basic Magic attack (auto-attack) once selected; 
 ## 3. Standard spellbook – https://runescape.wiki/w/Standard_spells
 
 ### Curses cast on the target (normal GCD casts, 1 minute = 100 ticks)
-- Vulnerability (66) – https://runescape.wiki/w/Vulnerability: infobox `cooldown = 3`, `duration = 100`; "Increases the target's damage received by 10% for 1 minute." / "A magic weapon is not required to cast this spell." The same debuff can be applied "by throwing a vulnerability bomb". **Trainer:** target debuff `vulnerability` (×1.1 damage like the bomb's debuff).
+- Vulnerability (66) – https://runescape.wiki/w/Vulnerability: infobox `cooldown = 3`, `duration = 100`; "Increases the target's damage received by 10% for 1 minute." / "A magic weapon is not required to cast this spell." The same debuff can be applied "by throwing a vulnerability bomb". Vulnerability (status): "Uses stacks: No", applied by the spell or the bomb, 10 % for 1 minute — https://runescape.wiki/w/Vulnerability_(status). **Trainer:** one target debuff `vulnerability` (×1.1) applied by the spell rule and by the bomb rule (`rules-consumables.ts`); a second application from either source only refreshes the 100 ticks – never 1.21× (fixed 2026-09-05, `TARGET_DAMAGE_MULT` entries share a `status`).
 - Enfeeble (73): "Reduces the target's damage dealt by 10%" for 1 minute.
 - Stagger (80): "Reduces the target's chance to hit by 10%" for 1 minute.
 - Confuse (1) / Weaken (11) / Curse (19): the 5 % versions – not included (obsolete).

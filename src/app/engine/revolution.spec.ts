@@ -21,14 +21,15 @@ const ULT = ability('ult', { abilityType: 'Ultimate', adrenaline: -100, cooldown
 const SPEC = ability('weapon-special-attack', { abilityType: 'Special', adrenaline: -50 });
 const SURGE = ability('surge', { gcd: false, adrenaline: 0, cooldownTicks: 34 });
 const CHAN = ability('chan', { channel: { ticks: 5, hits: [0, 2, 4] }, damageMin: 20, damageMax: 40, cooldownTicks: 10 });
+const NECRO = ability('necromancy', { style: 'Necromancy' });
 const PRAY: EngineEntity = { key: 'prayer:pray', id: 'pray', kind: 'prayer', name: 'pray', icon: '', gcd: false, adrenaline: 0, cooldownTicks: 0, buffs: [] };
-const CATALOG = new Map([A, B, C, ENH, THR, ULT, SPEC, SURGE, CHAN, PRAY].map((e) => [e.key, e]));
+const CATALOG = new Map([A, B, C, ENH, THR, ULT, SPEC, SURGE, CHAN, NECRO, PRAY].map((e) => [e.key, e]));
 
 const REVO: RevolutionConfig = { slots: 9, basics: true, enhanced: true, thresholds: false, ultimates: false, bar: [] };
 
 function make(steps: EngineEntity[], bar: (string | null)[], revo: Partial<RevolutionConfig> = {}, cfg: Partial<EngineConfig> = {}): TrainerEngine {
   const config: EngineConfig = {
-    pingMs: 0, jitterMs: 0, abilityQueueing: false, loop: false, loadout: defaultResolvedLoadout(),
+    pingMs: 0, jitterMs: 0, autoAttacks: false, abilityQueueing: false, loop: false, loadout: defaultResolvedLoadout(),
     combatMode: 'revolution', revolution: { ...REVO, ...revo, bar: bar.map((k) => (k ? 'ability:' + k : null)) },
     ...cfg,
   };
@@ -66,6 +67,19 @@ describe('revolution: picking the next ability', () => {
     expect(e.results[1]).toMatchObject({ key: 'ability:a', firedAtTick: 4, auto: true });
     e.update(7 * T);
     expect(e.results[2]).toMatchObject({ key: 'ability:a', firedAtTick: 7, auto: true });
+  });
+
+  it('a basic attack is the last resort, even in the first slot', () => {
+    const e = make([NECRO, NECRO, NECRO], ['necromancy', 'b', 'enh'], {}, { loop: true, fullAdrenaline: true, loadout: { ...defaultResolvedLoadout(), style: 'Necromancy' } });
+    e.update(T);
+    expect(autos(e).map((a) => [a.key, a.tick])).toEqual([['ability:b', 1]]); // not the basic attack in slot 1
+    e.update(4 * T); // b on cooldown → enh
+    expect(autos(e).at(-1)).toMatchObject({ key: 'ability:enh', tick: 4 });
+    e.update(7 * T); // both on cooldown: now the basic attack
+    expect(autos(e).at(-1)).toMatchObject({ key: 'ability:necromancy', tick: 7, matched: true });
+    expect(e.results[0]).toMatchObject({ key: 'ability:necromancy', firedAtTick: 7, auto: true });
+    expect(e.revolutionChoice(7)).toBe('ability:necromancy');
+    expect(e.revolutionChoice(11)).toBe('ability:b');
   });
 
   it('skips a slot without enough adrenaline', () => {

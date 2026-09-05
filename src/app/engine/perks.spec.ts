@@ -80,7 +80,7 @@ function ability(id: string): EngineEntity {
 function engine(ids: string[], l: ResolvedLoadout, opts: { random?: number; cfg?: Partial<EngineConfig> } = {}): TrainerEngine {
   const steps = ids.map(ability);
   const catalog = new Map(steps.map((e) => [e.key, e]));
-  const e = new TrainerEngine(steps, catalog, { pingMs: 0, jitterMs: 0, abilityQueueing: false, loop: true, fullAdrenaline: true, hitChanceDisabled: true, ...opts.cfg, loadout: l });
+  const e = new TrainerEngine(steps, catalog, { pingMs: 0, jitterMs: 0, autoAttacks: false, abilityQueueing: false, loop: true, fullAdrenaline: true, hitChanceDisabled: true, ...opts.cfg, loadout: l });
   e.random = () => opts.random ?? 0.5;
   e.start(0);
   return e;
@@ -357,7 +357,7 @@ describe('Precise / Equilibrium / Eruptive', () => {
   it('… but it does reach Bloat, whose DoT is a share of the Precise-rolled initial hit', () => {
     const l = { ...defaultResolvedLoadout(), style: 'Necromancy' as const, hasConduit: true, abilityDamage: 1000, preciseRank: 6 };
     const bloat = { ...ability('bloat'), damageMin: 135, damageMax: 165 };
-    const e = new TrainerEngine([bloat], new Map([[bloat.key, bloat]]), { pingMs: 0, jitterMs: 0, abilityQueueing: false, loop: true, fullAdrenaline: true, loadout: l });
+    const e = new TrainerEngine([bloat], new Map([[bloat.key, bloat]]), { pingMs: 0, jitterMs: 0, autoAttacks: false, abilityQueueing: false, loop: true, fullAdrenaline: true, loadout: l });
     e.random = () => 0.5;
     e.start(0);
     cast(e, 'bloat', 0);

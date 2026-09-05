@@ -62,7 +62,7 @@ function action(id: string): EngineEntity {
 /** engine over the steps (all of them in the catalog); ability damage 1000, melee 2h unless the loadout says otherwise */
 function make(steps: EngineEntity[], loadout: Partial<ResolvedLoadout> = {}, cfg: Partial<EngineConfig> = {}, random = 0.5): TrainerEngine {
   const l: ResolvedLoadout = { ...defaultResolvedLoadout(), style: 'Melee', has2h: true, abilityDamage: 1000, ...loadout, items: new Set(loadout.items ?? []) };
-  const e = new TrainerEngine(steps, new Map(steps.map((s) => [s.key, s])), { pingMs: 0, jitterMs: 0, abilityQueueing: true, loop: true, fullAdrenaline: true, hitChanceDisabled: true, ...cfg, loadout: l });
+  const e = new TrainerEngine(steps, new Map(steps.map((s) => [s.key, s])), { pingMs: 0, jitterMs: 0, autoAttacks: false, abilityQueueing: true, loop: true, fullAdrenaline: true, hitChanceDisabled: true, ...cfg, loadout: l });
   e.random = () => random;
   e.start(0);
   return e;
@@ -153,6 +153,20 @@ describe('combat dummy', () => {
     cast(e, 'action:target-cycle', 1);
     expect(e.buffs).toEqual([]);
     expect(e.adrenaline).toBe(0);
+  });
+});
+
+describe('vulnerability bomb', () => {
+  it('applies the Vulnerability status (+10% for 100 ticks); a second bomb or the spell only refreshes it – never 1.21x', () => {
+    const e = make([special('vulnerability-bomb'), ability('attack'), special('vulnerability-bomb')]);
+    cast(e, 'special:vulnerability-bomb', 1);
+    expect(e.buff('vulnerability')).toMatchObject({ on: 'target', endTick: 101 });
+    expect(e.buffs.filter((b) => b.id.includes('vulnerab'))).toHaveLength(1);
+    e.buffs.push({ id: 'vulnerability', name: 'Vulnerability', kind: 'Debuff', on: 'target', icon: null, startTick: 1, endTick: 101, stacks: 0, extended: 0, sourceKey: 'spell:vulnerability' }); // even a duplicate entry counts once
+    cast(e, 'ability:attack', 2);
+    expect(hits(e, 'ability:attack')).toEqual([{ amount: Math.floor(1200 * 1.1), tick: 2, dot: false }]);
+    cast(e, 'special:vulnerability-bomb', 10);
+    expect(e.buff('vulnerability')?.endTick).toBe(110);
   });
 });
 

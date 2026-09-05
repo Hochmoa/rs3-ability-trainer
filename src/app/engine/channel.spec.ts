@@ -31,7 +31,7 @@ function make(ids: string[], loadout: Partial<ResolvedLoadout> = {}, cfg: Partia
   const steps = ids.map(ability);
   const catalog = new Map(steps.map((e) => [e.key, e]));
   const l = { ...defaultResolvedLoadout(), ...loadout, items: new Set(loadout.items ?? []) };
-  const e = new TrainerEngine(steps, catalog, { pingMs: 0, jitterMs: 0, abilityQueueing: true, loop: true, hitChanceDisabled: true, ...cfg, loadout: l });
+  const e = new TrainerEngine(steps, catalog, { pingMs: 0, jitterMs: 0, autoAttacks: false, abilityQueueing: true, loop: true, hitChanceDisabled: true, ...cfg, loadout: l });
   e.random = () => 0.99;
   e.start(0);
   e.adrenaline = 100;
@@ -144,7 +144,7 @@ describe('scoring after a full channel', () => {
     const run = (pressTick: number) => {
       const steps = [ability('asphyxiate'), ability('dragon-breath')];
       const catalog = new Map(steps.map((e) => [e.key, e]));
-      const e = new TrainerEngine(steps, catalog, { pingMs: 0, jitterMs: 0, abilityQueueing: false, loop: false, fullAdrenaline: true, hitChanceDisabled: true, loadout: { ...defaultResolvedLoadout(), style: 'Magic', abilityDamage: 1000, items: new Set() } });
+      const e = new TrainerEngine(steps, catalog, { pingMs: 0, jitterMs: 0, autoAttacks: false, abilityQueueing: false, loop: false, fullAdrenaline: true, hitChanceDisabled: true, loadout: { ...defaultResolvedLoadout(), style: 'Magic', abilityDamage: 1000, items: new Set() } });
       e.random = () => 0.5;
       e.start(0);
       e.press('ability:asphyxiate', 1);
@@ -157,5 +157,32 @@ describe('scoring after a full channel', () => {
     expect(run(8)).toBe('perfect:0'); // channel of 7 ticks ends at tick 8
     expect(run(5)).toBe('perfect:0'); // early cancel at the GCD end – the player's choice, not late
     expect(run(10)).toBe('late:2');
+  });
+});
+
+describe('scoring a channel the rotation cuts short (PvME "asphyx (4t)" / "3 hit asphyx")', () => {
+  const run = (step: Partial<EngineEntity>, pressTick: number) => {
+    const steps = [{ ...ability('asphyxiate'), ...step }, ability('dragon-breath')];
+    const catalog = new Map(steps.map((e) => [e.key, e]));
+    const e = new TrainerEngine(steps, catalog, { pingMs: 0, jitterMs: 0, autoAttacks: false, abilityQueueing: false, loop: false, fullAdrenaline: true, hitChanceDisabled: true, loadout: { ...defaultResolvedLoadout(), style: 'Magic', abilityDamage: 1000, items: new Set() } });
+    e.random = () => 0.5;
+    e.start(0);
+    e.press('ability:asphyxiate', 1);
+    e.update(TICK_MS + 1);
+    e.press('ability:dragon-breath', (pressTick - 1) * TICK_MS + 1);
+    e.update((pressTick + 1) * TICK_MS);
+    const r = e.results.find((x) => x.name === 'Dragon Breath')!;
+    return r.outcome + ':' + r.lateTicks;
+  };
+  it('"asphyx (4t) → x": x is due 4 ticks after the cast, not at the channel end', () => {
+    expect(run({ cancelAfterTicks: 4 }, 5)).toBe('perfect:0');
+    expect(run({ cancelAfterTicks: 4 }, 4)).toBe('perfect:0'); // the GCD end – an even earlier cancel, the player's choice
+    expect(run({ cancelAfterTicks: 4 }, 6)).toBe('late:1');
+    expect(run({ cancelAfterTicks: 4 }, 8)).toBe('late:3'); // the channel end itself is late now
+  });
+  it('"3 hit asphyx → x": x is due on the tick the third hit lands (cast + 5)', () => {
+    expect(run({ afterHits: 3 }, 6)).toBe('perfect:0');
+    expect(run({ afterHits: 3 }, 7)).toBe('late:1');
+    expect(run({ afterHits: 9 }, 8)).toBe('perfect:0'); // more hits than the channel has: the channel end
   });
 });

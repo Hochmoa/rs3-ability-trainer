@@ -28,7 +28,7 @@ function make(ids: string[], loadout: Partial<ResolvedLoadout> = {}, cfg: Partia
   const steps = ids.map(ability);
   const catalog = new Map(steps.map((e) => [e.key, e]));
   const l = { ...defaultResolvedLoadout(), style: 'Necromancy' as const, hasConduit: true, abilityDamage: 1000, ...loadout, items: new Set(loadout.items ?? []) };
-  const e = new TrainerEngine(steps, catalog, { pingMs: 0, jitterMs: 0, abilityQueueing: true, loop: true, fullAdrenaline: true, hitChanceDisabled: true, ...cfg, loadout: l });
+  const e = new TrainerEngine(steps, catalog, { pingMs: 0, jitterMs: 0, autoAttacks: false, abilityQueueing: true, loop: true, fullAdrenaline: true, hitChanceDisabled: true, ...cfg, loadout: l });
   e.random = () => random;
   e.start(0);
   return e;
@@ -78,6 +78,25 @@ describe('necromancy: Bloat, Death Skulls, Spectral Scythe, Blood Siphon', () =>
     expect(ticks).toEqual([4, 7, 10, 13, 16, 19, 22, 25, 28, 31, 34]); // the tick landing on the recast still lands, then only the second cast's ticks
   });
 
+  it('Bloated is 25% of what the initial hit actually dealt: a curse-boosted critical opener carries into every tick, which never crits itself', () => {
+    // Ruination +12% on the initial hit, guaranteed critical strike ×1.5 at level 99: 1500 × 1.12 × 1.5 = 2520 → 630 per tick
+    const e = make(['bloat'], { critChanceAdd: 1 }, { prebuild: { stacks: {}, spirits: [], abilities: [], prayers: ['ruination'] } });
+    cast(e, 'bloat', 1);
+    e.update(32 * T);
+    const h = hits(e, 'ability:bloat');
+    expect(h[0]).toEqual({ amount: 2520, tick: 1, crit: true, dot: false });
+    expect(h.slice(1).map((x) => [x.amount, x.crit, x.dot])).toEqual(Array(10).fill([630, false, true]));
+    // on-npc effects apply per tick: Vulnerability on the target after the opener raises only the ticks it covers
+    const v = make(['bloat', 'soul-sap'], {}, { prebuild: { stacks: {}, spirits: [], abilities: [], prayers: [] } });
+    cast(v, 'bloat', 1);
+    v.update(5 * T);
+    v.buffs.push({ id: 'vulnerability', name: 'Vulnerability', kind: 'Debuff', on: 'target', icon: null, startTick: 5, endTick: 105, stacks: 0, extended: 0, sourceKey: 'test' });
+    v.update(32 * T);
+    const vh = hits(v, 'ability:bloat');
+    expect(vh[0].amount).toBe(1500);
+    expect(vh.slice(1).map((x) => x.amount)).toEqual([375, ...Array(9).fill(Math.floor(375 * 1.1))]);
+  });
+
   it('Death Skulls on one target: the skull lands three times (initial + two returns), four with Igneous Kal-Mor', () => {
     const e = make(['death-skulls']);
     cast(e, 'death-skulls', 1);
@@ -110,24 +129,37 @@ describe('necromancy: Bloat, Death Skulls, Spectral Scythe, Blood Siphon', () =>
 });
 
 describe('necromancy: spirits', () => {
-  it('Haunted adds 10% of a hit, capped at 20% of the ability damage', () => {
-    const e = make(['command-vengeful-ghost', 'necromancy', 'finger-of-death'], {}, { prebuild: { stacks: { necrosis: 12 }, spirits: ['vengeful-ghost'], abilities: [], prayers: [] } });
+  it("Haunted arrives with the ghost's next hit after the Command, then adds 10% of a hit, capped at 20% of the ability damage", () => {
+    // pre-built ghost: conjured 6 ticks before the start, so it hits on ticks 0, 7, 14 …
+    const e = make(['command-vengeful-ghost', 'necromancy', 'necromancy', 'finger-of-death'], {}, { prebuild: { stacks: { necrosis: 12 }, spirits: ['vengeful-ghost'], abilities: [], prayers: [] } });
     cast(e, 'command-vengeful-ghost', 1);
-    expect(e.hasBuff('haunted')).toBe(true);
+    expect(e.hasBuff('haunted')).toBe(false); // "future attacks will apply Haunted" – not the cast
     cast(e, 'necromancy', 4);
-    expect(hits(e, 'ability:necromancy')[0].amount).toBe(1100);
-    cast(e, 'finger-of-death', 7);
+    expect(hits(e, 'ability:necromancy')[0].amount).toBe(1000);
+    cast(e, 'necromancy', 7); // the ghost's hit on tick 7 applies Haunted before the cast lands
+    expect(e.buff('haunted')).toMatchObject({ startTick: 7, spirit: 'vengeful-ghost' });
+    expect(hits(e, 'ability:necromancy')[1].amount).toBe(1100);
+    cast(e, 'finger-of-death', 10);
     expect(hits(e, 'ability:finger-of-death')[0].amount).toBe(3200); // 3000 + min(300, 200)
   });
 
-  it('Command Vengeful Ghost cannot be used again while the target is Haunted', () => {
-    const e = make(['command-vengeful-ghost', 'command-vengeful-ghost'], {}, { prebuild: { stacks: {}, spirits: ['vengeful-ghost'], abilities: [], prayers: [] } });
+  it('Command Vengeful Ghost pressed again while the target is Haunted is an ordinary (wasted) cast, not blocked', () => {
+    const e = make(['command-vengeful-ghost', 'command-vengeful-ghost', 'command-vengeful-ghost'], {}, { prebuild: { stacks: {}, spirits: ['vengeful-ghost'], abilities: [], prayers: [] } });
     cast(e, 'command-vengeful-ghost', 1);
+    e.update(8 * T);
     expect(e.hasBuff('haunted')).toBe(true);
-    expect(e.requirementFailure(ability('command-vengeful-ghost'), 4)).toContain('Haunted');
-    cast(e, 'command-vengeful-ghost', 4);
-    expect(e.events.some((x) => x.kind === 'requirement' && x.key === 'ability:command-vengeful-ghost')).toBe(true);
-    expect(e.results.length).toBe(1);
+    expect(e.requirementFailure(ability('command-vengeful-ghost'), 8)).toBeNull();
+    cast(e, 'command-vengeful-ghost', 8);
+    expect(e.events.some((x) => x.kind === 'requirement' && x.key === 'ability:command-vengeful-ghost')).toBe(false);
+    expect(e.results.length).toBe(2);
+    expect(e.hasBuff('haunted')).toBe(true);
+  });
+
+  it('a ghost that expires before its next hit never applies Haunted', () => {
+    const e = make(['command-vengeful-ghost'], {}, { prebuild: { stacks: {}, spirits: ['vengeful-ghost'], abilities: [], prayers: [], remaining: { 'spirit:vengeful-ghost': 3 } } });
+    cast(e, 'command-vengeful-ghost', 1);
+    e.update(20 * T);
+    expect(e.hasBuff('haunted')).toBe(false);
   });
 
   it('the skeleton attacks from its 7th tick every 5 ticks, each attack adds Rage (+3%); the zombie poisons every 3 ticks', () => {

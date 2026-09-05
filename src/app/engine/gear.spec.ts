@@ -109,7 +109,7 @@ function ability(id: string): EngineEntity {
 function make(ids: string[], loadout: ResolvedLoadout, cfg: Partial<EngineConfig> = {}): { e: TrainerEngine; rnd: { v: number } } {
   const steps = ids.map(ability);
   const catalog = new Map(steps.map((x) => [x.key, x]));
-  const e = new TrainerEngine(steps, catalog, { pingMs: 0, jitterMs: 0, abilityQueueing: true, loop: true, fullAdrenaline: true, hitChanceDisabled: true, ...cfg, loadout: { ...loadout, abilityDamage: 1000 } });
+  const e = new TrainerEngine(steps, catalog, { pingMs: 0, jitterMs: 0, autoAttacks: false, abilityQueueing: true, loop: true, fullAdrenaline: true, hitChanceDisabled: true, ...cfg, loadout: { ...loadout, abilityDamage: 1000 } });
   const rnd = { v: 0.5 };
   e.random = () => rnd.v;
   e.start(0);
@@ -242,10 +242,10 @@ describe('gear: armour sets resolve from set-effects.json', () => {
 // ---------------------------------------------------------------- items
 
 describe('gear: item passives resolve from set-effects.json', () => {
-  it('Igneous capes: Overpower 2 × 310–370 at tick 3, Omnipower 4 × 120–150, Deadshot 8 × 55–75, Death Skulls 6 bounces; Kal-Zuk all four', () => {
+  it('Igneous capes: Overpower 2 × 280–340 (9 March 2026) at tick 3, Omnipower 4 × 120–150, Deadshot 8 × 55–75, Death Skulls 6 bounces; Kal-Zuk all four', () => {
     const ket = resolve({ gear: ['igneous-kal-ket'] });
     expect(ket.hitsOverrides['overpower']).toEqual([3, 3]);
-    expect(ket.damageOverrides['overpower']).toEqual({ min: 310, max: 370 });
+    expect(ket.damageOverrides['overpower']).toEqual({ min: 280, max: 340 });
     expect(ket.hitsOverrides['omnipower']).toBeUndefined();
     const mej = resolve({ gear: ['igneous-kal-mej'] });
     expect(mej.hitsOverrides['omnipower']).toHaveLength(4);

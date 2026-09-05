@@ -76,7 +76,7 @@ const NAKATRA = preset('nakatra');
 function make(ids: string[], loadout: ResolvedLoadout, cfg: Partial<EngineConfig> = {}): { e: TrainerEngine; rnd: { v: number; seq: number[] } } {
   const steps = ids.map(ability);
   const catalog = new Map(steps.map((x) => [x.key, x]));
-  const e = new TrainerEngine(steps, catalog, { pingMs: 0, jitterMs: 0, abilityQueueing: true, loop: true, fullAdrenaline: true, enemy: NAKATRA, ...cfg, loadout: { ...loadout, abilityDamage: 1000 } });
+  const e = new TrainerEngine(steps, catalog, { pingMs: 0, jitterMs: 0, autoAttacks: false, abilityQueueing: true, loop: true, fullAdrenaline: true, enemy: NAKATRA, ...cfg, loadout: { ...loadout, abilityDamage: 1000 } });
   const rnd = { v: 0.5, seq: [] as number[] };
   e.random = () => (rnd.seq.length ? rnd.seq.shift()! : rnd.v);
   e.start(0);

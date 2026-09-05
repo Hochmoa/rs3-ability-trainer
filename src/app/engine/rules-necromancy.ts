@@ -114,12 +114,11 @@ export const NECROMANCY_RULES: AbilityRule[] = [
   conjure('vengeful-ghost', 'Vengeful Ghost'),
   {
     ability: 'command-vengeful-ghost',
-    requires: [
-      { text: 'needs an active Vengeful Ghost (6 ticks after the conjure)', spirit: 'vengeful-ghost', spiritAgeMin: COMMAND_READY_AFTER },
-      { text: 'the target is already Haunted – wait for the ghost to expire', notBuff: 'haunted' },
+    requires: [{ text: 'needs an active Vengeful Ghost (6 ticks after the conjure)', spirit: 'vengeful-ghost', spiritAgeMin: COMMAND_READY_AFTER }],
+    notes: [
+      'No cost, no cooldown: from the ghost\'s next hit on (up to 7 ticks later) every hit applies Haunted (+10% damage taken, capped) for the rest of the ghost\'s life; pressing it again while Haunted is a wasted GCD (' + W + 'Vengeful_Ghost/Hit_timings )',
     ],
-    notes: ['From the next ghost hit on every hit applies Haunted (+10% damage taken, capped) for the rest of the ghost\'s life (' + W + 'Command_Vengeful_Ghost )'],
-    onCast: [{ kind: 'buff', id: 'haunted', untilSpirit: 'vengeful-ghost' }],
+    onCast: [{ kind: 'buff', id: 'haunted', untilSpirit: 'vengeful-ghost', onSpiritHit: true }],
   },
   conjure('phantom-guardian', 'Phantom Guardian', ['The guardian gains Valour whenever you take a hit (max 25) (' + W + 'Valour )']),
   {
@@ -143,8 +142,11 @@ export const NECROMANCY_RULES: AbilityRule[] = [
   },
   {
     ability: 'bloat',
-    bleed: { hits: 10, everyTicks: 3, direct: true, factors: Array(10).fill(0.25) },
-    notes: ['20% adrenaline: a 135–165% hit, then Bloated – 10 hits of 25% of that hit every 3 ticks; recasting resets it; spreads on death; removed by Freedom (' + W + 'Bloat )'],
+    bleed: { hits: 10, everyTicks: 3, direct: true, shareOfDirect: 0.25 },
+    notes: [
+      '20% adrenaline: a 135–165% hit, then Bloated – 10 hits of 25% of what that hit actually dealt every 3 ticks; recasting resets it; spreads on death; removed by Freedom (' + W + 'Bloat )',
+      'The DoT is "calculated after applying the critical strike damage boost, before any on-npc effects are applied": a critical or prayer-boosted initial hit carries into every tick, Vulnerability / Haunted apply per tick (' + W + 'Bloat )',
+    ],
     onCast: [{ kind: 'buff', id: 'bloated', refresh: true }],
   },
   {
@@ -210,7 +212,7 @@ export const NECROMANCY_RULES: AbilityRule[] = [
   },
   {
     ability: 'invoke-death',
-    notes: ['Incantation, 12 s (20 ticks): the next necromancy attack applies Death Mark – the target is executed below 25% life points (' + W + 'Invoke_Death )'],
+    notes: ['Incantation, 12 s (20 ticks): the next necromancy attack applies Death Mark – the target is executed below 20% of its life points or 30,000, whichever is lower (' + W + 'Invoke_Death )'],
     onCast: [{ kind: 'buff', id: 'invoke-death' }],
   },
   {

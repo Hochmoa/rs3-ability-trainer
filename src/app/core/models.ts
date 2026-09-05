@@ -218,6 +218,10 @@ export interface RotationStep {
   offsetTicks?: number;
   /** annotation such as "(DW)" or trailing prose */
   hint?: string;
+  /** PvME "asphyx (4t) →": the channel is cancelled by the next ability this many ticks after the cast (the next step is due there) */
+  cancelAfterTicks?: number;
+  /** PvME "7 hit rapid": let this many hits of the channel land, then continue (the next step is due on the tick of that hit) */
+  afterHits?: number;
 }
 
 export interface Rotation {
@@ -923,7 +927,7 @@ export const ENEMY_PRESETS: EnemyConfig[] = [
   { ...DEFAULT_ENEMY, enabled: true, preset: 'nakatra', name: 'Nakatra, Devourer Eternal', styles: ['Magic', 'Ranged'], pattern: 'streak', streak: 3, intervalTicks: 5, warningTicks: 3, lifePoints: 800000, affinity: { Melee: 55, Ranged: 65, Magic: 55, Necromancy: 55 }, defenceLevel: 95, armour: 2765 },
   { ...DEFAULT_ENEMY, enabled: true, preset: 'zamorak', name: 'Zamorak, Lord of Chaos', styles: ['Magic', 'Ranged'], pattern: 'random', intervalTicks: 5, warningTicks: 3, lifePoints: 300000, affinity: { Melee: 55, Ranged: 55, Magic: 55, Necromancy: 55 }, defenceLevel: 80, armour: 1924 },
   { ...DEFAULT_ENEMY, enabled: true, preset: 'raksha', name: 'Raksha, the Shadow Colossus', styles: ['Melee', 'Ranged', 'Magic'], pattern: 'no-repeat', intervalTicks: 5, warningTicks: 3, lifePoints: 800000, affinity: { Melee: 55, Ranged: 65, Magic: 55, Necromancy: 55 }, defenceLevel: 85, armour: 2178 },
-  { ...DEFAULT_ENEMY, enabled: true, preset: 'rasial', name: 'Rasial, the First Necromancer', styles: ['Necromancy'], pattern: 'cycle', intervalTicks: 5, warningTicks: 3, lifePoints: 900000, affinity: { Melee: 55, Ranged: 55, Magic: 55, Necromancy: 55 }, defenceLevel: 95, armour: 2458 },
+  { ...DEFAULT_ENEMY, enabled: true, preset: 'rasial', name: 'Rasial, the First Necromancer', styles: ['Necromancy'], pattern: 'cycle', intervalTicks: 3, warningTicks: 3, lifePoints: 800000, affinity: { Melee: 55, Ranged: 55, Magic: 55, Necromancy: 55 }, defenceLevel: 95, armour: 2458 },
   { ...DEFAULT_ENEMY, enabled: false, preset: 'dummy', name: 'Training dummy', styles: ['Melee'], pattern: 'cycle', intervalTicks: 5, warningTicks: 3, lifePoints: 0, affinity: { Melee: 60, Ranged: 50, Magic: 70, Necromancy: 60 }, defenceLevel: 1, armour: 110 },
 ];
 
@@ -987,6 +991,10 @@ export interface StepResult {
   adrenaline: number;
   /** the step was completed by Revolution, not by a press (docs/research/revolution.md) */
   auto?: boolean;
+  /** the step was completed by the automatic basic attack (nothing was pressed when the GCD ended) */
+  autoAttack?: boolean;
+  /** an automatic basic attack slipped in before this cast because the press came after the GCD end: `lateTicks` counts from the intended tick */
+  autoAttackBefore?: boolean;
 }
 
 export interface Session {
