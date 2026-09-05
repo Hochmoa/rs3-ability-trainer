@@ -19,11 +19,11 @@
       } @else {
         <button class="btn btn-sm" (click)="stop()" title="Esc stops too">Stop</button>
       }
-      <span class="focus-hint muted">{{ running() ? 'Esc stops' : coarsePointer() ? 'Tap the glowing slot' : 'Click into this window, then press your keys' }}</span>
+      <span class="focus-hint muted">{{ running() ? 'Esc stops' : coarsePointer() ? 'Tap the glowing slot' : 'Click here, then press your keys' }}</span>
       @if (coarsePointer() && !running()) { <a class="btn btn-sm focus-back" routerLink="/" title="Back to the full Train page">Back</a> }
     </div>
     @if (!canStart()) {
-      <p class="focus-warn">Cannot start: some steps are not on a keybound bar (or unknown). Fix it on the main Train page.</p>
+      <p class="focus-warn">Can't start: some steps have no keybound slot. Fix it on the Train page.</p>
     }
     <div class="focus-strip">
       @for (s of focusSlots(); track s.stepIndex + '-' + s.kind) {
@@ -63,7 +63,7 @@
         </div>
       </div>
     </div>
-    <div class="history" title="Everything that really cast, in order: green = on time, yellow = late, red = wrong, blue = Revolution, grey = prayer / weapon switch">
+    <div class="history" title="What actually cast, in order. Green on time, yellow late, red wrong, blue Revolution, grey prayer or switch.">
       <span class="bar-label">Pressed</span>
       <div class="history-strip" #historyStrip>
         @for (h of history(); track h.id) {
@@ -134,8 +134,8 @@
           </label>
         }
         @if (storage.barProfiles().length > 1) {
-          <label class="field" title="Action bar setup: presets, positions, style bindings and keys (Action bars page)">
-            <span>Bars</span>
+          <label class="field" title="Bar setup: presets, positions, style bindings and keys (Action bars page)">
+            <span>Bar setup</span>
             <select [ngModel]="storage.activeBarProfileId()" (ngModelChange)="pickBars($event)" [disabled]="running()">
               @for (p of storage.barProfiles(); track p.id) {
                 <option [value]="p.id">{{ p.name }}</option>
@@ -159,7 +159,7 @@
     </div>
     @if (advanced() || optionsOpen()) {
     <div class="options-row">
-      <span class="opt-group" title="In-game Combat Mode. Revolution: the leftmost usable ability inside the yellow box of the main bar fires on its own whenever the global cooldown is free; your presses take priority.">
+      <span class="opt-group" title="Revolution: the leftmost usable ability in the yellow box fires on its own when the GCD is free. Your presses win.">
         <span class="opt-label">Mode</span>
         <select class="mode" [ngModel]="storage.settings().combatMode" (ngModelChange)="setSetting('combatMode', $event)" [disabled]="running()">
           <option value="manual">Full manual</option>
@@ -172,28 +172,28 @@
           <input type="checkbox" [checked]="storage.settings().fullAdrenaline" (change)="setSetting('fullAdrenaline', !storage.settings().fullAdrenaline)" [disabled]="running()" />
           100% at start
         </label>
-        <label class="pill" title="+10% adrenaline every tick (0.6 s), like at a training dummy – practise thresholds and ultimates without building up">
+        <label class="pill" title="+10% adrenaline per tick, like on a dummy.">
           <input type="checkbox" [checked]="storage.settings().rechargeAdrenaline" (change)="setSetting('rechargeAdrenaline', !storage.settings().rechargeAdrenaline)" [disabled]="running()" />
           Recharge +10%/tick
         </label>
       </span>
-      <span class="opt-group" title="Voice coach: the trainer says the keys out loud (3, Ctrl 4, Shift Q) – for players who learn by ear. Settings → Coach for volume, lead time and voice.">
+      <span class="opt-group" title="Says the keys out loud. Volume, lead and voice: Settings → Sound.">
         <span class="opt-label">Coach</span>
-        <label class="pill" title="After every cast the keys of the next steps are said out loud (Q, then 3) – you hear what comes next while the global cooldown runs">
+        <label class="pill" title="After each cast, the next keys are said at once (Q, then 3).">
           <input type="checkbox" [checked]="storage.settings().coach.callouts" (change)="setCoach('callouts', !storage.settings().coach.callouts)" [disabled]="running()" />
           Call-outs
         </label>
-        <label class="pill" title="Every key is called at the moment to press it, in the tick rhythm like a rhythm game – press along. Falls behind with you: the next key is only called after the actual cast.">
+        <label class="pill" title="Each key is called when it is time to press it. If you fall behind, it waits for your cast.">
           <input type="checkbox" [checked]="storage.settings().coach.lead" (change)="setCoach('lead', !storage.settings().coach.lead)" [disabled]="running()" />
           Key by key
         </label>
-        <label class="pill" title="Click on every game tick (0.6 s) and a higher beep the moment the global cooldown ends – the moment to press">
+        <label class="pill" title="A click every tick, a higher beep when the GCD ends.">
           <input type="checkbox" [checked]="storage.settings().coach.metronome" (change)="setCoach('metronome', !storage.settings().coach.metronome)" [disabled]="running()" />
           Metronome
         </label>
       </span>
       @if (advanced()) {
-      <span class="opt-group" title="Bone Shield incantation up from the start. It stands in for a shield: Reflect, Immortality, Rejuvenate and Preparation work with either; Debilitate, Resonance, Divert and Barricade scale with the tier – Greater (⌊50% × Necromancy⌋) is the one to use.">
+      <span class="opt-group" title="Bone Shield up from the start. Counts as a shield for Reflect, Immortality, Rejuvenate and Preparation; Debilitate, Resonance, Divert and Barricade scale with its tier.">
         <span class="opt-label">Bone Shield</span>
         <label class="pill"><input type="radio" name="boneShield" [checked]="storage.settings().boneShield === 'none'" (change)="setSetting('boneShield', 'none')" [disabled]="running()" /> none</label>
         <label class="pill"><input type="radio" name="boneShield" [checked]="storage.settings().boneShield === 'lesser'" (change)="setSetting('boneShield', 'lesser')" [disabled]="running()" /> Lesser</label>
@@ -217,13 +217,13 @@
         Ping {{ storage.settings().pingMs }} ms ± {{ storage.settings().jitterMs }} · Ability queueing {{ storage.settings().abilityQueueing ? 'on' : 'off' }}@if (storage.settings().loop) { · loop } · {{ prayerBook() === 'Curses' ? 'curses' : 'standard prayers' }} · <a routerLink="/settings">settings</a>
       </span>
       @if (coarsePointer()) {
-        <a class="btn btn-sm popout" routerLink="/focus" [queryParams]="selectedId() ? { rotation: selectedId() } : {}" title="The compact view for a phone: rotation strip, tick and GCD bars, feedback and your bars on one screen – tap the slots to press them">Phone view</a>
+        <a class="btn btn-sm popout" routerLink="/focus" [queryParams]="selectedId() ? { rotation: selectedId() } : {}" title="Rotation strip, timers, feedback and your bars on one screen. Tap a slot to press it.">Phone view</a>
       } @else {
-        <button class="btn btn-sm popout" type="button" (click)="popout()" title="Open the compact focus view (rotation strip, tick and GCD bars, feedback, your bars) in a small window that you can keep next to the game – Chromium keeps it on top">Popout</button>
+        <button class="btn btn-sm popout" type="button" (click)="popout()" title="Opens the focus view in a small window you can keep next to the game. Stays on top in Chrome and Edge.">Popout</button>
       }
-      <label class="pill adv" title="Advanced view: enemy attacks, pre-build, buff and prayer HUD, equipment panel, Revolution and Bone Shield options, layout editor. The simulation is the same either way.">
+      <label class="pill adv" title="Shows the enemy, pre-build, HUD, gear panel and layout editor. Same simulation.">
         <input type="checkbox" [checked]="advanced()" (change)="setUiMode(!advanced())" [disabled]="running()" />
-        Advanced
+        Advanced view
       </label>
     </div>
     }
@@ -253,11 +253,11 @@
       } @else {
         <span class="muted small">The enemy attacks in a fixed rhythm. Have the matching Protect / Deflect prayer on when the hit lands, Soul Split the rest of the time.</span>
       }
-      <label class="field lp" title="Life points of the target: damage is tracked and the session ends at 0. Leave 0 for a training dummy (unlimited).">
+      <label class="field lp" title="Target life points; the session ends at 0. Leave 0 for a dummy.">
         <span>Life points</span>
         <input type="number" inputmode="decimal" min="0" step="10000" [ngModel]="enemy().lifePoints" (ngModelChange)="setEnemy('lifePoints', numberOf($event, 0, 100000000))" [disabled]="running()" />
       </label>
-      <label class="lp" title="What the target is: Salve amulet, Jas dragonbane / demonbane arrows and the Undead / Dragon / Demon Slayer perks only work against their type.">
+      <label class="lp" title="Salve amulet, bane arrows and the Slayer perks only work against their type.">
         Type
         <select [ngModel]="enemy().type ?? ''" (ngModelChange)="setEnemy('type', $event || null)" [disabled]="running()">
           <option value="">none</option>
@@ -299,7 +299,7 @@
           <span>First attack after (ticks)</span>
           <input type="number" inputmode="decimal" min="1" max="50" [ngModel]="enemy().firstAttackTicks" (ngModelChange)="setEnemy('firstAttackTicks', numberOf($event, 1, 50))" [disabled]="running()" />
         </label>
-        <div class="field" title="Affinity (base hit chance) of the target per attack style, from the wiki infobox: 90 against its weakness, 55–70 otherwise; 100 = always hit. Necromancy uses the monster's middle value.">
+        <div class="field" title="Affinity per style from the wiki: 90 against its weakness, 55–70 otherwise, 100 = always hit.">
           <span>Affinity (%)</span>
           <div class="affinity">
             @for (st of STYLES4; track st) {
@@ -307,15 +307,15 @@
             }
           </div>
         </div>
-        <label class="field" title="Defence level of the target (wiki infobox). Its armour rating is armour + f(Defence), f(x) = x³/1250 + 4x + 40.">
+        <label class="field" title="Defence level from the wiki. Armour rating = armour + x³/1250 + 4x + 40.">
           <span>Defence level</span>
           <input type="number" inputmode="decimal" min="1" max="10000" [ngModel]="enemy().defenceLevel" (ngModelChange)="setEnemy('defenceLevel', numberOf($event, 1, 10000))" [disabled]="running()" />
         </label>
-        <label class="field" title="Armour value of the target (wiki infobox). Hit chance = affinity × your accuracy / (armour + f(Defence)), capped at 100%.">
+        <label class="field" title="Armour value from the wiki. Hit chance = affinity × accuracy / armour rating, capped at 100%.">
           <span>Armour</span>
           <input type="number" inputmode="decimal" min="0" max="100000" step="10" [ngModel]="enemy().armour" (ngModelChange)="setEnemy('armour', numberOf($event, 0, 100000))" [disabled]="running()" />
         </label>
-        <p class="muted small note">Scoring: +1 for every tick with Soul Split active, +1 for every attack met with the right overhead or absorbed by Disruption Shield, Barricade, Resonance or Divert. Specials of the bosses are not simulated; the presets use the auto-attack styles, rate, affinity, Defence level and armour from the wiki. Hit chance: affinity × accuracy / armour rating (Settings: scaled damage, roll to hit, or off).</p>
+        <p class="muted small note">Score: +1 per tick on Soul Split, +1 per attack you prayed against or absorbed (Disruption Shield, Barricade, Resonance, Divert). Boss specials are not simulated. Hit chance = affinity × accuracy / armour rating.</p>
       </div>
     }
   </div>
@@ -324,7 +324,7 @@
     <div class="prebuild-head">
       <b>Pre-build</b>
       @if (prebuildEmpty()) {
-        <span class="muted small">Start from nothing – or set the stacks, conjures, buffs and prayers you would build at a dummy first.</span>
+        <span class="muted small">Stacks, conjures, buffs and prayers you'd build at a dummy first.</span>
       } @else {
         <span class="pb-counts" [title]="prebuildSummary()">
           @if (prebuild().adrenaline !== undefined) { <span class="pb-count">{{ prebuild().adrenaline }}% adrenaline</span> }
@@ -357,7 +357,7 @@
         </section>
         @if (rotationStyles().has('Necromancy')) {
           <section class="pb-section">
-            <h4>Conjures out</h4>
+            <h4>Conjures up</h4>
             <div class="chips">
               @for (sp of SPIRITS; track sp.id) {
                 <label class="chip" [title]="prebuild().spirits.includes(sp.id) ? 'lifetime left when the session starts (full: ' + prebuildFullTicks('spirit:' + sp.id) * 0.6 + ' s)' : sp.name">
@@ -402,7 +402,7 @@
             </div>
           </section>
         }
-        <p class="muted small note">Saved per rotation. The seconds are what a conjure or buff still has when the session starts – by default its full duration (conjures: cast 3.6 s ago, so they are commandable right away).</p>
+        <p class="muted small note">Saved with the rotation. Seconds = time left at the start; default is the full duration (conjures start 3.6 s old, so Command is ready).</p>
       </div>
     }
   </div>
@@ -430,12 +430,12 @@
   }
   @if (unknownSteps()) {
     <div class="panel warning">
-      {{ unknownSteps() }} step(s) of this rotation refer to abilities that were removed from the game. <a routerLink="/rotations">Edit the rotation</a> to fix it.
+      {{ unknownSteps() }} step(s) use abilities that are no longer in the game. <a routerLink="/rotations">Edit the rotation</a>.
     </div>
   }
   @if (adrenalineShort(); as a) {
     <div class="panel warning">
-      {{ a.name }} opens the rotation and needs {{ a.need }}% adrenaline – the session starts with {{ a.have }}%.
+      {{ a.name }} needs {{ a.need }}% adrenaline; the session starts with {{ a.have }}%.
       <div class="fixes">
         <button class="btn btn-sm" (click)="setSetting('fullAdrenaline', true)" [disabled]="running()">Start with 100% adrenaline</button>
         @if (advanced()) { <span class="muted small">or set a starting adrenaline in the pre-build</span> }
@@ -535,13 +535,14 @@
         }
       }
     </div>
+    <p class="muted small layout-hint">same tick = together with the previous input · 2 ticks later = wait 2 ticks · channelling = let the channel run</p>
 
     <div class="feedback" [class]="'feedback ' + (feedback()?.cls ?? '')" [title]="feedback()?.text ?? ''">
       {{ feedback()?.text ?? idleText() }}@if (feedback()?.detail; as d) { <small class="detail muted">{{ d }}</small> }
     </div>
 
     <!-- what the server made of every press, in order – compare with the rotation strip above; always rendered so nothing below moves -->
-    <div class="history" title="Everything that really cast, in order – presses the game refused (not enough adrenaline, on cooldown, requirement missing) are not listed. Green = expected step on time, yellow = late, red = wrong ability, blue = Revolution, grey = prayer / weapon switch outside the rotation. The number is the rotation step it completed.">
+    <div class="history" title="What actually cast, in order. Refused presses are not listed. Green on time, yellow late, red wrong, blue Revolution, grey prayer or switch. Number = rotation step.">
       <span class="bar-label">Pressed</span>
       <div class="history-strip" #historyStrip>
         @for (h of history(); track h.id) {
@@ -742,7 +743,7 @@
       }
     </div>
     @if (editLayout() && !running()) {
-      <p class="muted small layout-hint">← → move a bar, ½ makes it half as wide with two rows of seven slots – two half bars share one line. Hover a slot for ‹ › to shift it and × to clear it. Keybinds stay with slot numbers 1–14.</p>
+      <p class="muted small layout-hint">← → moves a bar. ½ makes two rows of seven; two half bars share a line. Hover a slot for ‹ › and ×. Keys stay with the slot numbers.</p>
     }
 
     <div class="counts">
@@ -754,7 +755,7 @@
       <span class="muted">Damage {{ damage() | number: '1.0-0' }}</span>
       <span class="muted">DPS {{ dps() | number: '1.0-0' }}</span>
       @if (advanced() && hitChance() !== null) {
-        <span class="muted" title="hit chance of the wielded style against the target's affinity, Defence level and armour with the active prayers (wiki: affinity × accuracy / armour rating, capped at 100%)">Hit chance {{ hitChance()! * 100 | number: '1.0-0' }}%</span>
+        <span class="muted" title="Hit chance of the wielded style against the target, with the active prayers: affinity × accuracy / armour rating, capped at 100%.">Hit chance {{ hitChance()! * 100 | number: '1.0-0' }}%</span>
         <span [class]="misses() ? 'warn' : 'muted'">Misses {{ misses() }}</span>
       }
       @if (killedAtMs(); as ms) { <span class="good">Kill {{ (ms / 1000) | number: '1.1-1' }} s</span> }
@@ -779,7 +780,7 @@
    <aside class="gear-side">
     <div class="gear-head"><b>Equipment &amp; backpack</b> <a routerLink="/loadout">edit</a></div>
     <gear-panel [equipment]="gearState().equipment" [inventory]="gearState().inventory" [live]="true" [cdkDrops]="!running()" [dragOut]="!running()" [usable]="gearUsable()" [keyOf]="gearKey" (action)="onGear($event)" (cdkDrop)="dropIntoInventory($event.index, $event.data)" />
-    <p class="muted small">{{ running() ? 'Click a weapon to wield it, a potion to drink it, armour to wear it; click a worn item to take it off. Changes are not saved to the loadout.' : 'While training: click to switch weapons, drink potions and swap armour. Set effects follow what you wear. Drag a potion or weapon from the backpack onto a bar slot, or a missing one into the backpack.' }}</p>
+    <p class="muted small">{{ running() ? 'Click to wield, drink, wear or take off. Not saved to the loadout.' : 'While training you can switch, drink and swap armour here. Drag a potion or weapon onto a bar slot.' }}</p>
    </aside>
    }
   </div>
@@ -799,7 +800,6 @@
           <b>{{ damage() | number: '1.0-0' }} damage</b> in {{ hits() }} hits · {{ dps() | number: '1.0-0' }} DPS
           @if (advanced() && hitChance() !== null) { · hit chance {{ hitChance()! * 100 | number: '1.0-0' }}% · {{ misses() }} {{ misses() === 1 ? 'miss' : 'misses' }} }
           @if (killedAtMs(); as ms) { · target killed after {{ (ms / 1000) | number: '1.1-1' }} s }
-          @if (advanced()) { <small class="muted">(level 99, no armour bonus – see the wiki's ability damage formula)</small> }
         </p>
       }
       @if (advanced() && enemy().enabled) {

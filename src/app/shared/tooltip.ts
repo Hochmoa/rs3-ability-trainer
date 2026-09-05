@@ -268,7 +268,7 @@ interface Note {
             <tr><th>Target</th><td>{{ a.target }}{{ a.channelled ? ' · channelled' : '' }}</td></tr>
             @if (a.equipment && a.equipment !== 'Any') { <tr><th>Requires</th><td>{{ a.equipment }}</td></tr> }
             @if (a.durationTicks) { <tr><th>Duration</th><td>{{ seconds(a.durationTicks) }}</td></tr> }
-            @if (!a.triggersGcd) { <tr><th>GCD</th><td class="warn">does not trigger the global cooldown</td></tr> }
+            @if (!a.triggersGcd) { <tr><th>GCD</th><td class="warn">off the GCD</td></tr> }
           </table>
           <p class="desc">{{ describe(a.description) }}</p>
           @if (notes(a.id).length) {
@@ -300,7 +300,7 @@ interface Note {
             <tr><th>Level</th><td>{{ p.level }}</td></tr>
             @if (p.drainPerHour) { <tr><th>Drain</th><td>{{ p.drainPerHour }} points / hour</td></tr> }
             @if (p.adrenaline) { <tr><th>Adrenaline</th><td>{{ p.adrenaline > 0 ? '+' : '' }}{{ p.adrenaline }}%</td></tr> }
-            <tr><th>GCD</th><td class="warn">off the global cooldown</td></tr>
+            <tr><th>GCD</th><td class="warn">off the GCD</td></tr>
           </table>
           @if (p.effect) { <p class="desc">{{ p.effect }}</p> }
           <p class="desc muted">{{ p.description }}</p>
@@ -310,14 +310,14 @@ interface Note {
             <tr><th>Level</th><td>{{ s.level }} Magic</td></tr>
             @if (s.cooldownTicks) { <tr><th>Cooldown</th><td>{{ seconds(s.cooldownTicks) }}</td></tr> }
             @if (s.durationTicks) { <tr><th>Duration</th><td>{{ seconds(s.durationTicks) }}</td></tr> }
-            <tr><th>GCD</th><td [class.warn]="!s.gcd">{{ s.kind === 'autocast' ? 'selecting the auto-cast spell is instant' : s.gcd ? 'starts the global cooldown' : 'off the global cooldown' }}</td></tr>
+            <tr><th>GCD</th><td [class.warn]="!s.gcd">{{ s.kind === 'autocast' ? 'selecting the auto-cast spell is instant' : s.gcd ? 'on the GCD' : 'off the GCD' }}</td></tr>
           </table>
           <p class="desc">{{ s.effect }}</p>
           <p class="desc muted">{{ s.description }}</p>
         } @else if (e.weapon; as w) {
           <table>
             <tr><th>Style</th><td>{{ w.style }}</td></tr>
-            <tr><th>GCD</th><td class="warn">instant – switching gear does not use a tick</td></tr>
+            <tr><th>GCD</th><td class="warn">instant, no tick used</td></tr>
           </table>
           <p class="desc">Wield your {{ w.style }} weapon. Abilities of other styles are greyed out until you switch back; Defence and Constitution abilities work with any weapon.</p>
         } @else if (e.spec; as sp) {
@@ -332,7 +332,7 @@ interface Note {
             @if (sp.cooldownTicks) { <tr><th>Cooldown</th><td>{{ seconds(sp.cooldownTicks) }}</td></tr> }
             @if (sp.damageText && sp.damageText !== 'None' && sp.damageText !== 'N/A') { <tr><th>Damage</th><td>{{ sp.damageText }}</td></tr> }
             <tr><th>Target</th><td>{{ sp.target }}{{ sp.channelled ? ' · channelled' : '' }}</td></tr>
-            <tr><th>GCD</th><td [class]="sp.ignoresGcd ? 'warn' : ''">{{ sp.ignoresGcd ? 'off the global cooldown' : 'yes' }}</td></tr>
+            <tr><th>GCD</th><td [class]="sp.ignoresGcd ? 'warn' : ''">{{ sp.ignoresGcd ? 'off the GCD' : 'on the GCD' }}</td></tr>
             @if (sp.eof.storable === true) { <tr><th>Essence of Finality</th><td>storable{{ sp.eof.notes ? ' – ' + sp.eof.notes : '' }}</td></tr> }
           </table>
           <p class="desc">{{ describe(sp.description) }}</p>
@@ -344,7 +344,7 @@ interface Note {
             @if (sp.debuff; as d) { <tr><th>Target</th><td>{{ d.name }} for {{ seconds(d.durationTicks) }}</td></tr> }
             @if (sp.cooldownTicks) { <tr><th>Cooldown</th><td>{{ seconds(sp.cooldownTicks) }}{{ sp.sharedCooldown ? ' (shared)' : '' }}</td></tr> }
             @if (sp.level) { <tr><th>Herblore</th><td>{{ sp.level }}</td></tr> }
-            <tr><th>GCD</th><td class="warn">off the global cooldown</td></tr>
+            <tr><th>GCD</th><td class="warn">off the GCD</td></tr>
           </table>
           <p class="desc">{{ sp.description }}</p>
           @if (specialNotes(sp.id).length) {
@@ -513,8 +513,6 @@ interface Note {
       color: var(--gold);
       font-weight: 700;
       font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
       margin-bottom: 3px;
     }
     .rule {

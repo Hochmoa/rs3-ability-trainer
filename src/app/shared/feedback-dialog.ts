@@ -16,7 +16,7 @@ import { SupabaseService, errorText } from '../core/supabase.service';
         <button class="close" type="button" (click)="close()" title="Close" aria-label="Close">×</button>
         @if (sent()) {
           <h2>Thanks!</h2>
-          <p>Your {{ kind() === 'bug' ? 'bug report' : 'suggestion' }} is in. Thanks, every report is read.</p>
+          <p>Your {{ kind() === 'bug' ? 'bug report' : 'suggestion' }} is in. We read every one.</p>
           <div class="actions">
             <button class="btn btn-primary" (click)="close()">Close</button>
           </div>
@@ -42,7 +42,7 @@ import { SupabaseService, errorText } from '../core/supabase.service';
             <p class="muted small">Sent as <b>{{ supabase.profile()?.display_name ?? 'your account' }}</b>, so we can get back to you.</p>
           } @else {
             <label class="contact">
-              <span class="muted small">Contact (optional, e-mail or RSN, in case there are questions)</span>
+              <span class="muted small">Contact (optional): e-mail or RSN, in case we have a question</span>
               <input type="text" [ngModel]="contact()" (ngModelChange)="contact.set($event)" maxlength="200" />
             </label>
           }

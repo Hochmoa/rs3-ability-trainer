@@ -12,13 +12,12 @@
     Name
     <input type="text" [ngModel]="l().name" (ngModelChange)="rename($event)" maxlength="40" />
   </label>
-  <label class="check" title="Hides Daemonheim-tier gear, tools, cosmetic and recolour variants, intermediate smithing upgrades (+1 … +4), sub-tier-60 gear and non-combat perks. The catalog only – nothing already in the loadout is removed.">
+  <label class="check" title="Hides Daemonheim gear, tools, cosmetics, recolours, +1 … +4 smithing steps, sub-60 gear and non-combat perks. Catalog only.">
     <input type="checkbox" [checked]="hideObscure()" (change)="setHideObscure(!hideObscure())" />
     Hide obscure equipment
   </label>
   <p class="muted small">
-    Drag items from the catalog into the equipment slots or the backpack, like in game. Click a catalog item to put it in the backpack, click a backpack item to wear it, click a worn item to take it off.
-    Right-click an item for Invention perks (augmentable weapons, body, legs, shields) and the Essence of Finality special. While training, weapons in the backpack are switches, potions in it can be drunk and armour can be swapped.
+    Drag from the catalog into a slot or the backpack. Click: catalog → backpack, backpack → wear, worn → take off. Right-click for perks and the EoF special.
   </p>
   @if (warnings().length) {
     <div class="warnings">
@@ -59,7 +58,7 @@
         <p class="muted">{{ data.loadoutReady() ? 'Nothing matches.' : 'Loading…' }}</p>
       }
     </div>
-    <p class="muted small">Up to 200 results; items with a special attack, set effect or passive always appear regardless of the tier filter.{{ hideObscure() ? ' Obscure gear is hidden (checkbox at the top).' : '' }} Drop an item back here to remove it from the loadout.</p>
+    <p class="muted small">First 200 results. Specs, set pieces and passives ignore the tier filter.{{ hideObscure() ? ' Obscure gear is hidden.' : '' }} Drop an item here to remove it.</p>
   </div>
 
   <div class="worn">
@@ -69,7 +68,7 @@
       <div class="effect">
         <span class="slot-label">Weapon special attack</span>
         @if (weaponSpec(); as s) {
-          <span><b>{{ s.name }}</b> <small class="muted">{{ s.adrenaline }}% adrenaline{{ s.cooldownTicks ? ' · ' + (s.cooldownTicks * 0.6) + ' s cooldown' : '' }}{{ s.ignoresGcd ? ' · off GCD' : '' }}</small></span>
+          <span><b>{{ s.name }}</b> <small class="muted">{{ s.adrenaline }}% adrenaline{{ s.cooldownTicks ? ' · ' + (s.cooldownTicks * 0.6) + ' s cooldown' : '' }}{{ s.ignoresGcd ? ' · off the GCD' : '' }}</small></span>
         } @else { <span class="muted">the wielded weapon has no special attack</span> }
       </div>
       <div class="effect">
@@ -141,7 +140,7 @@
       </select>
       @if (familiar(); as f) {
         <small class="muted">{{ f.passive }}</small>
-        <small class="muted"><b>{{ f.scroll.name }}</b> ({{ f.scroll.specialPoints }} special move points{{ f.scroll.cooldownTicks ? ', ' + seconds(f.scroll.cooldownTicks) + ' s cooldown' : '' }}): {{ f.scroll.description }} Put the scroll on an action bar to use it while training; the familiar has 60 special move points and regains 15 every 30 s.</small>
+        <small class="muted"><b>{{ f.scroll.name }}</b> ({{ f.scroll.specialPoints }} points{{ f.scroll.cooldownTicks ? ', ' + seconds(f.scroll.cooldownTicks) + ' s cooldown' : '' }}): {{ f.scroll.description }} Put it on a bar to use it. 60 points, +15 every 30 s.</small>
       } @else {
         <small class="muted">The familiar attacks on its own (like conjured spirits) and makes its scroll usable from the action bars.</small>
       }
@@ -179,14 +178,14 @@
         <div>
           <span class="slot-label">Ability damage</span> <b>{{ r.abilityDamage }}</b>
           @if (r.style) {
-            <small class="muted">{{ r.style }}: {{ damageSkillName(r) }} {{ r.combatLevel }} â†’ level part {{ levelPart(r.combatLevel) }}, plus the weapons' tier part and a damage bonus of {{ styleBonus(r) }} (Ã—1.5 with a two-hander or dual wield)</small>
+            <small class="muted">{{ r.style }}: {{ damageSkillName(r) }} {{ r.combatLevel }} → level part {{ levelPart(r.combatLevel) }}, plus the weapons' tier part and a damage bonus of {{ styleBonus(r) }} (×1.5 with a two-hander or dual wield)</small>
           } @else {
             <small class="muted">no weapon in hand</small>
           }
         </div>
         <div>
           <span class="slot-label">Damage bonus</span>
-          <small class="muted">@for (s of STYLES4; track s) {{{ s }} +{{ r.damageBonus[s] }}{{ $last ? '' : ' Â· ' }}} â€“ power armour, jewellery, capes and pocket items (runescape.wiki: Damage bonus)</small>
+          <small class="muted">@for (s of STYLES4; track s) {{{ s }} +{{ r.damageBonus[s] }}{{ $last ? '' : ' · ' }}} – power armour, jewellery, capes and pocket items (runescape.wiki: Damage bonus)</small>
         </div>
         <div>
           <span class="slot-label">Critical strike damage</span> <b>+{{ critPct(r) }}%</b>
@@ -194,7 +193,7 @@
         </div>
         <div>
           <span class="slot-label">Maximum life points</span> <b>{{ r.maxLifePoints }}</b>
-          <small class="muted">Constitution {{ r.levels.constitution }} Ã— 100 + {{ r.lifePointsBonus }} from the worn armour (Fortitude and the Powerburst of vitality add to it while active)</small>
+          <small class="muted">Constitution {{ r.levels.constitution }} × 100 + {{ r.lifePointsBonus }} from the worn armour (Fortitude and the Powerburst of vitality add to it while active)</small>
         </div>
       </div>
     }
@@ -206,7 +205,7 @@
           <option [ngValue]="o">{{ OVERLOADS[o].name }}{{ o === 'none' ? ' – level 99' : ' – level ' + boostedLevel(o) }}</option>
         }
       </select>
-      <small class="muted">Boosts every combat level for the whole session, so the ability damage rises with it (36 min per flask; the elder overload salve boosts the same). PvME rotations do not press it.</small>
+      <small class="muted">Boosts all combat levels for the session; ability damage rises with them. Rotations don't press it.</small>
     </label>
     <label>
       <span>Weapon poison</span>

@@ -347,11 +347,11 @@ export class Bars implements OnDestroy {
 
 
   subtitle(e: Entity): string {
-    if (e.ability) return e.ability.basicAttack ? 'auto-attack' : e.ability.type + (e.ability.triggersGcd ? '' : ' · no GCD');
+    if (e.ability) return e.ability.basicAttack ? 'auto-attack' : e.ability.type + (e.ability.triggersGcd ? '' : ' · off the GCD');
     if (e.prayer) return 'level ' + e.prayer.level;
     if (e.special) return '+' + (e.special.adrenaline || e.special.adrenalineOverTime) + '% adrenaline';
     if (e.weapon) return 'weapon switch';
-    if (e.spell) return SPELLBOOK_NAMES[e.spell.book] + ' · level ' + e.spell.level + (e.spell.gcd ? '' : ' · no GCD');
+    if (e.spell) return SPELLBOOK_NAMES[e.spell.book] + ' · level ' + e.spell.level + (e.spell.gcd ? '' : ' · off the GCD');
     return '';
   }
 }

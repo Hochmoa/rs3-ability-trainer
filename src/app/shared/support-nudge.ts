@@ -98,7 +98,7 @@ export class EngagementService {
         <div class="cup">☕</div>
         <div class="body">
           <div class="title">Enjoying the trainer?</div>
-          <p>The trainer is free and has no ads. A coffee keeps the servers and the wiki data updates going.</p>
+          <p>Free, no ads. If it helped, a coffee helps back.</p>
           <div class="actions">
             <a class="btn btn-primary" [href]="url" target="_blank" rel="noopener" (click)="engagement.thanks()">{{ label }}</a>
             <button class="btn" (click)="engagement.snooze()">Not now</button>

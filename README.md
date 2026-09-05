@@ -1,6 +1,6 @@
 # RS3 Ability Trainer
 
-Practice pressing RuneScape 3 ability keybinds with correct tick and global-cooldown timing, in the browser.
+Practise RuneScape 3 rotations on the real tick clock, in the browser: paste a PvME rotation, press the keys, see if you were on tick.
 Live at **https://rs3trainer.hochware.com** (GitHub Pages).
 
 ## How it works
@@ -41,7 +41,7 @@ Live at **https://rs3trainer.hochware.com** (GitHub Pages).
   Magic / Necromancy → which position shows which preset). Keybinds belong to position + slot (*Keybinds* page),
   plus one key per weapon switch. While training, the slot of the next step glows, GCD abilities get the cooldown
   overlay, abilities you can't use are greyed out (wrong weapon, equipment requirement, adrenaline, cooldown).
-  Presets can be copied into each other. Signed in, the whole setup syncs across devices (table `action_bars`).
+  Presets can be copied into each other. Signed in, the bar setup syncs across devices (table `action_bars`).
   *Layout* on the Train page arranges the five bars: drag to reorder, make a bar half as wide (two rows of seven) so
   two of them share a line.
 - **Weapon switches** are rotation steps (catalog tab "Weapons"); switching is instant. Each style has one weapon
@@ -54,8 +54,8 @@ Live at **https://rs3trainer.hochware.com** (GitHub Pages).
   (random / never twice the same / in order / streaks), interval and warning time are configurable; presets for Nakatra,
   Zamorak and Raksha use the wiki's auto-attack styles and 5-tick rate (specials are not simulated).
 - Two bars above the queue show the tick (0.6 s) and the GCD (1.8 s) progress, a third one the adrenaline.
-- Rotations, keybinds (with Ctrl/Shift/Alt), loadout, settings and session results are stored in IndexedDB after you
-  accept the storage banner.
+- Rotations, keybinds (with Ctrl/Shift/Alt), loadouts, bar setups and settings are stored in the browser (IndexedDB) after
+  you accept the storage banner. Results are kept for the session summary only – there is no session history.
 
 - **Ability interactions** are simulated the way the wiki documents them (`docs/research/*.md`, ~190 rules,
   `src/app/engine/rules-*.ts`): style resources (Bloodlust, Necrosis, Residual Souls, Storm Shards), cooldown

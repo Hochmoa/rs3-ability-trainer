@@ -136,7 +136,7 @@ export class Account {
   async setShare(value: boolean): Promise<void> {
     try {
       await this.setups.setPublic(value);
-      this.message.set({ text: value ? 'Your setup is listed on the Setups page.' : 'Your setup is hidden from the Setups page.', cls: 'info' });
+      this.message.set({ text: value ? 'Your setup is listed on the Shared setups page.' : 'Your setup is hidden from the Shared setups page.', cls: 'info' });
     } catch (err) {
       this.message.set({ text: errorText(err), cls: 'bad' });
     }

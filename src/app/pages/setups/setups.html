@@ -1,7 +1,7 @@
 <div class="panel controls">
   <h2>Shared setups</h2>
   <p class="muted small">
-    Settings, loadouts, keybinds and action bars other players share.
+    Shared setups: settings, loadouts, keybinds and bars other players share.
     @if (!supabase.user()) { <a routerLink="/account">Sign in</a> to share your own. }
     @else if (setups.isPublic() === false) { Your own setup is hidden – change that on the <a routerLink="/account">account page</a>. }
   </p>
@@ -14,7 +14,7 @@
 } @else if (!rows().length) {
   <div class="panel empty">
     <p>Nobody shares a setup yet.</p>
-    <p class="muted small">Sign in – your settings, loadouts, keybinds and action bars are listed here automatically.</p>
+    <p class="muted small">Sign in and yours is listed here.</p>
   </div>
 }
 

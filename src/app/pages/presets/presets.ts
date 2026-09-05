@@ -64,7 +64,7 @@ export class Presets {
         this.loading.set(false);
       },
       () => {
-        this.error.set('presets.json could not be loaded');
+        this.error.set('The boss setups could not be loaded.');
         this.loading.set(false);
       },
     );
@@ -89,8 +89,8 @@ export class Presets {
 
   async load(p: BossPreset): Promise<void> {
     const ok = await this.dialogs.confirm(
-      'Add "' + p.title + '"?\n\nThis creates a loadout with the PvME gear, ' + p.rotations.length + ' rotations and an action bar setup of its own with the abilities they use. Your keys are kept; slots without a key get one from the default keyboard layout, so it is playable right away. Nothing of yours is replaced – pick the rotation on the Train page and loadout and bars switch with it.',
-      { ok: 'Add', title: p.boss + ' – ' + p.style },
+      'Use "' + p.title + '"?\n\nAdds a loadout, ' + p.rotations.length + ' rotations and a bar setup. Your keys stay; empty slots get default keys. Nothing of yours is replaced.',
+      { ok: 'Use it', title: p.boss + ' – ' + p.style },
     );
     if (!ok) return;
     this.busy.set(p.id);
