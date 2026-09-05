@@ -138,7 +138,7 @@
       </label>
       <div class="actions">
         @if (!running()) {
-          <button class="btn btn-primary btn-start" (click)="start()" [disabled]="!canStart()">Start</button>
+          <button class="btn btn-primary btn-start" (click)="start()" [disabled]="!canStart() || !data.loadoutReady()" [title]="data.loadoutReady() ? '' : 'loading the equipment data…'">Start</button>
           @if (advanced()) {
             <button class="btn" [class.active]="editLayout()" (click)="editLayout.set(!editLayout())" title="Arrange the action bars: move with the arrows, toggle half width, rearrange slots">{{ editLayout() ? 'Done' : 'Layout' }}</button>
           }
@@ -412,6 +412,13 @@
       @for (w of equipmentWarnings(); track w) {
         <div>{{ w }}</div>
       }
+      @if (missingSpecials().length) {
+        <div class="fixes">
+          @for (e of missingSpecials(); track e.key) {
+            <button class="btn btn-sm" (click)="addToBackpack(e)" [disabled]="running()"><img [src]="e.icon" alt="" /> Put {{ e.name }} into the backpack</button>
+          }
+        </div>
+      }
       <a routerLink="/loadout">Change the loadout</a> or the rotation. You can still train; those steps will be refused like in game.
     </div>
   }
@@ -658,7 +665,7 @@
             [position]="b.position"
             [presetName]="b.presetName"
             [slots]="b.slots"
-            [compact]="b.shape === 'compact'"
+            [compact]="b.shape === 'compact' || narrow()"
             [droppable]="!running()"
             [editable]="editLayout() && !running()"
             [revolutionSlots]="revolutionSlots()"

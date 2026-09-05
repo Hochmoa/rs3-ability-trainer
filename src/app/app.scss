@@ -100,3 +100,24 @@ footer .support {
 .blocked {
   margin-bottom: 16px;
 }
+
+/* phones: the menu stays one row and scrolls sideways instead of stacking four rows */
+@media (max-width: 640px) {
+  .topbar nav {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+
+    a,
+    .feedback {
+      flex: none;
+      white-space: nowrap;
+      padding: 6px 9px;
+    }
+  }
+}

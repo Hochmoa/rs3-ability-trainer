@@ -65,11 +65,18 @@ export class PresetsService {
 
   /** Creates loadout, rotations and bar profile for the preset and makes them active. Nothing of the player's is replaced. */
   async add(p: BossPreset): Promise<AddedPreset> {
+    const parsed = this.parse(p);
     const loadout = presetLoadout(p, (ref) => this.data.slotOf(ref));
+    // potions and bombs the rotations press must be in the backpack, or the trainer refuses them like the game
+    for (const id of new Set(parsed.flatMap((r) => r.steps).filter((st) => st.kind === 'special').map((st) => st.id))) {
+      if (loadout.inventory.some((r) => r?.kind === 'special' && r.id === id)) continue;
+      const free = loadout.inventory.findIndex((r) => !r);
+      if (free < 0) break;
+      loadout.inventory[free] = { kind: 'special', id };
+    }
     await this.storage.saveLoadout(loadout);
     await this.storage.setActiveLoadout(loadout.id);
 
-    const parsed = this.parse(p);
     const now = Date.now();
     const rotations: Rotation[] = parsed.map((r, i) => ({ id: crypto.randomUUID(), name: p.boss + ' – ' + r.name, steps: r.steps, updatedAt: now - i, presetId: p.id }));
     for (const r of rotations) await this.storage.saveRotation(r);

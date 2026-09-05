@@ -1318,3 +1318,47 @@
   }
 }
 
+/* quick fixes under the "cannot perform" warning */
+.panel.warning .fixes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+
+  .btn img {
+    width: 16px;
+    height: 16px;
+    vertical-align: -3px;
+    margin-right: 4px;
+  }
+}
+
+/* phones: one 2 × 7 bar per line, feedback may take two lines, the enemy text drops under the checkbox */
+@media (max-width: 640px) {
+  .action-bars {
+    grid-template-columns: 1fr;
+
+    .bar-cell,
+    .bar-cell.wide {
+      grid-column: 1 / -1;
+    }
+  }
+
+  .feedback {
+    height: 44px;
+    line-height: 22px;
+    font-size: 15px;
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  .enemy .enemy-head .small {
+    flex-basis: 100%;
+  }
+
+  .queue-strip {
+    justify-content: flex-start;
+  }
+}

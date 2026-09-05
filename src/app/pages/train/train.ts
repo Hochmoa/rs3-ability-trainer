@@ -308,7 +308,7 @@ export class Train implements OnDestroy {
     const inv = this.storage.loadout().inventory;
     for (const e of this.stepEntities()) {
       if (e?.special?.kind === 'scroll' && this.storage.loadout().familiar !== e.special.familiar) out.add(e.name + ': needs the ' + (this.data.familiarById().get(e.special.familiar ?? '')?.name ?? e.special.familiar) + ' familiar (Loadout page)');
-      else if (e?.special && !inv.some((r) => r?.kind === 'special' && r.id === e.id)) out.add(e.name + ': not in your backpack (Loadout page)');
+      else if (e?.special && !inv.some((r) => r?.kind === 'special' && r.id === e.id)) out.add(e.name + ': not in your backpack');
       if (!e?.ability) continue;
       const rule = ruleFor(e.ability.id);
       for (const r of rule?.requires ?? []) {
@@ -367,6 +367,23 @@ export class Train implements OnDestroy {
     const r = this.reachable();
     return this.stepEntities().filter((e): e is Entity => !!e && !e.key.startsWith('note:') && !r.has(e.key) && !seen.has(e.key) && !!seen.add(e.key));
   });
+  /** potions / bombs the rotation presses that are not in the backpack – one click puts them there */
+  readonly missingSpecials = computed<Entity[]>(() => {
+    if (!this.data.loadoutReady()) return [];
+    const inv = this.storage.loadout().inventory;
+    const seen = new Set<string>();
+    return this.stepEntities().filter((e): e is Entity => !!e?.special && !inv.some((r) => r?.kind === 'special' && r.id === e.id) && !seen.has(e.id) && !!seen.add(e.id));
+  });
+
+  /** put a missing potion / bomb into the first free backpack slot of the active loadout */
+  addToBackpack(e: Entity): void {
+    const free = this.storage.loadout().inventory.findIndex((r) => !r);
+    this.dropIntoInventory(free >= 0 ? free : 0, e);
+  }
+
+  /** phone-sized screen: every bar shows as 2 × 7 on its own line */
+  readonly narrow = signal(typeof window !== 'undefined' && window.matchMedia('(max-width: 640px)').matches);
+
   readonly canStart = computed(() => !!this.rotation() && this.stepEntities().length > 0 && this.unreachable().length === 0 && this.unknownSteps() === 0);
   /** resources shown for this rotation (STYLE_STACKS of its styles); Storm Shards sit on the target, so they cannot be pre-built */
   readonly styleStacks = computed<StackId[]>(() => {
@@ -673,6 +690,10 @@ export class Train implements OnDestroy {
   private startedAt = 0;
 
   constructor() {
+    if (typeof window !== 'undefined') {
+      const mq = window.matchMedia('(max-width: 640px)');
+      mq.addEventListener('change', (ev) => this.narrow.set(ev.matches));
+    }
     // the gear and weapon catalogs (~1 MB each) come after the first paint; the resolved loadout, gear panel and
     // warnings recompute when they arrive
     afterNextRender(() => void this.data.ensure('gear', 'weapons', 'perks'));
