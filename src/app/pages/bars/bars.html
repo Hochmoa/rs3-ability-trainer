@@ -76,7 +76,7 @@
             </div>
           }
         </div>
-        <p class="muted small">Drag from the catalog into a slot or click an icon in the catalog to fill the first free slot. Drag an ability within the bar to move or swap it. Keybinds are set per bar position on the <a routerLink="/keybinds">Keybinds</a> page.</p>
+        <p class="muted small">Drag from the catalog into a slot, or click an icon to fill the first free one. Drag within the bar to move. Keys: <a routerLink="/keybinds">Keybinds</a> page.</p>
       </div>
 
       <div class="panel">
@@ -87,7 +87,7 @@
               <button class="tab" [class.active]="tab() === t && !search()" (click)="tab.set(t); search.set('')">{{ t }}</button>
             }
           </div>
-          <label class="check" title="Hides what is practically never on a PvM bar: Slayer passives and unused ultimates, standard prayers below level 36 and Smite, the Sap / Leech and utility curses, and obscure weapons (tools, cosmetics, Daemonheim tiers). Search also respects it.">
+          <label class="check" title="Hides what is rarely on a PvM bar: Slayer passives, unused ultimates, low prayers, Sap / Leech curses, obscure weapons. Search respects it.">
             <input type="checkbox" [checked]="hideObscure()" (change)="setHideObscure(!hideObscure())" />
             Hide obscure abilities/prayers
           </label>
@@ -133,7 +133,7 @@
 
       <div class="panel">
         <h2>Action bar binding</h2>
-        <p class="muted small">Like the in-game setting: when you wield a weapon of a style, these positions switch to the chosen preset. "keep" leaves the position as set above.</p>
+        <p class="muted small">When you wield a weapon of a style, these positions switch to the chosen preset; "keep" leaves the position as above.</p>
         <table class="bindings">
           <thead>
             <tr><th>Style</th>@for (name of POSITIONS; track $index) { <th>{{ name }}</th> }</tr>
@@ -160,7 +160,7 @@
 
       <div class="panel">
         <h2>Weapons</h2>
-        <p class="muted small">The weapons you wield and carry are part of the <a routerLink="/loadout">loadout</a>; bars are bound per combat style, the wielded weapon's style decides which set is shown.</p>
+        <p class="muted small">Weapons live in the <a routerLink="/loadout">loadout</a>. The wielded weapon's style picks the bars.</p>
       </div>
       </details>
     </div>

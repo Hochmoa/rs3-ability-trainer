@@ -19,7 +19,7 @@ import { ToastService } from '../../shared/toast';
           <input type="checkbox" [ngModel]="s().abilityQueueing" (ngModelChange)="set('abilityQueueing', $event)" />
           <span>Ability queueing</span>
         </label>
-        <small class="indent">Same as the in-game option: on, a press during the global cooldown is queued; off, it is ignored and you press in the last tick.</small>
+        <small class="indent">The in-game setting. On: a press during the global cooldown (GCD) queues and casts when it ends. Off: it is ignored, press in the last tick.</small>
         <label class="check">
           <input type="checkbox" [ngModel]="s().loop" (ngModelChange)="set('loop', $event)" />
           <span>Loop the rotation until stopped (Esc)</span>
@@ -27,8 +27,8 @@ import { ToastService } from '../../shared/toast';
         <label>
           <span>View</span>
           <select [ngModel]="s().uiMode" (ngModelChange)="set('uiMode', $event)">
-            <option value="simple">Simple</option>
-            <option value="advanced">Advanced</option>
+            <option value="simple">Simple view</option>
+            <option value="advanced">Advanced view</option>
           </select>
           <small>Simple hides the enemy, buff and gear panels and the Loadout, Explore and Shared setups pages.</small>
         </label>
@@ -58,7 +58,7 @@ import { ToastService } from '../../shared/toast';
 
     <div class="panel">
       <h2>Sound</h2>
-      <p class="muted small">The trainer says the keys out loud and clicks the tick; switch it on with the Voice pills on the Train page.</p>
+      <p class="muted small">Says the keys out loud and clicks the tick. Switch it on with the Coach pills on the Train page.</p>
       <div class="form">
         <label class="check">
           <input type="checkbox" [ngModel]="s().coach.callouts" (ngModelChange)="setCoach('callouts', $event)" />
@@ -67,14 +67,14 @@ import { ToastService } from '../../shared/toast';
         <small class="indent">After every cast the next keys are said at once ("Q, then 3").</small>
         <label class="check">
           <input type="checkbox" [ngModel]="s().coach.lead" (ngModelChange)="setCoach('lead', $event)" />
-          <span>Coach mode – call every key at its tick</span>
+          <span>Key by key – each key called at its tick</span>
         </label>
-        <small class="indent">Every key is called the moment it should be pressed; the scoring stays the same.</small>
+        <small class="indent">Each key is called at its tick. Falls behind with you; scoring is unchanged.</small>
         <label class="check">
           <input type="checkbox" [ngModel]="s().coach.metronome" (ngModelChange)="setCoach('metronome', $event)" />
           <span>Metronome</span>
         </label>
-        <small class="indent">A click on every tick and a higher beep when the global cooldown ends.</small>
+        <small class="indent">A click every tick, a higher beep when the GCD ends.</small>
         <label>
           <span>Volume ({{ s().coach.volume }}%)</span>
           <input type="range" min="0" max="100" step="5" [ngModel]="s().coach.volume" (ngModelChange)="setCoach('volume', $event)" />
@@ -111,8 +111,8 @@ import { ToastService } from '../../shared/toast';
             @for (m of HIT_CHANCE_MODES; track m.id) { <option [ngValue]="m.id">{{ m.label }}</option> }
           </select>
           <small>
-            Your accuracy against the target's affinity, Defence level and armour from the enemy panel on the Train page.
-            Scaled: every hit deals hit chance × damage (the PvM rule since March 2024); roll: every hit lands in full or misses; off: every hit lands
+            Your accuracy against the target's affinity, Defence and armour (enemy panel on the Train page).
+            Scaled: every hit deals hit chance × damage (PvM since March 2024). Roll: full hit or miss. Off: always hits
             (<a href="https://runescape.wiki/w/Hit_chance" target="_blank" rel="noopener">wiki</a>).
           </small>
         </label>
@@ -122,7 +122,7 @@ import { ToastService } from '../../shared/toast';
     <div class="panel">
       <h2>Alt1</h2>
       <p class="muted small">
-        Run the compact focus view inside the game client: install the <a href="https://runeapps.org/alt1" target="_blank" rel="noopener">Alt1 Toolkit</a>, then click the link below.
+        Runs the focus view inside the game client. Install <a href="https://runeapps.org/alt1" target="_blank" rel="noopener">Alt1</a>, click the link, accept the app.
       </p>
       <a class="btn" [href]="ALT1_ADD_URL" title="alt1://addapp/… – needs the Alt1 Toolkit installed">Add to Alt1</a>
     </div>

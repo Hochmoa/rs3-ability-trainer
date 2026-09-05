@@ -117,13 +117,13 @@ export class Rotations {
   }
 
   subtitle(e: Entity): string {
-    if (e.ability) return e.ability.basicAttack ? 'auto-attack' : e.ability.type + (e.ability.triggersGcd ? '' : ' · no GCD');
+    if (e.ability) return e.ability.basicAttack ? 'auto-attack' : e.ability.type + (e.ability.triggersGcd ? '' : ' · off the GCD');
     if (e.prayer) return 'level ' + e.prayer.level;
-    if (e.special) return e.special.kind === 'bomb' ? 'thrown · no GCD' : e.special.kind === 'device' ? 'deployed · no GCD' : e.special.kind === 'scroll' ? 'familiar scroll · ' + e.special.specialPoints + ' special move points · no GCD' : e.special.adrenaline || e.special.adrenalineOverTime ? '+' + (e.special.adrenaline || e.special.adrenalineOverTime) + '% adrenaline' : 'potion · no GCD';
-    if (e.weapon) return 'weapon switch · no GCD';
+    if (e.special) return e.special.kind === 'bomb' ? 'thrown · off the GCD' : e.special.kind === 'device' ? 'deployed · off the GCD' : e.special.kind === 'scroll' ? 'familiar scroll · ' + e.special.specialPoints + ' special move points · no GCD' : e.special.adrenaline || e.special.adrenalineOverTime ? '+' + (e.special.adrenaline || e.special.adrenalineOverTime) + '% adrenaline' : 'potion · no GCD';
+    if (e.weapon) return 'weapon switch · off the GCD';
     if (e.spec) return 'spec · ' + (e.spec.adrenaline ?? 0) + '% adrenaline';
-    if (e.action) return 'client action · no GCD';
-    if (e.spell) return SPELLBOOK_NAMES[e.spell.book] + ' · level ' + e.spell.level + (e.spell.gcd ? '' : ' · no GCD');
+    if (e.action) return 'client action · off the GCD';
+    if (e.spell) return SPELLBOOK_NAMES[e.spell.book] + ' · level ' + e.spell.level + (e.spell.gcd ? '' : ' · off the GCD');
     return '';
   }
 

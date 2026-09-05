@@ -1,4 +1,4 @@
-<h1 class="sr-only">Keybind drill – burn your RS3 keybinds into muscle memory</h1>
+<h1 class="sr-only">Key drill</h1>
 @if (data.loadError()) {
   <p class="bad" role="alert">Could not load the ability data – check your connection. <button class="btn btn-sm" type="button" (click)="data.retry()">Retry</button></p>
 } @else if (!storage.ready() || !data.loaded()) {
@@ -6,7 +6,7 @@
 } @else if (!anyKeys()) {
   <div class="panel empty">
     <h2>No keybinds yet</h2>
-    <p>The drill asks for random abilities from your bars and scores the key you press.</p>
+    <p>A slot lights up, you press its key. It needs keybound slots first.</p>
     <button class="btn btn-primary" (click)="presets.addDemo()">Load a demo setup</button>
     <p class="muted small">or <a routerLink="/bars">set up your own bars</a></p>
   </div>
@@ -46,7 +46,7 @@
           }
         </select>
       </label>
-      <label class="field pace" title="Wait until you press the right key, or move on at a fixed cadence (a missed prompt counts as a miss)">
+      <label class="field pace" title="Wait for the right key, or move on at a fixed pace (a missed prompt counts as a miss)">
         <span>Speed</span>
         <select [ngModel]="options().paceMs" (ngModelChange)="set('paceMs', +$event)" [disabled]="running()">
           @for (p of PACES; track p.ms) {
@@ -64,7 +64,7 @@
       </label>
     </div>
     <div class="options-row">
-      <label class="pill" title="The key appears on the prompt when you have not found it after two seconds">
+      <label class="pill" title="Shows the key when you have not found it in time">
         <input type="checkbox" [checked]="options().hint" (change)="set('hint', !options().hint)" [disabled]="running()" />
         show key hint after {{ HINT_AFTER_S }} s
       </label>

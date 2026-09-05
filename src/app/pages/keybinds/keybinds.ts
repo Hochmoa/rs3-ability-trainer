@@ -262,7 +262,7 @@ export class Keybinds {
     }
     for (const w of this.carried()) stops.push({ target: { weapon: w.id }, entity: w, where: 'Weapon switch' });
     if (!stops.length) {
-      await this.dialogs.alert('The bars of this setup are empty – put abilities on them on the Action bars page (or add a boss setup) and come back.', 'Nothing to bind');
+      await this.dialogs.alert('The bars of this bar setup are empty. Fill them on the Action bars page or add a boss setup.', 'Nothing to bind');
       return;
     }
     this.capturing.set(null);
@@ -309,7 +309,7 @@ export class Keybinds {
     const dupes = [...this.conflictMap(w.setup).entries()].filter(([, places]) => places.length > 1);
     if (dupes.length) {
       const lines = dupes.map(([key, places]) => '• ' + keybindLabel(fromKey(key)) + ': ' + places.join(', '));
-      await this.dialogs.alert('These keys are bound more than once – only one of the places can win in a session. Click a slot to rebind it.\n\n' + lines.join('\n'), 'Keys used twice');
+      await this.dialogs.alert('These keys are bound twice; only one place can fire. Click a slot to rebind.\n\n' + lines.join('\n'), 'Keys used twice');
     }
   }
 

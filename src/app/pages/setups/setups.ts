@@ -71,7 +71,7 @@ export class Setups {
 
   async loadSetup(row: PublicSetupRow): Promise<void> {
     const ok = await this.dialogs.confirm(
-      'Replace your settings, loadouts, keybinds, action bars and enemy config with the setup of ' + row.display_name + '? Your rotations stay. This cannot be undone.',
+      'Replace your settings, loadouts, keybinds, bars and enemy config with the shared setup of ' + row.display_name + '? Your rotations stay. This cannot be undone.',
       { title: 'Load setup', ok: 'Replace mine', danger: true },
     );
     if (!ok) return;
@@ -80,7 +80,7 @@ export class Setups {
       const s = this.details()[row.user_id] ?? (await this.setups.get(row.user_id));
       if (!s) throw new Error('This setup is not shared any more.');
       await this.setups.loadIntoMine(s);
-      this.toast.show('Setup of ' + row.display_name + ' loaded' + (this.supabase.user() ? ' – your online copy follows.' : '.'), 'info');
+      this.toast.show('Shared setup of ' + row.display_name + ' loaded.' + (this.supabase.user() ? ' Your online copy follows.' : ''), 'info');
       void this.router.navigate(['/']);
     } catch (err) {
       this.toast.show('Load failed: ' + errorText(err), 'warn');

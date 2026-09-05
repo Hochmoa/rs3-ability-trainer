@@ -82,7 +82,7 @@
           <button class="tab" [class.active]="tab() === t && !search()" (click)="tab.set(t); search.set('')">{{ t }}</button>
         }
       </div>
-      <label class="check" title="Hides what is practically never on a PvM bar: Slayer buffs and unused ultimates, standard prayers below level 36 and Smite, the Sap / Leech and utility curses, and obscure weapons and specs (tools, cosmetics, Daemonheim tiers). Shared with the action bars page; search also respects it.">
+      <label class="check" title="Hides what is rarely on a PvM bar: Slayer buffs, unused ultimates, low prayers, Sap / Leech curses, obscure weapons and specs. Same switch as on Action bars; search respects it.">
         <input type="checkbox" [checked]="hideObscure()" (change)="setHideObscure(!hideObscure())" />
         Hide obscure abilities/prayers
       </label>

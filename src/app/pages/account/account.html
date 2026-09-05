@@ -23,7 +23,7 @@
     <h2>Share my setup</h2>
     <label class="check">
       <input type="checkbox" [checked]="setups.isPublic() !== false" (change)="setShare(setups.isPublic() === false)" [disabled]="busy() || setups.isPublic() === null" />
-      List my settings, loadouts, keybinds and action bars on the <a routerLink="/setups">Setups</a> page
+      List my settings, loadouts, keybinds and bars on the <a routerLink="/setups">Shared setups</a> page
     </label>
     <p class="muted small">Other players can look at them and load them as their own. Your rotations are shared separately ("public" flag per rotation).</p>
   </div>
@@ -47,7 +47,7 @@
 
   <div class="panel">
     <h2>Delete account</h2>
-    <p class="muted small">Removes your profile, online rotations, keybinds, action bars, setup and session results. Local data in this browser stays.</p>
+    <p class="muted small">Removes your profile, online rotations, keybinds, bars, shared setup and session results. Local data in this browser stays.</p>
     <button class="btn danger" (click)="deleteAccount()" [disabled]="busy()">Delete my account</button>
   </div>
 } @else {
@@ -59,7 +59,7 @@
     </div>
 
     <p class="muted small">
-      An account syncs your rotations, keybinds, action bars, loadouts and settings across browsers and lets you publish rotations. Training works without one.
+      You only need an account to publish rotations and sync across browsers. Everything else works without one.
       @if (ownRotations(); as n) { Your {{ n }} local {{ n === 1 ? 'rotation is' : 'rotations are' }} uploaded when you sign in. }
     </p>
 
