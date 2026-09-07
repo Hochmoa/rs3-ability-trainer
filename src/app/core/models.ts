@@ -223,6 +223,10 @@ export interface RotationStep {
   cancelAfterTicks?: number;
   /** PvME "7 hit rapid": let this many hits of the channel land, then continue (the next step is due on the tick of that hit) */
   afterHits?: number;
+  /** PvME "s<ability>": the ability is started but held (adrenaline and cooldown are spent, nothing lands yet) */
+  stall?: boolean;
+  /** PvME "r<ability>": the held cast is released here – it lands now and costs nothing more */
+  release?: boolean;
 }
 
 export interface Rotation {

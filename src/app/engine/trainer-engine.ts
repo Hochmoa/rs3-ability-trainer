@@ -203,6 +203,10 @@ export interface EngineEntity {
   cancelAfterTicks?: number;
   /** rotation steps only: PvME "7 hit rapid" – the next ability is due on the tick this channel's n-th hit lands */
   afterHits?: number;
+  /** rotation steps only: PvME "s<ability>" – start the ability and hold it (pay and start the cooldown, land nothing) */
+  stall?: boolean;
+  /** rotation steps only: PvME "r<ability>" – let the held cast land; it costs nothing and starts no cooldown again */
+  release?: boolean;
 }
 
 export interface ActiveBuff {
@@ -249,6 +253,8 @@ export type EngineEvent =
   | { kind: 'wrong-fired'; key: string; expected: string; tick: number }
   /** Temporal Anomaly reset the cooldown of the ability just cast */
   | { kind: 'cooldown-reset'; key: string; tick: number }
+  /** a stall step started this ability and holds it: it was paid for and is on cooldown, but nothing has landed */
+  | { kind: 'stalled'; key: string; tick: number }
   | { kind: 'too-early'; key: string; ticksEarly: number }
   | { kind: 'wrong'; key: string; expected: string }
   | { kind: 'no-adrenaline'; key: string; need: number; have: number }
@@ -425,6 +431,8 @@ export class TrainerEngine {
   private wrongWeaponStrikes = 0;
   /** wrong-fired presses in a row while the same special-attack step is expected (see wrongFiredStrike) */
   private wrongFired: { key: string; count: number } | null = null;
+  /** the cast started by a stall step and held until its release step (PvME "sassault → … → rassault") */
+  private held: { key: string; tick: number } | null = null;
   private readyTick = new Map<string, number>();
   private chargeReady = new Map<string, number[]>();
   private sequences = new Map<string, SequenceState>();
@@ -500,6 +508,7 @@ export class TrainerEngine {
     this.stuck = null;
     this.wrongWeaponStrikes = 0;
     this.wrongFired = null;
+    this.held = null;
     this.castTick = null;
     this.wield = { mainHand: null, offHand: null, twoHand: null, ...(this.config.startWield ?? {}) };
     this.adrenaline = this.config.fullAdrenaline ? this.maxAdrenaline : Math.max(0, Math.min(this.maxAdrenaline, this.loadout.startAdrenaline));
@@ -1072,6 +1081,8 @@ export class TrainerEngine {
 
   /** Why an entity cannot cast at `tick` (cooldown, adrenaline, rule requirement), or null. */
   private blocker(entity: EngineEntity, tick: number): EngineEvent | null {
+    // releasing a held cast asks nothing of cooldown or adrenaline: the stall paid for it
+    if (this.held?.key === entity.key && this.steps[this.index]?.release) return null;
     if (entity.scroll) {
       const fam = this.loadout.familiar;
       if (!fam || fam.id !== entity.scroll.familiar) return { kind: 'requirement', key: entity.key, text: 'needs the ' + entity.scroll.familiar.replace(/-/g, ' ') + ' familiar (Loadout page)' };
@@ -1249,7 +1260,15 @@ export class TrainerEngine {
     const autoDue = this.autoDue;
     this.castTick = p.tick;
     this.lastInputTick = p.tick;
-    this.activate(entity, p.tick, { offGcd: false, noGain: false, hitKey: p.autoAttack ? AUTO_ATTACK_KEY : undefined });
+    // the step being completed decides whether this press starts a held cast or releases one
+    const stallStep = expected && this.satisfies(entity, expected) ? expected : undefined;
+    this.activate(entity, p.tick, {
+      offGcd: false,
+      noGain: false,
+      hitKey: p.autoAttack ? AUTO_ATTACK_KEY : undefined,
+      stall: stallStep?.stall,
+      release: stallStep?.release && this.held?.key === entity.key,
+    });
 
     const matched = !!expected && this.satisfies(entity, expected);
     if (p.autoAttack) this.events.push({ kind: 'auto-attack', key: entity.key, tick: p.tick, matched, expected: expected?.key ?? '', dueTick: autoDue ?? p.tick });
@@ -1328,7 +1347,7 @@ export class TrainerEngine {
   }
 
   /** Apply everything an entity does when it casts / activates at `tick`. */
-  private activate(entity: EngineEntity, tick: number, opt: { offGcd: boolean; noGain: boolean; hitKey?: string }): void {
+  private activate(entity: EngineEntity, tick: number, opt: { offGcd: boolean; noGain: boolean; hitKey?: string; stall?: boolean; release?: boolean }): void {
     if (entity.kind === 'prayer') {
       const id = prayerId(entity.key);
       const t = togglePrayer(this.activePrayers, id);
@@ -1368,11 +1387,13 @@ export class TrainerEngine {
       }
     }
 
-    // cooldown (charges, own, shared)
+    // cooldown (charges, own, shared) – a release only lets the held cast land, it does not start the cooldown again
     const stage = this.stageOf(rule);
     const cdTicks = rule?.stages && stage > 1 ? 0 : this.cooldownFor(acting, rule, tick);
     const charges = this.chargesOf(entity, rule);
-    if (charges > 1) {
+    if (opt.release) {
+      // nothing: the stall already paid for this cast
+    } else if (charges > 1) {
       const list = (this.chargeReady.get(entity.key) ?? []).filter((t) => t > tick);
       if (list.length < charges) list.push(tick + cdTicks);
       this.chargeReady.set(entity.key, list);
@@ -1380,7 +1401,7 @@ export class TrainerEngine {
       this.readyTick.set(acting.key, tick + cdTicks);
     }
     const shared = rule?.sharedCooldown ?? acting.sharedCooldown;
-    if (shared && cdTicks > 0) this.readyTick.set('shared:' + shared, tick + cdTicks);
+    if (shared && cdTicks > 0 && !opt.release) this.readyTick.set('shared:' + shared, tick + cdTicks);
     if (cdTicks > 0 && this.temporalAnomalyReset(entity)) {
       this.readyTick.delete(acting.key);
       if (shared) this.readyTick.delete('shared:' + shared);
@@ -1443,7 +1464,15 @@ export class TrainerEngine {
         delta += gain;
       }
     }
-    this.addAdrenaline(delta);
+    if (!opt.release) this.addAdrenaline(delta); // the stall already paid
+    // A stalled cast stops here: "its adrenaline cost is consumed and its cooldown begins" while it is held, and
+    // nothing else of it happens until the release (runescape.wiki/w/Ability_stalling).
+    if (opt.stall) {
+      this.held = { key: entity.key, tick };
+      this.events.push({ kind: 'stalled', key: entity.key, tick });
+      return;
+    }
+    if (this.held?.key === entity.key) this.held = null;
     if (entity.scroll) this.familiarSpecial = Math.max(0, this.familiarSpecial - entity.scroll.specialPoints);
     if (acting.adrenalineOverTime && acting.adrenalineOverTime.ticks > 0) {
       this.overTime.push({ key: acting.key, perTick: acting.adrenalineOverTime.amount / acting.adrenalineOverTime.ticks, untilTick: tick + acting.adrenalineOverTime.ticks });

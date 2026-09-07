@@ -30,5 +30,7 @@ export function stepToEngineEntity(step: RotationStep, entity: Entity, toEngine:
   else if (step.sameTick) ee.offsetTicks = 0;
   if (step.cancelAfterTicks) ee.cancelAfterTicks = step.cancelAfterTicks;
   if (step.afterHits) ee.afterHits = step.afterHits;
+  if (step.stall) ee.stall = true;
+  if (step.release) ee.release = true;
   return ee;
 }

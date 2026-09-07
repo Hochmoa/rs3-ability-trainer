@@ -71,12 +71,17 @@ describe('parsePvme', () => {
     expect(r.unknown).toEqual([]);
   });
 
-  it('a stalled ability released later is one cast: the stall becomes a note, the release the step', () => {
+  it('a stalled ability and its release are marked as the pair of one cast', () => {
     const r = parsePvme('sassault → punish → rassault + bloat', resolve);
-    expect(ids(r.steps)).toEqual(['note:stall assault (released below)', 'punish', 'assault', 'bloat+']);
-    expect(r.steps[2].hint).toBeUndefined();
-    // a stall without a release stays a cast
-    expect(ids(parsePvme('sassault → punish', resolve).steps)).toEqual(['assault', 'punish']);
+    expect(ids(r.steps)).toEqual(['assault', 'punish', 'assault', 'bloat+']);
+    expect(r.steps[0]).toMatchObject({ id: 'assault', stall: true });
+    expect(r.steps[2]).toMatchObject({ id: 'assault', release: true });
+    expect(r.steps[0].hint).toBe('stall'); // the queue shows what the press is for
+    expect(r.steps[2].hint).toBe('release');
+    // a stall without a release stays an ordinary cast
+    const alone = parsePvme('sassault → punish', resolve);
+    expect(ids(alone.steps)).toEqual(['assault', 'punish']);
+    expect(alone.steps[0].stall).toBeUndefined();
   });
 
   it('handles "2t x" offsets and weapon specs', () => {
