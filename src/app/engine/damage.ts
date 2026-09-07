@@ -77,8 +77,10 @@ export function poisonPct(tier: number): number {
  * weapons.json carries the wiki's tier part of every weapon (9.6·t main hand, 4.8·t off-hand = half of its 9.6·t_oh, 14.4·t
  * two-handed; defenders count as half their tier, hatchets and the like less). So b counts 1.5× with a two-hander or dual
  * wield and 1× with a main hand + shield; a shield adds no damage. Weapon speed does not enter the ability damage (only the
- * auto-attack "damage" stat). `capTier`: Ranged uses min(t, ammunition tier) – the weapon part is capped at that tier
- * (Magic's min(t, spell tier) is not modelled: no autocast spell is chosen in the loadout).
+ * auto-attack "damage" stat). `capTier`: Ranged uses min(t, ammunition tier) – the weapon part is capped at that tier.
+ * Magic's min(t, spell tier) needs no model: every combat spell a PvM rotation autocasts scales to tier 100 since the
+ * Combat Style Modernisation (Ice Barrage "scales up to level 100"), so the cap never binds for the tier 90–95 staves –
+ * it would only matter for a low-tier spell on a high-tier staff, which no boss setup uses.
  */
 export function abilityDamageOf(main: Weapon | null, off: Weapon | null, two: Weapon | null, level = 99, bonus = 0, capTier?: number): number {
   const lp = levelPart(level);

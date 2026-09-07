@@ -223,7 +223,9 @@ export function resolveLoadout(l: Loadout, data: LoadoutData): ResolvedLoadout {
   // (runescape.wiki/w/Gloomfire_bow). Same average damage, twice the hits – the on-hit effects are what this is about.
   if ([two?.id, main?.id].some((id) => id === 'gloomfire-bow' || id === 'dark-bow')) r.hitsOverrides['ranged'] = [0, 0];
   r.spellbook = l.spellbook ?? 'standard';
-  // nexus in the ammunition slot: rune store of the bone shields; Zemouregal's adds 15 levels (Fortified Bones)
+  // nexus in the ammunition slot: rune store of the bone shields; Zemouregal's adds 15 levels (Fortified Bones).
+  // Fortified Bones needs the nexus worn for 9 s before it applies – a training session starts with the gear already on,
+  // so the bonus counts from tick 0 here.
   for (const g of wn.gear) {
     if (g.slot !== 'ammo' || !g.item.id.includes('nexus')) continue;
     r.hasNexus = true;
