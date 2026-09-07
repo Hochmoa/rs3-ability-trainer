@@ -93,6 +93,26 @@ NOISE_WORDS = {"hybrid", "guide", "rots", "rotations", "rotation", "aod", "bm", 
 VARIANT_WORDS = {"hm": "HM", "nm": "NM", "hmvork": "HM", "mt": "minion tank", "4man": "4-man", "7s": "7-man", "4s": "4-man", "1mid": "1 mid", "kph": "KPH", "t90": "T90", "t95": "T95", "t100": "T100", "hamm": "HAMM", "orikalka": "Orikalka", "osseous": "Osseous", "pthentraken": "Pthentraken", "rathis": "Rathis"}
 # PvME preset maker equipment slot order
 EQUIP_SLOTS = ["head", "cape", "neck", "mainHand", "body", "offHand", "legs", "hands", "feet", "ring", "ammo", "aura", "pocket"]
+# preset maker relic id -> RELICS id of core/models.ts; the ones we do not model (Font of Life, Death Ward,
+# Blessing of Het, Sticky Fingers) are defensive or skilling relics and land in "unknown"
+RELICS = {
+    "conservationofenergy": "conservation-of-energy",
+    "furyofthesmall": "fury-of-the-small",
+    "berserkersfury": "berserker-s-fury",
+    "persistentrage": "persistent-rage",
+    "shadowsgrace": "shadow-s-grace",
+    "heightenedsenses": "heightened-senses",
+    "doublesurge": "double-surge",
+}
+# preset maker familiar id -> familiars.json id
+FAMILIARS = {
+    "kalgpouch": "kalgerion-demon", "kalgdemon": "kalgerion-demon",
+    "ripperpouch": "ripper-demon", "ripperdemon": "ripper-demon",
+    "reaverpouch": "blood-reaver", "bloodreaver": "blood-reaver",
+    "hellhoundpouch": "hellhound", "mammothpouch": "pack-mammoth",
+    "bloodnihil": "blood-nihil", "icenihil": "ice-nihil",
+    "smokenihil": "smoke-nihil", "shadownihil": "shadow-nihil",
+}
 EMOJI = re.compile(r"<a?:([A-Za-z0-9_]+):\d+>")
 LINK = re.compile(r"\[([^\]]+)\]\(<?[^)]*>?\)")
 PRESET_LINK = re.compile(r"(?:\[([^\]]*)\]\(<?)?https?://presets\.pvme\.io/?\?id=([A-Za-z0-9-]+)")
@@ -320,6 +340,8 @@ class Gear:
 
     def __init__(self, aliases: dict[str, str]):
         self.aliases = aliases
+        self.ammo_ids = {x["id"] for x in json.loads((DATA / "gear.json").read_text(encoding="utf-8")) if x.get("slot") == "ammo"}
+        self.spec_of = {w["id"]: w.get("spec") for w in json.loads((DATA / "weapons.json").read_text(encoding="utf-8"))}
         self.by_name: dict[str, str] = {}
         for f, kind in (("weapons", "gear"), ("gear", "item"), ("specials", "special")):
             for x in json.loads((DATA / f"{f}.json").read_text(encoding="utf-8")):
@@ -335,6 +357,48 @@ class Gear:
             if not key and name.lower().startswith("essence of finality"):
                 key = "item:essence-of-finality-amulet"
         return key
+
+    def store_eof_spec(self, ref: dict | None, slot: dict) -> None:
+        """The preset maker names the weapon whose special an Essence of Finality holds ("eof_spec": "Seren godbow")."""
+        name = slot.get("eof_spec")
+        if not ref or not name or "essence-of-finality" not in ref.get("id", ""):
+            return
+        key = self.aliases.get(norm(name)) or self.by_name.get(norm(name)) or self.by_name.get(norm(re.sub(r"\s*\([^)]*\)", "", name)))
+        spec = self.spec_of.get(key.split(":", 1)[1]) if key else None
+        if spec:
+            ref["spec"] = spec
+
+    def extras(self, gear: dict, unknown: list[str]) -> dict:
+        """relics, familiar and ammunition from the preset maker's own fields (they are not gear slots)"""
+        def ids(value) -> list[str]:
+            if isinstance(value, dict):  # newer presets: {"primaryRelics": [...], "alternativeRelics": [...]}
+                value = value.get("primaryRelics") or []
+            out = []
+            for x in value or []:
+                i = x.get("id") if isinstance(x, dict) else x
+                if i and i not in ("primaryRelics", "alternativeRelics"):
+                    out.append(i)
+            return out
+
+        relics: list[str] = []
+        for i in ids(gear.get("relics")):
+            r = RELICS.get(norm(i))
+            if r and r not in relics:
+                relics.append(r)
+            elif not r and i not in unknown:
+                unknown.append(i)
+        raw_fam = gear.get("familiar")
+        fam_id = raw_fam.get("id") if isinstance(raw_fam, dict) else raw_fam
+        familiar = FAMILIARS.get(norm(fam_id or ""))
+        if fam_id and not familiar and fam_id not in unknown:
+            unknown.append(fam_id)
+        ammo = None
+        for a in ids(gear.get("ammoSpells")):  # holds ammunition and spells; only the ammunition is a slot item
+            key = self.aliases.get(norm(a))
+            item = key.split(":", 1)[1] if key and key.startswith("item:") else None
+            if item in self.ammo_ids:
+                ammo = ammo or item
+        return {"relics": relics, "familiar": familiar, "ammo": ammo}
 
     def load(self, pid: str | None) -> tuple[dict, dict, list, list[str]]:
         """(raw preset, equipment, inventory, unknown labels) of a preset maker id; empty when there is none or it fails"""
@@ -353,6 +417,7 @@ class Gear:
                 continue
             key = self.resolve(slot)
             ref = ref_of(key) if key else None
+            self.store_eof_spec(ref, slot)
             if ref and ref["kind"] != "special":
                 equipment[EQUIP_SLOTS[i]] = ref  # a two-hander sits in mainHand here; the app re-slots it (presetLoadout)
             else:
@@ -363,6 +428,7 @@ class Gear:
             label = slot.get("name") or slot.get("label") or slot.get("id") or ""
             key = self.resolve(slot) if label else None
             ref = ref_of(key) if key else None
+            self.store_eof_spec(ref, slot)
             inventory.append(ref)
             if label and not ref and label not in unknown:
                 unknown.append(label)
@@ -517,6 +583,7 @@ class Builder:
             "equipment": equipment,
             "inventory": inventory,
             "unknown": unknown,
+            **self.gear.extras(gear, unknown),
             "rotations": rotations,
         }
 

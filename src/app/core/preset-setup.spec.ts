@@ -33,6 +33,20 @@ describe('preset loadout', () => {
     expect(l.inventory[1]).toBeNull();
     expect(l.prayerBook).toBe('Curses');
   });
+
+  it('takes the relics, the familiar and the ammunition the preset maker stores next to the gear', () => {
+    const l = presetLoadout({ ...preset, relics: ['conservation-of-energy', 'fury-of-the-small'], familiar: 'kalgerion-demon', ammo: 'deathspore-arrows' }, slotOf);
+    expect(l.relics).toEqual(['conservation-of-energy', 'fury-of-the-small']);
+    expect(l.familiar).toBe('kalgerion-demon');
+    expect(l.equipment?.ammo).toEqual({ kind: 'gear', id: 'deathspore-arrows' });
+  });
+
+  it('a preset without them keeps the loadout defaults, and worn ammunition wins over the preset maker field', () => {
+    expect(presetLoadout(preset, slotOf).relics).toEqual([]);
+    expect(presetLoadout(preset, slotOf).familiar ?? null).toBeNull();
+    const worn: BossPreset = { ...preset, ammo: 'deathspore-arrows', equipment: { ...preset.equipment, ammo: { kind: 'gear', id: 'ful-arrow' } } };
+    expect(presetLoadout(worn, (r) => (r.id === 'ful-arrow' ? 'ammo' : slotOf(r))).equipment?.ammo?.id).toBe('ful-arrow');
+  });
 });
 
 describe('preset slot keys', () => {
