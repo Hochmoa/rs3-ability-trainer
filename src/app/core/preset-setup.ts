@@ -6,6 +6,9 @@ export interface BossPreset {
   id: string;
   boss: string;
   style: string;
+  /** what tells the setups of one boss apart: "HM solo", "1000% group", "minion tank" ("" when the guide has one) */
+  variant: string;
+  /** boss – variant style, hybrids with every style: "Kerapac, the bound – HM solo magic/melee hybrid" */
   title: string;
   guide: string;
   presetUrl: string | null;

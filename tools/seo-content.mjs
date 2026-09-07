@@ -63,10 +63,10 @@ The trainer applies their effects – for example to ability cooldowns and adren
 
   presets: `
 <h1>Boss presets from PvME</h1>
-<p>Ready-made setups for RuneScape 3 bosses taken from the PvM Encyclopedia guides: the worn gear and backpack of the
-PvME preset, the guide's rotations in PvME notation, and action bars holding the abilities they use. One click adds
-them to your loadouts, rotations and bars so you can train a Rasial, Zamorak, Nakatra, Kerapac, Nex, Telos or Vorkath
-rotation with the right gear.</p>` + nav + footer,
+<p>Ready-made setups for every RuneScape 3 boss with a PvM Encyclopedia guide – over 40 bosses, every style and variant
+(solo, duo, hard mode, enrage brackets): the worn gear and backpack of the PvME preset, the guide's rotations in PvME
+notation, and action bars holding the abilities they use. One click adds them to your loadouts, rotations and bars so
+you can train a Rasial, Zamorak, Nakatra, Kerapac, Nex, Telos, Vorkath or Angel of Death rotation with the right gear.</p>` + nav + footer,
   settings: `
 <p>Adjust how the trainer simulates the game: ping and jitter, the in-game “Allow ability queueing” option
 (off: only a press in the last tick of the global cooldown queues; on: any press during the cooldown queues), looping and enemy behaviour.</p>`,

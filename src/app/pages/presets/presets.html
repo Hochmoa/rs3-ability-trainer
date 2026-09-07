@@ -1,14 +1,20 @@
 <div class="panel controls">
   <h1>Boss setups</h1>
   <p class="muted small">
-    <a href="https://github.com/pvme/pvme-guides" target="_blank" rel="noopener">PvME</a> boss setups. One click gives you the gear, the rotations, the bars and the keys.
+    <a href="https://github.com/pvme/pvme-guides" target="_blank" rel="noopener">PvME</a> boss setups – every boss guide, every style and variant. One click gives you the gear, the rotations, the bars and the keys.
   </p>
-  <div class="chips">
-    <button class="chip" [class.active]="styleFilter() === 'all'" (click)="styleFilter.set('all')">All styles</button>
-    @for (s of styles(); track s) {
-      <button class="chip" [class.active]="styleFilter() === s" (click)="styleFilter.set(s)">{{ s }}</button>
-    }
+  <div class="filters">
+    <input class="search" type="search" placeholder="Search boss or variant…" [value]="query()" (input)="query.set($any($event.target).value)" aria-label="Search boss setups" />
+    <div class="chips">
+      <button class="chip" [class.active]="styleFilter() === 'all'" (click)="styleFilter.set('all')">All styles</button>
+      @for (s of styles(); track s) {
+        <button class="chip" [class.active]="styleFilter() === s" (click)="styleFilter.set(s)">{{ s }}</button>
+      }
+    </div>
   </div>
+  @if (!loading() && data.loaded()) {
+    <p class="muted small count">{{ presets().length }} setups for {{ bossCount() }} bosses</p>
+  }
 </div>
 
 @if (error(); as e) {
@@ -17,53 +23,73 @@
   <p class="muted">Loading…</p>
 }
 
-@for (v of views(); track v.preset.id) {
-  <div class="panel preset" [class.open]="open() === v.preset.id">
-    <div class="preset-head">
-      <div>
-        <h3>{{ v.preset.boss }} <span class="style">{{ v.preset.style }}</span></h3>
-        <div class="muted small">{{ v.preset.title }} · {{ v.preset.rotations.length }} rotations · {{ v.worn.length }} worn items · {{ v.carried.length }} in the backpack</div>
-      </div>
-      <span class="actions">
-        <button class="btn btn-sm" (click)="toggle(v.preset.id)">{{ open() === v.preset.id ? 'Hide' : 'Details' }}</button>
-        <button class="btn btn-sm btn-primary" (click)="load(v.preset)" [disabled]="busy() === v.preset.id">Use this setup</button>
+@for (g of groups(); track g.boss) {
+  <section class="panel boss" [class.open]="isOpen(g.boss)">
+    <button class="boss-head" type="button" (click)="toggleBoss(g.boss)" [attr.aria-expanded]="isOpen(g.boss)">
+      <span class="caret" aria-hidden="true">{{ isOpen(g.boss) ? '▾' : '▸' }}</span>
+      <h2>{{ g.boss }}</h2>
+      <span class="muted small">{{ g.views.length }} {{ g.views.length === 1 ? 'setup' : 'setups' }}</span>
+      <span class="boss-styles">
+        @for (s of g.styles; track s) {
+          <span class="style">{{ s }}</span>
+        }
       </span>
-    </div>
-    <div class="gear-row">
-      @for (g of v.worn; track g.ref.kind + g.ref.id) {
-        <span class="gear" [gearTip]="g">@if (g.icon) { <img [src]="g.icon" [alt]="g.name" /> } @else { <span class="noicon">{{ g.name.slice(0, 3) }}</span> }</span>
-      }
-      @if (v.carried.length) { <span class="sep">backpack</span> }
-      @for (g of v.carried; track $index) {
-        <span class="gear" [gearTip]="g">@if (g.icon) { <img [src]="g.icon" [alt]="g.name" /> } @else { <span class="noicon">{{ g.name.slice(0, 3) }}</span> }</span>
-      }
-    </div>
-    @if (open() === v.preset.id) {
-      <div class="details">
-        <div>
-          <h4>Rotations</h4>
-          <ul>
-            @for (r of parse(v.preset); track r.name) {
-              <li>
-                <b>{{ r.name }}</b>&ngsp;<span class="muted small" [title]="r.unknown.length ? 'Kept as notes: ' + r.unknown.join(', ') : ''">{{ r.steps.length }} steps</span>
-              </li>
+    </button>
+    @if (isOpen(g.boss)) {
+      @for (v of g.views; track v.preset.id) {
+        <div class="preset" [class.open]="open() === v.preset.id">
+          <div class="preset-head">
+            <div>
+              <h3>
+                @if (v.label) { <span class="variant">{{ v.label }}</span> } @else { <span class="variant muted">Standard</span> }
+                <span class="style">{{ v.preset.style }}</span>
+              </h3>
+              <div class="muted small">{{ v.preset.rotations.length }} rotations · {{ v.worn.length }} worn items · {{ v.carried.length }} in the backpack</div>
+            </div>
+            <span class="actions">
+              <button class="btn btn-sm" (click)="toggle(v.preset.id)">{{ open() === v.preset.id ? 'Hide' : 'Details' }}</button>
+              <button class="btn btn-sm btn-primary" (click)="load(v.preset)" [disabled]="busy() === v.preset.id">Use this setup</button>
+            </span>
+          </div>
+          <div class="gear-row">
+            @for (g of v.worn; track g.ref.kind + g.ref.id) {
+              <span class="gear" [gearTip]="g">@if (g.icon) { <img [src]="g.icon" [alt]="g.name" /> } @else { <span class="noicon">{{ g.name.slice(0, 3) }}</span> }</span>
             }
-          </ul>
-        </div>
-        <div>
-          <h4>Source</h4>
-          <p class="small"><a [href]="v.preset.guide" target="_blank" rel="noopener">PvME guide</a>@if (v.preset.presetUrl) { · <a [href]="v.preset.presetUrl" target="_blank" rel="noopener">PvME preset</a> }</p>
-          @if (notes(v.preset); as n) { <p class="muted small">{{ n }}</p> }
-          @if (v.preset.unknown.length) {
-            <details class="left-out">
-              <summary class="muted small">Food, potions, auras and familiars are not simulated. <span class="toggle">what is left out</span></summary>
-              <p class="muted small">{{ v.preset.unknown.join(', ') }}</p>
-            </details>
+            @if (v.carried.length) { <span class="sep">backpack</span> }
+            @for (g of v.carried; track $index) {
+              <span class="gear" [gearTip]="g">@if (g.icon) { <img [src]="g.icon" [alt]="g.name" /> } @else { <span class="noicon">{{ g.name.slice(0, 3) }}</span> }</span>
+            }
+            @if (!v.worn.length && !v.carried.length) { <span class="muted small">The guide links no gear preset – rotations only.</span> }
+          </div>
+          @if (open() === v.preset.id) {
+            <div class="details">
+              <div>
+                <h4>Rotations</h4>
+                <ul>
+                  @for (r of parse(v.preset); track r.name) {
+                    <li>
+                      <b>{{ r.name }}</b>&ngsp;<span class="muted small" [title]="r.unknown.length ? 'Kept as notes: ' + r.unknown.join(', ') : ''">{{ r.steps.length }} steps</span>
+                    </li>
+                  }
+                </ul>
+              </div>
+              <div>
+                <h4>Source</h4>
+                <p class="small"><a [href]="v.preset.guide" target="_blank" rel="noopener">PvME guide</a>@if (v.preset.presetUrl) { · <a [href]="v.preset.presetUrl" target="_blank" rel="noopener">PvME preset</a> }</p>
+                @if (notes(v.preset); as n) { <p class="muted small">{{ n }}</p> }
+                @if (v.preset.unknown.length) {
+                  <details class="left-out">
+                    <summary class="muted small">Food, potions, auras and familiars are not simulated. <span class="toggle">what is left out</span></summary>
+                    <p class="muted small">{{ v.preset.unknown.join(', ') }}</p>
+                  </details>
+                }
+              </div>
+            </div>
           }
         </div>
-      </div>
+      }
     }
-  </div>
+  </section>
 } @empty {
-  @if (!loading() && data.loaded()) { <p class="muted">No setups for this style.</p> }
+  @if (!loading() && data.loaded()) { <p class="muted">No setups match.</p> }
 }

@@ -7,6 +7,7 @@ const preset: BossPreset = {
   id: 'demo-boss-necromancy',
   boss: 'Demo boss, the Tester',
   style: 'Necromancy',
+  variant: 't90',
   title: 'Demo t90',
   guide: '',
   presetUrl: null,
