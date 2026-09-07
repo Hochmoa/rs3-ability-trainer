@@ -110,7 +110,9 @@ export class PresetsService {
     if (p.style === 'Necromancy') {
       for (const r of rotations) {
         if (PREBUILD_ROTATION.test(r.name)) continue;
-        await this.storage.savePrebuild(r.id, { stacks: { necrosis: 12, 'residual-souls': 5 }, spirits: ['skeleton-warrior', 'putrid-zombie', 'vengeful-ghost'], abilities: [], prayers: [] });
+        // a rotation that conjures itself starts without spirits (Conjure Undead Army refuses while all are out)
+        const conjures = r.steps.some((st) => st.kind === 'ability' && st.id.startsWith('conjure-'));
+        await this.storage.savePrebuild(r.id, { stacks: { necrosis: 12, 'residual-souls': 5 }, spirits: conjures ? [] : ['skeleton-warrior', 'putrid-zombie', 'vengeful-ghost'], abilities: [], prayers: [] });
       }
     }
 
