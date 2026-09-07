@@ -157,3 +157,5 @@ Resend-SMTP, Account löschen, Likes/Rating, "Train directly from explorer" ohne
 - Offen: `setups.is_public` ist weiterhin default **true** (Setup wird beim ersten Login ohne Nachfrage
   veröffentlicht) – Produktentscheidung steht aus. Keybind-Merge: Server gewinnt immer (kein "neueres updated_at
   gewinnt" wie in §4 geplant).
+
+- 0011: blocked users are hidden from the explorer (`public_profiles` filters `blocked_at is null`, so `public_rotations` drops their rotations). Decided 2026-09-05; shared setups stay public by default, keybind sync stays server-wins.
