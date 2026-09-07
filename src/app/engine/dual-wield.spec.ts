@@ -81,7 +81,7 @@ describe('dual wield', () => {
     const two = make(['flurry'], { has2h: true, hasDualWield: false });
     cast(two, 'flurry', 1);
     two.update(4 * T);
-    expect(two.events.map((x) => x.kind + ':' + ('text' in x ? x.text : ''))).toEqual(['DEBUG']);
+    expect(two.events.filter((x) => x.kind === 'requirement').map((x) => ('text' in x ? x.text : ''))).toEqual(['only works while dual-wielding']);
     expect(hits(two, 'ability:flurry')).toHaveLength(0);
 
     const dw = make(['flurry'], { hasDualWield: true });
