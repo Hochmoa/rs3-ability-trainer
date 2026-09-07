@@ -93,7 +93,8 @@ describe('familiar attacks', () => {
 
   it('another familiar out: its scroll is refused, the loadout familiar keeps attacking', () => {
     const critikal = scroll(familiar('kalgerion-demon'));
-    const e = make([critikal], { familiar: familiar('ripper-demon') });
+    // Strike is the current step: the scroll is a refused wrong press (as the rotation's own step a missing familiar ends the session stuck)
+    const e = make([STRIKE, critikal], { familiar: familiar('ripper-demon') });
     press(e, critikal.key, 2);
     advance(e, 7);
     expect(requirements(e)).toEqual(['needs the kalgerion demon familiar (Loadout page)']);

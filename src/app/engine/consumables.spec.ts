@@ -83,7 +83,8 @@ const ACCELERATION = 'special:powerburst-of-acceleration';
 
 describe('powerbursts', () => {
   it('vitality: doubles the life points for 10 ticks, off the GCD, and starts the 200-tick cooldown shared with every powerburst', () => {
-    const e = make([special('powerburst-of-vitality'), special('powerburst-of-acceleration'), ability('attack')]);
+    // Acceleration comes after Attack: pressed early it is a refused wrong press, not the rotation's expected step (that would end the session stuck)
+    const e = make([special('powerburst-of-vitality'), ability('attack'), special('powerburst-of-acceleration')]);
     cast(e, VITALITY, 1);
     expect(e.buff('powerburst-of-vitality')).toMatchObject({ startTick: 1, endTick: 1 + POWERBURST_TICKS });
     expect(e.maxLifePointsMult).toBe(2);

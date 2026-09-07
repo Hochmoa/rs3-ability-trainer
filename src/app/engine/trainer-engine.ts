@@ -39,6 +39,21 @@ export const TICK_MS = 600;
 export const SETTLE_TICKS = 34;
 /** Global cooldown in ticks (1.8 s). */
 export const GCD_TICKS = 3;
+/**
+ * A press of the rotation's expected step that is refused because the ability is on cooldown for at least this long
+ * (10 s) means the rotation cannot be played as written from here – the session ends "stuck" instead of waiting.
+ */
+export const STUCK_COOLDOWN_TICKS = 17;
+
+/** why a session ended stuck: the expected step could not be cast (see STUCK_COOLDOWN_TICKS) */
+export interface StuckInfo {
+  key: string;
+  /** index of the rotation step that could not be played */
+  step: number;
+  reason: 'cooldown' | 'requirement';
+  readyInTicks?: number;
+  text: string;
+}
 
 /** The weapons in hand: item ids from weapons.json. A two-handed weapon excludes main/off hand. */
 export interface Wield {
@@ -231,7 +246,8 @@ export type EngineEvent =
   | { kind: 'no-adrenaline'; key: string; need: number; have: number }
   | { kind: 'on-cooldown'; key: string; readyInTicks: number }
   /** a rule requirement is not met (stacks, spirit, sequence, equipment ...) */
-  | { kind: 'requirement'; key: string; text: string }
+  /** `transient`: the requirement clears on its own (stun wears off, special move points come back, re-conjure timer) – never "stuck" */
+  | { kind: 'requirement'; key: string; text: string; transient?: boolean }
   | { kind: 'channel-cancelled'; key: string; hitsLost: number }
   /** ability needs another weapon style / the wielded weapon has no such special – ignored like in the game */
   | { kind: 'wrong-weapon'; key: string; reason: 'weapon' | 'spec' }
@@ -257,6 +273,8 @@ export type EngineEvent =
    * step was due); `matched` = it was the expected step (an "(auto)" step); otherwise the next press waits a GCD ("+1 GCD")
    */
   | { kind: 'auto-attack'; key: string; tick: number; matched: boolean; expected: string; dueTick: number }
+  /** the expected step was pressed and refused for good (long cooldown / unmet requirement): the session ends stuck */
+  | { kind: 'stuck'; key: string; step: number; reason: 'cooldown' | 'requirement'; readyInTicks?: number; text: string }
   | { kind: 'finished' };
 
 interface PendingInput {
@@ -350,6 +368,8 @@ export class TrainerEngine {
   get settling(): boolean {
     return this.settleUntil !== null;
   }
+  /** set when the session ended because the expected step could not be cast (a 'stuck' event was emitted) */
+  stuck: StuckInfo | null = null;
   t0 = 0;
   index = 0;
   castTick: number | null = null;
@@ -465,6 +485,7 @@ export class TrainerEngine {
     this.t0 = now;
     this.index = 0;
     this.settleUntil = null;
+    this.stuck = null;
     this.castTick = null;
     this.wield = { mainHand: null, offHand: null, twoHand: null, ...(this.config.startWield ?? {}) };
     this.adrenaline = this.config.fullAdrenaline ? this.maxAdrenaline : Math.max(0, Math.min(this.maxAdrenaline, this.loadout.startAdrenaline));
@@ -804,6 +825,7 @@ export class TrainerEngine {
         // inputs of a tick come first (a prayer switched on this tick counts for this tick's attack)
         this.inflight.shift();
         this.handle(next!);
+        if (this.state !== 'running') return;
       } else if (tickAt <= now && tickAt <= castAt) {
         // advance server ticks (over-time adrenaline, buff expiry) before anything scheduled later
         this.advanceTick(this.lastTick + 1);
@@ -908,6 +930,7 @@ export class TrainerEngine {
         if (input.key === expected) this.tooEarly++;
         else this.wrong++;
         this.events.push(blocked);
+        if (input.key === expected) this.checkStuck(entity, blocked);
         return;
       }
     }
@@ -915,6 +938,40 @@ export class TrainerEngine {
     const gcdEnd = this.gcdEndTick;
     const marginMs = gcdEnd === null ? 0 : this.tickTime(gcdEnd) - input.arrival;
     this.events.push({ kind: 'queued', key: entity.key, expected, fireTick: tick, marginMs });
+  }
+
+  /**
+   * The expected step was pressed and refused: a long cooldown (>= STUCK_COOLDOWN_TICKS) or a requirement the rotation
+   * cannot meet means the rotation as written cannot be played from here (a game update changed the ability, or the
+   * trainer has a bug). Emits one 'stuck' event and ends the session at once – no settle, nothing stays queued.
+   * Adrenaline is never stuck (it still comes), nor is a transient requirement (a stun, special move points, the re-conjure timer).
+   */
+  private checkStuck(entity: EngineEntity, blocked: EngineEvent): boolean {
+    if (this.stuck || this.state !== 'running') return false;
+    let info: StuckInfo;
+    if (blocked.kind === 'on-cooldown') {
+      if (blocked.readyInTicks < STUCK_COOLDOWN_TICKS) return false;
+      info = { key: entity.key, step: this.stepIndexOf(entity.key), reason: 'cooldown', readyInTicks: blocked.readyInTicks, text: entity.name + ' is still on cooldown for ' + (blocked.readyInTicks * TICK_MS) / 1000 + ' s' };
+    } else if (blocked.kind === 'requirement') {
+      if (blocked.transient) return false;
+      info = { key: entity.key, step: this.stepIndexOf(entity.key), reason: 'requirement', text: entity.name + ': ' + blocked.text };
+    } else {
+      return false;
+    }
+    this.stuck = info;
+    this.pending = null;
+    this.inflight = [];
+    this.settleUntil = null;
+    this.events.push({ kind: 'stuck', ...info });
+    this.state = 'finished';
+    this.events.push({ kind: 'finished' });
+    return true;
+  }
+
+  /** index of the next open rotation step with this key (the step the press was meant for) */
+  private stepIndexOf(key: string): number {
+    const i = this.steps.findIndex((s, j) => j >= this.index && !this.done.has(j) && s.key === key);
+    return i < 0 ? this.index : i;
   }
 
   /** Why an entity cannot cast at `tick` (cooldown, adrenaline, rule requirement), or null. */
@@ -926,12 +983,12 @@ export class TrainerEngine {
       return { kind: 'requirement', key: entity.key, text: 'not in your inventory' };
     }
     const lock = this.buffs.find((b) => BUFF_BY_ID.get(b.id)?.locksAbilities);
-    if (lock && entity.kind !== 'prayer') return { kind: 'requirement', key: entity.key, text: 'no abilities while ' + lock.name + ' stuns you' };
+    if (lock && entity.kind !== 'prayer') return { kind: 'requirement', key: entity.key, text: 'no abilities while ' + lock.name + ' stuns you', transient: true };
     const cd = this.cooldownLeft(entity.key, tick);
     if (cd > 0) return { kind: 'on-cooldown', key: entity.key, readyInTicks: cd };
-    if (entity.scroll && this.familiarSpecial < entity.scroll.specialPoints) return { kind: 'requirement', key: entity.key, text: 'needs ' + entity.scroll.specialPoints + ' special move points (' + this.familiarSpecial + ' left)' };
+    if (entity.scroll && this.familiarSpecial < entity.scroll.specialPoints) return { kind: 'requirement', key: entity.key, text: 'needs ' + entity.scroll.specialPoints + ' special move points (' + this.familiarSpecial + ' left)', transient: true };
     const req = this.requirementFailure(entity, tick);
-    if (req) return { kind: 'requirement', key: entity.key, text: req };
+    if (req) return { kind: 'requirement', key: entity.key, text: req, transient: req.startsWith('cannot be re-conjured') || undefined };
     const { need } = this.costOf(entity);
     if (need > 0 && this.adrenaline < need) return { kind: 'no-adrenaline', key: entity.key, need, have: this.adrenaline };
     return null;
@@ -955,6 +1012,7 @@ export class TrainerEngine {
     if (blocked) {
       this.wrong++;
       this.events.push(blocked);
+      if (this.currentStep?.key === entity.key) this.checkStuck(entity, blocked);
       return;
     }
     // does it satisfy an open off-GCD step in the current group?
@@ -1075,6 +1133,8 @@ export class TrainerEngine {
         this.events.push(blocked);
         p.notified = true;
       }
+      const expectedKey = this.expectedAbility?.key;
+      if (expectedKey && entity.key === expectedKey && this.checkStuck(entity, blocked)) return;
       p.tick += Math.max(1, blocked.kind === 'on-cooldown' ? blocked.readyInTicks : 1);
       return;
     }

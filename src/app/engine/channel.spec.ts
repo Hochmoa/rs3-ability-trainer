@@ -98,7 +98,8 @@ describe('channelled abilities', () => {
   });
 
   it('a press that does not cast (cooldown, queueing off) leaves the channel running', () => {
-    const e = make(['rapid-fire', 'rapid-fire'], dracolich('bow'), { abilityQueueing: false });
+    // Piercing Shot is the expected step: the second Rapid Fire is a wrong press on cooldown (as the expected step it would end the session stuck)
+    const e = make(['rapid-fire', 'piercing-shot', 'rapid-fire'], dracolich('bow'), { abilityQueueing: false });
     e.press('ability:rapid-fire', 1);
     e.update(1 * T);
     e.press('ability:rapid-fire', 4 * T + 1); // on cooldown → rejected

@@ -9,7 +9,7 @@ import { DataService, EOF_ICON, Entity, SPEC_KEY } from '../../core/data.service
 import { applyWield, equip, hasSpecial, unequip } from '../../core/equipment';
 import { DEFAULT_LAYOUT_ID, keybindLayout } from '../../core/keybind-layouts';
 import { keybindFromEvent, keybindFromMouse, keybindKey, keybindLabel, resolvePress } from '../../core/keybind.util';
-import { ActionBarSetup, AttackPattern, Keybind, BAR_POSITIONS, BONE_SHIELD_ABILITY, INVENTORY_SIZE, BAR_SLOTS, BarShape, barLayout, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, TARGET_TYPES, EquipSlot, ItemRef, Loadout, PrayerStats, Prebuild, REVOLUTION_MAX_SLOTS, REVOLUTION_MIN_SLOTS, RevolutionSettings, Rotation, STYLES4, Settings, StepResult, Style, Style4, WeaponSpec, emptyPrebuild, entityKey, isStyle4, loadoutStyle, loadoutWield, parseEntityKey, prebuildIsEmpty, visiblePresets, RotationStep, CoachSettings } from '../../core/models';
+import { ActionBarSetup, AttackPattern, Keybind, BAR_POSITIONS, BONE_SHIELD_ABILITY, INVENTORY_SIZE, BAR_SLOTS, BarShape, barLayout, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, TARGET_TYPES, EquipSlot, ItemRef, Loadout, PrayerStats, Prebuild, REVOLUTION_MAX_SLOTS, REVOLUTION_MIN_SLOTS, RevolutionSettings, Rotation, STYLES4, Settings, StepResult, Style, Style4, WeaponSpec, emptyPrebuild, entityKey, isStyle4, loadoutStyle, loadoutWield, parseEntityKey, prebuildIsEmpty, visiblePresets, RotationStep, CoachSettings, SessionStuck } from '../../core/models';
 import { alt1Announce, focusUrl, openFocusWindow } from '../../core/popout';
 import { CoachService, spokenLabel, spokenSequence } from '../../core/coach.service';
 import { PresetsService } from '../../core/presets.service';
@@ -120,6 +120,16 @@ const PRESS_FLASH_MS = 200;
 const NARROW_QUERY = '(max-width: 640px)';
 /** localStorage: the simple view's "Options" disclosure */
 const OPTIONS_KEY = 'rs3trainer.train.options';
+/** one-line hint under the stuck marker (finish overlay, session summary) */
+const STUCK_HINT = "A game update may have changed the ability, or the trainer has a bug – check the ability's cooldown in the tooltip and the rotation text";
+
+/** the stuck marker's reason line: "Death Skulls is still on cooldown for 20 s" / "Conjure Skeleton Warrior: a skeleton warrior is already active" */
+function stuckReason(name: string, ev: Extract<EngineEvent, { kind: 'stuck' }>): string {
+  if (ev.reason === 'cooldown' && ev.readyInTicks !== undefined) return name + ' is still on cooldown for ' + (ev.readyInTicks * TICK_MS) / 1000 + ' s';
+  // the engine text starts with the entity's key name; show the catalogue name instead
+  const i = ev.text.indexOf(': ');
+  return name + ': ' + (i >= 0 ? ev.text.slice(i + 2) : ev.text);
+}
 const EMPTY_PRAYER_STATS: PrayerStats = { ticks: 0, soulSplitTicks: 0, attacks: 0, prayed: 0, hits: 0, absorbed: 0 };
 
 @Component({
@@ -477,7 +487,11 @@ export class Train implements OnDestroy {
   readonly running = signal(false);
   readonly finished = signal(false);
   /** why the last session ended – drives the big end-of-rotation overlay */
-  readonly finishReason = signal<'finished' | 'stopped' | null>(null);
+  readonly finishReason = signal<'finished' | 'stopped' | 'stuck' | null>(null);
+  /** the session ended stuck: the expected step could not be cast (engine 'stuck' event) – shown in the finish overlay and the summary */
+  readonly stuck = signal<SessionStuck | null>(null);
+  /** the stuck panel's hint line (finish overlay and session summary) */
+  readonly stuckHint = STUCK_HINT;
   /** the "waiting for the last hits" line was shown for this session */
   private settleNoted = false;
   readonly finishDismissed = signal(false);
@@ -1038,6 +1052,7 @@ export class Train implements OnDestroy {
     else this.feedback.set({ text: (this.coarsePointer() ? 'Tap ' : 'Press ') + first?.key + ' (' + first?.entity.name + ') to start.', cls: 'info' });
     this.finished.set(false);
     this.finishReason.set(null);
+    this.stuck.set(null);
     this.settleNoted = false;
     this.finishDismissed.set(false);
     this.history.set([]);
@@ -1607,7 +1622,18 @@ export class Train implements OnDestroy {
         this.counts.update((c) => ({ ...c, missed: c.missed + ev.keys.length }));
         this.feedback.set({ text: 'Missed before the cast: ' + ev.keys.map((k) => this.name(k)).join(', '), cls: 'warn' });
         break;
+      case 'stuck': {
+        const name = this.name(ev.key);
+        const info: SessionStuck = { key: ev.key, step: ev.step, name, reason: ev.reason, readyInTicks: ev.readyInTicks, text: stuckReason(name, ev) };
+        this.stuck.set(info);
+        this.finishReason.set('stuck');
+        this.feedback.set({ text: 'Stuck at step ' + (ev.step + 1) + ': ' + info.text + ' – this rotation cannot be played as written from here', cls: 'bad' });
+        this.flash('wrong', ev.key, now, 600);
+        this.log(ev.key, 'wrong', this.feedback()?.text ?? '', ev.step);
+        break;
+      }
       case 'finished': {
+        if (this.stuck()) break; // the stuck line stays – it is the reason the session ended
         const last = this.feedback();
         this.feedback.set({ text: (last ? last.text + ' · ' : '') + 'Rotation finished.', cls: last?.cls ?? 'info' });
         break;
@@ -1638,7 +1664,9 @@ export class Train implements OnDestroy {
   private saveSession(): void {
     const rot = this.rotation();
     const results = this.results();
-    if (!rot || (!results.length && !(this.enemy().enabled && this.prayerStats().attacks))) return;
+    const stuck = this.stuck();
+    // a session stuck on its first step has no results but is still worth keeping: the rotation cannot be played
+    if (!rot || (!results.length && !stuck && !(this.enemy().enabled && this.prayerStats().attacks))) return;
     void this.storage.addSession({
       rotationId: rot.id,
       rotationName: rot.name,
@@ -1650,6 +1678,7 @@ export class Train implements OnDestroy {
       enemy: this.enemy().enabled ? { ...this.enemy() } : undefined,
       prayerStats: this.enemy().enabled ? { ...this.prayerStats() } : undefined,
       damage: { total: this.damage(), hits: this.hits(), dps: Math.round(this.dps()), killedAtMs: this.killedAtMs(), misses: this.misses(), hitChance: this.hitChance() },
+      stuck: stuck ?? undefined,
     });
   }
 

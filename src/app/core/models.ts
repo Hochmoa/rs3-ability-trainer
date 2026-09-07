@@ -1007,4 +1007,16 @@ export interface Session {
   prayerStats?: PrayerStats;
   /** damage dealt in the session (engine/damage.ts numbers); `misses` and `hitChance` (0..1 against the enemy's stats, null = not simulated) since the hit chance model */
   damage?: { total: number; hits: number; dps: number; killedAtMs: number | null; misses?: number; hitChance?: number | null };
+  /** the session ended stuck: the expected step (`step` is 0-based) could not be cast – long cooldown or an unmet requirement (engine STUCK_COOLDOWN_TICKS) */
+  stuck?: SessionStuck;
+}
+
+/** why a session ended stuck (see TrainerEngine.stuck); optional on old sessions */
+export interface SessionStuck {
+  key: string;
+  step: number;
+  name: string;
+  reason: 'cooldown' | 'requirement';
+  readyInTicks?: number;
+  text: string;
 }

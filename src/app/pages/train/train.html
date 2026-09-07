@@ -470,8 +470,15 @@
     @if (finishReason(); as why) {
       @if (!finishDismissed()) {
         <div class="finish-overlay" role="dialog" aria-label="Session ended">
-          <div class="finish-card" [class.stopped]="why === 'stopped'">
-            <h2>{{ why === 'finished' ? 'Rotation finished' : 'Session stopped' }}</h2>
+          <div class="finish-card" [class.stopped]="why === 'stopped'" [class.stuck]="why === 'stuck'">
+            <h2>{{ why === 'finished' ? 'Rotation finished' : why === 'stuck' ? 'Rotation stuck' : 'Session stopped' }}</h2>
+            @if (stuck(); as st) {
+              <div class="stuck-panel" data-stuck="1" role="alert">
+                <b>Step {{ st.step + 1 }}: {{ st.name }}</b>
+                <p class="stuck-reason">{{ st.text }}</p>
+                <p class="stuck-hint">{{ stuckHint }}</p>
+              </div>
+            }
             @if (results().length) {
               <p class="finish-score">{{ accuracy() }}% clean</p>
               <p class="finish-counts">
@@ -790,7 +797,7 @@
 
   </div>
 
-  @if (finished() && (results().length || (enemy().enabled && prayerStats().attacks))) {
+  @if (finished() && (results().length || stuck() || (enemy().enabled && prayerStats().attacks))) {
     <div class="panel summary">
       <div class="summary-head">
         <h2>Session summary{{ results().length ? ' – ' + accuracy() + '% clean' : '' }}</h2>
@@ -798,6 +805,13 @@
           <button class="btn btn-sm" type="button" (click)="showAllResults.set(!showAllResults())">{{ showAllResults() ? 'Only the steps that were off' : 'Show all ' + results().length + ' steps' }}</button>
         }
       </div>
+      @if (stuck(); as st) {
+        <div class="stuck-panel" data-stuck="1" role="alert">
+          <b>Rotation stuck at step {{ st.step + 1 }}: {{ st.name }}</b>
+          <p class="stuck-reason">{{ st.text }} – this rotation cannot be played as written from here.</p>
+          <p class="stuck-hint">{{ stuckHint }}</p>
+        </div>
+      }
       @if (damage() > 0) {
         <p class="damage-summary">
           <b>{{ damage() | number: '1.0-0' }} damage</b> in {{ hits() }} hits · {{ dps() | number: '1.0-0' }} DPS

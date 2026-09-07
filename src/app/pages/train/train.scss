@@ -985,6 +985,13 @@
       color: var(--text);
     }
   }
+  &.stuck {
+    border-color: var(--bad);
+    box-shadow: 0 0 24px rgba(229, 57, 53, 0.55), 0 8px 30px rgba(0, 0, 0, 0.7);
+    h2 {
+      color: var(--bad-text);
+    }
+  }
   .finish-score {
     margin: 0 0 6px;
     font-size: 20px;
@@ -1009,6 +1016,31 @@
   }
   .small {
     margin: 0;
+  }
+}
+/* the stuck marker: the expected step could not be cast, the rotation cannot be played as written (finish overlay and summary) */
+.stuck-panel {
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  text-align: left;
+  color: var(--text);
+  background: rgba(229, 57, 53, 0.14);
+  border: 2px solid var(--bad);
+  border-left-width: 6px;
+  border-radius: 6px;
+
+  b {
+    color: var(--bad-text);
+    font-size: 15px;
+  }
+  .stuck-reason {
+    margin: 4px 0 6px;
+    font-weight: 600;
+  }
+  .stuck-hint {
+    margin: 0;
+    font-size: 13px;
+    color: var(--muted);
   }
 }
 @keyframes finish-pop {
