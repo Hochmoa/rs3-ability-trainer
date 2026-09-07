@@ -4,7 +4,14 @@ const MODIFIER_CODES = new Set([
   'ControlLeft', 'ControlRight', 'ShiftLeft', 'ShiftRight', 'AltLeft', 'AltRight', 'MetaLeft', 'MetaRight',
 ]);
 
+/**
+ * Extra mouse buttons as keybind codes: MouseEvent.button 1 (middle), 3 (back / "mouse 4") and 4 (forward / "mouse 5").
+ * Left and right stay the UI's; the codes live next to the KeyboardEvent codes in the same Keybind shape.
+ */
+const MOUSE_CODES: Record<number, string> = { 1: 'Mouse3', 3: 'Mouse4', 4: 'Mouse5' };
+
 const CODE_LABELS: Record<string, string> = {
+  Mouse3: 'M3', Mouse4: 'M4', Mouse5: 'M5',
   Space: 'Space', Enter: 'Enter', Tab: 'Tab', Escape: 'Esc', Backspace: 'Backspace', Delete: 'Del',
   Insert: 'Ins', Home: 'Home', End: 'End', PageUp: 'PgUp', PageDown: 'PgDn',
   ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→',
@@ -13,6 +20,18 @@ const CODE_LABELS: Record<string, string> = {
   NumpadAdd: 'Num +', NumpadSubtract: 'Num -', NumpadMultiply: 'Num *', NumpadDivide: 'Num /',
   NumpadDecimal: 'Num .', NumpadEnter: 'Num Enter',
 };
+
+/** Converts a mousedown of an extra mouse button (middle, mouse 4, mouse 5) into a keybind; null for left / right and unknown buttons. */
+export function keybindFromMouse(e: MouseEvent): Keybind | null {
+  const code = MOUSE_CODES[e.button];
+  if (!code) return null;
+  return { code, ctrl: e.ctrlKey, shift: e.shiftKey, alt: e.altKey };
+}
+
+/** true for the mouse-button codes (their default action – browser back / forward, autoscroll – is suppressed while they are bound) */
+export function isMouseCode(code: string): boolean {
+  return code.startsWith('Mouse');
+}
 
 /** Converts a keydown into a keybind, or null if only a modifier was pressed. */
 export function keybindFromEvent(e: KeyboardEvent): Keybind | null {

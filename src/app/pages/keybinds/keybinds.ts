@@ -2,7 +2,7 @@ import { Component, HostListener, computed, inject, signal } from '@angular/core
 import { RouterLink } from '@angular/router';
 import { DataService, Entity } from '../../core/data.service';
 import { DEFAULT_LAYOUT_ID, KEYBIND_LAYOUTS, applyLayout, keybindLayout } from '../../core/keybind-layouts';
-import { isReservedKeybind, keybindFromEvent, keybindKey, keybindLabel } from '../../core/keybind.util';
+import { isMouseCode, isReservedKeybind, keybindFromEvent, keybindFromMouse, keybindKey, keybindLabel } from '../../core/keybind.util';
 import { ACTIONS, ActionBarSetup, BAR_POSITION_NAMES, Keybind } from '../../core/models';
 import { StorageService } from '../../core/storage.service';
 import { DialogService } from '../../shared/dialog';
@@ -318,12 +318,8 @@ export class Keybinds {
       if (e.code === 'Escape' && !e.ctrlKey && !e.shiftKey && !e.altKey) return this.wizardStep(w, 'skip');
       if (e.code === 'Backspace' && !e.ctrlKey && !e.shiftKey && !e.altKey) return this.wizardStep(w, null);
       const kb = keybindFromEvent(e);
-      if (!kb) return;
-      if (isReservedKeybind(kb)) {
-        this.toasts.show(keybindLabel(kb) + ' is reserved by the browser – pick another key', 'warn');
-        return;
-      }
-      return this.wizardStep(w, kb);
+      if (kb) this.captureBind(kb);
+      return;
     }
     const t = this.capturing();
     if (!t) return;
@@ -339,11 +335,44 @@ export class Keybinds {
       return;
     }
     const kb = keybindFromEvent(e);
+    if (kb) this.captureBind(kb);
+  }
+
+  /** the middle and side mouse buttons bind like keys while the wizard runs or a slot waits for its key */
+  @HostListener('window:mousedown', ['$event'])
+  onMousedown(e: MouseEvent): void {
+    if (!this.wizard() && !this.capturing()) return;
+    const kb = keybindFromMouse(e);
     if (!kb) return;
+    e.preventDefault();
+    e.stopPropagation();
+    this.captureBind(kb);
+  }
+
+  /** a side button would also navigate back / forward when released: not right after it was bound */
+  @HostListener('window:mouseup', ['$event'])
+  @HostListener('window:auxclick', ['$event'])
+  onMouseButtonRelease(e: MouseEvent): void {
+    if ((this.wizard() || this.capturing() || this.mouseBoundUntil > Date.now()) && keybindFromMouse(e)) e.preventDefault();
+  }
+
+  /** the capture ends on the press, the browser navigates on the release: releases are swallowed until this time */
+  private mouseBoundUntil = 0;
+
+  /** a captured key or mouse button goes to the wizard step or the waiting slot */
+  private captureBind(kb: Keybind): void {
+    if (isMouseCode(kb.code)) this.mouseBoundUntil = Date.now() + 1000;
     if (isReservedKeybind(kb)) {
       this.toasts.show(keybindLabel(kb) + ' is reserved by the browser – pick another key', 'warn');
       return;
     }
+    const w = this.wizard();
+    if (w) {
+      this.wizardStep(w, kb);
+      return;
+    }
+    const t = this.capturing();
+    if (!t) return;
     this.assign(t, kb);
     this.capturing.set(null);
   }

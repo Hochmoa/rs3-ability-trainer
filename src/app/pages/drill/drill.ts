@@ -3,8 +3,8 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { DataService, Entity } from '../../core/data.service';
 import { Drill, DrillSource, DrillSummary, DrillTarget, WEAPON_POS, buildPool } from '../../core/drill';
-import { keybindFromEvent, keybindKey, keybindLabel, resolvePress } from '../../core/keybind.util';
-import { BAR_POSITIONS, BarShape, Style4, barLayout, entityKey, loadoutStyle, visiblePresets } from '../../core/models';
+import { keybindFromEvent, keybindFromMouse, keybindKey, keybindLabel, resolvePress } from '../../core/keybind.util';
+import { BAR_POSITIONS, BarShape, Keybind, Style4, barLayout, entityKey, loadoutStyle, visiblePresets } from '../../core/models';
 import { PresetsService } from '../../core/presets.service';
 import { FeedbackService } from '../../core/feedback.service';
 import { StorageService } from '../../core/storage.service';
@@ -411,7 +411,26 @@ export class DrillPage implements OnDestroy {
       return;
     }
     const kb = keybindFromEvent(e);
-    if (!kb) return;
+    if (kb) this.pressBind(kb, e);
+  }
+
+  /** extra mouse buttons (middle, mouse 4, mouse 5) press like keys */
+  @HostListener('window:mousedown', ['$event'])
+  onMousedown(e: MouseEvent): void {
+    if (!this.running()) return;
+    if (isTypingTarget(e.target) || this.dialogs.current() || this.feedbackDialog.open()) return;
+    const kb = keybindFromMouse(e);
+    if (kb) this.pressBind(kb, e);
+  }
+
+  /** a side button navigates back / forward when released: not during a drill */
+  @HostListener('window:mouseup', ['$event'])
+  @HostListener('window:auxclick', ['$event'])
+  onMouseButtonRelease(e: MouseEvent): void {
+    if (this.running() && keybindFromMouse(e)) e.preventDefault();
+  }
+
+  private pressBind(kb: Keybind, e: Event): void {
     const k = keybindKey(kb);
     // same order as the trainer (core/keybind.util resolvePress): weapon keys, client actions, then the bars top to bottom
     const carried = this.carried();

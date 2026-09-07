@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { keybindKey, parseKeybind, resolvePress } from './keybind.util';
+import { isMouseCode, keybindFromMouse, keybindKey, keybindLabel, parseKeybind, resolvePress } from './keybind.util';
 import { ActionBarSetup, defaultActionBars } from './models';
 
 const Q = parseKeybind('KeyQ');
@@ -51,5 +51,28 @@ describe('resolvePress – one key resolution for the Train page and the drill',
     s.slotKeybinds = [[Q]];
     expect(resolvePress(s, keybindKey(Q), [])).toEqual({ kind: 'slot', pos: 0, slot: 0 });
     expect(resolvePress(s, keybindKey(F1), [])).toBeNull();
+  });
+});
+
+describe('extra mouse buttons as keybinds', () => {
+  const ev = (button: number, mods: Partial<MouseEvent> = {}) => ({ button, ctrlKey: false, shiftKey: false, altKey: false, ...mods }) as MouseEvent;
+
+  it('middle, back and forward become Mouse3 / Mouse4 / Mouse5, left and right stay clicks', () => {
+    expect(keybindFromMouse(ev(3))).toEqual({ code: 'Mouse4', ctrl: false, shift: false, alt: false });
+    expect(keybindFromMouse(ev(4, { shiftKey: true }))).toEqual({ code: 'Mouse5', ctrl: false, shift: true, alt: false });
+    expect(keybindFromMouse(ev(1))).toEqual({ code: 'Mouse3', ctrl: false, shift: false, alt: false });
+    expect(keybindFromMouse(ev(0))).toBeNull();
+    expect(keybindFromMouse(ev(2))).toBeNull();
+  });
+
+  it('labels, keys and layouts treat them like any other code', () => {
+    expect(keybindLabel(parseKeybind('Mouse4'))).toBe('M4');
+    expect(keybindLabel(parseKeybind('Shift+Mouse5'))).toBe('s+M5');
+    expect(keybindKey(parseKeybind('Ctrl+Mouse4'))).toBe('C:Mouse4');
+    expect(isMouseCode('Mouse4')).toBe(true);
+    expect(isMouseCode('KeyM')).toBe(false);
+    const s = setup();
+    s.slotKeybinds[0][1] = parseKeybind('Mouse5');
+    expect(resolvePress(s, keybindKey(parseKeybind('Mouse5')), [])).toEqual({ kind: 'slot', pos: 0, slot: 1 });
   });
 });

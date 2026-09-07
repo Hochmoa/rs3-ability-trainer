@@ -8,8 +8,8 @@ import { placeOnBars } from '../../core/bar-place';
 import { DataService, EOF_ICON, Entity, SPEC_KEY } from '../../core/data.service';
 import { applyWield, equip, hasSpecial, unequip } from '../../core/equipment';
 import { DEFAULT_LAYOUT_ID, keybindLayout } from '../../core/keybind-layouts';
-import { keybindFromEvent, keybindKey, keybindLabel, resolvePress } from '../../core/keybind.util';
-import { ActionBarSetup, AttackPattern, BAR_POSITIONS, BONE_SHIELD_ABILITY, INVENTORY_SIZE, BAR_SLOTS, BarShape, barLayout, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, TARGET_TYPES, EquipSlot, ItemRef, Loadout, PrayerStats, Prebuild, REVOLUTION_MAX_SLOTS, REVOLUTION_MIN_SLOTS, RevolutionSettings, Rotation, STYLES4, Settings, StepResult, Style, Style4, WeaponSpec, emptyPrebuild, entityKey, isStyle4, loadoutStyle, loadoutWield, parseEntityKey, prebuildIsEmpty, visiblePresets, RotationStep, CoachSettings } from '../../core/models';
+import { keybindFromEvent, keybindFromMouse, keybindKey, keybindLabel, resolvePress } from '../../core/keybind.util';
+import { ActionBarSetup, AttackPattern, Keybind, BAR_POSITIONS, BONE_SHIELD_ABILITY, INVENTORY_SIZE, BAR_SLOTS, BarShape, barLayout, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, TARGET_TYPES, EquipSlot, ItemRef, Loadout, PrayerStats, Prebuild, REVOLUTION_MAX_SLOTS, REVOLUTION_MIN_SLOTS, RevolutionSettings, Rotation, STYLES4, Settings, StepResult, Style, Style4, WeaponSpec, emptyPrebuild, entityKey, isStyle4, loadoutStyle, loadoutWield, parseEntityKey, prebuildIsEmpty, visiblePresets, RotationStep, CoachSettings } from '../../core/models';
 import { alt1Announce, focusUrl, openFocusWindow } from '../../core/popout';
 import { CoachService, spokenLabel, spokenSequence } from '../../core/coach.service';
 import { PresetsService } from '../../core/presets.service';
@@ -1753,7 +1753,28 @@ export class Train implements OnDestroy {
       return;
     }
     const kb = keybindFromEvent(e);
-    if (!kb) return;
+    if (kb) this.pressBind(kb, e);
+  }
+
+  /** extra mouse buttons (middle, mouse 4, mouse 5) press like keys; left and right stay clicks */
+  @HostListener('window:mousedown', ['$event'])
+  onMousedown(e: MouseEvent): void {
+    if (!this.running()) return;
+    if (isTypingTarget(e.target) || this.dialogs.current() || this.feedbackDialog.open()) return;
+    const kb = keybindFromMouse(e);
+    if (kb) this.pressBind(kb, e);
+  }
+
+  /** browsers navigate back / forward when a side button is released: swallow that for bound buttons while training */
+  @HostListener('window:mouseup', ['$event'])
+  @HostListener('window:auxclick', ['$event'])
+  onMouseButtonRelease(e: MouseEvent): void {
+    if (!this.running()) return;
+    const kb = keybindFromMouse(e);
+    if (kb && resolvePress(this.storage.actionBars(), keybindKey(kb), this.carriedWeapons().map((w) => w.entity.id))) e.preventDefault();
+  }
+
+  private pressBind(kb: Keybind, e: Event): void {
     // the same resolution as the drill (core/keybind.util): carried weapons' switch keys, client actions, then the bars
     const target = resolvePress(this.storage.actionBars(), keybindKey(kb), this.carriedWeapons().map((w) => w.entity.id));
     if (!target) return;
