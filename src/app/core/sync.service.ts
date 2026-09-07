@@ -1,6 +1,6 @@
 import { Injectable, effect, inject, signal } from '@angular/core';
 import { DataService } from './data.service';
-import { Keybind, Rotation, Session } from './models';
+import { Keybind, ProfileKind, Rotation, Session } from './models';
 import { StorageService } from './storage.service';
 import { SupabaseService, errorText } from './supabase.service';
 
@@ -16,6 +16,38 @@ export interface RotationRow {
   copies: number;
   updated_at: string;
   owner_name?: string;
+  /** public_rotations only: 'guide' = the owner is a boss's guide account (PvME rotations) */
+  owner_kind?: ProfileKind;
+}
+
+/** Guide rotations are fetched as one page (a boss has a handful, all guides a few hundred), sorted by name. */
+export const EXPLORE_LIMIT = 60;
+export const EXPLORE_GUIDES_LIMIT = 500;
+
+export interface ExploreOptions {
+  search?: string;
+  style?: string;
+  sort: 'new' | 'copies';
+  /** only rotations of guide accounts */
+  guides?: boolean;
+}
+
+/** A server row as a local rotation; `local` carries what only the browser knows (where a copy came from). */
+export function rotationFromRow(row: RotationRow, local: Pick<Rotation, 'sourceName' | 'sourceOwner' | 'sourceOwnerKind'> | undefined): Rotation {
+  const ms = Date.parse(row.updated_at);
+  return {
+    id: row.id,
+    name: row.name,
+    steps: row.steps,
+    updatedAt: ms,
+    syncedAt: ms,
+    isPublic: row.is_public,
+    sourceId: row.source_id ?? undefined,
+    sourceName: local?.sourceName,
+    sourceOwner: local?.sourceOwner,
+    sourceOwnerKind: local?.sourceOwnerKind,
+    copies: row.copies,
+  };
 }
 
 /** clock skew we tolerate before calling a local edit "newer" than the server copy */
@@ -113,7 +145,7 @@ export class SyncService {
     for (const [id, row] of server) {
       const mine = local.get(id);
       if (mine && decideRotationMerge(mine, Date.parse(row.updated_at)) === 'upload') await this.upsertRotation(mine);
-      else await this.storage.putRotation(this.fromRow(row, mine));
+      else await this.storage.putRotation(rotationFromRow(row, mine));
     }
     for (const [id, mine] of local) {
       if (server.has(id)) continue;
@@ -211,11 +243,12 @@ export class SyncService {
 
   // ------------------------------------------------------------------ explorer
 
-  async explore(opts: { search?: string; style?: string; sort: 'new' | 'copies' }): Promise<RotationRow[]> {
-    let q = (await this.supabase.db()).from('public_rotations').select('*').limit(60);
+  async explore(opts: ExploreOptions): Promise<RotationRow[]> {
+    let q = (await this.supabase.db()).from('public_rotations').select('*').limit(opts.guides ? EXPLORE_GUIDES_LIMIT : EXPLORE_LIMIT);
     if (opts.search?.trim()) q = q.ilike('name', '%' + opts.search.trim().replace(/[%_]/g, '') + '%');
     if (opts.style) q = q.contains('styles', [opts.style]);
-    q = opts.sort === 'copies' ? q.order('copies', { ascending: false }).order('updated_at', { ascending: false }) : q.order('updated_at', { ascending: false });
+    if (opts.guides) q = q.eq('owner_kind', 'guide').order('owner_name').order('name');
+    else q = opts.sort === 'copies' ? q.order('copies', { ascending: false }).order('updated_at', { ascending: false }) : q.order('updated_at', { ascending: false });
     const { data, error } = await q;
     if (error) throw error;
     return data as RotationRow[];
@@ -227,9 +260,7 @@ export class SyncService {
     if (this.uid) {
       const { data, error } = await (await this.supabase.db()).rpc('copy_rotation', { source: row.id, new_id: id });
       if (error) throw error;
-      const copy = this.fromRow(data as RotationRow, undefined);
-      copy.sourceName = row.name;
-      copy.sourceOwner = row.owner_name;
+      const copy = rotationFromRow(data as RotationRow, { sourceName: row.name, sourceOwner: row.owner_name, sourceOwnerKind: row.owner_kind });
       return this.storage.putRotation(copy);
     }
     return this.storage.putRotation({
@@ -241,6 +272,7 @@ export class SyncService {
       sourceId: row.id,
       sourceName: row.name,
       sourceOwner: row.owner_name,
+      sourceOwnerKind: row.owner_kind,
     });
   }
 
@@ -253,19 +285,4 @@ export class SyncService {
     return [...set];
   }
 
-  private fromRow(row: RotationRow, local: Rotation | undefined): Rotation {
-    const ms = Date.parse(row.updated_at);
-    return {
-      id: row.id,
-      name: row.name,
-      steps: row.steps,
-      updatedAt: ms,
-      syncedAt: ms,
-      isPublic: row.is_public,
-      sourceId: row.source_id ?? undefined,
-      sourceName: local?.sourceName,
-      sourceOwner: local?.sourceOwner,
-      copies: row.copies,
-    };
-  }
 }

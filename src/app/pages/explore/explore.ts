@@ -26,6 +26,8 @@ export class Explore {
   readonly search = signal('');
   readonly style = signal('');
   readonly sort = signal<'new' | 'copies'>('new');
+  /** "Guides" chip: only rotations of the guide accounts (their own, larger page, sorted by boss and name) */
+  readonly guides = signal(false);
   readonly rows = signal<RotationRow[]>([]);
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
@@ -40,6 +42,7 @@ export class Explore {
       this.search();
       this.style();
       this.sort();
+      this.guides();
       window.clearTimeout(this.timer);
       this.timer = window.setTimeout(() => void this.load(), 250);
     });
@@ -49,7 +52,7 @@ export class Explore {
     this.loading.set(true);
     this.error.set(null);
     try {
-      this.rows.set(await this.sync.explore({ search: this.search(), style: this.style(), sort: this.sort() }));
+      this.rows.set(await this.sync.explore({ search: this.search(), style: this.style(), sort: this.sort(), guides: this.guides() }));
     } catch (err) {
       this.error.set(errorText(err));
     } finally {

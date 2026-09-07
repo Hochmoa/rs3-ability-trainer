@@ -1,5 +1,5 @@
 import { Injectable, effect, inject, signal } from '@angular/core';
-import { ActionBarSetup, EnemyConfig, Keybind, Loadout, SetupBundle, Settings } from './models';
+import { ActionBarSetup, EnemyConfig, Keybind, Loadout, ProfileKind, SetupBundle, Settings } from './models';
 import { StorageService } from './storage.service';
 import { SupabaseService, errorText } from './supabase.service';
 
@@ -12,6 +12,8 @@ const DEBOUNCE_MS = 800;
 export interface PublicSetupRow {
   user_id: string;
   display_name: string;
+  /** 'guide' = a boss's guide account (PvME loadouts), shown with the Guide badge */
+  kind: ProfileKind;
   updated_at: string;
   settings: Settings;
   loadout_names: string[];
@@ -23,6 +25,7 @@ export interface PublicSetupRow {
 export interface PublicSetup {
   user_id: string;
   display_name: string;
+  kind: ProfileKind;
   updated_at: string;
   settings: Settings;
   loadouts: { loadouts: Loadout[]; active: string };

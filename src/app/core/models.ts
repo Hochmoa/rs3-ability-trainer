@@ -2,6 +2,9 @@ export type Style = 'Melee' | 'Ranged' | 'Magic' | 'Necromancy' | 'Defence' | 'C
 /** "Enhanced" replaced most Melee/Ranged/Magic thresholds in the Combat Style Modernisation (2 March 2026) */
 export type AbilityType = 'Basic' | 'Enhanced' | 'Threshold' | 'Ultimate' | 'Special' | 'Incantation';
 
+/** profiles.kind: a player, or a guide account that holds a boss's PvME loadouts and rotations (never signed in to) */
+export type ProfileKind = 'player' | 'guide';
+
 export const STYLES: Style[] = ['Melee', 'Ranged', 'Magic', 'Necromancy', 'Defence', 'Constitution'];
 
 export interface Ability {
@@ -221,6 +224,8 @@ export interface Rotation {
   sourceId?: string;
   sourceName?: string;
   sourceOwner?: string;
+  /** kind of the account the copy came from (guide accounts hold the PvME guide's rotations) */
+  sourceOwnerKind?: ProfileKind;
   /** server updated_at (ms) of the last successful sync; missing = never synced */
   syncedAt?: number;
   /** explorer copy counter, read-only mirror */

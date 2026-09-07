@@ -7,7 +7,11 @@
       <option [value]="s">{{ s }}</option>
     }
   </select>
-  <select [ngModel]="sort()" (ngModelChange)="sort.set($event)">
+  <label class="chip" [class.active]="guides()" title="Only the rotations of the guide accounts – one per boss, maintained by the trainer from the PvME guide">
+    <input type="checkbox" [checked]="guides()" (change)="guides.set(!guides())" />
+    Guides
+  </label>
+  <select [ngModel]="sort()" (ngModelChange)="sort.set($event)" [disabled]="guides()" [title]="guides() ? 'Guide rotations are sorted by boss and name' : ''">
     <option value="new">Newest</option>
     <option value="copies">Most copied</option>
   </select>
@@ -23,7 +27,7 @@
   <p class="muted">Loading…</p>
 } @else if (!rows().length) {
   <div class="panel empty">
-    <p>No public rotations yet{{ search() || style() ? ' for this filter' : '' }}.</p>
+    <p>No {{ guides() ? 'guide' : 'public' }} rotations yet{{ search() || style() ? ' for this filter' : '' }}.</p>
     <p class="muted small">Sign in and tick "Public" on one of your rotations to list it here.</p>
   </div>
 }
@@ -32,7 +36,13 @@
   <div class="panel rotation">
     <div class="rotation-head">
       <h3>{{ row.name }}</h3>
-      <span class="muted">by {{ row.owner_name }} · {{ ago(row.updated_at) }} · {{ row.steps.length }} steps</span>
+      <span class="muted">
+        by {{ row.owner_name }}
+        @if (row.owner_kind === 'guide') {
+          <span class="tag guide" title="Guide account: this rotation comes from the PvME guide and is maintained by the trainer">Guide</span>
+        }
+        · {{ ago(row.updated_at) }} · {{ row.steps.length }} steps
+      </span>
       @if (row.copies) { <span class="copies" title="times copied">⧉ {{ row.copies }}</span> }
       <span class="tags">
         @for (s of row.styles; track s) { <span class="tag">{{ s }}</span> }
