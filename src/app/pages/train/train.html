@@ -10,8 +10,14 @@
   } @else {
     <div class="focus-head">
       <select [ngModel]="selectedId()" (ngModelChange)="pickRotation($event)" [disabled]="running()" title="Rotation">
-        @for (r of storage.rotations(); track r.id) {
-          <option [value]="r.id">{{ r.name }}</option>
+        @for (g of rotationGroups(); track g.label) {
+          @if (g.label) {
+            <optgroup [label]="g.label">
+              @for (e of g.items; track e.item.id) { <option [value]="e.item.id">{{ e.label }}</option> }
+            </optgroup>
+          } @else {
+            @for (e of g.items; track e.item.id) { <option [value]="e.item.id">{{ e.label }}</option> }
+          }
         }
       </select>
       @if (!running()) {
@@ -116,20 +122,45 @@
     <div class="setup-row">
       <label class="field grow" title="Rotation to practise (Rotations page)">
         <span>Rotation</span>
-        <select [ngModel]="selectedId()" (ngModelChange)="pickRotation($event)" [disabled]="running()">
-          @for (r of storage.rotations(); track r.id) {
-            <option [value]="r.id">{{ r.name }}</option>
+        <div class="picker">
+          <select [ngModel]="selectedId()" (ngModelChange)="pickRotation($event)" [disabled]="running()">
+            @for (g of rotationGroups(); track g.label) {
+              @if (g.label) {
+                <optgroup [label]="g.label">
+                  @for (e of g.items; track e.item.id) { <option [value]="e.item.id">{{ e.label }}</option> }
+                </optgroup>
+              } @else {
+                @for (e of g.items; track e.item.id) { <option [value]="e.item.id">{{ e.label }}</option> }
+              }
+            }
+          </select>
+          @if (storage.rotations().length > 8) {
+            <input
+              class="picker-search"
+              type="search"
+              placeholder="Filter by boss or name…"
+              aria-label="Filter the rotations"
+              [ngModel]="rotationSearch()"
+              (ngModelChange)="rotationSearch.set($event)"
+              [disabled]="running()"
+            />
           }
-        </select>
-        <small class="caption muted">{{ rotationCaption() }}</small>
+        </div>
+        <small class="caption muted">{{ rotationCaption() }}{{ rotationCount() ? ' · ' + rotationCount() : '' }}</small>
       </label>
       @if (advanced() || optionsOpen()) {
         @if (storage.loadouts().length > 1) {
           <label class="field" title="Gear, backpack and prayer book (Loadout page)">
             <span>Loadout</span>
             <select [ngModel]="storage.activeLoadoutId()" (ngModelChange)="pickLoadout($event)" [disabled]="running()">
-              @for (l of storage.loadouts(); track l.id) {
-                <option [value]="l.id">{{ l.name }}</option>
+              @for (g of loadoutGroups(); track g.label) {
+                @if (g.label) {
+                  <optgroup [label]="g.label">
+                    @for (e of g.items; track e.item.id) { <option [value]="e.item.id">{{ e.label }}</option> }
+                  </optgroup>
+                } @else {
+                  @for (e of g.items; track e.item.id) { <option [value]="e.item.id">{{ e.label }}</option> }
+                }
               }
             </select>
           </label>

@@ -153,7 +153,25 @@ export class SetupSyncService {
     return (data as PublicSetup | null) ?? null;
   }
 
-  /** Replaces the whole local setup with another user's; while signed in the own online copy follows. */
+  /**
+   * Adds one loadout of a shared setup to the player's own and makes it active – the additive counterpart of
+   * `loadIntoMine`. This is the path the Setups page is really about ("give me that boss's gear"): the loadout
+   * arrives under a new id next to the ones the player has, and their settings, keybinds, action bars and other
+   * loadouts stay exactly as they were.
+   */
+  async copyLoadoutIntoMine(l: Loadout): Promise<Loadout> {
+    const copy = JSON.parse(JSON.stringify(l)) as Loadout;
+    copy.id = crypto.randomUUID();
+    await this.storage.saveLoadout(copy);
+    await this.storage.setActiveLoadout(copy.id);
+    return copy;
+  }
+
+  /**
+   * Replaces the local setup with another user's; while signed in the own online copy follows. Keybinds and action
+   * bars are only replaced when the shared setup carries them (StorageService.replaceSetup / setupReplacement) – the
+   * guide accounts publish settings and loadouts only.
+   */
   async loadIntoMine(s: PublicSetup): Promise<void> {
     const bundle: SetupBundle = {
       settings: s.settings,

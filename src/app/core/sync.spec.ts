@@ -1,6 +1,6 @@
 import '@angular/compiler';
 import { describe, expect, it } from 'vitest';
-import { RotationRow, decideRotationMerge, rotationFromRow } from './sync.service';
+import { EXPLORE_GUIDES_LIMIT, EXPLORE_LIMIT, RotationRow, decideRotationMerge, exploreRange, rotationFromRow } from './sync.service';
 
 describe('decideRotationMerge – one local rotation against the server copy on login', () => {
   it('a rotation the server does not have: uploaded when never synced, deleted when it was (removed on another device)', () => {
@@ -71,5 +71,31 @@ describe('rotationFromRow – a server row as a local rotation', () => {
     expect(r.sourceOwner).toBe('Vorkath');
     expect(r.sourceOwnerKind).toBe('guide');
     expect(rotationFromRow({ ...row, source_id: null }, undefined).sourceId).toBeUndefined();
+  });
+});
+
+/**
+ * The explorer used to ask for a fixed 500 guide rotations ordered by owner and name, so everything from about "S" on
+ * (Sanctum, Solak, Telos, Vorago, Zamorak …) was unreachable under the Guides chip. It now fetches one page per
+ * request and continues from the rows already shown.
+ */
+describe('exploreRange – paging through the explorer', () => {
+  it('starts at the first row and asks for one page', () => {
+    expect(exploreRange({})).toEqual([0, EXPLORE_LIMIT - 1]);
+    expect(exploreRange({ guides: true })).toEqual([0, EXPLORE_GUIDES_LIMIT - 1]);
+  });
+
+  it('the following pages neither overlap nor skip a row', () => {
+    const size = EXPLORE_GUIDES_LIMIT;
+    const [, firstTo] = exploreRange({ guides: true });
+    const [secondFrom, secondTo] = exploreRange({ guides: true, offset: size });
+    expect(secondFrom).toBe(firstTo + 1);
+    expect(secondTo - secondFrom + 1).toBe(size);
+    // "Load more" passes the number of rows on screen, whatever it is
+    expect(exploreRange({ guides: true, offset: 250 })).toEqual([250, 250 + size - 1]);
+  });
+
+  it('never asks for a negative row', () => {
+    expect(exploreRange({ offset: -5 })).toEqual([0, EXPLORE_LIMIT - 1]);
   });
 });

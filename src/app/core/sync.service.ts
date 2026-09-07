@@ -20,9 +20,25 @@ export interface RotationRow {
   owner_kind?: ProfileKind;
 }
 
-/** Guide rotations are fetched as one page (a boss has a handful, all guides a few hundred), sorted by name. */
+/** rows per request in the players' feed */
 export const EXPLORE_LIMIT = 60;
-export const EXPLORE_GUIDES_LIMIT = 500;
+/**
+ * Rows per request under the "Guides" chip. The guide accounts hold roughly a thousand rotations – far more than one
+ * request should carry, and a fixed cap simply hid everything after it (the bosses from "S" on were invisible). The
+ * page fetches this many at a time and asks for the next range when the player presses "Load more".
+ */
+export const EXPLORE_GUIDES_LIMIT = 120;
+
+/** rows one `explore()` call returns – a full page means there may be more */
+export function explorePageSize(guides: boolean | undefined): number {
+  return guides ? EXPLORE_GUIDES_LIMIT : EXPLORE_LIMIT;
+}
+
+/** the inclusive `[from, to]` bounds postgrest's `.range()` wants for the page that follows `offset` rows */
+export function exploreRange(opts: { guides?: boolean; offset?: number }): [number, number] {
+  const from = Math.max(0, Math.floor(opts.offset ?? 0));
+  return [from, from + explorePageSize(opts.guides) - 1];
+}
 
 export interface ExploreOptions {
   search?: string;
@@ -30,6 +46,10 @@ export interface ExploreOptions {
   sort: 'new' | 'copies';
   /** only rotations of guide accounts */
   guides?: boolean;
+  /** display name of one account (the Explore page's boss filter picks a guide account) */
+  owner?: string;
+  /** first row of the page – the rows already shown, for "Load more" */
+  offset?: number;
 }
 
 /** A server row as a local rotation; `local` carries what only the browser knows (where a copy came from). */
@@ -243,19 +263,30 @@ export class SyncService {
 
   // ------------------------------------------------------------------ explorer
 
+  /** One page of the explorer; `opts.offset` continues the list ("Load more"), so every guide rotation is reachable. */
   async explore(opts: ExploreOptions): Promise<RotationRow[]> {
-    let q = (await this.supabase.db()).from('public_rotations').select('*').limit(opts.guides ? EXPLORE_GUIDES_LIMIT : EXPLORE_LIMIT);
+    const [from, to] = exploreRange(opts);
+    let q = (await this.supabase.db()).from('public_rotations').select('*').range(from, to);
     if (opts.search?.trim()) q = q.ilike('name', '%' + opts.search.trim().replace(/[%_]/g, '') + '%');
     if (opts.style) q = q.contains('styles', [opts.style]);
+    if (opts.owner) q = q.eq('owner_name', opts.owner);
     if (opts.guides) q = q.eq('owner_kind', 'guide').order('owner_name').order('name');
     else {
-      // the guide accounts hold hundreds of rotations – they have their own chip and would bury the players' feed, but a search finds them
-      if (!opts.search?.trim()) q = q.neq('owner_kind', 'guide');
+      // the guide accounts hold hundreds of rotations – they have their own chip and would bury the players' feed, but a search or the boss filter finds them
+      if (!opts.search?.trim() && !opts.owner) q = q.neq('owner_kind', 'guide');
       q = opts.sort === 'copies' ? q.order('copies', { ascending: false }).order('updated_at', { ascending: false }) : q.order('updated_at', { ascending: false });
     }
-    const { data, error } = await q;
+    // the paging needs a total order: two rows with the same name / timestamp would otherwise be free to swap pages
+    const { data, error } = await q.order('id');
     if (error) throw error;
     return data as RotationRow[];
+  }
+
+  /** Display names of the guide accounts (one per boss) – the Explore page's boss filter. */
+  async guideAccounts(): Promise<string[]> {
+    const { data, error } = await (await this.supabase.db()).from('public_profiles').select('display_name').eq('kind', 'guide').order('display_name');
+    if (error) throw error;
+    return (data as { display_name: string }[]).map((r) => r.display_name);
   }
 
   /** Copies an explorer rotation into "my rotations": through the RPC when logged in (counts the copy), else locally. */

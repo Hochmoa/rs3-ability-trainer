@@ -69,9 +69,26 @@ export class Setups {
     }
   }
 
+  /**
+   * The additive path: one shared loadout is added to the player's own and made active. Nothing else is touched –
+   * this is what "load this setup" was meant to do for the guide accounts, which publish loadouts only.
+   */
+  async copyLoadout(row: PublicSetupRow, l: Loadout): Promise<void> {
+    this.busy.set(row.user_id);
+    try {
+      const copy = await this.setups.copyLoadoutIntoMine(l);
+      this.toast.show('"' + copy.name + '" added to your loadouts and made active – your keybinds, bars and other loadouts are untouched.', 'info');
+    } catch (err) {
+      this.toast.show('Could not copy the loadout: ' + errorText(err), 'warn');
+    } finally {
+      this.busy.set(null);
+    }
+  }
+
   async loadSetup(row: PublicSetupRow): Promise<void> {
     const ok = await this.dialogs.confirm(
-      'Replace your settings, loadouts, keybinds, bars and enemy config with the shared setup of ' + row.display_name + '? Your rotations stay. This cannot be undone.',
+      'Replace your settings, loadouts and enemy config with the shared setup of ' + row.display_name +
+        '? Keybinds and action bars are only replaced if this setup carries any – a guide account publishes loadouts only. Your rotations stay. This cannot be undone.',
       { title: 'Load setup', ok: 'Replace mine', danger: true },
     );
     if (!ok) return;

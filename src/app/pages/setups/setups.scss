@@ -87,6 +87,12 @@
 
 .loadout {
   margin-bottom: 8px;
+
+  /* the additive path sits with the loadout it copies, not with the destructive "Replace mine" in the head */
+  .copy-loadout {
+    margin-left: 8px;
+    vertical-align: middle;
+  }
 }
 
 .keys {

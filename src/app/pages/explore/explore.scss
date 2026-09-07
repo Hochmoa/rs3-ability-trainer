@@ -124,3 +124,10 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* "Load more": the guide accounts hold about a thousand rotations, fetched a page at a time */
+.more {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
