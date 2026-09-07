@@ -278,11 +278,12 @@ where.
 
 ## 5. Scope limits (bigger than any single bug)
 
-- **Single target.** The engine has one enemy (`EnemyConfig`), no target count. 300 of the 905 guide rotations contain a
-  multi-target ability (Greater Ricochet 206, Threads of Fate 70, caroming switches 62, Chain 41, Greater Chain 33).
-  Their damage is single-target damage, and the effects that depend on hitting several targets never happen — which is
-  exactly why 22 rotations still fail on "Volley of Souls: needs 2 Residual Souls": the guide builds those souls with a
-  multi-target Soul Sap.
+- **Single target, now with a group setting.** The enemy panel has a target count since this round, and Threads of Fate
+  spreads a single-target Necromancy ability over up to four more of them, so one Soul Sap yields a Residual Soul per
+  target — that is what the 22 "Volley of Souls: needs 2 Residual Souls" rotations were missing. What is still
+  single-target: Chain and Greater Chain copying to secondary targets, Corruption Blast and Shot spreading, and the
+  cone of a two-handed Adaptive Strike. Greater Ricochet and Ricochet need nothing: without other enemies their
+  secondary arrows return to the primary target, which is what the engine already does.
 - **No life points, no incoming damage.** Devotion, Resonance, Immortality, Barricade, Debilitate, Preparation and every
   healing effect are no-ops; "Enable incoming attacks" simulates a rhythm, not a boss. Defensive rotations cannot be
   practised.
@@ -290,6 +291,8 @@ where.
 - **Hit chance uses the wiki's cubic curve** while damage already uses the modernisation's logarithmic one
   (`f(x) = x³/1250 + 4x + 40` in `hit-chance.ts` versus `2.5·145·ln(1+0.6·level/145)/ln 1.6` in `damage.ts`). The wiki's
   Hit chance page still shows the cubic, so we follow it — but it predates the modernisation and is probably stale.
+- **Stalling and eating** are modelled since this round (see `stall.spec.ts`, `eat-food.spec.ts`); the exception for a
+  special whose cooldown lives in a debuff (Crystal Rain) is in as well.
 - Further known-open points are marked `[OPEN]` in `docs/research/*.md` (cooldown off-by-one, the second stun charge
   level, the Berserk Overpower cap, DoT tick spacing, dual-wield hit chance, leech curses, black stone arrows).
 
