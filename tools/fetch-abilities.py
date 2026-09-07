@@ -148,11 +148,12 @@ def main():
         m = re.search(r"\{\{Infobox Buff details(.*?)\n\}\}", t, re.S)
         if not m:
             continue
-        params = dict(re.findall(r"\|\s*(\w+)\s*=\s*(.*?)(?=\n\||\Z)", m.group(1), re.S))
-        buffs[bid]["duration"] = strip_markup(params.get("duration"))
+        # the value must not start past the newline: with `=\s*` an empty parameter swallows the next one
+        params = dict(re.findall(r"\|\s*(\w+)\s*=[ \t]*(.*?)(?=\n\s*\||\Z)", m.group(1), re.S))
+        buffs[bid]["duration"] = strip_markup(params.get("duration")) or None
         buffs[bid]["durationTicks"] = parse_ticks(strip_markup(params.get("duration")))
-        buffs[bid]["trigger"] = strip_markup(params.get("trigger"))
-        buffs[bid]["effects"] = strip_markup(params.get("effects"))
+        buffs[bid]["trigger"] = strip_markup(params.get("trigger")) or None
+        buffs[bid]["effects"] = strip_markup(params.get("effects")) or None
 
     # ---- icons
     files = [a["_iconFile"] for a in abilities.values()]
