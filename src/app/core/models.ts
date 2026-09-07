@@ -563,10 +563,10 @@ export const COMBAT_SKILLS: CombatSkill[] = ['attack', 'strength', 'ranged', 'ma
 export const SKILL_NAMES: Record<CombatSkill, string> = {
   attack: 'Attack', strength: 'Strength', ranged: 'Ranged', magic: 'Magic', necromancy: 'Necromancy', defence: 'Defence', constitution: 'Constitution', prayer: 'Prayer',
 };
-/** level caps (Necromancy goes to 120) */
-export const SKILL_MAX: Record<CombatSkill, number> = { attack: 99, strength: 99, ranged: 99, magic: 99, necromancy: 120, defence: 99, constitution: 99, prayer: 99 };
-/** a maxed account – the default for every loadout */
-export const DEFAULT_LEVELS: Record<CombatSkill, number> = { ...SKILL_MAX };
+/** level caps: the six combat skills go to 120 since the Combat Style Modernisation (2 March 2026), Constitution and Prayer stay at 99 */
+export const SKILL_MAX: Record<CombatSkill, number> = { attack: 120, strength: 120, ranged: 120, magic: 120, necromancy: 120, defence: 120, constitution: 99, prayer: 99 };
+/** the default levels of a loadout: 99 in the classic skills (most players are not 120 yet – edit them on the Loadout page), 120 Necromancy */
+export const DEFAULT_LEVELS: Record<CombatSkill, number> = { ...SKILL_MAX, attack: 99, strength: 99, ranged: 99, magic: 99, defence: 99 };
 
 /** the loadout's base levels (unboosted), missing ones at the cap, clamped to 1..cap */
 export function loadoutLevels(l: { levels?: Partial<Record<CombatSkill, number>> }): Record<CombatSkill, number> {

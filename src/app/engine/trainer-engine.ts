@@ -35,6 +35,8 @@ function appliesBuff(effects: Effect[] | undefined): boolean {
 
 /** One RS3 game tick / server cycle. */
 export const TICK_MS = 600;
+/** after the last input the session keeps running this long at most so that the last casts' hits, bleeds and bounces still land */
+export const SETTLE_TICKS = 34;
 /** Global cooldown in ticks (1.8 s). */
 export const GCD_TICKS = 3;
 
@@ -343,6 +345,11 @@ interface SequenceState {
  */
 export class TrainerEngine {
   state: 'idle' | 'running' | 'finished' = 'idle';
+  /** every input is done, the session waits (until this tick at most) for the damage still in the air */
+  settleUntil: number | null = null;
+  get settling(): boolean {
+    return this.settleUntil !== null;
+  }
   t0 = 0;
   index = 0;
   castTick: number | null = null;
@@ -457,6 +464,7 @@ export class TrainerEngine {
   start(now: number): void {
     this.t0 = now;
     this.index = 0;
+    this.settleUntil = null;
     this.castTick = null;
     this.wield = { mainHand: null, offHand: null, twoHand: null, ...(this.config.startWield ?? {}) };
     this.adrenaline = this.config.fullAdrenaline ? this.maxAdrenaline : Math.max(0, Math.min(this.maxAdrenaline, this.loadout.startAdrenaline));
@@ -809,6 +817,7 @@ export class TrainerEngine {
   }
 
   private handle(input: PendingInput): void {
+    if (this.settleUntil !== null) return; // every input is done, only the damage in the air is still landing
     const slot = input.key === SPEC_KEY || input.key === EOF_KEY;
     if (slot) {
       // the special-attack / Essence of Finality slot fires the wielded / stored weapon's spec; a rotation step written as that spec counts
@@ -2221,6 +2230,10 @@ export class TrainerEngine {
 
   private advanceTick(tick: number): void {
     this.lastTick = tick;
+    if (this.settleUntil !== null && (tick >= this.settleUntil || !this.damageInTheAir())) {
+      this.finish();
+      return;
+    }
     const due = this.deferred.filter((d) => d.tick <= tick);
     this.deferred = this.deferred.filter((d) => d.tick > tick);
     for (const d of due) d.apply();
@@ -2326,7 +2339,7 @@ export class TrainerEngine {
    * fires the basic attack through its bar instead (last resort), so nothing happens there.
    */
   private autoAttackTick(tick: number): void {
-    if (this.config.autoAttacks === false || this.revolutionOn || this.pending || this.castTick === null) return;
+    if (this.config.autoAttacks === false || this.revolutionOn || this.pending || this.castTick === null || this.settleUntil !== null) return;
     const gcdEnd = this.gcdEndTick!;
     if (tick < gcdEnd) return;
     if (this.channel && !this.channel.cancelled && tick < this.channel.endTick) return;
@@ -2396,7 +2409,7 @@ export class TrainerEngine {
    * the leftmost usable ability is cast on this tick through the normal cast path.
    */
   private revolutionTick(tick: number): void {
-    if (!this.revolutionOn || this.pending) return;
+    if (!this.revolutionOn || this.pending || this.settleUntil !== null) return;
     const gcdEnd = this.gcdEndTick;
     if (gcdEnd !== null && tick < gcdEnd) return;
     if (this.channel && !this.channel.cancelled && tick < this.channel.endTick) return;
@@ -2418,11 +2431,24 @@ export class TrainerEngine {
       if (this.config.loop) {
         this.index = 0;
         this.done.clear();
+      } else if (this.damageInTheAir()) {
+        // the last cast's hits (hit delay, bounces, bleeds) still land: keep ticking, finish when they have or after SETTLE_TICKS
+        this.settleUntil = this.lastTick + SETTLE_TICKS;
       } else {
-        this.state = 'finished';
-        this.events.push({ kind: 'finished' });
+        this.finish();
       }
     }
+  }
+
+  /** hits of the player's casts (not the conjured spirits' own attacks) that have not landed yet */
+  private damageInTheAir(): boolean {
+    return this.scheduled.some((h) => !h.spirit) || (this.channel !== null && !this.channel.cancelled && this.channel.hitsDone < this.channel.hits);
+  }
+
+  private finish(): void {
+    this.settleUntil = null;
+    this.state = 'finished';
+    this.events.push({ kind: 'finished' });
   }
 
   // ---------------------------------------------------------------- helpers

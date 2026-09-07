@@ -11,6 +11,8 @@ describe('combat levels', () => {
   it('an elder overload boosts the six combat skills, not Constitution or Prayer', () => {
     const b = boostedLevels(loadoutLevels({ levels: { strength: 90 } }), 'elder');
     expect(b).toMatchObject({ strength: 90 + 15 + 5, attack: 120, ranged: 120, magic: 120, necromancy: 120 + 20 + 5, defence: 120, constitution: 99, prayer: 99 });
+    expect(loadoutLevels({ levels: { magic: 120 } }).magic).toBe(120);
+    expect(boostedLevels(loadoutLevels({ levels: { magic: 120 } }), 'elder').magic).toBe(145);
     expect(boostedLevels(DEFAULT_LEVELS, 'none')).toEqual(DEFAULT_LEVELS);
   });
 

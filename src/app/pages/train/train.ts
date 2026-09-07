@@ -478,6 +478,8 @@ export class Train implements OnDestroy {
   readonly finished = signal(false);
   /** why the last session ended – drives the big end-of-rotation overlay */
   readonly finishReason = signal<'finished' | 'stopped' | null>(null);
+  /** the "waiting for the last hits" line was shown for this session */
+  private settleNoted = false;
   readonly finishDismissed = signal(false);
   /** every processed input of the session in order (compare with the rotation strip above) */
   readonly history = signal<HistoryEntry[]>([]);
@@ -1036,6 +1038,7 @@ export class Train implements OnDestroy {
     else this.feedback.set({ text: (this.coarsePointer() ? 'Tap ' : 'Press ') + first?.key + ' (' + first?.entity.name + ') to start.', cls: 'info' });
     this.finished.set(false);
     this.finishReason.set(null);
+    this.settleNoted = false;
     this.finishDismissed.set(false);
     this.history.set([]);
     this.running.set(true);
@@ -1254,6 +1257,10 @@ export class Train implements OnDestroy {
       }
       this.cooldowns.set(cds);
       this.cooldownsShown = Object.keys(cds).length > 0;
+    }
+    if (e.settling && !this.settleNoted) {
+      this.settleNoted = true;
+      this.feedback.set({ text: 'All inputs done – waiting for the last hits to land (Esc ends now)', cls: 'info' });
     }
     const cp = e.channelProgress(now);
     this.channel.set(cp ? { ...cp, name: this.name(cp.key), icon: e.catalog.get(cp.key)?.icon ?? null, remainingS: cp.remainingMs / 1000 } : null);
