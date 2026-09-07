@@ -43,6 +43,15 @@
   }
 }
 
+.tag.guide {
+  font-size: 11px;
+  padding: 1px 6px;
+  border: 1px solid var(--gold);
+  border-radius: 10px;
+  color: var(--gold);
+  font-weight: 600;
+}
+
 .details {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -55,6 +64,14 @@
     margin: 0 0 6px;
     color: var(--gold);
     font-size: 14px;
+  }
+
+  .guide-note {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
   }
 
   table td {

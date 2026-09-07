@@ -1,6 +1,7 @@
 import { Injectable, computed, signal } from '@angular/core';
 import type { Session as AuthSession, SupabaseClient } from '@supabase/supabase-js';
 import { environment } from '../../environments/environment';
+import type { ProfileKind } from './models';
 
 export type Role = 'user' | 'moderator' | 'admin';
 
@@ -8,6 +9,7 @@ export interface Profile {
   id: string;
   display_name: string;
   role: Role;
+  kind: ProfileKind;
   blocked_at: string | null;
   blocked_reason: string | null;
 }
@@ -85,7 +87,7 @@ export class SupabaseService {
   }
 
   private async loadProfile(id: string): Promise<void> {
-    const { data } = await (await this.db()).from('profiles').select('id, display_name, role, blocked_at, blocked_reason').eq('id', id).maybeSingle();
+    const { data } = await (await this.db()).from('profiles').select('id, display_name, role, kind, blocked_at, blocked_reason').eq('id', id).maybeSingle();
     this.profile.set((data as Profile | null) ?? null);
   }
 

@@ -17,7 +17,12 @@
     </div>
   </div>
   @if (r.sourceName) {
-    <p class="muted small origin">Copied from "{{ r.sourceName }}"{{ r.sourceOwner ? ' by ' + r.sourceOwner : '' }}.</p>
+    <p class="muted small origin">
+      Copied from "{{ r.sourceName }}"{{ r.sourceOwner ? ' by ' + r.sourceOwner : '' }}.
+      @if (r.sourceOwnerKind === 'guide') {
+        <span class="tag" title="Guide account: this rotation comes from the PvME guide and is maintained by the trainer">Guide</span>
+      }
+    </p>
   }
 
   @if (editWarnings().length) {

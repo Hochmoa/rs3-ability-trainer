@@ -22,6 +22,9 @@
   <div class="panel setup" [class.open]="open() === row.user_id">
     <div class="setup-head">
       <h3>{{ row.display_name }}</h3>
+      @if (row.kind === 'guide') {
+        <span class="tag guide" title="Guide account: this setup holds the PvME guide's loadouts for the boss and is maintained by the trainer">Guide</span>
+      }
       <span class="muted">{{ ago(row.updated_at) }}</span>
       @if (row.user_id === myId()) { <span class="muted small">yours</span> }
       <span class="tags">
@@ -41,6 +44,12 @@
     @if (open() === row.user_id) {
       @if (details()[row.user_id]; as s) {
         <div class="details">
+          @if (s.kind === 'guide') {
+            <p class="guide-note">
+              <span class="tag guide">Guide</span>
+              <span class="muted small">Guide account for {{ s.display_name }}: the loadouts come from the PvME guide and are maintained by the trainer – settings are the defaults, there are no keybinds or bars.</span>
+            </p>
+          }
           <section>
             <h4>Settings</h4>
             <table>
