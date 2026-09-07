@@ -7,7 +7,11 @@ familiars and the damage/accuracy formulas), each diffed against `public/data/*.
 plus a walk through the running application and the numbers from the 905-rotation playthrough
 (`docs/research/guide-playthrough.md`).
 
-**Headline:** the game data is in good shape. `specs.json` (75 special attacks) and `weapons.json` (1923 weapons) are
+**Everything in this list has been fixed** (7 September 2026, commits `2f783d1` … `d019c8b`); the two entries that
+needed no change say so, and §5 collects the scope limits that are features rather than defects. The findings are kept
+in full below so the reasoning and the wiki quotes stay readable.
+
+**Headline of the research:** the game data is in good shape. `specs.json` (75 special attacks) and `weapons.json` (1923 weapons) are
 byte-identical to the wiki's own tables, `abilities.json` reproduces today's ability infoboxes with zero differences, and
 there is **no main-game combat change between 3 September (our last research) and today** — August and September 2026 are
 Leagues II: EQUILIBRIUM, which runs on separate worlds and must not be copied into the model. What is left is: a handful
@@ -18,35 +22,76 @@ but the engine, and a set of application problems that hurt more than any of the
 
 ## The list, ranked
 
-| # | What | Where | Impact |
-|---|---|---|---|
-| 1 | Session freezes silently when the page stops drawing (rAF stall) | `train.ts` | high – a training session that ignores every key |
-| 2 | Dual-wield requirement does not exist in the engine | `rules-model.ts`, `trainer-engine.ts` | high – Flurry, Greater Flurry, Bladed Dive fire with a two-hander |
-| 3 | Tsunami costs 100 % adrenaline instead of 40 % at 5 Glacial Embrace stacks | `rules-magic.ts`, `rules-buffs.ts` | high – magic rotations stall on an ultimate the game lets you cast |
-| 4 | Glacial Embrace: 10 stacks without a timer instead of 5 for 34 ticks | `rules-buffs.ts` | high – feeds 3, and the stacks never expire |
-| 5 | Reflect reflects 50 %, the game does 100 % (PvE) | `rules-defcon.ts` | medium – wrong damage whenever Reflect is used |
-| 6 | Darkfang (Gloomfire bow, Dark bow) not modelled | `rules-ranged.ts` | medium – half the on-hit procs and Snipe cooldown reduction for those bows |
-| 7 | Temporal Anomaly and Darkness missing entirely | `spells.json` | medium – up to 20 % magic-ability cooldown resets, used by PvME |
-| 8 | Aspect exclusivity not enforced | `rules-buffs.ts` | medium – Animate Dead + Vampyrism + Penance can all run at once |
-| 9 | Adaptive Strike modelled as dual-wield only | `rules-melee.ts` | medium – wrong damage and a false requirement for 2h / main-hand |
-| 10 | Rotation and loadout pickers do not scale (905 / 128 flat entries) | `train.html`, `rotations.html`, `loadout.html` | high for usability |
-| 11 | Explore "Guides" chip shows 500 of 905 guide rotations | `sync.service.ts` | medium – half the bosses are invisible there |
-| 12 | "Load this setup" of a guide account wipes the player's keybinds and bars | `setups.ts`, `setup-sync.service.ts` | medium – data loss on the intended copy path |
-| 13 | Berserk lasts 34 ticks instead of 33 | `buffs.json` | medium – a Berserk window is one tick long, rotations are built to the tick |
-| 14 | Greater Sunshine / Greater Death's Swiftness duration 62 instead of 63 ticks | `rules-magic.ts`, `rules-ranged.ts` | small – one lost GCD per window |
-| 15 | Weapon poison ticks every 17 ticks instead of 16 (17 hits instead of 18) | `damage.ts` | small – a few percent of poison damage |
-| 16 | Magic ability damage ignores the spell-tier cap `min(t, s)` | `damage.ts` | small today, wrong for low-tier spells |
-| 17 | Chaotic grimoire's +7 % critical chance never applied | `gear.json`, `set-effects.json` | small – silently 0 % |
-| 18 | `abilities.json` damage fields wrong for ~18 abilities (rules compensate) | `public/data/abilities.json` | small in the sim, wrong in tooltips and previews |
-| 19 | Familiars: Steel titan missing, two scroll costs wrong (6 vs 20 points) | `familiars.json` | small |
-| 20 | No `Utility` ability class (Surge, Escape, Dive … filed under Basic) | `fetch-abilities.py`, catalog, revolution toggles | small |
-| 21 | Only the worn Essence of Finality is shown, not the carried ones | `loadout.html` | small, but confusing after the multi-amulet change |
-| 22 | Rejuvenate heals 40 % instead of 42.5 % | `rules-defcon.ts` | small |
-| 23 | Ring of kinship: 12 selectable items, three Necromancy classes missing | `gear.json` | small |
+| # | What | Where | Impact | State |
+|---|---|---|---|---|
+| 1 | Session freezes silently when the page stops drawing (rAF stall) | `train.ts` | high – a training session that ignores every key | fixed – watchdog `frame-loop.ts`, verified in the running app |
+| 2 | Dual-wield requirement does not exist in the engine | `rules-model.ts`, `trainer-engine.ts` | high – Flurry, Greater Flurry, Bladed Dive fire with a two-hander | fixed – `dw` requirement + switch inserter |
+| 3 | Tsunami costs 100 % adrenaline instead of 40 % at 5 Glacial Embrace stacks | `rules-magic.ts`, `rules-buffs.ts` | high – magic rotations stall on an ultimate the game lets you cast | fixed – cost and requirement per stack |
+| 4 | Glacial Embrace: 10 stacks without a timer instead of 5 for 34 ticks | `rules-buffs.ts` | high – feeds 3, and the stacks never expire | fixed – 5 stacks, 34 ticks, from Incite Fear |
+| 5 | Reflect reflects 50 %, the game does 100 % (PvE) | `rules-defcon.ts` | medium – wrong damage whenever Reflect is used | fixed – text now matches the wiki |
+| 6 | Darkfang (Gloomfire bow, Dark bow) not modelled | `rules-ranged.ts` | medium – half the on-hit procs and Snipe cooldown reduction for those bows | fixed – `hitsOverrides` for both bows |
+| 7 | Temporal Anomaly and Darkness missing entirely | `spells.json` | medium – up to 20 % magic-ability cooldown resets, used by PvME | fixed – spell added, resets modelled |
+| 8 | Aspect exclusivity not enforced | `rules-buffs.ts` | medium – Animate Dead + Vampyrism + Penance can all run at once | fixed – `aspectEffects()` |
+| 9 | Adaptive Strike modelled as dual-wield only | `rules-melee.ts` | medium – wrong damage and a false requirement for 2h / main-hand | fixed – three forms |
+| 10 | Rotation and loadout pickers do not scale (905 / 128 flat entries) | `train.html`, `rotations.html`, `loadout.html` | high for usability | fixed – grouped, searchable pickers |
+| 11 | Explore "Guides" chip shows 500 of 905 guide rotations | `sync.service.ts` | medium – half the bosses are invisible there | fixed – paging + boss filter |
+| 12 | "Load this setup" of a guide account wipes the player's keybinds and bars | `setups.ts`, `setup-sync.service.ts` | medium – data loss on the intended copy path | fixed – additive "Copy this loadout" |
+| 13 | Berserk lasts 34 ticks instead of 33 | `buffs.json` | medium – a Berserk window is one tick long, rotations are built to the tick | fixed – 33 ticks |
+| 14 | Greater Sunshine / Greater Death's Swiftness duration 62 instead of 63 ticks | `rules-magic.ts`, `rules-ranged.ts` | small – one lost GCD per window | fixed – 63 ticks |
+| 15 | Weapon poison ticks every 17 ticks instead of 16 (17 hits instead of 18) | `damage.ts` | small – a few percent of poison damage | fixed – every 16 ticks |
+| 16 | Magic ability damage ignores the spell-tier cap `min(t, s)` | `damage.ts` | small today, wrong for low-tier spells | no change needed – see §2.4 |
+| 17 | Chaotic grimoire's +7 % critical chance never applied | `gear.json`, `set-effects.json` | small – silently 0 % | fixed – passive applies |
+| 18 | `abilities.json` damage fields wrong for ~18 abilities (rules compensate) | `public/data/abilities.json` | small in the sim, wrong in tooltips and previews | fixed – regenerated with the parser |
+| 19 | Familiars: Steel titan missing, two scroll costs wrong (6 vs 20 points) | `familiars.json` | small | fixed – Steel titan + scroll costs |
+| 20 | No `Utility` ability class (Surge, Escape, Dive … filed under Basic) | `fetch-abilities.py`, catalog, revolution toggles | small | fixed – `Utility` type |
+| 21 | Only the worn Essence of Finality is shown, not the carried ones | `loadout.html` | small, but confusing after the multi-amulet change | fixed – every carried amulet listed |
+| 22 | Rejuvenate heals 40 % instead of 42.5 % | `rules-defcon.ts` | small | no change – the wiki says 40 % |
+| 23 | Ring of kinship: 12 selectable items, three Necromancy classes missing | `gear.json` | small | fixed – one ring, 15 classes |
 
 Scope limits that are bigger than any single bug are in §5.
 
 ---
+
+## 0. What the fix round changed
+
+Engine and rules (`src/app/engine`):
+
+- A dual-wield requirement exists (`equipment: 'dw'`, `ResolvedLoadout.hasDualWield`); Flurry, Greater Flurry and Bladed
+  Dive carry it, and the preset import switches to a pair before them.
+- Adaptive Strike has its three forms (`hitsWhen` + `damageRules`): two hits of 60–75 % dual-wielding, one of 120–140 %
+  otherwise.
+- Darkfang: the Gloomfire bow and the Dark bow split the Ranged basic attack into two hits, so every on-hit effect and
+  the fleeting-boots cooldown reduction count twice.
+- Incite Fear builds Glacial Embrace (1 per cast, max 5, 34 ticks, refreshed), and Tsunami's cost *and* requirement drop
+  12 % per stack down to 40 %, without consuming them (new `cost.keepStacks`).
+- The aspects of power exclude each other (`aspectEffects()`); Temporal Anomaly is a spell now and resets the cooldown of
+  the magic ability just cast with 12.5 % of the magic damage bonus, capped at 20 %, excluding Sunshine, Greater
+  Sunshine, Magma Tempest and Runic Charge.
+- Reflect reflects 100 % (25 % in PvP), the two greater ultimate windows last 63 ticks, poison ticks every 16 ticks,
+  Berserk lasts 33 ticks in the buff catalogue, the Lunar heals have their 17-tick cooldown, and Rejuvenate quotes the
+  wiki instead of a bare number.
+
+Application (`src/app/pages`, `src/app/core`):
+
+- `frame-loop.ts`: a watchdog starts a 100 ms interval when no animation frame arrived for 250 ms and stops it when
+  frames return, so an occluded window no longer freezes a session. Verified in the running app: with zero frames
+  delivered the engine advanced from tick 3 to tick 8 in 2.5 s and accepted a press.
+- Rotation, loadout and focus pickers are grouped by boss with a filter field; the rotations page has a search box and a
+  boss filter.
+- Explore pages through the guide rotations (`.range()`, boss filter) instead of stopping at 500.
+- A shared setup no longer replaces keybinds or bars it does not carry, and every loadout can be copied on its own.
+- The loadout page lists every carried Essence of Finality with its stored special.
+
+Data and tools (`public/data`, `tools`):
+
+- `abilities.json` regenerated with correct hit counts, per-hit damage, buff windows and the `Utility` class (Bladed Dive
+  stays `Basic`, which is what the wiki types it as today).
+- Steel titan added, Soul Food and Mammoth Feast cost 20 special move points, the chaotic grimoire's +7 % critical chance
+  applies, the ring of kinship is one ring with its 15 classes.
+- The boss setups carry the relics (84 of 127), the familiar (56), the ammunition (21) and the stored Essence of Finality
+  specials (8) of the PvME preset maker, so a rotation's adrenaline assumptions hold.
+
+Test suite: 735 tests green, typecheck clean.
 
 ## 1. Engine bugs found against the wiki
 
