@@ -2729,16 +2729,16 @@ a good player said on a given date, not as game data.
 
 ## What this means for the trainer
 
-The point of collecting all this was to check the trainer against it. That check was run on 7 September 2026.
+The point of collecting all this was to check the trainer against it, and then to close what the check found. Both
+happened on 7 September 2026.
 
-### What was checked
+### What the check found
 
 1. **All data re-fetched from the wiki** (`tools/fetch-abilities.py`, `fetch-specs.py`, `fetch-spells.py`,
    `fetch-prayers.py`) and diffed against what the repository shipped: **126 abilities, 75 special attacks and 30
-   spells came back byte-identical**, so nothing in the game's numbers has moved since the last fetch on 3 September.
-   Prayer texts improved only in wording (the wiki now names the combat style: "+6 % Necromancy damage" instead of
-   "+6 % damage"). One parser bug surfaced and was fixed: an empty wikitext parameter swallowed the one after it,
-   which had emptied the *effects* text of Death Spark and Soul Reave.
+   spells came back byte-identical**, so nothing in the game's numbers had moved since the last fetch. Prayer texts
+   improved only in wording (the wiki now names the combat style). One parser bug surfaced and was fixed: an empty
+   wikitext parameter swallowed the one after it, which had emptied the *effects* text of Death Spark and Soul Reave.
 2. **Every mechanic the videos teach was looked up in the engine rules.** Meteor Strike's 4.5 % adrenaline per tick
    and 1.5× melee basics, Greater Flurry extending Berserk by one tick per hit, Asphyxiate's Channelled Might,
    Tsunami's Glacial Embrace discount and its post-cast crit adrenaline, Galeshot's Searing Winds, Imbue: Shadows'
@@ -2749,22 +2749,29 @@ The point of collecting all this was to check the trainer against it. That check
    were matched against `public/data/abilities.json`, `specs.json` and `spells.json`; the only misses were spelling
    variants ("Pulverize" for Pulverise, "Snapshot" for Snap Shot) and headings that are not abilities.
 4. **The igneous capes' hit-splitting** (Overpower 2 × 280–340, Omnipower 4 × 120–150, Deadshot 8 × 55–75, Death
-   Skulls' two extra bounces) is modelled data-driven from `set-effects.json` through the loadout resolver's
-   `hitsOverrides` / `damageOverrides`.
+   Skulls' two extra bounces) is modelled data-driven from `set-effects.json` through the loadout resolver.
 
-So the answer to "does the trainer match what the community plays?" is: **on the numbers and the mechanics, yes.**
+So on the numbers and the mechanics, the trainer already matched what the community plays. What it could not do was
+everything *around* the numbers — and that is what this round built.
 
-### Where the trainer cannot express what these guides teach
+### What was built because of this document
 
-These are not wrong values; they are things the model has no room for. Listed in the order they would pay off.
+| Gap the videos exposed | What the trainer does now |
+|---|---|
+| **Stalling** — the standard opener on melee, ranged and magic: start an ability out of range, release it as the fight starts | A rotation step written `s<ability>` starts the cast and holds it — the adrenaline and the cooldown are spent there and nothing lands — and the matching `r<ability>` lets it land without paying again, exactly as the wiki describes stalling. Before, the importer folded the pair into one press (`src/app/engine/stall.spec.ts`) |
+| **Revolution bar order** — Qp RS's guides are entirely about which slots Revolution fires and in which priority | The Action bars page has a *Revolution check*: the scanned range in scan order, which slots fire, and the reason for every silent one — wrong style, off the global cooldown, a type switched off, a special attack Revolution never fires — plus the basic attack marked as the last resort (`src/app/engine/revolution-plan.ts`) |
+| **Eating** — solid food costs 3 % adrenaline since the rework, which is why the guides pick brews | An "Eat food" action that charges the 3 %, off the global cooldown. Life points are still not simulated, so that is all it does |
+| **A fight is a chain of phases** — every boss guide carries adrenaline, conjures and buffs across a phase boundary | "Next from here" on the session end writes the state this session ended in — adrenaline, stacks, conjures with their remaining lifetime, self buffs, prayers — into the next rotation as its pre-build, where it stays visible and editable (`TrainerEngine.snapshotPrebuild`) |
+| **Perks and relics on a preset** — the rotations assume Conservation of Energy, Fury of the Small, a familiar, the right arrows | The preset importer now reads the fields the PvME preset maker keeps next to the gear: 84 of 127 setups start with their relics (Conservation of Energy in 82), 56 with the familiar whose scroll they press, 21 with the right ammunition, and eight with the special attacks their Essence of Finality amulets actually store instead of the importer guessing |
 
-| Gap | What the videos do with it | What it would take |
-|---|---|---|
-| **Stalling** | The standard opener on melee, ranged and magic: start an ability out of range or on a target cycle, release it as the fight starts. Cooldown and adrenaline are spent at the stall, the damage lands later. KevMcGames spends a whole video on releasing a stall cleanly | The PvME importer currently folds "stall X … release X" into one cast. A real model needs a held-cast state in the engine, plus a key to release it |
-| **Revolution practice** | Qp RS's guides are entirely about *bar order*: which abilities revolution should fire for you and in which priority | The engine has a revolution mode, but a player cannot practise "is my bar ordered right?" — there is no bar-scoring screen |
-| **Eating** | Food costs 3 % adrenaline since the rework (down from 10 %), which is why the guides pick brews and blubber over solid food, and why the "Hungry Like the Wolf" relic matters | Life points are not simulated, so food has nothing to interact with. A cheap version: an "eat" action that only charges the adrenaline |
-| **A fight as a chain of phases** | Every boss guide carries adrenaline across a phase boundary on purpose — the Zuk guide's core trick, Zamorak's potion between runes | Pre-builds exist per rotation, but not "this rotation starts where that one ended" |
-| **Perks and relics on a preset** | Rotations assume Conservation of Energy, Ring of Vigour, Invigorating 4, Fury of the Small, Equilibrium; some assume Double Surge or Mobile | The loadout has all of these, but the PvME preset importer does not read them from the guides, so imported setups start without them |
+### What is still out of reach
+
+- **Invention perks** are not in the PvME preset data at all (the preset maker stores no gizmos), so a setup still
+  starts without Biting, Precise, Equilibrium or Invigorating unless you add them on the Loadout page.
+- **Life points** are not simulated, so food heals nothing, Berserk's +25 % damage taken costs nothing, and
+  Powerburst of vitality only exposes its factor.
+- **Team play** — the guides' role assignments (Umbra, Hammer, minion tank) and anything that depends on what other
+  players do cannot be practised alone.
 
 ### Where the videos disagree with each other
 
