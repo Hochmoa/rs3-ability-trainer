@@ -35,6 +35,12 @@ STYLE_ORDER = {"Melee": 0, "Ranged": 1, "Magic": 2, "Necromancy": 3, "Defence": 
 #
 # HITS holds the single-target hit counts the ability text does not spell out; the wiki sentence naming the number
 # is quoted on every entry. Everything else is parsed. Checked against runescape.wiki on 2026-09-07.
+# Status pages that contradict their ability page; the ability page is what the engine rules follow.
+# Berserk: "Berserk ... lasts 19.8 seconds (33 ticks)" (runescape.wiki/w/Berserk) against "20.4 seconds" on the status page.
+BUFF_DURATION_FIX = {
+    14707: ("19.8 seconds", 33),
+}
+
 HITS = {
     # "The target will be hit for an additional 15-20% Ranged damage (4-6% Ranged damage after 2 hits) for each
     # enemy that cannot be found." -> 1 primary hit + 6 returning secondaries (/w/Greater_Ricochet)
@@ -242,6 +248,8 @@ def main():
         params = dict(re.findall(r"\|\s*(\w+)\s*=[ \t]*(.*?)(?=\n\s*\||\Z)", m.group(1), re.S))
         buffs[bid]["duration"] = strip_markup(params.get("duration")) or None
         buffs[bid]["durationTicks"] = parse_ticks(strip_markup(params.get("duration")))
+        if bid in BUFF_DURATION_FIX:
+            buffs[bid]["duration"], buffs[bid]["durationTicks"] = BUFF_DURATION_FIX[bid]
         buffs[bid]["trigger"] = strip_markup(params.get("trigger")) or None
         buffs[bid]["effects"] = strip_markup(params.get("effects")) or None
 
