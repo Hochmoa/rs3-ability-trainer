@@ -112,6 +112,39 @@
       </div>
 
       <details class="advanced">
+        <summary>Revolution check: what fires on its own</summary>
+        <div class="panel">
+          <p class="muted small">
+            Revolution scans the first {{ storage.settings().revolution.slots }} slots of this bar from the left and fires the
+            first ability that can go off{{ revolutionStyle() ? ', with a ' + revolutionStyle() + ' weapon in hand' : '' }}.
+            The size and the ability types are set on the <a routerLink="/settings">Settings</a> page.
+          </p>
+          @for (w of revolution().warnings; track $index) {
+            <p class="warn small">{{ w }}</p>
+          }
+          <ol class="revo-plan">
+            @for (s of revolution().scanned; track s.slot) {
+              <li [class.fires]="s.fires" [class.silent]="!s.fires">
+                <span class="revo-slot">{{ s.slot }}</span>
+                <span class="revo-name">{{ s.name }}</span>
+                @if (s.fires) {
+                  <span class="revo-why">{{ s.lastResort ? 'fires only when nothing else can – the basic attack is the last resort' : 'Revolution fires this' }}</span>
+                } @else {
+                  <span class="revo-why">{{ s.why }}</span>
+                }
+              </li>
+            }
+          </ol>
+          @if (revolution().ignored.length) {
+            <p class="muted small">
+              Past slot {{ storage.settings().revolution.slots }}, never scanned:
+              {{ revolutionIgnoredNames() }}
+            </p>
+          }
+        </div>
+      </details>
+
+      <details class="advanced">
         <summary>Match my in-game bars (advanced)</summary>
       <div class="panel">
         <h2>Positions</h2>

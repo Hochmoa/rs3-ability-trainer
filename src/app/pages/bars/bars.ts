@@ -4,7 +4,8 @@ import { RouterLink } from '@angular/router';
 import { groupCatalog } from '../../core/catalog-groups';
 import { DataService, Entity } from '../../core/data.service';
 import { keybindLabel } from '../../core/keybind.util';
-import { ActionBarSetup, BAR_POSITION_NAMES, RotationStep, SPELLBOOKS, SPELLBOOK_NAMES, STYLES, STYLES4, Style4, WEAPON_TYPES } from '../../core/models';
+import { ActionBarSetup, BAR_POSITION_NAMES, RotationStep, SPELLBOOKS, SPELLBOOK_NAMES, STYLES, STYLES4, Style, Style4, WEAPON_TYPES, isStyle4 } from '../../core/models';
+import { RevolutionPlan, revolutionPlan } from '../../engine/revolution-plan';
 import { isObscureEntity } from '../../core/obscure';
 import { StorageService } from '../../core/storage.service';
 import { AbilityIcon } from '../../shared/ability-icon';
@@ -50,6 +51,28 @@ export class Bars implements OnDestroy {
 
   readonly preset = computed(() => this.setup().presets.find((p) => p.id === this.selectedId()) ?? this.setup().presets[0]);
   readonly slotEntities = computed<(Entity | null)[]>(() => this.preset().slots.map((s) => (s ? this.data.step(s) ?? null : null)));
+  /**
+   * What Revolution would do with this bar: the guides are about bar order, so the page says which slots it scans,
+   * which of them it can fire and why the rest stay silent. The style is the tab's when it is a weapon style, else
+   * the one you wield.
+   */
+  readonly revolutionStyle = computed<Style4 | null>(() => {
+    const tab = this.tab();
+    if (isStyle4(tab as Style)) return tab as Style4;
+    const eq = this.storage.loadout().equipment;
+    for (const ref of [eq.twoHand, eq.mainHand, eq.offHand]) {
+      const style = ref?.kind === 'weapon' ? this.data.weaponById().get(ref.id)?.style : undefined;
+      if (style && isStyle4(style)) return style;
+    }
+    return null;
+  });
+  readonly revolution = computed<RevolutionPlan>(() => {
+    const entities = this.slotEntities();
+    const keys = entities.map((e) => e?.key ?? null);
+    const byKey = new Map(entities.filter((e): e is Entity => !!e).map((e) => [e.key, this.data.toEngineEntity(e)] as const));
+    return revolutionPlan(keys, (key) => byKey.get(key), this.storage.settings().revolution, this.revolutionStyle());
+  });
+  readonly revolutionIgnoredNames = computed(() => this.revolution().ignored.map((s) => s.name).join(', '));
   /** slot under the pointer while dragging */
   readonly hoverSlot = signal<number | null>(null);
   /** slot being dragged (dimmed) */
