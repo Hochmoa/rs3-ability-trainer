@@ -175,6 +175,14 @@ describe('necromancy: spirits', () => {
     expect(hits(e, 'spirit:putrid-zombie-poison').map((x) => [x.tick, x.amount, x.dot])).toEqual([[29, 100, true], [32, 100, true], [35, 100, true]]);
   });
 
+  it('a pre-built spirit with more lifetime left than a fresh conjure (Life Transfer, Spirit Pact) is commandable at once', () => {
+    const e = make(['command-skeleton-warrior'], {}, { prebuild: { stacks: {}, spirits: ['skeleton-warrior'], abilities: [], prayers: [], remaining: { 'spirit:skeleton-warrior': 84 } } });
+    cast(e, 'command-skeleton-warrior', 1);
+    e.update(8 * T + 1);
+    expect(e.events.filter((x) => x.kind === 'on-cooldown' || x.kind === 'requirement')).toEqual([]);
+    expect(hits(e, 'ability:command-skeleton-warrior').length).toBeGreaterThan(0);
+  });
+
   it('Command Skeleton Warrior: ten spirit hits from the second tick on, building Rage with the auto attacks; Robes of the First Necromancer boost them', () => {
     // skeleton with 60 ticks left: conjured 10 ticks ago, its auto attacks land on ticks 2, 7, 12 (age 12, 17, 22)
     const e = make(['command-skeleton-warrior'], { conjureDamageMult: 1.14 }, { prebuild: { stacks: {}, spirits: ['skeleton-warrior'], abilities: [], prayers: [], remaining: { 'spirit:skeleton-warrior': 60 } } });

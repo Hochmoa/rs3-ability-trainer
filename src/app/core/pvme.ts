@@ -227,7 +227,27 @@ export function parsePvme(text: string, resolve: AliasResolver): PvmeParseResult
       }
     }
   }
+  mergeStallRelease(steps);
   return { steps, unknown };
+}
+
+/**
+ * "s<X> → … → r<X>" is one cast: the stall queues X, the release fires it. The stall becomes a note and the release
+ * the step – played as two casts the second press would hit X's cooldown.
+ */
+function mergeStallRelease(steps: RotationStep[]): void {
+  const has = (s: RotationStep, mark: string) => !!s.hint && s.hint.split(', ').includes(mark);
+  for (let i = 0; i < steps.length; i++) {
+    const s = steps[i];
+    if (s.kind === 'note' || !has(s, 'stall')) continue;
+    const j = steps.findIndex((t, k) => k > i && t.kind === s.kind && t.id === s.id && has(t, 'release'));
+    if (j < 0) continue;
+    steps[i] = { kind: 'note', id: '', note: 'stall ' + s.id.replace(/-/g, ' ') + ' (released below)', sameTick: s.sameTick };
+    const hint = steps[j].hint!.split(', ').filter((h) => h !== 'release').join(', ');
+    steps[j] = { ...steps[j] };
+    if (hint) steps[j].hint = hint;
+    else delete steps[j].hint;
+  }
 }
 
 function joinHint(hint: string | undefined, text: string): string {

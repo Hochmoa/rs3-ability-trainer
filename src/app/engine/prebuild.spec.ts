@@ -40,7 +40,7 @@ describe('pre-build', () => {
     expect(e.costOf(finger).cost).toBe(0);
   });
 
-  it('remaining time shortens a pre-built conjure and buff; the conjure is not commandable before it is 6 ticks old', () => {
+  it('remaining time shortens a pre-built conjure and buff; a pre-built conjure is commandable at once whatever is left', () => {
     const command = ability('command-vengeful-ghost', { abilityType: 'Enhanced', adrenaline: 0 });
     const split = ability('split-soul', { abilityType: 'Incantation', adrenaline: 0 });
     const catalog = new Map([command, split].map((e) => [e.key, e]));
@@ -60,9 +60,8 @@ describe('pre-build', () => {
     e.start(0);
     expect(e.spirits.get('vengeful-ghost')?.endTick).toBe(68);
     expect(e.buff('split-soul')?.endTick).toBe(10);
-    // 68 of 70 ticks left = conjured 2 ticks ago → Command needs 4 more ticks
-    expect(e.requirementFailure(command, 0)).not.toBeNull();
-    expect(e.requirementFailure(command, 4)).toBeNull();
+    // the pre-build happened before the session: the 6-tick conjure-to-command wait is over even with most lifetime left
+    expect(e.requirementFailure(command, 0)).toBeNull();
   });
 
   it('Life Transfer extends every active spirit by 35 ticks', () => {

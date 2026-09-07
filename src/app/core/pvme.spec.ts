@@ -71,6 +71,14 @@ describe('parsePvme', () => {
     expect(r.unknown).toEqual([]);
   });
 
+  it('a stalled ability released later is one cast: the stall becomes a note, the release the step', () => {
+    const r = parsePvme('sassault → punish → rassault + bloat', resolve);
+    expect(ids(r.steps)).toEqual(['note:stall assault (released below)', 'punish', 'assault', 'bloat+']);
+    expect(r.steps[2].hint).toBeUndefined();
+    // a stall without a release stays a cast
+    expect(ids(parsePvme('sassault → punish', resolve).steps)).toEqual(['assault', 'punish']);
+  });
+
   it('handles "2t x" offsets and weapon specs', () => {
     const r = parsePvme('deathskulls + 2t undeadslayer → volleyofsouls → omniguard spec → necrobasic → deathguard90 spec', resolve);
     expect(ids(r.steps)).toEqual([

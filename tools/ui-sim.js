@@ -123,7 +123,11 @@
             if (p.style === 'Necromancy') {
               pb.stacks.necrosis = Math.max(12, pb.stacks.necrosis || 0);
               pb.stacks['residual-souls'] = Math.max(5, pb.stacks['residual-souls'] || 0);
-              if (r.steps.some(x => x.kind === 'ability' && x.id.startsWith('conjure-'))) pb.spirits = [];
+              const acts = r.steps.filter(x => x.kind !== 'note');
+              const conjure = acts.findIndex(x => x.kind === 'ability' && x.id.startsWith('conjure-'));
+              const command = acts.findIndex(x => x.kind === 'ability' && x.id.startsWith('command-'));
+              if (conjure >= 0 && (command < 0 || conjure < command)) pb.spirits = [];
+              else if (conjure >= 0) for (const sp of pb.spirits) pb.remaining['spirit:' + sp] = Math.max(6, 3 * conjure - 2);
             }
             await st.savePrebuild(r.id, pb); rec.prebuild = prebuildFrom;
           }

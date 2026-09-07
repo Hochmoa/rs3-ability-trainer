@@ -4,12 +4,28 @@ import { ToastService } from '../shared/toast';
 import { DataService } from './data.service';
 import { addItem, stockSpecials } from './equipment';
 import { DEFAULT_LAYOUT_ID, keybindLayout } from './keybind-layouts';
-import { Rotation, RotationStep } from './models';
+import { Prebuild, Rotation, RotationStep } from './models';
 import { BossPreset, demoRotationIndex, presetBars, presetLoadout, presetSlotKeys } from './preset-setup';
 import { parsePvme } from './pvme';
 import { StorageService } from './storage.service';
 
 export type { BossPreset } from './preset-setup';
+
+/**
+ * The state a PvME necromancy fight rotation assumes: 12 Necrosis, 5 Residual Souls and the three conjures out. A rotation
+ * that conjures before it commands starts without spirits (Conjure Undead Army refuses while all are active); one that
+ * commands first and re-conjures later starts with spirits that expire shortly before that conjure.
+ */
+export function necroPrebuild(steps: RotationStep[]): Prebuild {
+  const acts = steps.filter((st) => st.kind !== 'note');
+  const conjure = acts.findIndex((st) => st.kind === 'ability' && st.id.startsWith('conjure-'));
+  const command = acts.findIndex((st) => st.kind === 'ability' && st.id.startsWith('command-'));
+  const spirits = ['skeleton-warrior', 'putrid-zombie', 'vengeful-ghost'];
+  const pb: Prebuild = { stacks: { necrosis: 12, 'residual-souls': 5 }, spirits, abilities: [], prayers: [] };
+  if (conjure >= 0 && (command < 0 || conjure < command)) pb.spirits = [];
+  else if (conjure >= 0) pb.remaining = Object.fromEntries(spirits.map((sp) => ['spirit:' + sp, Math.max(6, 3 * conjure - 2)]));
+  return pb;
+}
 
 /** rotation names PvME uses for what happens before the fight – those build the state, the others assume it */
 const PREBUILD_ROTATION = /pre-?build|pre-?fight|war'?s? retreat|^[^–]*–\s*wars?\b|prep|pre-?kill|fort forinthry/i;
@@ -110,9 +126,7 @@ export class PresetsService {
     if (p.style === 'Necromancy') {
       for (const r of rotations) {
         if (PREBUILD_ROTATION.test(r.name)) continue;
-        // a rotation that conjures itself starts without spirits (Conjure Undead Army refuses while all are out)
-        const conjures = r.steps.some((st) => st.kind === 'ability' && st.id.startsWith('conjure-'));
-        await this.storage.savePrebuild(r.id, { stacks: { necrosis: 12, 'residual-souls': 5 }, spirits: conjures ? [] : ['skeleton-warrior', 'putrid-zombie', 'vengeful-ghost'], abilities: [], prayers: [] });
+        await this.storage.savePrebuild(r.id, necroPrebuild(r.steps));
       }
     }
 

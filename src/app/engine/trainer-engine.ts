@@ -1733,7 +1733,8 @@ export class TrainerEngine {
       // remaining lifetime from the pre-build; default: conjured 6 ticks ago, so it is commandable right away
       // Life Transfer extends a conjure by 35 ticks beyond its base duration, so a pre-built spirit may have more left than a fresh one
       const left = Math.max(1, Math.min(duration + 35, pb.remaining?.['spirit:' + spirit] ?? duration - COMMAND_READY_AFTER));
-      this.spirits.set(spirit, { spirit, sinceTick: left - duration, endTick: left, rage: 0 });
+      // a pre-built spirit was conjured long enough ago to be commanded at once, however much lifetime it has left
+      this.spirits.set(spirit, { spirit, sinceTick: Math.min(left - duration, -COMMAND_READY_AFTER), endTick: left, rage: 0 });
       this.applyBuff('spirit-' + spirit, 0, 'prebuild', left);
     }
     for (const id of pb.abilities ?? []) {
