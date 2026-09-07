@@ -1493,7 +1493,8 @@ export class TrainerEngine {
     // hits / channel (a cast inside the GCD that gives no adrenaline – Bladed Dive – deals no damage either)
     const channel = opt.noGain ? undefined : channelSpecEarly;
     const bleed = opt.noGain ? undefined : bleedEarly;
-    let hits = opt.noGain || rule?.noDamage ? undefined : this.loadout.hitsOverrides[entity.id] ?? rule?.hits ?? acting.hits ?? (this.isDamaging(acting, rule) ? [0] : undefined);
+    const hitsForWield = rule?.hitsWhen?.find((h) => this.conditionMet(h.when, tick, 0))?.hits;
+    let hits = opt.noGain || rule?.noDamage ? undefined : this.loadout.hitsOverrides[entity.id] ?? hitsForWield ?? rule?.hits ?? acting.hits ?? (this.isDamaging(acting, rule) ? [0] : undefined);
     if (rule?.hitsPerStack) hits = Array(Math.max(1, stacksBefore)).fill(0);
     const override = this.loadout.damageOverrides[entity.id];
     let damage: { min: number; max: number } | null = override ?? rule?.stages?.[Math.min(stage, rule.stages.length) - 1]?.damage ?? (acting.damageMin !== undefined && acting.damageMax !== undefined ? { min: acting.damageMin, max: acting.damageMax } : null);
@@ -2253,6 +2254,7 @@ export class TrainerEngine {
     if (c.item && !this.loadout.items.has(c.item)) return false;
     if (c.notItem && this.loadout.items.has(c.notItem)) return false;
     if (c.style && this.loadout.style !== c.style) return false;
+    if (c.dualWield !== undefined && this.loadout.hasDualWield !== c.dualWield) return false;
     if (c.chance !== undefined && this.random() >= c.chance) return false;
     if (c.idleMin !== undefined && tick - this.lastAttackTick < c.idleMin) return false;
     if (c.hit !== undefined && hitIndex !== c.hit) return false;
@@ -2286,6 +2288,7 @@ export class TrainerEngine {
       const bone = !r.offensive && this.boneShieldTier > 0;
       switch (r.equipment) {
         case '2h': if (!l.has2h) return false; break;
+        case 'dw': if (!l.hasDualWield) return false; break;
         case 'shield': if (!l.hasShield && !bone) return false; break;
         case 'defender-or-shield': if (!l.hasShield && !l.hasDefender && !bone) return false; break;
         case 'conduit': if (!l.hasConduit) return false; break;

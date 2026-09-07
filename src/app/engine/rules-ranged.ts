@@ -13,7 +13,11 @@ export const RANGED_RULES: AbilityRule[] = [
   {
     ability: 'ranged',
     hits: [0],
-    notes: ['Basic attack: +9% adrenaline (' + W + 'Ranged_(ability) )', 'With fleeting boots every hit reduces the Snipe cooldown by 6 ticks (' + W + 'Fleeting_boots )'],
+    notes: [
+      'Basic attack: +9% adrenaline (' + W + 'Ranged_(ability) )',
+      'With fleeting boots every hit reduces the Snipe cooldown by 6 ticks (' + W + 'Fleeting_boots )',
+      'Darkfang (Gloomfire bow, Dark bow): two hits of 45–55% instead of one of 90–110%, so every on-hit effect counts twice (' + W + 'Gloomfire_bow )',
+    ],
     onHit: [{ kind: 'cooldown-reduce', ability: 'snipe', ticks: 6, when: { item: 'fleeting-boots' } }],
   },
   {
@@ -116,6 +120,6 @@ export const RANGED_RULES: AbilityRule[] = [
     ability: 'greater-death-s-swiftness',
     replaces: 'death-s-swiftness',
     notes: ['100% adrenaline: ranged hits deal 1.5x for 63 ticks; not affected by Planted Feet (' + W + "Greater_Death's_Swiftness )"],
-    onCast: [{ kind: 'buff', id: 'greater-death-s-swiftness', durationTicks: 62, delayTicks: 1 }],
+    onCast: [{ kind: 'buff', id: 'greater-death-s-swiftness', durationTicks: 63, delayTicks: 1 }],
   },
 ];

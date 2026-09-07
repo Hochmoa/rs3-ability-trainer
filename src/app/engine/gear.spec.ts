@@ -500,14 +500,14 @@ describe('gear: effects in the engine', () => {
     expect(hits(e, 'proc:scripture-of-jas')).toEqual([{ amount: 1200, tick: 19, crit: false, dot: false }]); // 0.2 × 5 × 1200
   });
 
-  it('cinderbane gloves: a poisoning hit on a poisoned target deals a poison hit at once; the poison ticks every 17 ticks', () => {
+  it('cinderbane gloves: a poisoning hit on a poisoned target deals a poison hit at once; the poison ticks every 16 ticks', () => {
     const { e, rnd } = make(['attack'], resolve({ weapons: ['masterwork-2h-sword'], gear: ['cinderbane-gloves'] }));
     rnd.v = 0.05;
     cast(e, 'attack', 1); // applies the poison
     expect(e.hasBuff('poisoned')).toBe(true);
     cast(e, 'attack', 4); // re-applies it: extra hit
     e.update(20 * T);
-    expect(hits(e, 'proc:poison')).toEqual([{ amount: 170, tick: 4, crit: false, dot: true }, { amount: 170, tick: 18, crit: false, dot: true }]); // 25% × 1000 × 0.6825
+    expect(hits(e, 'proc:poison')).toEqual([{ amount: 170, tick: 4, crit: false, dot: true }, { amount: 170, tick: 17, crit: false, dot: true }]); // 25% × 1000 × 0.6825
   });
 
   it('Dark Sliver of Leng: 2% chance on a melee hit for Frostblades (+24% of the ability damage per hit for 15 ticks)', () => {

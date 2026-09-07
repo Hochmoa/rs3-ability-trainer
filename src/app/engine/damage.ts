@@ -279,10 +279,11 @@ export const SPIRIT_ATTACKS: Record<string, { everyTicks: number; firstTick: num
 };
 
 /**
- * Poison on a monster (cinderbane gloves): a hit every 10 s of the tier's share of the ability damage
- * (tier 1 20%, +5% per tier) × 0.65–1.3 – https://runescape.wiki/w/Poison
+ * Poison on a monster (cinderbane gloves): "damaging them every 9.6 seconds, hitting 18 times if not reapplied"
+ * = every 16 ticks, of the tier's share of the ability damage (tier 1 20%, +5% per tier) × 0.65–1.3
+ * – https://runescape.wiki/w/Poison
  */
-export const POISON_EVERY_TICKS = 17;
+export const POISON_EVERY_TICKS = 16;
 export const POISON_ROLL = { min: 0.65, max: 1.3 };
 
 /** Skeleton Warrior Rage: +3% damage per stack, max 25, one stack per skeleton attack */

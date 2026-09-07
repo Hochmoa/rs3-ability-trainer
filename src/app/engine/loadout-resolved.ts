@@ -115,6 +115,8 @@ export interface ResolvedLoadout {
   /** tier of the shield in the off-hand; a defender counts half; 0 without */
   shieldTier: number;
   hasDefender: boolean;
+  /** a weapon in each hand: Flurry, Greater Flurry and Bladed Dive "only work while dual-wielding" (runescape.wiki/w/Flurry) */
+  hasDualWield: boolean;
   /** necromancy siphon + conduit */
   hasConduit: boolean;
   /** a nexus (Deathwarden, Zemouregal's, the Devourer's) in the ammunition slot – the rune store of the bone shields */
@@ -237,6 +239,7 @@ export function defaultResolvedLoadout(): ResolvedLoadout {
     hasShield: false,
     shieldTier: 0,
     hasDefender: false,
+    hasDualWield: false,
     hasConduit: false,
     hasNexus: false,
     boneShieldLevelBonus: 0,

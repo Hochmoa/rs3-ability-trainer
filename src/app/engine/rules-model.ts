@@ -121,6 +121,8 @@ export interface Condition {
   targetLpBelow?: number;
   /** the cast did not set this flag (Spectral Scythe's last cast rolls no soul) */
   notFlag?: string;
+  /** a weapon in each hand (true) or a two-hander / single main hand (false) – Adaptive Strike's forms */
+  dualWield?: boolean;
 }
 
 export type Effect =
@@ -166,7 +168,7 @@ export interface Requirement {
   sequence?: { group: string; step: number };
   adrenalineBelow?: number;
   adrenalineMin?: number;
-  equipment?: '2h' | 'shield' | 'defender-or-shield' | 'conduit' | 'spec-weapon' | 'eof';
+  equipment?: '2h' | 'dw' | 'shield' | 'defender-or-shield' | 'conduit' | 'spec-weapon' | 'eof';
   /** offensive shield ability (Bash, Revenge): an active bone shield does not satisfy the shield requirement */
   offensive?: boolean;
   style?: Style;
@@ -301,6 +303,8 @@ export interface AbilityRule {
   recast?: { whileBuff: string };
   /** one hit per stack held (Volley of Souls) */
   hitsPerStack?: StackId;
+  /** hit offsets that depend on the situation, first match wins (Adaptive Strike: two hits dual-wielding, one otherwise) */
+  hitsWhen?: { when: Condition; hits: number[] }[];
   /** situational damage multipliers (Finger of Death 1.5x under Living Death) */
   damageRules?: {
     when: Condition;

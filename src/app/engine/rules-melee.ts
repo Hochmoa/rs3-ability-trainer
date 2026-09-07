@@ -11,8 +11,12 @@ export const MELEE_RULES: AbilityRule[] = [
   },
   {
     ability: 'adaptive-strike',
-    notes: ['+12% adrenaline, 2 hits (' + W + 'Adaptive_Strike )'],
-    hits: [0, 0],
+    // "120%-140% Melee damage" with a main hand or a two-hander (the two-hander also hits up to 8 more enemies in a cone,
+    // which a single-target session never sees), "60%-75% Melee damage per hit" twice while dual-wielding
+    // (runescape.wiki/w/Adaptive_Strike). It replaced Decimate and Cleave in the Combat Style Modernisation.
+    notes: ['+12% adrenaline; dual wield 2 hits of 60–75%, main hand or two-hander one hit of 120–140% (a cone of up to 9 targets) (' + W + 'Adaptive_Strike )'],
+    hitsWhen: [{ when: { dualWield: true }, hits: [0, 0] }, { when: { dualWield: false }, hits: [0] }],
+    damageRules: [{ when: { dualWield: true }, damage: { min: 60, max: 75 } }, { when: { dualWield: false }, damage: { min: 120, max: 140 } }],
   },
   {
     ability: 'rend',
@@ -91,6 +95,7 @@ export const MELEE_RULES: AbilityRule[] = [
     offGcdNoGain: true,
     sharedCooldown: 'dive',
     adrenaline: 9,
+    requires: [{ text: 'only works while dual-wielding', equipment: 'dw' }],
     cooldownRules: [{ ticks: 2, when: { buff: 'powerburst-of-acceleration' } }],
     damageRules: [{ when: { buff: 'powerburst-of-acceleration' }, mult: 0 }],
     notes: [
@@ -129,8 +134,10 @@ export const MELEE_RULES: AbilityRule[] = [
     ability: 'flurry',
     channel: { ticks: 8, hits: [1, 2, 3, 4, 5, 6, 7, 8], asDotWhen: { buff: 'endless-assault' } },
     damageRules: [{ when: { flag: 'bloodlust' }, perMissingLp: { per: 0.01, max: 0.65 } }],
+    requires: [{ text: 'only works while dual-wielding', equipment: 'dw' }],
     notes: [
       'Channelled: 8 hits on 8 consecutive ticks, AoE; stuns and binds the main target for 6 ticks (' + W + 'Flurry )',
+      '"It requires level 45 Attack to use and only works while dual-wielding" (' + W + 'Flurry )',
       'Consumes 4 Bloodlust: +1% damage per 1% life points the target is missing, max +65% (' + W + 'Bloodlust )',
     ],
     onCast: [{ kind: 'consume-stack', stack: 'bloodlust', amount: 4, min: 4, then: [{ kind: 'flag', flag: 'bloodlust', value: true }] }, { kind: 'remove-buff', id: 'endless-assault' }],
@@ -141,8 +148,9 @@ export const MELEE_RULES: AbilityRule[] = [
     replaces: 'flurry',
     channel: { ticks: 8, hits: [1, 2, 3, 4, 5, 6, 7, 8], asDotWhen: { buff: 'endless-assault' } },
     damageRules: [{ when: { flag: 'bloodlust' }, perMissingLp: { per: 0.01, max: 0.65 } }],
+    requires: [{ text: 'only works while dual-wielding', equipment: 'dw' }],
     notes: [
-      'Channelled: 8 hits on 8 consecutive ticks (' + W + 'Greater_Flurry )',
+      'Channelled: 8 hits on 8 consecutive ticks; like Flurry it only works while dual-wielding (' + W + 'Greater_Flurry )',
       'Every hit extends an active Berserk by 1 tick, max +8 per cast (' + W + 'Greater_Flurry )',
       'Consumes 4 Bloodlust: +1% damage per 1% life points the target is missing, max +65% (' + W + 'Bloodlust )',
     ],

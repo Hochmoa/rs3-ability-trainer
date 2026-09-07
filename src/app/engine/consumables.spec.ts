@@ -61,7 +61,7 @@ function action(id: string): EngineEntity {
 
 /** engine over the steps (all of them in the catalog); ability damage 1000, melee 2h unless the loadout says otherwise */
 function make(steps: EngineEntity[], loadout: Partial<ResolvedLoadout> = {}, cfg: Partial<EngineConfig> = {}, random = 0.5): TrainerEngine {
-  const l: ResolvedLoadout = { ...defaultResolvedLoadout(), style: 'Melee', has2h: true, abilityDamage: 1000, ...loadout, items: new Set(loadout.items ?? []) };
+  const l: ResolvedLoadout = { ...defaultResolvedLoadout(), style: 'Melee', has2h: true, hasDualWield: true, abilityDamage: 1000, ...loadout, items: new Set(loadout.items ?? []) };
   const e = new TrainerEngine(steps, new Map(steps.map((s) => [s.key, s])), { pingMs: 0, jitterMs: 0, autoAttacks: false, abilityQueueing: true, loop: true, fullAdrenaline: true, hitChanceDisabled: true, ...cfg, loadout: l });
   e.random = () => random;
   e.start(0);
@@ -246,14 +246,14 @@ describe('loadout: overload, weapon poison, Kwuarm incense', () => {
     expect(two('none', { weaponPoison: 0, kwuarmPotency: 4 }).poison).toBeNull();
   });
 
-  it('a poisoning hit with weapon poison+++ deals 35% × 0.65–1.3 of the ability damage every 17 ticks, an extra hit on re-application', () => {
+  it('a poisoning hit with weapon poison+++ deals 35% × 0.65–1.3 of the ability damage every 16 ticks, an extra hit on re-application', () => {
     const l = { ...two('none', { weaponPoison: 4 }), abilityDamage: 1000 };
     const e = make([ability('attack')], l, {}, 0.05);
     cast(e, 'ability:attack', 1); // 5% roll: poisons
     expect(e.hasBuff('poisoned')).toBe(true);
     cast(e, 'ability:attack', 4); // re-applies: an immediate poison hit of 35% × 1000 × (0.65 + 0.05 × 0.65)
     e.update(20 * T);
-    expect(hits(e, 'proc:poison')).toEqual([{ amount: 238, tick: 4, dot: true }, { amount: 238, tick: 18, dot: true }]);
+    expect(hits(e, 'proc:poison')).toEqual([{ amount: 238, tick: 4, dot: true }, { amount: 238, tick: 17, dot: true }]);
     const none = make([ability('attack')], { ...two('none', { weaponPoison: 0 }), abilityDamage: 1000 }, {}, 0.05);
     cast(none, 'ability:attack', 1);
     expect(none.hasBuff('poisoned')).toBe(false);

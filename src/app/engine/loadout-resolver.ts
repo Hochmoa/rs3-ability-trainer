@@ -176,6 +176,7 @@ export function resolveLoadout(l: Loadout, data: LoadoutData): ResolvedLoadout {
   r.hasShield = off?.slot === 'shield';
   r.shieldTier = off?.slot === 'shield' ? off.tier : off?.role === 'defender' ? off.tier / 2 : 0;
   r.hasDefender = off?.role === 'defender';
+  r.hasDualWield = !!main && !!off && off.slot !== 'shield';
   r.hasConduit = main?.role === 'siphon' && off?.role === 'conduit';
   r.weaponType = main ? weaponType(main) : null;
   // levels: the loadout's base levels under the overload; the ability damage takes the wielded style's damage skill
@@ -217,6 +218,10 @@ export function resolveLoadout(l: Loadout, data: LoadoutData): ResolvedLoadout {
     if (spec && !r.eofSpecs.some((e) => e.id === spec.id)) r.eofSpecs.push(data.specEntity(spec));
   }
   if (off?.name === 'Soulbound lantern' || off?.name.startsWith('Soulbound lantern')) r.stackCaps['residual-souls'] = 5;
+  // Darkfang (Gloomfire bow, Dark bow): "changes the Ranged basic ability from dealing 90%-110% ability damage in one hit
+  // to dealing 45%-55% ability damage per hit for two hits ... allows it to count double for on-hit effects"
+  // (runescape.wiki/w/Gloomfire_bow). Same average damage, twice the hits – the on-hit effects are what this is about.
+  if ([two?.id, main?.id].some((id) => id === 'gloomfire-bow' || id === 'dark-bow')) r.hitsOverrides['ranged'] = [0, 0];
   r.spellbook = l.spellbook ?? 'standard';
   // nexus in the ammunition slot: rune store of the bone shields; Zemouregal's adds 15 levels (Fortified Bones)
   for (const g of wn.gear) {

@@ -71,7 +71,7 @@ describe('melee: Bloodlust and Berserk', () => {
   });
 
   it('Greater Flurry extends Berserk by 1 tick per hit, max 8', () => {
-    const e = make(['berserk', 'greater-flurry'], { style: 'Melee', startAdrenaline: 100 });
+    const e = make(['berserk', 'greater-flurry'], { style: 'Melee', hasDualWield: true, startAdrenaline: 100 });
     cast(e, 'berserk', 0, 1 * T);
     e.adrenaline = 100;
     cast(e, 'greater-flurry', 2 * T, 4 * T); // casts tick 4, hits ticks 5..12
@@ -120,7 +120,7 @@ describe('melee: Bloodlust and Berserk', () => {
   });
 
   it('Bladed Dive during the GCD gives nothing; Dive shares its cooldown', () => {
-    const e = make(['attack', 'bladed-dive', 'dive'], { style: 'Melee' });
+    const e = make(['attack', 'bladed-dive', 'dive'], { style: 'Melee', hasDualWield: true });
     cast(e, 'attack', 0, 1 * T);
     const a = e.adrenaline;
     cast(e, 'bladed-dive', 2 * T, 2 * T); // inside the GCD (ticks 2, 3)

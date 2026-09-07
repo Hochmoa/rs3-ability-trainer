@@ -169,7 +169,7 @@ export const MAGIC_RULES: AbilityRule[] = [
     replaces: 'sunshine',
     notes: ['100% adrenaline: Magic attacks inside the area deal 1.5x for 63 ticks; Planted Feet only removes the periodic damage (' + W + 'Greater_Sunshine )'],
     bleedWhen: [{ when: { notItem: 'planted-feet' }, bleed: { hits: 21, everyTicks: 3, damage: { min: 10, max: 20 } } }],
-    onCast: [{ kind: 'buff', id: 'greater-sunshine', durationTicks: 62, delayTicks: 1 }],
+    onCast: [{ kind: 'buff', id: 'greater-sunshine', durationTicks: 63, delayTicks: 1 }],
   },
   {
     ability: 'tsunami',

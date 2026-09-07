@@ -28,7 +28,7 @@ const POTION: EngineEntity = { key: 'special:adrenaline-potion', kind: 'special'
 function make(ids: string[], loadout: Partial<ResolvedLoadout> = {}, cfg: Partial<EngineConfig> = {}, random = 0.5, extra: EngineEntity[] = []): TrainerEngine {
   const steps = ids.map(ability);
   const catalog = new Map([...steps, ...extra].map((e) => [e.key, e]));
-  const l = { ...defaultResolvedLoadout(), style: 'Melee' as const, has2h: true, abilityDamage: 1000, ...loadout, items: new Set(loadout.items ?? []) };
+  const l = { ...defaultResolvedLoadout(), style: 'Melee' as const, has2h: true, hasDualWield: true, abilityDamage: 1000, ...loadout, items: new Set(loadout.items ?? []) };
   const e = new TrainerEngine(steps, catalog, { pingMs: 0, jitterMs: 0, autoAttacks: false, abilityQueueing: true, loop: true, fullAdrenaline: true, hitChanceDisabled: true, ...cfg, loadout: l });
   e.random = () => random;
   e.start(0);

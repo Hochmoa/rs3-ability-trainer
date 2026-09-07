@@ -63,7 +63,7 @@ export const DEFCON_RULES: AbilityRule[] = [
     ability: 'reflect',
     cost: THRESHOLD,
     requires: [{ text: 'needs a shield or defender', equipment: 'defender-or-shield' }],
-    notes: ['Threshold: halves damage taken and reflects 50% for 16 ticks; without a target it costs nothing (' + W + 'Reflect )'],
+    notes: ['Threshold: halves damage taken and reflects 100% of it back at the attacker for 16 ticks (25% in PvP); without a target it costs nothing (' + W + 'Reflect )'],
     onCast: [{ kind: 'buff', id: 'reflect' }],
   },
   {
