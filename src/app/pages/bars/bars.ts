@@ -15,7 +15,7 @@ import { DragArm } from '../../shared/hold-drag';
 
 const TABS = [...STYLES, 'Prayers', 'Curses', 'Spells', 'Special', 'Weapons'] as const;
 type Tab = (typeof TABS)[number];
-const TYPE_ORDER: Record<string, number> = { Basic: 0, Enhanced: 1, Threshold: 2, Ultimate: 3, Incantation: 4, Special: 5 };
+const TYPE_ORDER: Record<string, number> = { Basic: 0, Enhanced: 1, Threshold: 2, Ultimate: 3, Utility: 4, Incantation: 5, Special: 6 };
 
 /** Action bar setup: 18 presets with drag & drop, positions, style bindings, weapon types. */
 @Component({

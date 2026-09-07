@@ -20,6 +20,12 @@ DYE = re.compile(r" \((blood|ice|shadow|aurora|barrows|third age|soulflame|or|so
                  r"damaged|degraded|new|uncharged|inactive|locked|unlocked|red|blue|green|yellow|purple|white|black|orange|pink|grey|gold|silver)\)$", re.I)
 SUB_RANK = {"": 0, "new": 0, "Normal": 0, "unbound": 1, "usable": 1, "charged": 2, "active": 0, "Innate Mastery": 3}
 
+# One wiki page per ring of kinship class upgrade, but the game has a single ring: "There are 15 passive effects
+# that can be upgraded - 3 for each of the four combat styles and 3 for skillers - and all unlocked bonuses are
+# active at all times within Daemonheim." (/w/Ring_of_kinship). The class pages carry no stats of their own, so
+# only the plain "Ring of kinship" is kept; the classes are described by its passive in set-effects.json.
+SKIP_PAGES = re.compile(r"^Ring of kinship \(")
+
 # armour set (set-effects.json id) by page-name prefix; longest prefix wins
 SET_PREFIX = [
     ("Vestments of havoc", "vestments-of-havoc"),
@@ -72,7 +78,7 @@ def main():
     for r in rows:
         page = r.get("page_name") or ""
         slot = SLOT.get(r.get("equipment_slot") or "")
-        if not page or not slot or page.startswith("Augmented ") or DYE.search(page):
+        if not page or not slot or page.startswith("Augmented ") or DYE.search(page) or SKIP_PAGES.match(page):
             continue
         if page in removed or page in dungeoneering:
             continue
