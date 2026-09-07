@@ -12,6 +12,8 @@ import { AbilityRule, ChannelSpec, Condition, Effect, GlobalRule, Requirement, S
 /** the Essence of Finality slot: fires the special stored in the amulet with a weapon of the same style */
 export const EOF_KEY = 'ability:essence-of-finality';
 
+/** Threads of Fate: "up to 4 additional enemies within 4 tiles of the target" (runescape.wiki/w/Threads_of_Fate) */
+const THREADS_EXTRA_TARGETS = 4;
 /** Temporal Anomaly: chance per point of magic damage bonus, and its cap */
 const TEMPORAL_ANOMALY_PER_BONUS = 0.00125;
 const TEMPORAL_ANOMALY_MAX = 0.2;
@@ -1622,13 +1624,33 @@ export class TrainerEngine {
     } else if (hits) {
       // an ordinary hit (no timing of its own) lands after the configured hit delay
       const delay = hits.every((o) => o === 0) ? this.hitDelay() : 0;
-      hits.forEach((offset, i) => {
+      const hitList = hits;
+      hitList.forEach((offset, i) => {
         if (!hitWanted(i)) return;
-        this.scheduled.push({ key: opt.hitKey ?? entity.key, entity: acting, rule, tick: tick + offset + delay, index: i, total: hits.length, channel: null, guaranteedCrit: !!rule?.guaranteedCrit, damage: hitDamage(i), mult, flat, castMult, flags, spirit: rule?.spiritHit, critAdd: consumedCritAdd, castTick: tick });
+        this.scheduled.push({ key: opt.hitKey ?? entity.key, entity: acting, rule, tick: tick + offset + delay, index: i, total: hitList.length, channel: null, guaranteedCrit: !!rule?.guaranteedCrit, damage: hitDamage(i), mult, flat, castMult, flags, spirit: rule?.spiritHit, critAdd: consumedCritAdd, castTick: tick });
       });
+      // every further enemy Threads of Fate reaches takes the same hit, so per-hit effects (Soul Sap's Residual Soul)
+      // count once per target, exactly as the wiki describes
+      if (hitWanted(0)) {
+        for (let t = 0; t < this.spreadTargets(acting, hitList); t++) {
+          this.scheduled.push({ key: opt.hitKey ?? entity.key, entity: acting, rule, tick: tick + hitList[0] + delay, index: 0, total: hitList.length, channel: null, guaranteedCrit: !!rule?.guaranteedCrit, damage: hitDamage(0), mult, flat, castMult, flags, spirit: rule?.spiritHit, critAdd: consumedCritAdd, castTick: tick });
+        }
+      }
       this.lastAttackTick = tick;
     }
     this.processHits(tick);
+  }
+
+  /**
+   * Extra enemies a cast reaches: Threads of Fate makes "single-target Necromancy abilities" hit up to 4 more of the
+   * enemies standing together (`EnemyConfig.targets`). An ability that already hits several times is not single-target,
+   * so it is left alone.
+   */
+  private spreadTargets(e: EngineEntity, hits: number[]): number {
+    const targets = Math.max(1, Math.floor(this.config.enemy?.targets ?? 1));
+    if (targets < 2 || hits.length !== 1) return 0;
+    if (e.style !== 'Necromancy' || !this.hasBuff('threads-of-fate')) return 0;
+    return Math.min(targets - 1, THREADS_EXTRA_TARGETS);
   }
 
   /** configured delay of ordinary hits, clamped to 0..5 ticks */

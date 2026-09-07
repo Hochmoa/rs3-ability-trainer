@@ -346,7 +346,7 @@ export interface RevolutionSettings {
   ultimates: boolean;
 }
 
-const DEFAULT_REVOLUTION: RevolutionSettings = { slots: 9, basics: true, enhanced: true, thresholds: false, ultimates: false };
+export const DEFAULT_REVOLUTION: RevolutionSettings = { slots: 9, basics: true, enhanced: true, thresholds: false, ultimates: false };
 
 /** Everything the Setups page shares and "Load this setup" replaces: all local data except the rotations. */
 export interface SetupBundle {
@@ -907,6 +907,13 @@ export interface EnemyConfig {
   firstAttackTicks: number;
   /** life points of the target; 0 = unlimited (training dummy). Damage is tracked whether or not attacks are enabled. */
   lifePoints: number;
+  /**
+   * How many enemies stand together (1 = the usual single target). Multi-target abilities only do something with more
+   * than one: Threads of Fate spreads a single-target Necromancy ability over "up to 4 additional enemies within 4
+   * tiles of the target" (runescape.wiki/w/Threads_of_Fate), which is how a rotation gets several Residual Souls out of
+   * one Soul Sap. Counts even when the incoming attacks are switched off.
+   */
+  targets?: number;
   /** what the target is: Salve amulet, bane ammunition and the Slayer perks only work against their type (missing / null = none of them) */
   type?: TargetType | null;
   /** affinity ("base hit chance") per attack style in % (wiki infobox; 100 = always hit); Necromancy uses the monster's middle value */
@@ -939,6 +946,7 @@ export const DEFAULT_ENEMY: EnemyConfig = {
   warningTicks: 3,
   firstAttackTicks: 8,
   lifePoints: 0,
+  targets: 1,
   type: null,
   // a custom target is hit like a training dummy: affinity 100, no armour (existing sessions keep their numbers)
   affinity: { Melee: 100, Ranged: 100, Magic: 100, Necromancy: 100 },

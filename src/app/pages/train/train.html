@@ -289,6 +289,10 @@
         <span>Life points</span>
         <input type="number" inputmode="decimal" min="0" step="10000" [ngModel]="enemy().lifePoints" (ngModelChange)="setEnemy('lifePoints', numberOf($event, 0, 100000000))" [disabled]="running()" />
       </label>
+      <label class="field lp" title="How many enemies stand together. Threads of Fate spreads a single-target Necromancy ability over up to four more of them, which is how one Soul Sap yields several Residual Souls.">
+        <span>Enemies</span>
+        <input type="number" inputmode="numeric" min="1" max="9" step="1" [ngModel]="enemy().targets ?? 1" (ngModelChange)="setEnemy('targets', numberOf($event, 1, 9))" [disabled]="running()" />
+      </label>
       <label class="lp" title="Salve amulet, bane arrows and the Slayer perks only work against their type.">
         Type
         <select [ngModel]="enemy().type ?? ''" (ngModelChange)="setEnemy('type', $event || null)" [disabled]="running()">
