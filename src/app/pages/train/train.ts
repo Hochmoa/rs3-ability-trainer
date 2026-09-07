@@ -906,6 +906,20 @@ export class Train implements OnDestroy {
     if (this.canStart() && this.data.loadoutReady()) this.start();
   }
 
+  /**
+   * "Next from here": a boss is a chain of phases and the next one starts where this one stopped, so the state this
+   * session ends in – adrenaline, stacks, the conjures still out, the buffs and prayers – becomes the next rotation's
+   * pre-build. It is saved like any pre-build, so the panel above shows it and it can be edited or cleared.
+   */
+  async playNextFromHere(id: string): Promise<void> {
+    const pb = this.engine?.snapshotPrebuild();
+    if (pb) {
+      await this.storage.savePrebuild(id, pb);
+      this.toast.show('The next rotation starts from this state', 'info', 3000);
+    }
+    this.playNext(id);
+  }
+
   pickLoadout(id: string): void {
     void this.storage.setActiveLoadout(id);
   }

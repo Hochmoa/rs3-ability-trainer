@@ -528,6 +528,8 @@
               <button class="btn btn-primary" (click)="restart()" [disabled]="!canStart()">Try again</button>
               @if (next(); as n) {
                 <button class="btn" type="button" (click)="playNext(n.id)">Next: {{ nextLabel() }} ▸</button>
+                <button class="btn" type="button" (click)="playNextFromHere(n.id)"
+                        title="Carries this session's adrenaline, stacks, conjures, buffs and prayers into the next rotation as its pre-build – the way a boss's next phase starts where this one stopped">Next from here ▸</button>
               }
               <button class="btn" (click)="finishDismissed.set(true)">Close</button>
             </div>

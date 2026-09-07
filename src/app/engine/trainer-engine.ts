@@ -2552,6 +2552,32 @@ export class TrainerEngine {
     this.pending = { key: basic.key, tick, arrival: this.tickTime(tick), auto: true, autoAttack: true };
   }
 
+  /**
+   * The state this session ends in, as the pre-build of the next one: adrenaline, stacks, the conjures still out with
+   * their remaining lifetime, the self buffs an ability put up, and the prayers left on. A boss guide is a chain of
+   * phases and every phase starts where the previous one stopped – "Phase 2" is never played from an empty bar.
+   */
+  snapshotPrebuild(): Prebuild {
+    const tick = this.lastTick;
+    const left = (endTick: number | null) => (endTick === null ? undefined : Math.max(1, endTick - tick));
+    const pb: Prebuild = { adrenaline: Math.round(this.adrenaline), stacks: {}, spirits: [], abilities: [], prayers: [...this.activePrayers], remaining: {} };
+    for (const s of this.spirits.values()) {
+      pb.spirits.push(s.spirit);
+      pb.remaining!['spirit:' + s.spirit] = Math.max(1, s.endTick - tick);
+    }
+    for (const b of this.buffs) {
+      if (b.endTick !== null && b.endTick <= tick) continue;
+      if (b.stacks > 0) pb.stacks[b.id] = b.stacks;
+      // only buffs an ability of the catalogue put up can be restored – the pre-build lists abilities, not buff ids
+      if (b.on !== 'self' || !this.catalog.has('ability:' + b.id) || pb.abilities.includes(b.id)) continue;
+      pb.abilities.push(b.id);
+      const rest = left(b.endTick);
+      if (rest !== undefined) pb.remaining!['ability:' + b.id] = rest;
+    }
+    if (!Object.keys(pb.remaining!).length) delete pb.remaining;
+    return pb;
+  }
+
   // ---------------------------------------------------------------- Revolution (docs/research/revolution.md)
 
   /** Revolution is on and has a bar to scan. */
