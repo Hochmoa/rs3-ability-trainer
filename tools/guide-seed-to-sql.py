@@ -33,7 +33,7 @@ Output (per account, in this order):
 
 Every statement is an upsert keyed by the deterministic ids (rotation id from the dump, account id from the name), so
 the generated migration – and a regenerated one with the same numbers – can be applied again without duplicates.
-Rotations that disappeared from the dump stay in the database (nothing is deleted); an account without loadouts gets
+Rotations that disappeared from the dump are deleted from the account; an account without loadouts gets
 its setups row removed so it is not listed with an empty setup.
 On a re-run the rotations' updated_at becomes server time (the rotations_protect_counters trigger sets it on every
 update) and copies / owner_id stay as they are.
@@ -231,8 +231,10 @@ def render(accounts: list[dict], source: str) -> str:
                 "  on conflict (id) do update set name = excluded.name, steps = excluded.steps, styles = excluded.styles, "
                 "is_public = true, updated_at = excluded.updated_at;"
             )
-        if a["rotations"]:
-            out.append("")
+        # rotations that left the dump (a re-import split or renamed them) go, so a guide account never shows stale content
+        ids = ", ".join(sql_text(r["id"]) for r in a["rotations"])
+        out.append(f"delete from public.rotations where owner_id = {guide}" + (f" and id not in ({ids});" if ids else ";"))
+        out.append("")
         if a["loadouts"]:
             loadouts = {"loadouts": a["loadouts"], "active": a["loadouts"][0]["id"]}
             out.append(
