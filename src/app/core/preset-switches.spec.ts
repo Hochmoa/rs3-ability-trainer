@@ -16,6 +16,7 @@ const SPECS: Record<string, WeaponSpec> = {
 };
 const ABILITIES: Record<string, { style: 'Melee' | 'Ranged' | 'Magic' | 'Necromancy' | 'Constitution'; gcd: boolean }> = {
   assault: { style: 'Melee', gcd: true },
+  'greater-flurry': { style: 'Melee', gcd: true },
   hurricane: { style: 'Melee', gcd: true },
   'greater-ricochet': { style: 'Ranged', gcd: true },
   surge: { style: 'Constitution', gcd: false },
@@ -70,6 +71,14 @@ describe('insertSwitches', () => {
     expect(ids(insertSwitches([ability('essence-of-finality')], l, cat))).toEqual(['+bow-of-the-last-guardian', 'essence-of-finality']);
     const fits = loadout('dark-shard-of-leng', 'dark-sliver-of-leng', null, ['bow-of-the-last-guardian'], ['blackhole']);
     expect(ids(insertSwitches([ability('essence-of-finality')], fits, cat))).toEqual(['essence-of-finality']);
+  });
+
+  it('a dual-wield ability with a two-hander in hand takes the pair from the backpack', () => {
+    const l = loadout(null, null, 'zaros-godsword', ['dark-shard-of-leng', 'dark-sliver-of-leng']);
+    expect(ids(insertSwitches([ability('assault'), ability('greater-flurry')], l, cat))).toEqual(['assault', '+dark-shard-of-leng', '+dark-sliver-of-leng', 'greater-flurry']);
+    // already dual-wielding: nothing is inserted
+    const pair = loadout('dark-shard-of-leng', 'dark-sliver-of-leng', null, ['zaros-godsword']);
+    expect(ids(insertSwitches([ability('greater-flurry')], pair, cat))).toEqual(['greater-flurry']);
   });
 
   it('a switch the rotation writes itself is kept and counted', () => {

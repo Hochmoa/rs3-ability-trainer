@@ -49,6 +49,11 @@ function needs2h(abilityId: string): boolean {
   return !!ruleFor(abilityId)?.requires?.some((r) => r.equipment === '2h');
 }
 
+/** Flurry, Greater Flurry and Bladed Dive "only work while dual-wielding" (runescape.wiki/w/Flurry) */
+function needsDw(abilityId: string): boolean {
+  return !!ruleFor(abilityId)?.requires?.some((r) => r.equipment === 'dw');
+}
+
 /** the weapons a switch can pick from: the backpack, then the ones in hand at the start (in the backpack once switched out) */
 function backpack(l: Loadout, cat: SwitchCatalog): Weapon[] {
   const refs = [...(l.inventory ?? []), l.equipment?.twoHand, l.equipment?.mainHand, l.equipment?.offHand];
@@ -61,12 +66,13 @@ function backpack(l: Loadout, cat: SwitchCatalog): Weapon[] {
   return out;
 }
 
-/** the switch to a set of `style`: a 2h when asked for (or when no pair exists), else main hand + off-hand */
-function setFor(pool: Weapon[], style: Style, twoHanded: boolean): Weapon[] {
+/** the switch to a set of `style` in the shape the ability needs; 'any' takes a pair, else a two-hander */
+function setFor(pool: Weapon[], style: Style, shape: '2h' | 'dw' | 'any'): Weapon[] {
   const two = pool.find((w) => w.style === style && w.slot === '2h');
   const main = pool.find((w) => w.style === style && w.slot === 'main');
   const off = pool.find((w) => w.style === style && w.slot === 'off');
-  if (twoHanded) return two ? [two] : [];
+  if (shape === '2h') return two ? [two] : [];
+  if (shape === 'dw') return main && off ? [main, off] : [];
   if (main && off) return [main, off];
   if (two) return [two];
   return main ? [main] : off ? [off] : [];
@@ -106,22 +112,27 @@ export function insertSwitches(steps: RotationStep[], loadout: Loadout, cat: Swi
       // works – else switch to the style of a stored special the setup has weapons for
       const styles = [...stored].map((id) => cat.spec(id)?.style).filter((x): x is Style => !!x);
       if (styles.length && !styles.includes(styleOf(hand) as Style)) {
-        const target = styles.find((st) => setFor(pool, st, false).length);
-        if (target) switchTo(setFor(pool, target, false), s);
+        const target = styles.find((st) => setFor(pool, st, 'any').length);
+        if (target) switchTo(setFor(pool, target, 'any'), s);
       }
     } else if (s.kind === 'ability') {
       const a = cat.ability(s.id);
       const two = needs2h(s.id);
-      if (a && a.gcd && isStyle4(a.style)) {
+      const dw = needsDw(s.id);
+      const shape = two ? '2h' : dw ? 'dw' : 'any';
+      if (a && isStyle4(a.style)) {
         const current = styleOf(hand);
-        if (current !== a.style) switchTo(setFor(pool, a.style, two), s);
-        else if (two && !hand.two) switchTo(setFor(pool, a.style, true), s);
+        // a cast needs its style in hand; a two-handed or a dual-wield ability needs that shape too (Bladed Dive is off
+        // the global cooldown and still "only works while dual-wielding")
+        if (a.gcd && current !== a.style) switchTo(setFor(pool, a.style, shape), s);
+        else if (two && !hand.two) switchTo(setFor(pool, a.style, '2h'), s);
+        else if (dw && !(hand.main && hand.off)) switchTo(setFor(pool, a.style, 'dw'), s);
       }
     } else if (s.kind === 'spec') {
       const spec = cat.spec(s.id);
       if (spec && stored.has(s.id)) {
         // an Essence of Finality fires its special only with a weapon of the special's style in hand
-        if (styleOf(hand) !== spec.style) switchTo(setFor(pool, spec.style, false), s);
+        if (styleOf(hand) !== spec.style) switchTo(setFor(pool, spec.style, 'any'), s);
       } else if (spec) {
         const own = [hand.two, hand.main, hand.off].some((w) => w && spec.weaponIds.includes(w.id));
         if (!own) {
