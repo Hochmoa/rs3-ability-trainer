@@ -513,7 +513,7 @@ def main():
     if "--report" in sys.argv:
         by_boss: dict[str, list[str]] = {}
         for p in presets:
-            by_boss.setdefault(p["boss"], []).append(p["title"].split(" – ", 1)[1] + (" (no gear)" if not p["equipment"] else ""))
+            by_boss.setdefault(p["boss"], []).append(p["title"][len(p["boss"]) + 3 :] + (" (no gear)" if not p["equipment"] else ""))
         for boss, entries in sorted(by_boss.items()):
             print(f"  {boss}: " + "; ".join(entries))
 
