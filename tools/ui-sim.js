@@ -117,7 +117,16 @@
         if (playable === 0) { rec.outcome = 'notes-only'; results.push(rec); continue; }
         const isPrebuild = PREBUILD_RE.test(short);
         try {
-          if (!isPrebuild && prebuild) { await st.savePrebuild(r.id, prebuild); rec.prebuild = prebuildFrom; }
+          if (!isPrebuild && prebuild) {
+            // like PresetsService: a necromancy fight rotation assumes the stacks are built, and starts without spirits when it conjures itself
+            const pb = JSON.parse(JSON.stringify(prebuild));
+            if (p.style === 'Necromancy') {
+              pb.stacks.necrosis = Math.max(12, pb.stacks.necrosis || 0);
+              pb.stacks['residual-souls'] = Math.max(5, pb.stacks['residual-souls'] || 0);
+              if (r.steps.some(x => x.kind === 'ability' && x.id.startsWith('conjure-'))) pb.spirits = [];
+            }
+            await st.savePrebuild(r.id, pb); rec.prebuild = prebuildFrom;
+          }
           await router.navigateByUrl('/?rotation=' + r.id);
           await sleep(250);
           tc = await trainComp();

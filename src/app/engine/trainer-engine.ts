@@ -849,6 +849,17 @@ export class TrainerEngine {
       const fired = input.key === SPEC_KEY ? this.loadout.weaponSpec?.id : this.eofSpecReady()?.id;
       const spec = fired ? this.steps.find((s, i) => i >= this.index && !this.done.has(i) && s.kind === 'spec' && s.id === fired) : undefined;
       if (spec) input = { ...input, key: spec.key };
+      else {
+        // the slot cannot fire the spec the rotation expects (its weapon is not in hand, it is not stored in the EoF): counted
+        // as a wrong-weapon press of that step, nothing fires; three in a row end the session stuck like a missing weapon switch
+        const expected = this.steps[this.index];
+        if (expected && expected.kind === 'spec' && !this.done.has(this.index)) {
+          this.wrong++;
+          this.events.push({ kind: 'wrong-weapon', key: expected.key, reason: 'spec' });
+          this.weaponStrike(expected, 'spec');
+          return;
+        }
+      }
     }
     let entity = this.catalog.get(input.key);
     if (!entity) return;
@@ -1120,7 +1131,10 @@ export class TrainerEngine {
 
   /** a cast completes a step with the same key; a basic-attack step ("(auto)") is satisfied by the basic attack of whatever style is wielded */
   private satisfies(cast: EngineEntity, step: EngineEntity): boolean {
-    return cast.key === step.key || (cast.kind === 'ability' && step.kind === 'ability' && this.isBasicAttack(cast) && this.isBasicAttack(step));
+    if (cast.key === step.key) return true;
+    // a step written as the generic "Weapon Special Attack" / "Essence of Finality" slot is completed by whatever spec that slot fires
+    if (cast.kind === 'spec' && step.kind === 'ability' && (step.id === 'weapon-special-attack' || step.id === 'essence-of-finality')) return true;
+    return cast.kind === 'ability' && step.kind === 'ability' && this.isBasicAttack(cast) && this.isBasicAttack(step);
   }
 
   /** the tick the ability after `step` is due at: the channel's end, or earlier when the step says the channel is cut (`(4t)`, `7 hit`) */

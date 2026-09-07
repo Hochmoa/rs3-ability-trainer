@@ -8,6 +8,7 @@ import ABILITIES from '../../../public/data/abilities.json';
 import { Ability } from '../core/models';
 import { defaultResolvedLoadout } from './loadout-resolved';
 import { EngineConfig, EngineEntity, EngineEvent, STUCK_COOLDOWN_TICKS, TICK_MS, TrainerEngine } from './trainer-engine';
+import { SPEC_KEY } from '../core/models';
 
 const T = TICK_MS;
 const off: EngineConfig = { pingMs: 0, jitterMs: 0, autoAttacks: false, abilityQueueing: false, loop: false, loadout: defaultResolvedLoadout(), hitChanceDisabled: true };
@@ -25,8 +26,13 @@ const SHORT = ability('short', { cooldownTicks: 9 });
 /** a familiar scroll: needs the familiar out, which the loadout does not have */
 const SCROLL: EngineEntity = { key: 'scroll', id: 'scroll', kind: 'special', name: 'Scroll', icon: '', gcd: false, adrenaline: 0, cooldownTicks: 0, buffs: [], scroll: { familiar: 'ripper-demon', specialPoints: 10 } };
 
+/** a weapon special attack: the loadout wields no weapon with it and stores nothing in the Essence of Finality */
+const SPEC: EngineEntity = { key: 'spec:crystal-rain', id: 'crystal-rain', kind: 'spec', name: 'Crystal Rain', icon: '', gcd: true, style: 'Ranged', abilityType: 'Special', adrenaline: -30, cooldownTicks: 40, buffs: [] };
+/** the generic special-attack slot step ("spec" in a PvME rotation) */
+const GENERIC = ability('ability:weapon-special-attack', { id: 'weapon-special-attack', name: 'Weapon Special Attack', adrenaline: 0 });
+
 function make(steps: EngineEntity[], cfg: Partial<EngineConfig> = {}): TrainerEngine {
-  const catalog = new Map([A, B, LONG, SHORT, SCROLL].map((e) => [e.key, e]));
+  const catalog = new Map([A, B, LONG, SHORT, SCROLL, SPEC, GENERIC].map((e) => [e.key, e]));
   const e = new TrainerEngine(steps, catalog, { ...off, ...cfg });
   e.random = () => 0.99;
   e.start(0);
@@ -160,6 +166,26 @@ describe('stuck marker', () => {
     expect(kinds(e).filter((k) => k === 'finished').length).toBe(1);
     expect(e.state).toBe('finished');
     expect(e.stuck?.step).toBe(2);
+  });
+
+  it('a spec whose weapon is not in hand nor stored in the EoF: three slot presses end the session stuck', () => {
+    const e = make([SPEC, A]);
+    press(e, SPEC_KEY, 1);
+    press(e, SPEC_KEY, 2);
+    expect(e.stuck).toBeNull();
+    press(e, SPEC_KEY, 3);
+    expect(e.stuck).toMatchObject({ key: SPEC.key, step: 0, reason: 'weapon' });
+    expect(e.stuck?.text).toContain('not the special attack of the wielded weapon');
+    expect(e.state).toBe('finished');
+  });
+
+  it('a generic "Weapon Special Attack" step is completed by the spec the slot fires', () => {
+    const e = make([GENERIC, A], { loadout: { ...defaultResolvedLoadout(), weaponSpec: SPEC, startAdrenaline: 100 } });
+    press(e, SPEC_KEY, 1);
+    e.update(2 * T + 1);
+    expect(kinds(e)).not.toContain('wrong-fired');
+    expect(e.index).toBe(1);
+    expect(e.stuck).toBeNull();
   });
 
   it('start() clears the marker', () => {
