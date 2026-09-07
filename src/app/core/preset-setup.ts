@@ -23,6 +23,8 @@ export interface BossPreset {
   familiar?: string | null;
   /** gear.json id for the ammunition slot (Ful arrows, Deathspore arrows ...) */
   ammo?: string | null;
+  /** Invention perks the guide names ("biting4", "relentless5"); the preset maker itself stores no gizmos */
+  perks?: { id: string; rank: number }[];
   rotations: { name: string; text: string }[];
   /** index into `rotations` that "Load a demo" opens; missing = the first playable fight rotation (demoRotationIndex) */
   demoRotation?: number;
@@ -49,8 +51,61 @@ export function demoRotationIndex(p: Pick<BossPreset, 'demoRotation'>, parsed: {
   return best;
 }
 
+/** where a perk may sit, from perks.json `gizmos` */
+type GizmoKind = 'weapon' | 'armour';
+const GIZMO_PERKS = 2; // a gizmo holds up to two perks
+
+/**
+ * Puts the guide's Invention perks on the gear: weapon perks into the wielded weapon's gizmos (a two-hander takes
+ * two, a pair one each), the rest into the body and legs gizmos. Ancient perks make their gizmo ancient. Perks that
+ * find no free gizmo are dropped – the loadout page can still add them by hand.
+ */
+export function applyPresetPerks(l: Loadout, perks: { id: string; rank: number }[], perkGizmos: (id: string) => string[] | undefined): void {
+  const slots: { ref: ItemRef; kind: GizmoKind }[] = [];
+  const eq = l.equipment ?? {};
+  const add = (ref: ItemRef | null | undefined, kind: GizmoKind, times: number) => {
+    for (let i = 0; i < times; i++) if (ref) slots.push({ ref, kind });
+  };
+  add(eq.twoHand, 'weapon', 2);
+  add(eq.mainHand, 'weapon', 1);
+  add(eq.offHand?.kind === 'weapon' ? eq.offHand : null, 'weapon', 1);
+  add(eq.body, 'armour', 1);
+  add(eq.legs, 'armour', 1);
+  const gizmos = new Map<ItemRef, { ancient: boolean; perks: { perk: string; rank: number }[] }[]>();
+  for (const { ref, kind } of slots) {
+    void kind;
+    if (!gizmos.has(ref)) gizmos.set(ref, []);
+  }
+  const free = (kind: GizmoKind) => slots.find((s) => {
+    const list = gizmos.get(s.ref)!;
+    const own = slots.filter((x) => x.ref === s.ref).length;
+    return s.kind === kind && (list.length < own || list.some((g) => g.perks.length < GIZMO_PERKS));
+  });
+  for (const { id, rank } of perks) {
+    const where = perkGizmos(id) ?? [];
+    const ancient = where.some((g) => g.startsWith('ancient-')) && !where.some((g) => g === 'weapon' || g === 'armour');
+    const kind: GizmoKind | null = where.some((g) => g.endsWith('weapon')) ? 'weapon' : where.some((g) => g.endsWith('armour')) ? 'armour' : null;
+    const target = kind ? free(kind) : undefined;
+    if (!target) continue;
+    const list = gizmos.get(target.ref)!;
+    const own = slots.filter((x) => x.ref === target.ref).length;
+    let g = list.find((x) => x.perks.length < GIZMO_PERKS && x.ancient === ancient);
+    if (!g && list.length < own) {
+      g = { ancient, perks: [] };
+      list.push(g);
+    }
+    if (!g) continue;
+    g.ancient = g.ancient || ancient;
+    g.perks.push({ perk: id, rank });
+  }
+  for (const [ref, list] of gizmos) {
+    const kept = list.filter((g) => g.perks.length);
+    if (kept.length) ref.gizmos = kept;
+  }
+}
+
 /** The loadout of a preset: every item re-slotted (a two-hander sits in the main-hand slot of the PvME preset), the backpack as-is. */
-export function presetLoadout(p: BossPreset, slotOf: (ref: ItemRef) => EquipSlot | null): Loadout {
+export function presetLoadout(p: BossPreset, slotOf: (ref: ItemRef) => EquipSlot | null, perkGizmos: (id: string) => string[] | undefined = () => undefined): Loadout {
   const l: Loadout = newLoadout(p.title.slice(0, 40));
   l.presetId = p.id;
   const eq: Equipment = {};
@@ -71,6 +126,7 @@ export function presetLoadout(p: BossPreset, slotOf: (ref: ItemRef) => EquipSlot
   if (p.relics?.length) l.relics = [...p.relics];
   if (p.familiar) l.familiar = p.familiar;
   if (p.ammo && !eq.ammo) eq.ammo = { kind: 'gear', id: p.ammo };
+  if (p.perks?.length) applyPresetPerks(l, p.perks, perkGizmos);
   return l;
 }
 

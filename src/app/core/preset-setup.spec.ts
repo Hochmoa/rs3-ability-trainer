@@ -41,6 +41,25 @@ describe('preset loadout', () => {
     expect(l.equipment?.ammo).toEqual({ kind: 'gear', id: 'deathspore-arrows' });
   });
 
+  it('puts the perks a guide names on the gear: weapon perks on the weapon, the rest on body and legs', () => {
+    const gizmos: Record<string, string[]> = { biting: ['armour', 'weapon'], 'planted-feet': ['weapon'], relentless: ['ancient-armour', 'ancient-weapon'], genocidal: ['armour', 'weapon'] };
+    const two: BossPreset = {
+      ...preset,
+      equipment: { twoHand: { kind: 'weapon', id: 'ek-zekkil' }, body: { kind: 'gear', id: 'top' }, legs: { kind: 'gear', id: 'bottom' } },
+      perks: [{ id: 'biting', rank: 4 }, { id: 'planted-feet', rank: 1 }, { id: 'relentless', rank: 5 }, { id: 'genocidal', rank: 1 }],
+    };
+    const slots = (r: ItemRef): EquipSlot | null => (r.id === 'ek-zekkil' ? 'twoHand' : r.id === 'top' ? 'body' : r.id === 'bottom' ? 'legs' : null);
+    const l = presetLoadout(two, slots, (id) => gizmos[id]);
+    const onWeapon = (l.equipment?.twoHand?.gizmos ?? []).flatMap((g) => g.perks.map((x) => x.perk));
+    const onArmour = [...(l.equipment?.body?.gizmos ?? []), ...(l.equipment?.legs?.gizmos ?? [])].flatMap((g) => g.perks.map((x) => x.perk));
+    expect(onWeapon).toContain('biting');
+    expect(onWeapon).toContain('planted-feet');
+    expect([...onWeapon, ...onArmour]).toContain('relentless');
+    expect((l.equipment?.twoHand?.gizmos ?? []).find((g) => g.perks.some((x) => x.perk === 'relentless'))?.ancient ?? true).toBe(true);
+    expect(l.equipment?.twoHand?.gizmos?.every((g) => g.perks.length <= 2)).toBe(true);
+    expect((l.equipment?.twoHand?.gizmos ?? []).flatMap((g) => g.perks).find((x) => x.perk === 'biting')?.rank).toBe(4);
+  });
+
   it('a preset without them keeps the loadout defaults, and worn ammunition wins over the preset maker field', () => {
     expect(presetLoadout(preset, slotOf).relics).toEqual([]);
     expect(presetLoadout(preset, slotOf).familiar ?? null).toBeNull();

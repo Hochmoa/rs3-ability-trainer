@@ -104,6 +104,12 @@ RELICS = {
     "heightenedsenses": "heightened-senses",
     "doublesurge": "double-surge",
 }
+# perks are not in the preset maker's data (it stores no gizmos), but the guides name them as emoji: "biting4",
+# "relentless5", "genocidal". A trailing digit is the rank; without one the guide means the best rank it can get,
+# which is what a PvM setup wears. These three are also ability names, so only their "...perk" spelling counts.
+PERK_ALSO_ABILITY = {"undeadslayer", "dragonslayer", "demonslayer"}
+PERK_EMOJI = re.compile(r"^([a-z]+?)(\d)?(perk)?$")
+
 # preset maker familiar id -> familiars.json id
 FAMILIARS = {
     "kalgpouch": "kalgerion-demon", "kalgdemon": "kalgerion-demon",
@@ -445,8 +451,28 @@ class Builder:
         self.ability_style = {a["id"]: a["style"] for a in json.loads((DATA / "abilities.json").read_text(encoding="utf-8"))}
         self.unknown_aliases: Counter[str] = Counter()
         self.parser_known, self.suffixes, self.prefixes = parser_tokens()
+        self.perks = {p["id"].replace("-", ""): p for p in json.loads((DATA / "perks.json").read_text(encoding="utf-8"))}
         self.skipped: list[tuple[str, str]] = []
         self.ids: set[str] = set()
+
+    def perks_of(self, text: str) -> list[dict]:
+        """the Invention perks the guide's emoji name, with the rank it writes (or the perk's best rank)"""
+        found: dict[str, int] = {}
+        for raw in EMOJI.findall(text):
+            m = PERK_EMOJI.fullmatch(raw.lower())
+            if not m:
+                continue
+            base, rank, suffix = m.group(1), m.group(2), m.group(3)
+            perk = self.perks.get(base)
+            if not perk or (base in PERK_ALSO_ABILITY and not suffix):
+                continue
+            # tool perks are not worn in combat ("rapid" in a guide is Rapid Fire, not the smithing perk)
+            if not any(g in ("armour", "weapon", "ancient-armour", "ancient-weapon") for g in perk.get("gizmos") or []):
+                continue
+            cap = perk.get("maxRankAncient") or perk.get("maxRank") or 1
+            r = min(int(rank), cap) if rank else cap
+            found[perk["id"]] = max(found.get(perk["id"], 0), r)
+        return [{"id": k, "rank": v} for k, v in sorted(found.items())]
 
     def dominant_style(self, secs: list[dict]) -> str | None:
         """the style most of the resolved abilities in the rotation lines belong to"""
@@ -495,6 +521,7 @@ class Builder:
             self.skipped.append((path, "fetch failed: " + str(e)))
             return []
         over = OVERRIDES.get(path, {})
+        perks = self.perks_of(text)
         secs = sections(text)
         if not secs:
             self.skipped.append((path, "no rotation section"))
@@ -518,6 +545,8 @@ class Builder:
                     inner = [i for _, i in PRESET_LINK.findall(self.scope_text(text, head))]
                     pid = inner[0] if inner else self.link_for(links, style, hv)
                     out.append(self.preset(path, boss, [style], " ".join(x for x in (variant, hv) if x), pid, rotations_of(scope, None)))
+                for p in out:
+                    p["perks"] = perks
                 return out
 
         if not styles:
@@ -528,6 +557,7 @@ class Builder:
             styles = [style]
         pid = over.get("id") or (links[0][1] if links else None)
         p = self.preset(path, boss, styles, variant, pid, rotations_of(secs, over.get("filter")))
+        p["perks"] = perks
         if over.get("first"):
             p["_first"] = True
         return [p]

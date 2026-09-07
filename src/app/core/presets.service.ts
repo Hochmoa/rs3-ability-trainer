@@ -89,7 +89,7 @@ export class PresetsService {
     // adding a preset is an explicit save: it stands in for the consent banner's OK
     if (await this.storage.acceptConsentOnSave()) this.toast.show('Saved in this browser', 'info', 2000);
     const parsed = this.parse(p);
-    const loadout = presetLoadout(p, (ref) => this.data.slotOf(ref));
+    const loadout = presetLoadout(p, (ref) => this.data.slotOf(ref), (id) => this.data.perkById().get(id)?.gizmos);
     // potions and bombs the rotations press must be in the backpack, or the trainer refuses them like the game
     const steps = parsed.flatMap((r) => r.steps);
     loadout.inventory = stockSpecials(loadout, steps.filter((st) => st.kind === 'special').map((st) => st.id)).state.inventory;
