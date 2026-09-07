@@ -9,7 +9,7 @@ export interface CatalogGroup {
   entities: Entity[];
 }
 
-const TYPE_ORDER = ['Basic', 'Enhanced', 'Threshold', 'Ultimate', 'Incantation', 'Special'];
+const TYPE_ORDER = ['Basic', 'Enhanced', 'Threshold', 'Ultimate', 'Utility', 'Incantation', 'Special'];
 const GROUP_ORDER = ['Melee', 'Ranged', 'Magic', 'Necromancy', 'Defence', 'Constitution', 'Prayers', 'Curses', 'Special', 'Weapons', 'Specs', 'Actions'];
 
 function rank(key: string): number {
@@ -21,7 +21,7 @@ function rank(key: string): number {
 
 /**
  * Groups a (sorted) catalog like the game's ability book: abilities by type – Basic → Enhanced →
- * Threshold → Ultimate → Incantation → Special – then everything else by its catalog group
+ * Threshold → Ultimate → Utility → Incantation → Special – then everything else by its catalog group
  * (Prayers, Curses, Special, Weapons …). The order inside a group is the order of `list`.
  */
 export function groupCatalog(list: Entity[]): CatalogGroup[] {

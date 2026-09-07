@@ -38,8 +38,9 @@ export const SCROLL_RULES: AbilityRule[] = [
   pointsOnly('annihilate-ice', 'Ice_nihil_(familiar)', '20 special move points: attacks the target with a 50–60% chance to stun it for 3.6 s – the wiki gives no damage numbers, nothing extra is dealt'),
   pointsOnly('annihilate-smoke', 'Smoke_nihil_(familiar)', '20 special move points: attacks the target with a 50–60% chance to stun it for 3.6 s – the wiki gives no damage numbers, nothing extra is dealt'),
   pointsOnly('annihilate-shadow', 'Shadow_nihil_(familiar)', '20 special move points: attacks the target with a 50–60% chance to stun it for 3.6 s – the wiki gives no damage numbers, nothing extra is dealt'),
-  pointsOnly('soul-food', 'Hellhound_(familiar)', '6 special move points: heals the hellhound for 10% of its max life points – not simulated'),
-  pointsOnly('mammoth-feast', 'Pack_mammoth', "6 special move points: eats a piece of food from the mammoth's inventory and heals you without draining adrenaline – not simulated"),
+  pointsOnly('soul-food', 'Hellhound_(familiar)', '20 special move points: heals the hellhound for 10% of its max life points – not simulated'),
+  pointsOnly('mammoth-feast', 'Pack_mammoth', "20 special move points: eats a piece of food from the mammoth's inventory and heals you without draining adrenaline – not simulated"),
+  pointsOnly('steel-of-legends', 'Steel_Titan_scroll_(Steel_of_Legends)', "18 special move points: the titan's next attack \"inflicts four ranged or melee attacks (depending on distance from target) instead of one\" – the extra hits are not simulated"),
 ];
 
 const SCROLL_RULE_BY_ID = new Map(SCROLL_RULES.map((r) => [r.ability, r]));

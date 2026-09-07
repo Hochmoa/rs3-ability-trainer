@@ -1,6 +1,13 @@
 export type Style = 'Melee' | 'Ranged' | 'Magic' | 'Necromancy' | 'Defence' | 'Constitution';
-/** "Enhanced" replaced most Melee/Ranged/Magic thresholds in the Combat Style Modernisation (2 March 2026) */
-export type AbilityType = 'Basic' | 'Enhanced' | 'Threshold' | 'Ultimate' | 'Special' | 'Incantation';
+/**
+ * "Enhanced" replaced most Melee/Ranged/Magic thresholds in the Combat Style Modernisation (2 March 2026).
+ * "Utility" is the wiki's own class for the movement / no-cost abilities ("Type: Utility ability" on
+ * https://runescape.wiki/w/Surge – Surge, Escape, Dive, Limitless, Runic Charge, the slayer and quiver
+ * toggles). They are off the global cooldown and Revolution never fires them ("Revolution now supports
+ * untargeted Agility abilities, so Escape and Surge can once again be put on a Revolution bar",
+ * docs/research/revolution.md §4) – a utility ability is not a basic ability for the Revolution toggles.
+ */
+export type AbilityType = 'Basic' | 'Enhanced' | 'Threshold' | 'Ultimate' | 'Utility' | 'Special' | 'Incantation';
 
 /** profiles.kind: a player, or a guide account that holds a boss's PvME loadouts and rotations (never signed in to) */
 export type ProfileKind = 'player' | 'guide';
@@ -18,13 +25,22 @@ export interface Ability {
   equipment: string;
   members: boolean;
   basicAttack: boolean;
-  /** +gain / -cost in percent, null if unknown */
+  /** +gain / -cost in percent, null if unknown; the worst case when the cost varies (Finger of Death: -60) */
   adrenaline: number | null;
+  /** the infobox text when the cost is not one number: "-60–0%" (Finger of Death), "Varies" (special attacks) */
+  adrenalineText?: string | null;
   cooldownTicks: number | null;
+  /**
+   * The wiki infobox's total damage, verbatim. Deliberately not `damageMin..damageMax × hits`: decaying DoTs
+   * (Corruption Shot 300 %), flat bleeds (Massacre 720 %), guaranteed crits (Smoke Tendrils 472.5 %) and Rage
+   * stacks (the conjures) make the real total differ from the naive product (tools/fetch-abilities.py).
+   */
   damageAvg: number | null;
   damageText: string;
+  /** damage of ONE hit in % of ability damage, as the ability text states it; null when the ability deals none */
   damageMin: number | null;
   damageMax: number | null;
+  /** how many hits a SINGLE target takes (Ricochet's missing secondaries return to it, Death Skulls bounces back) */
   hits: number | null;
   channelled: boolean;
   /** effect duration from the ability text ("19.8s (33 ticks) duration") */

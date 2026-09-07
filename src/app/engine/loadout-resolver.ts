@@ -322,6 +322,7 @@ export const NOT_SIMULATED_EFFECT_KINDS: Record<string, string> = {
   'death-mark': 'Death Mark executes below 20% life points – boss immunities are not modelled (Deathdealer)',
   'cooldown-chance': 'numbers are not documented on the wiki (Warpriest of Armadyl / Bandos)',
   'crit-proc': 'numbers are not documented on the wiki (Warpriest of Tuska)',
+  'daemonheim-only': 'the 15 class upgrades are "active at all times within Daemonheim" and nowhere else (Ring of kinship)',
   'adrenaline-on-kill': 'the session ends with the kill (Ring of death)',
   'prayer': 'healing and damage taken are not simulated (Amulet of souls)',
 };

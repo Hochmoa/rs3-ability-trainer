@@ -22,7 +22,7 @@ import { filterEntries, groupLabels, groupOf } from '../../shared/picker-groups'
 
 const TABS = [...STYLES, 'Prayers', 'Curses', 'Spells', 'Special', 'Weapons', 'Specs', 'Actions'] as const;
 type Tab = (typeof TABS)[number];
-const TYPE_ORDER: Record<string, number> = { Basic: 0, Enhanced: 1, Threshold: 2, Ultimate: 3, Incantation: 4, Special: 5 };
+const TYPE_ORDER: Record<string, number> = { Basic: 0, Enhanced: 1, Threshold: 2, Ultimate: 3, Utility: 4, Incantation: 5, Special: 6 };
 
 @Component({
   selector: 'app-rotations',
