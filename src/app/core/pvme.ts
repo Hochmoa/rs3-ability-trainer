@@ -299,6 +299,11 @@ export function resolveAlias(alias: string, resolve: AliasResolver): RotationSte
       if (base) return withHint(base, VARIANT_SUFFIXES[prefix]);
     }
   }
+  // PvME glues the stall / release markers onto the emoji: "s<:adaptivestrike:>" → sadaptivestrike, "r<:overpower:>" → roverpower
+  if (alias.length > 3 && (alias[0] === 's' || alias[0] === 'r')) {
+    const base = resolve(alias.slice(1));
+    if (base) return withHint(base, alias[0] === 's' ? 'stall' : 'release');
+  }
   return null;
 }
 
@@ -309,6 +314,12 @@ export function resolveAlias(alias: string, resolve: AliasResolver): RotationSte
 function resolveAction(action: string, resolve: AliasResolver): RotationStep[] | null {
   const direct = resolveAlias(normalizeAlias(action), resolve);
   if (direct) return direct;
+  // "Kill the mages and build stacks. Use conjurearmy": the earlier sentences are a note, the last one may be the input
+  const sentences = action.split(/\.\s+(?=\S)/);
+  if (sentences.length > 1) {
+    const r = resolveAction(sentences[sentences.length - 1], resolve);
+    if (r) return [mechanicNote(sentences.slice(0, -1).join('. ')), ...r];
+  }
   const words = action.split(/\s+/);
   const first = normalizeAlias(words[0]);
   if (words.length < 2) {
@@ -320,7 +331,8 @@ function resolveAction(action: string, resolve: AliasResolver): RotationStep[] |
   const rest = (from: number, to = words.length) => words.slice(from, to).join(' ');
   if (last === 'spec' || last === 'eofspec') {
     const weapon = resolveAlias(normalizeAlias(rest(0, -1)), resolve);
-    if (weapon?.some((s) => s.kind === 'spec')) return weapon; // gear alias already expands to switch + its spec
+    // a gear alias expands to switch + its spec; "X eofspec" fires that spec from the Essence of Finality – no switch to X
+    if (weapon?.some((s) => s.kind === 'spec')) return last === 'eofspec' ? withHint(weapon.filter((s) => s.kind === 'spec'), 'EoF') : weapon;
     if (weapon?.some((s) => s.kind === 'ability' && s.id === 'essence-of-finality')) return weapon; // "eof spec"
     const spec = resolve(last);
     if (weapon || spec) return [...(weapon ?? []), ...(spec ?? [])];
@@ -351,6 +363,14 @@ function resolveAction(action: string, resolve: AliasResolver): RotationStep[] |
   if (head) {
     const prose = rest(1);
     return withHint(head, prose.startsWith('/') ? '' : prose);
+  }
+  // "Use conjurearmy" / "then commandghost": a short lead-in before the input
+  if (words.length <= 3 && !/^(still|while|during|under|if|when|after|before|without|no|not|don'?t|keep|stay|unless|until|instead|already|with|for|from|off|on|in|at|of|to|the|about|each|per|every|more|less|than|only|but|or|has|have|had|is|was|are|were|be)/i.test(words[0])) {
+    const tail = resolveAlias(last, resolve);
+    if (tail) {
+      const prose = rest(0, -1);
+      return /^(use|then|cast|and|now|next|do)$/i.test(prose) ? tail : withHint(tail, prose);
+    }
   }
   return null;
 }

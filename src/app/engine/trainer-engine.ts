@@ -50,7 +50,7 @@ export interface StuckInfo {
   key: string;
   /** index of the rotation step that could not be played */
   step: number;
-  reason: 'cooldown' | 'requirement';
+  reason: 'cooldown' | 'requirement' | 'weapon';
   readyInTicks?: number;
   text: string;
 }
@@ -274,7 +274,7 @@ export type EngineEvent =
    */
   | { kind: 'auto-attack'; key: string; tick: number; matched: boolean; expected: string; dueTick: number }
   /** the expected step was pressed and refused for good (long cooldown / unmet requirement): the session ends stuck */
-  | { kind: 'stuck'; key: string; step: number; reason: 'cooldown' | 'requirement'; readyInTicks?: number; text: string }
+  | { kind: 'stuck'; key: string; step: number; reason: 'cooldown' | 'requirement' | 'weapon'; readyInTicks?: number; text: string }
   | { kind: 'finished' };
 
 interface PendingInput {
@@ -413,6 +413,8 @@ export class TrainerEngine {
   private done = new Set<number>();
   private tooEarly = 0;
   private wrong = 0;
+  /** wrong-weapon refusals of the expected step in a row (three in a row = stuck: the rotation never switches to the weapon it needs) */
+  private wrongWeaponStrikes = 0;
   private readyTick = new Map<string, number>();
   private chargeReady = new Map<string, number[]>();
   private sequences = new Map<string, SequenceState>();
@@ -486,6 +488,7 @@ export class TrainerEngine {
     this.index = 0;
     this.settleUntil = null;
     this.stuck = null;
+    this.wrongWeaponStrikes = 0;
     this.castTick = null;
     this.wield = { mainHand: null, offHand: null, twoHand: null, ...(this.config.startWield ?? {}) };
     this.adrenaline = this.config.fullAdrenaline ? this.maxAdrenaline : Math.max(0, Math.min(this.maxAdrenaline, this.loadout.startAdrenaline));
@@ -863,6 +866,7 @@ export class TrainerEngine {
     if (wf) {
       this.wrong++;
       this.events.push({ kind: 'wrong-weapon', key: entity.key, reason: wf });
+      this.weaponStrike(entity, wf);
       return;
     }
     const gcdEnd = this.gcdEndTick;
@@ -966,6 +970,31 @@ export class TrainerEngine {
     this.state = 'finished';
     this.events.push({ kind: 'finished' });
     return true;
+  }
+
+  /**
+   * The expected step refused for its weapon three times in a row: the rotation as written never switches to the weapon
+   * it needs (or the weapon is not carried), so the session is stuck like on a long cooldown. Other keys never count.
+   */
+  private weaponStrike(entity: EngineEntity, wf: 'weapon' | 'spec'): void {
+    if (this.stuck || this.state !== 'running') return;
+    const expected = this.steps[this.index];
+    if (!expected || expected.key !== entity.key) {
+      this.wrongWeaponStrikes = 0;
+      return;
+    }
+    if (++this.wrongWeaponStrikes < 3) return;
+    const text = wf === 'weapon'
+      ? entity.name + ' needs a ' + (entity.style ?? '') + ' weapon wielded – the rotation has no switch to one and you wield ' + (this.style ?? 'nothing')
+      : entity.name + ' is not the special attack of the wielded weapon – switch to its weapon or store it in the Essence of Finality';
+    const info: StuckInfo = { key: entity.key, step: this.stepIndexOf(entity.key), reason: 'weapon', text };
+    this.stuck = info;
+    this.pending = null;
+    this.inflight = [];
+    this.settleUntil = null;
+    this.events.push({ kind: 'stuck', ...info });
+    this.state = 'finished';
+    this.events.push({ kind: 'finished' });
   }
 
   /** index of the next open rotation step with this key (the step the press was meant for) */
@@ -1125,6 +1154,7 @@ export class TrainerEngine {
       this.pending = p.bypassed ? { ...p.bypassed, tick: p.tick } : p.next ? { key: p.next.key, tick: p.tick, arrival: p.next.arrival } : null;
       this.wrong++;
       this.events.push({ kind: 'wrong-weapon', key: entity.key, reason: wf });
+      this.weaponStrike(entity, wf);
       return;
     }
     const blocked = this.blocker(entity, p.tick);
@@ -1685,7 +1715,8 @@ export class TrainerEngine {
     for (const spirit of pb.spirits ?? []) {
       const duration = Math.round((CONJURE_BASE_TICKS + this.loadout.conjureDurationAdd) * this.loadout.conjureDurationMult);
       // remaining lifetime from the pre-build; default: conjured 6 ticks ago, so it is commandable right away
-      const left = Math.max(1, Math.min(duration, pb.remaining?.['spirit:' + spirit] ?? duration - COMMAND_READY_AFTER));
+      // Life Transfer extends a conjure by 35 ticks beyond its base duration, so a pre-built spirit may have more left than a fresh one
+      const left = Math.max(1, Math.min(duration + 35, pb.remaining?.['spirit:' + spirit] ?? duration - COMMAND_READY_AFTER));
       this.spirits.set(spirit, { spirit, sinceTick: left - duration, endTick: left, rage: 0 });
       this.applyBuff('spirit-' + spirit, 0, 'prebuild', left);
     }

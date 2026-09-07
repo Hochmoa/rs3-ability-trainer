@@ -126,6 +126,7 @@ const STUCK_HINT = "A game update may have changed the ability, or the trainer h
 /** the stuck marker's reason line: "Death Skulls is still on cooldown for 20 s" / "Conjure Skeleton Warrior: a skeleton warrior is already active" */
 function stuckReason(name: string, ev: Extract<EngineEvent, { kind: 'stuck' }>): string {
   if (ev.reason === 'cooldown' && ev.readyInTicks !== undefined) return name + ' is still on cooldown for ' + (ev.readyInTicks * TICK_MS) / 1000 + ' s';
+  if (ev.reason === 'weapon') return ev.text;
   // the engine text starts with the entity's key name; show the catalogue name instead
   const i = ev.text.indexOf(': ');
   return name + ': ' + (i >= 0 ? ev.text.slice(i + 2) : ev.text);

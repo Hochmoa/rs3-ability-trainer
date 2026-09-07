@@ -1024,7 +1024,7 @@ export interface SessionStuck {
   key: string;
   step: number;
   name: string;
-  reason: 'cooldown' | 'requirement';
+  reason: 'cooldown' | 'requirement' | 'weapon';
   readyInTicks?: number;
   text: string;
 }
