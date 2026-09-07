@@ -87,6 +87,9 @@ What is left after the 10 %:
    (probably the rAF `now` used for the press). Open; a human run does not show them.
 6. PvME alias `runic_charge` (underscore) resolves through the normaliser; `deathspark` is a status marker, not an input.
 
+Decision (Martin, 7 September 2026): points 3–5 stay as they are – the Default loadout keeps Weapon poison+++, the
+adrenaline model stays, the auto-player scoring oddity is not worth chasing.
+
 ## Reproduce
 
 1. Loadout page: weapons as above, level 99 + elder overload, poison none. Settings: ping 0, jitter 0, auto basic
