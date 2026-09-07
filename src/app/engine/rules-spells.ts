@@ -4,7 +4,7 @@
  * requirement the loadout has to match.
  */
 import { SPELLBOOK_NAMES, Spellbook } from '../core/models';
-import { AbilityRule, BuffDef, Effect, Requirement } from './rules-model';
+import { AbilityRule, BuffDef, Effect, Requirement, aspectEffects } from './rules-model';
 
 const W = 'https://runescape.wiki/w/';
 
@@ -23,7 +23,7 @@ const AUTOCAST: { id: string; name: string; book: Spellbook; text: string }[] = 
   { id: 'blood-barrage', name: 'Blood Barrage', book: 'ancient', text: 'Basic Magic attack: Blood Barrage – 3x3 area, heals 5% of the damage dealt.' },
   { id: 'ice-barrage', name: 'Ice Barrage', book: 'ancient', text: 'Basic Magic attack: Ice Barrage – 3x3 area, freezes creatures for up to 9.6 s.' },
   { id: 'exsanguinate', name: 'Exsanguinate', book: 'ancient', text: 'Basic Magic attack: Exsanguinate – every ability cast grants a Blood Tithe stack (max 12, 20 s), +1% basic ability damage per stack (stacks not simulated).' },
-  { id: 'incite-fear', name: 'Incite Fear', book: 'ancient', text: 'Basic Magic attack: Incite Fear – every ability cast grants a Glacial Embrace stack (max 5, 20 s); at 5 stacks Frost Surge fires and Tsunami costs 12% less per stack (stacks not simulated).' },
+  { id: 'incite-fear', name: 'Incite Fear', book: 'ancient', text: 'Basic Magic attack: Incite Fear – every ability cast grants a Glacial Embrace stack (max 5, 20 s); each stack lowers the cost and the requirement of Tsunami by 12% (40% at 5 stacks). At 5 stacks a cast also fires Frost Surge (AoE, not simulated).' },
 ];
 const AUTOCAST_BUFF = (id: string) => 'autocast-' + id;
 
@@ -48,7 +48,10 @@ export const SPELL_BUFFS: BuffDef[] = [
   { id: 'penance', name: 'Penance', kind: 'Buff', on: 'self', durationTicks: 1200, icon: 'assets/spells/penance.png',
     text: '5% of the damage taken is restored as prayer points (up to 100 per hit) for 12 minutes.', source: W + 'Penance' },
   { id: 'vampyrism', name: 'Vampyrism', kind: 'Buff', on: 'self', durationTicks: 1200, icon: 'assets/spells/vampyrism.png',
-    text: 'Heals 5% of the damage dealt (up to 50 life points per hit) for 12 minutes.', source: W + 'Vampyrism' },
+    text: 'Heals 5% of the damage dealt (up to 50 life points per hit) for 12 minutes. One aspect at a time.', source: W + 'Vampyrism' },
+  { id: 'temporal-anomaly', name: 'Temporal Anomaly', kind: 'Buff', on: 'self', durationTicks: 1200,
+    text: 'Aspect of Time: every Magic ability cast has a chance to reset its own cooldown – "12.5% of magic power armour damage bonus as chance", at most 20%. Sunshine, Greater Sunshine, targeted Magma Tempest, Runic Charge and magic weapon special attacks are excluded. 12 minutes; one aspect at a time.',
+    source: W + 'Temporal_Anomaly' },
   { id: 'intercept', name: 'Intercept', kind: 'Buff', on: 'self', durationTicks: 17, icon: 'assets/spells/intercept.png',
     text: 'You take the damage the warded ally would receive, reduced by 5%, for 10 seconds.', source: W + 'Intercept' },
   { id: 'shield-dome', name: 'Shield Dome', kind: 'Buff', on: 'self', durationTicks: 25, icon: 'assets/spells/shield-dome.png',
@@ -97,8 +100,8 @@ export const SPELL_RULES: AbilityRule[] = [
     notes: ['Lunar, level 95, off the global cooldown: Vengeance on yourself and every player within 4 tiles; shares the 50-tick Vengeance cooldown (' + W + 'Vengeance_Group )'],
     onCast: [{ kind: 'buff', id: 'vengeance' }],
   },
-  { ability: 'heal-other', requires: [book('lunar')], notes: ['Lunar, level 92: consumes 75% of your current life points to heal the targeted player (' + W + 'Heal_Other )'] },
-  { ability: 'heal-group', requires: [book('lunar')], notes: ['Lunar, level 95: consumes 75% of your current life points to heal all nearby players (' + W + 'Heal_Group )'] },
+  { ability: 'heal-other', requires: [book('lunar')], cooldownTicks: 17, notes: ['Lunar, level 92: consumes 75% of your current life points to heal the targeted player; 10.2 s cooldown (' + W + 'Heal_Other )'] },
+  { ability: 'heal-group', requires: [book('lunar')], cooldownTicks: 17, notes: ['Lunar, level 95: consumes 75% of your current life points to heal all nearby players; 10.2 s cooldown (' + W + 'Heal_Group )'] },
   { ability: 'cure-me', requires: [book('lunar')], notes: ['Lunar, level 71: cures poison (' + W + 'Cure_Me )'] },
   {
     ability: 'spellbook-swap',
@@ -110,8 +113,21 @@ export const SPELL_RULES: AbilityRule[] = [
   {
     ability: 'animate-dead',
     requires: [book('ancient')],
-    notes: ['Ancient, level 84, ignores the global cooldown and does not interrupt channels: flat damage reduction from magic tank armour for 12 minutes (1200 ticks); recasting refreshes it (' + W + 'Animate_Dead )'],
-    onCast: [{ kind: 'buff', id: 'animate-dead' }],
+    notes: [
+      'Ancient, level 84, ignores the global cooldown and does not interrupt channels: flat damage reduction from magic tank armour for 12 minutes (1200 ticks); recasting refreshes it (' + W + 'Animate_Dead )',
+      'An aspect: casting it ends Vampyrism, Penance, Darkness or Temporal Anomaly (' + W + 'Animate_Dead )',
+    ],
+    onCast: aspectEffects('animate-dead'),
+  },
+  {
+    ability: 'temporal-anomaly',
+    requires: [book('standard')],
+    notes: [
+      'Standard, level 97: "12.5% of magic power armour damage bonus as chance to reset the cooldown of a magic ability", at most 20%, for 12 minutes (' + W + 'Temporal_Anomaly )',
+      'Sunshine, targeted Magma Tempest, Runic Charge and magic weapon special attacks cannot be reset (' + W + 'Temporal_Anomaly )',
+      'An aspect: casting it ends Animate Dead, Vampyrism, Penance or Darkness (' + W + 'Temporal_Anomaly )',
+    ],
+    onCast: aspectEffects('temporal-anomaly'),
   },
   {
     ability: 'smoke-cloud',
@@ -119,8 +135,8 @@ export const SPELL_RULES: AbilityRule[] = [
     notes: ['Ancient, level 74, a normal GCD cast on the target (no magic weapon needed): critical strike damage +15% (+6% for non-magic attacks) for 2 minutes (' + W + 'Smoke_Cloud )'],
     onCast: [{ kind: 'buff', id: 'smoke-cloud' }],
   },
-  { ability: 'penance', requires: [book('ancient')], notes: ['Ancient, level 67: 5% of the damage taken restored as prayer points (up to 100 per hit) for 12 minutes (' + W + 'Penance )'], onCast: [{ kind: 'buff', id: 'penance' }] },
-  { ability: 'vampyrism', requires: [book('ancient')], notes: ['Ancient, level 69: heals 5% of the damage dealt (up to 50 life points per hit) for 12 minutes (' + W + 'Vampyrism )'], onCast: [{ kind: 'buff', id: 'vampyrism' }] },
+  { ability: 'penance', requires: [book('ancient')], notes: ['Ancient, level 67: 5% of the damage taken restored as prayer points (up to 100 per hit) for 12 minutes; an aspect, so it ends the other aspects (' + W + 'Penance )'], onCast: aspectEffects('penance') },
+  { ability: 'vampyrism', requires: [book('ancient')], notes: ['Ancient, level 69: heals 5% of the damage dealt (up to 50 life points per hit) for 12 minutes; an aspect, so it ends the other aspects (' + W + 'Vampyrism )'], onCast: aspectEffects('vampyrism') },
   { ability: 'intercept', requires: [book('ancient')], notes: ['Ancient, level 77: ward on an ally for 10 seconds – you take their damage, reduced by 5% (' + W + 'Intercept )'], onCast: [{ kind: 'buff', id: 'intercept' }] },
   { ability: 'shield-dome', requires: [book('ancient')], notes: ['Ancient, level 84: energy shield for 15 seconds reducing damage to every player inside by up to 50% (' + W + 'Shield_Dome )'], onCast: [{ kind: 'buff', id: 'shield-dome' }] },
   // ---------------------------------------------------------------- standard

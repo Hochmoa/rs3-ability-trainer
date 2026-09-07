@@ -1,5 +1,5 @@
 /** Necromancy ability interactions – docs/research/necromancy.md */
-import { AbilityRule, BuffDef, Effect } from './rules-model';
+import { AbilityRule, BuffDef, Effect, aspectEffects } from './rules-model';
 
 const W = 'https://runescape.wiki/w/';
 
@@ -227,8 +227,8 @@ export const NECROMANCY_RULES: AbilityRule[] = [
   },
   {
     ability: 'darkness',
-    notes: ['Incantation, 12 minutes (1200 ticks): Aspect of Evasion, 20% chance to avoid damage; one aspect at a time (' + W + 'Darkness )'],
-    onCast: [{ kind: 'buff', id: 'darkness' }],
+    notes: ['Incantation, 12 minutes (1200 ticks): Aspect of Evasion, 20% chance to avoid damage; casting it ends Animate Dead, Vampyrism, Penance or Temporal Anomaly (' + W + 'Darkness )'],
+    onCast: aspectEffects('darkness'),
   },
   {
     ability: 'threads-of-fate',

@@ -174,7 +174,10 @@ export const MAGIC_RULES: AbilityRule[] = [
   {
     ability: 'tsunami',
     hits: [0],
-    notes: ['100% adrenaline (12% less per Glacial Embrace stack, min 40%): 225–275% hit; for 50 ticks every Magic critical strike generates +8% adrenaline; recasting refreshes it (' + W + 'Tsunami )'],
+    // "Both the adrenaline cost and requirement of Tsunami are reduced by 12% per Glacial Embrace stack (down to 40% at
+    // 5 stacks)" and "Using Tsunami does not consume Glacial Embrace stacks" (runescape.wiki/w/Incite_Fear)
+    cost: { perStack: { stack: 'glacial-embrace', per: 12, maxStacks: 5, base: 100 }, keepStacks: true },
+    notes: ['100% adrenaline, 12% less per Glacial Embrace stack (40% at 5, the stacks stay): 225–275% hit; for 50 ticks every Magic critical strike generates +8% adrenaline; recasting refreshes it (' + W + 'Tsunami )'],
     onCast: [{ kind: 'buff', id: 'tsunami', refresh: true }],
   },
 ];

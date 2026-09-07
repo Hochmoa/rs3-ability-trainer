@@ -11,6 +11,12 @@ import { AbilityRule, ChannelSpec, Condition, Effect, GlobalRule, Requirement, S
 
 /** the Essence of Finality slot: fires the special stored in the amulet with a weapon of the same style */
 export const EOF_KEY = 'ability:essence-of-finality';
+
+/** Temporal Anomaly: chance per point of magic damage bonus, and its cap */
+const TEMPORAL_ANOMALY_PER_BONUS = 0.00125;
+const TEMPORAL_ANOMALY_MAX = 0.2;
+/** abilities the aspect cannot reset (runescape.wiki/w/Temporal_Anomaly) */
+const TEMPORAL_ANOMALY_EXCLUDED = new Set(['sunshine', 'greater-sunshine', 'magma-tempest', 'runic-charge']);
 /** hit key of the Bow of the Last Guardian's Perfect Equilibrium bonus hit */
 export const PERFECT_EQUILIBRIUM_KEY = 'passive:perfect-equilibrium';
 
@@ -241,6 +247,8 @@ export type EngineEvent =
   /** the expected step finished – GCD ability cast or off-GCD thing activated */
   | { kind: 'fired'; result: StepResult }
   | { kind: 'wrong-fired'; key: string; expected: string; tick: number }
+  /** Temporal Anomaly reset the cooldown of the ability just cast */
+  | { kind: 'cooldown-reset'; key: string; tick: number }
   | { kind: 'too-early'; key: string; ticksEarly: number }
   | { kind: 'wrong'; key: string; expected: string }
   | { kind: 'no-adrenaline'; key: string; need: number; have: number }
@@ -671,6 +679,18 @@ export class TrainerEngine {
   gcdRemainingMs(now: number): number {
     const end = this.gcdEndTick;
     return end === null ? 0 : Math.max(0, this.tickTime(end) - now);
+  }
+
+  /**
+   * Temporal Anomaly (Aspect of Time): "12.5% of magic power armour damage bonus as chance to reset the cooldown of a
+   * magic ability", capped at 20%; Sunshine, targeted Magma Tempest, Runic Charge and magic weapon special attacks are
+   * excluded (runescape.wiki/w/Temporal_Anomaly). Rolled once per cast, right after the cooldown was set.
+   */
+  private temporalAnomalyReset(entity: EngineEntity): boolean {
+    if (!this.hasBuff('temporal-anomaly') || entity.kind !== 'ability' || entity.style !== 'Magic') return false;
+    if (TEMPORAL_ANOMALY_EXCLUDED.has(entity.id)) return false;
+    const chance = Math.min(TEMPORAL_ANOMALY_MAX, TEMPORAL_ANOMALY_PER_BONUS * (this.loadout.damageBonus.Magic ?? 0));
+    return chance > 0 && this.random() < chance;
   }
 
   /** charges of an ability: the rule's (Bladed Dive …) plus the loadout's (Double Surge relic: Surge +1); 1 = a plain cooldown */
@@ -1361,6 +1381,11 @@ export class TrainerEngine {
     }
     const shared = rule?.sharedCooldown ?? acting.sharedCooldown;
     if (shared && cdTicks > 0) this.readyTick.set('shared:' + shared, tick + cdTicks);
+    if (cdTicks > 0 && this.temporalAnomalyReset(entity)) {
+      this.readyTick.delete(acting.key);
+      if (shared) this.readyTick.delete('shared:' + shared);
+      this.events.push({ kind: 'cooldown-reset', key: entity.key, tick });
+    }
 
     // adrenaline
     const { cost } = this.costOf(entity);
@@ -1369,7 +1394,7 @@ export class TrainerEngine {
     if (baseCost > 0 || this.isThreshold(entity, rule)) {
       for (const g of globals) if (g.consumes && (g.discount || g.costMult !== undefined) && this.hasBuff(g.consumes)) this.removeBuff(g.consumes);
     }
-    if (rule?.cost?.perStack) {
+    if (rule?.cost?.perStack && !rule.cost.keepStacks) {
       const p = rule.cost.perStack;
       this.setStacks(p.stack, this.stack(p.stack) - Math.min(this.stack(p.stack), p.maxStacks), tick, entity.key);
     }

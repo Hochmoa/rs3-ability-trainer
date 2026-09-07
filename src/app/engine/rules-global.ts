@@ -14,6 +14,12 @@ export const GLOBAL_RULES: GlobalRule[] = [
     ],
   },
   {
+    id: 'glacial-embrace-generation',
+    notes: ['Incite Fear selected: "On ability cast, gain a stack of Glacial Embrace (max 5) for 20s" (' + W + 'Incite_Fear )'],
+    when: { style: 'Magic', gcd: true },
+    onCast: [{ kind: 'stack', stack: 'glacial-embrace', amount: 1, when: { buff: 'autocast-incite-fear' } }],
+  },
+  {
     id: 'occultist-ring',
     notes: ["Occultist's ring: every Necromancy ability cast has a 10% chance to grant 2 Necrosis (" + W + 'Necrosis )'],
     when: { style: 'Necromancy', gcd: true },

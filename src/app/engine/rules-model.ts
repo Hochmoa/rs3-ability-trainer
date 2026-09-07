@@ -125,6 +125,17 @@ export interface Condition {
   dualWield?: boolean;
 }
 
+/**
+ * The aspects of power: "As it is an aspect, it cannot be used in tandem with other aspects, such as Animate Dead,
+ * Darkness, Penance, or Vampyrism" (runescape.wiki/w/Temporal_Anomaly). Casting one ends the one that runs.
+ */
+export const ASPECTS = ['animate-dead', 'vampyrism', 'penance', 'darkness', 'temporal-anomaly'] as const;
+
+/** cast effects of an aspect: it replaces whichever aspect was up */
+export function aspectEffects(id: (typeof ASPECTS)[number]): Effect[] {
+  return [...ASPECTS.filter((a) => a !== id).map<Effect>((a) => ({ kind: 'remove-buff', id: a })), { kind: 'buff', id }];
+}
+
 export type Effect =
   /** add stacks to a stacking buff; `cap` overrides the definition's max (Berserk: Bloodlust 8) */
   | { kind: 'stack'; stack: StackId; amount: number; cap?: number; when?: Condition }
@@ -182,6 +193,8 @@ export interface CostRule {
   cost?: number;
   /** cost = base − per × min(stacks, maxStacks); the stacks are consumed. On a weapon special only the cost drops, the requirement stays (Icy Tempest) */
   perStack?: { stack: StackId; per: number; maxStacks: number; base: number };
+  /** the discount does not eat the stacks ("Using Tsunami does not consume Glacial Embrace stacks") */
+  keepStacks?: boolean;
   /** buff discount: consumed by the cast */
   buffDiscount?: { buff: string; amount: number };
   /** threshold ability: requirement 50 (15 during Limitless), drain 15 */
