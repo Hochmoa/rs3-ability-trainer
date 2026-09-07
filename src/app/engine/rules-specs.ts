@@ -265,6 +265,7 @@ export const SPEC_RULES: AbilityRule[] = [
   hit('chain-hit', 'Chain_Hit', '10% adrenaline: 55–65% hit that bounces up to 3 times between enemies within 3 tiles (single target: one hit); not affected by Locate / chinchompas'),
   {
     ability: 'crystal-rain',
+    cooldownByDebuff: true,
     hits: [0, 1, 1, 1, 1],
     hitDamage: [{ min: 125, max: 155 }, { min: 125, max: 155, when: { chance: 0.04 } }, { min: 125, max: 155, when: { chance: 0.04 } }, { min: 125, max: 155, when: { chance: 0.04 } }, { min: 125, max: 155, when: { chance: 0.04 } }],
     notes: [

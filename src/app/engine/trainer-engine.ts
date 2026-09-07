@@ -139,7 +139,12 @@ export interface RevolutionConfig extends RevolutionSettings {
 }
 
 /** abilities Revolution never triggers although they are GCD abilities (wiki patch notes) */
-const REVOLUTION_NEVER = new Set(['weapon-special-attack', 'essence-of-finality', 'regenerate']);
+export const REVOLUTION_NEVER = new Set(['weapon-special-attack', 'essence-of-finality', 'regenerate']);
+
+/** the four styles' basic attacks – Revolution's last resort (/w/Basic_attacks) */
+export function isBasicAttackId(id: string): boolean {
+  return id === 'attack' || id === 'ranged' || id === 'magic' || id === 'necromancy';
+}
 
 export type UsableReason = 'ok' | 'weapon' | 'book' | 'adrenaline' | 'cooldown' | 'requirement';
 
@@ -432,7 +437,7 @@ export class TrainerEngine {
   /** wrong-fired presses in a row while the same special-attack step is expected (see wrongFiredStrike) */
   private wrongFired: { key: string; count: number } | null = null;
   /** the cast started by a stall step and held until its release step (PvME "sassault → … → rassault") */
-  private held: { key: string; tick: number } | null = null;
+  private held: { key: string; tick: number; deferredCooldown: number } | null = null;
   private readyTick = new Map<string, number>();
   private chargeReady = new Map<string, number[]>();
   private sequences = new Map<string, SequenceState>();
@@ -1391,8 +1396,14 @@ export class TrainerEngine {
     const stage = this.stageOf(rule);
     const cdTicks = rule?.stages && stage > 1 ? 0 : this.cooldownFor(acting, rule, tick);
     const charges = this.chargesOf(entity, rule);
+    // Crystal Rain and its kind carry the cooldown in a debuff their hit applies: the stall does not start it, the
+    // release does (runescape.wiki/w/Ability_stalling)
+    const deferCooldown = !!opt.stall && !!rule?.cooldownByDebuff;
     if (opt.release) {
-      // nothing: the stall already paid for this cast
+      const held = this.held?.key === entity.key ? this.held : null;
+      if (held?.deferredCooldown) this.readyTick.set(acting.key, tick + held.deferredCooldown);
+    } else if (deferCooldown) {
+      // nothing yet: the cooldown starts when the held cast lands
     } else if (charges > 1) {
       const list = (this.chargeReady.get(entity.key) ?? []).filter((t) => t > tick);
       if (list.length < charges) list.push(tick + cdTicks);
@@ -1401,7 +1412,7 @@ export class TrainerEngine {
       this.readyTick.set(acting.key, tick + cdTicks);
     }
     const shared = rule?.sharedCooldown ?? acting.sharedCooldown;
-    if (shared && cdTicks > 0 && !opt.release) this.readyTick.set('shared:' + shared, tick + cdTicks);
+    if (shared && cdTicks > 0 && !opt.release && !deferCooldown) this.readyTick.set('shared:' + shared, tick + cdTicks);
     if (cdTicks > 0 && this.temporalAnomalyReset(entity)) {
       this.readyTick.delete(acting.key);
       if (shared) this.readyTick.delete('shared:' + shared);
@@ -1468,7 +1479,7 @@ export class TrainerEngine {
     // A stalled cast stops here: "its adrenaline cost is consumed and its cooldown begins" while it is held, and
     // nothing else of it happens until the release (runescape.wiki/w/Ability_stalling).
     if (opt.stall) {
-      this.held = { key: entity.key, tick };
+      this.held = { key: entity.key, tick, deferredCooldown: deferCooldown ? cdTicks : 0 };
       this.events.push({ kind: 'stalled', key: entity.key, tick });
       return;
     }

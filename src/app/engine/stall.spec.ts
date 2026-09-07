@@ -52,6 +52,31 @@ describe('ability stalling', () => {
     expect(e.index).toBe(2);
   });
 
+  it('a special whose cooldown lives in a debuff starts it on the release, not on the stall', () => {
+    // "For special attacks that track their cooldowns by a debuff (e.g. Crystal Rain cooldown) then the cooldown does
+    // not begin, as the debuff is only applied when the special attack hits an enemy" (runescape.wiki/w/Ability_stalling)
+    const spec = (extra: Partial<EngineEntity>): EngineEntity => ({
+      key: 'spec:crystal-rain', id: 'crystal-rain', kind: 'spec', name: 'Crystal Rain', icon: '', gcd: true, style: 'Ranged',
+      abilityType: 'Special', adrenaline: -30, cooldownTicks: 50, damageMin: 125, damageMax: 155, buffs: [], ...extra,
+    });
+    const steps = [spec({ stall: true }), spec({ release: true })];
+    const e = new TrainerEngine(steps, new Map(steps.map((x) => [x.key, x] as const)), {
+      pingMs: 0, jitterMs: 0, autoAttacks: false, abilityQueueing: false, loop: false, hitChanceDisabled: true,
+      loadout: { ...defaultResolvedLoadout(), style: 'Ranged', abilityDamage: 1000, startAdrenaline: 100, weaponSpec: steps[0] },
+    });
+    e.random = () => 0.5;
+    e.start(0);
+    press(e, 'spec:crystal-rain', 1);
+    e.update(6 * T);
+    expect(kinds(e)).toContain('stalled');
+    expect(e.cooldownLeft('spec:crystal-rain', 2)).toBe(0); // the arrow has not hit, so no debuff and no cooldown
+
+    press(e, 'spec:crystal-rain', 8);
+    e.update(14 * T);
+    expect(hits(e, 'spec:crystal-rain').length).toBeGreaterThan(0);
+    expect(e.cooldownLeft('spec:crystal-rain', 9)).toBe(49); // 50 ticks from the release
+  });
+
   it('a stall without a release stays paid for and lands nothing', () => {
     const e = make([ability('a', { stall: true }), ability('b')]);
     press(e, 'a', 1);

@@ -330,6 +330,12 @@ export interface AbilityRule {
     perStackAtCast?: { stack: StackId; mult: number };
   }[];
   sharedCooldown?: string;
+  /**
+   * The cooldown is a debuff the special applies on its hit, so a stalled cast does not start it: "For special attacks
+   * that track their cooldowns by a debuff (e.g. Crystal Rain cooldown) then the cooldown does not begin, as the debuff
+   * is only applied when the special attack hits an enemy" (runescape.wiki/w/Ability_stalling).
+   */
+  cooldownByDebuff?: boolean;
   /** buffs applied on cast (overrides the wiki buff link) */
   buffs?: string[];
   /** buffs applied per hit */
