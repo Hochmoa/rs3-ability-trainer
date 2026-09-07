@@ -172,6 +172,7 @@ export interface Action {
 export const ACTIONS: Action[] = [
   { id: 'target-cycle', name: 'Target cycle', description: 'Switches to the next target (client keybind). Instant, no cooldown, no tick.', icon: 'assets/actions/target-cycle.png' },
   { id: 'combat-dummy', name: 'Combat dummy MKII', description: 'Deploys a combat dummy for 60 seconds (100 ticks): hitting it builds adrenaline, modelled as +10% per tick like the "recharge adrenaline" option. Instant, no GCD.', icon: 'assets/actions/combat-dummy.png' },
+  { id: 'eat-food', name: 'Eat food', description: 'Eating solid food costs 3% adrenaline (10% before the Combat Style Modernisation). Brews, blubber and drinks cost none – that is why rotations reach for those. Off the global cooldown; life points are not simulated.', icon: 'assets/actions/eat-food.png' },
 ];
 /** pressing the "Weapon Special Attack" slot counts for whichever spec the rotation expects with the wielded weapon */
 export const SPEC_KEY = 'ability:weapon-special-attack';

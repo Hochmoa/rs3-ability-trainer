@@ -19,6 +19,8 @@ export const ACCELERATION_COOLDOWN_TICKS = 2;
 const COMBAT_DUMMY_TICKS = 100;
 /** adrenaline per tick while hitting the dummy – the engine's "recharge adrenaline" rate (trainer-engine.ts RECHARGE_PER_TICK) */
 const COMBAT_DUMMY_ADRENALINE_PER_TICK = 10;
+/** solid food since the Combat Style Modernisation (2 March 2026); it was 10% before */
+const SOLID_FOOD_ADRENALINE = 3;
 
 export const CONSUMABLE_BUFFS: BuffDef[] = [
   { id: 'powerburst-of-vitality', name: 'Powerburst of vitality', kind: 'Buff', on: 'self', durationTicks: POWERBURST_TICKS, maxLifePointsMult: 2, icon: 'assets/specials/powerburst-of-vitality.png',
@@ -86,5 +88,14 @@ export const ACTION_RULES: AbilityRule[] = [
       'Instant, no global cooldown, no cooldown; no experience and no Reaper stacks (' + W + 'Combat_dummy_MKII )',
     ],
     onCast: [{ kind: 'buff', id: 'combat-dummy' }],
+  },
+  {
+    ability: 'eat-food',
+    offGcd: true,
+    notes: [
+      'Eating solid food drains ' + SOLID_FOOD_ADRENALINE + '% adrenaline, down from 10% before the Combat Style Modernisation of 2 March 2026 (' + W + 'Adrenaline )',
+      'Brews, blubber and drinks cost no adrenaline – that is what a rotation reaches for when it has to heal; the trainer simulates no life points, so this only charges the adrenaline (' + W + 'Adrenaline )',
+    ],
+    onCast: [{ kind: 'adrenaline', amount: -SOLID_FOOD_ADRENALINE }],
   },
 ];
