@@ -35,8 +35,8 @@ function ability(id: string): EngineEntity {
   if (!a) throw new Error('unknown ability ' + id);
   return {
     key: 'ability:' + id, id, kind: 'ability', name: a.name, icon: '', gcd: a.triggersGcd, style: a.style, abilityType: a.type,
-    adrenaline: a.adrenaline, cooldownTicks: a.cooldownTicks, buffs: [], damageMin: a.damageMin ?? undefined, damageMax: a.damageMax ?? undefined,
-    channel: a.channelled && a.durationTicks ? { ticks: a.durationTicks, hits: [] } : undefined,
+    adrenaline: a.adrenaline ?? 0, cooldownTicks: a.cooldownTicks ?? 0, buffs: [], damageMin: a.damageMin ?? undefined, damageMax: a.damageMax ?? undefined,
+    channel: a.channelled && a.durationTicks ? { ticks: a.durationTicks, hits: [] as number[] } : undefined,
   };
 }
 
