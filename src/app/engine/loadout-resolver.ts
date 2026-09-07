@@ -36,6 +36,8 @@ interface Worn {
   /** passive ids of worn items (rings, capes, weapon passives) */
   passives: Set<string>;
   eofSpec: string | null;
+  /** specs stored in the Essence of Finality amulets carried in the backpack */
+  eofSpecs: string[];
 }
 
 function worn(l: Loadout, data: LoadoutData): Worn {
@@ -43,7 +45,7 @@ function worn(l: Loadout, data: LoadoutData): Worn {
   const two = w.twoHand ? data.weaponById.get(w.twoHand) ?? null : null;
   const main = w.mainHand ? data.weaponById.get(w.mainHand) ?? null : null;
   const off = w.offHand ? data.weaponById.get(w.offHand) ?? null : null;
-  const out: Worn = { two, main, off, gear: [], gizmos: [], sets: new Map(), passives: new Set(), eofSpec: null };
+  const out: Worn = { two, main, off, gear: [], gizmos: [], sets: new Map(), passives: new Set(), eofSpec: null, eofSpecs: [] };
   const eq = l.equipment ?? {};
   const legacy = !l.equipment;
   for (const wp of [two, main, off]) {
@@ -67,6 +69,10 @@ function worn(l: Loadout, data: LoadoutData): Worn {
       const type = wp?.slot === 'shield' ? 'armour' : 'weapon';
       for (const g of ref.gizmos ?? []) out.gizmos.push({ type, label: wp?.name ?? ref.id, gizmo: g });
     }
+  }
+  for (const ref of l.inventory ?? []) {
+    if (!ref || ref.kind !== 'gear' || !ref.spec) continue;
+    if (data.gearById?.get(ref.id)?.passive === 'essence-of-finality') out.eofSpecs.push(ref.spec);
   }
   if (legacy) {
     // loadouts saved before the inventory: flags instead of items
@@ -205,6 +211,10 @@ export function resolveLoadout(l: Loadout, data: LoadoutData): ResolvedLoadout {
   if (wn.eofSpec) {
     const spec = data.specById.get(wn.eofSpec);
     if (spec) r.eofSpec = data.specEntity(spec);
+  }
+  for (const id of new Set([wn.eofSpec, ...wn.eofSpecs])) {
+    const spec = id ? data.specById.get(id) : null;
+    if (spec && !r.eofSpecs.some((e) => e.id === spec.id)) r.eofSpecs.push(data.specEntity(spec));
   }
   if (off?.name === 'Soulbound lantern' || off?.name.startsWith('Soulbound lantern')) r.stackCaps['residual-souls'] = 5;
   r.spellbook = l.spellbook ?? 'standard';

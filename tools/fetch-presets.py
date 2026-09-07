@@ -213,8 +213,34 @@ def sections(text: str) -> list[dict]:
     return [s for s in out if any(ARROW.search(l) for l in s["raw"])]
 
 
+# a line that opens an alternative or a later part of the fight rather than continuing the previous line: it becomes its
+# own rotation, else the parts play as one sequence and the second part casts what the first put on cooldown
+ALT_LINE = re.compile(
+    r"^(?:if\b|when\b|alt\b|alternative(?:ly)?\b|option\s*\d*\b|otherwise\b|or\b|easier\b|harder\b|simpler?\b|advanced\b|standard\b|without\b|with\b|non[- ]|no\s+\w+\s*:|"
+    r"[<>\u2264\u2265]\s*\d+\s*%|\d+\s*%?\s*[<>\u2264\u2265]|(?:pillar|phase|wave|p|kill|part|cycle|round|option)\s*\d+\b|(?:first|second|third|fourth|last|next)\s+\w+\b)",
+    re.I,
+)
+
+
+def split_alternatives(lines: list[str]) -> list[tuple[str, list[str]]]:
+    """(label, lines) parts of a section: a line ALT_LINE matches, or a line ending in ':' (a condition heading its rotation), opens a part"""
+    parts: list[tuple[str, list[str]]] = []
+    for line in lines:
+        head = ARROW.split(line, 1)[0].strip()
+        label = ""
+        heading = line.rstrip().endswith(":")
+        # a remark without a sequence ("If Umbra, surge after mds") stays a note of the part it follows
+        if len(lines) > 1 and (heading or (ALT_LINE.match(line) and ARROW.search(line))):
+            label = re.sub(r"\s*[:(].*$", "", head).strip()[:32].rstrip(" -–,") or head[:32]
+        if label or not parts:
+            parts.append((label, [line]))
+        else:
+            parts[-1][1].append(line)
+    return parts
+
+
 def rotations_of(secs: list[dict], section_filter: str | None) -> list[dict]:
-    """{name, text} per section (under a `##` matching the filter, when given); names used twice get their parent heading in front"""
+    """{name, text} per section part (under a `##` matching the filter, when given); names used twice get their parent heading in front"""
     secs = [s for s in secs if not section_filter or re.search(section_filter, s["h2"])]
     # "### Note:" under "## T90 Necro Rotation" is that rotation
     own = [s["parent"] if s["name"].rstrip(":").lower() in ("note", "notes") and s["parent"] else s["name"].rstrip(":") for s in secs]
@@ -226,7 +252,12 @@ def rotations_of(secs: list[dict], section_filter: str | None) -> list[dict]:
         seen[name] += 1
         if seen[name] > 1:
             name = f"{name} ({seen[name]})"
-        rots.append({"name": name, "text": "\n".join(s["lines"])})
+        parts = split_alternatives(s["lines"])
+        if len(parts) == 1:
+            rots.append({"name": name, "text": "\n".join(s["lines"])})
+            continue
+        for label, lines in parts:
+            rots.append({"name": f"{name} – {label}" if label else name, "text": "\n".join(lines)})
     return rots
 
 

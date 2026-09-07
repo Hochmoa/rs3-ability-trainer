@@ -4,8 +4,9 @@ import { ToastService } from '../shared/toast';
 import { DataService } from './data.service';
 import { addItem, stockSpecials } from './equipment';
 import { DEFAULT_LAYOUT_ID, keybindLayout } from './keybind-layouts';
-import { Prebuild, Rotation, RotationStep } from './models';
+import { ItemRef, Prebuild, Rotation, RotationStep } from './models';
 import { BossPreset, demoRotationIndex, presetBars, presetLoadout, presetSlotKeys } from './preset-setup';
+import { SwitchCatalog, insertSwitches } from './preset-switches';
 import { parsePvme } from './pvme';
 import { StorageService } from './storage.service';
 
@@ -99,22 +100,43 @@ export class PresetsService {
       const r = addItem(loadout, { kind: 'weapon', id });
       if (!r.error) loadout.inventory = r.state.inventory;
     }
-    // "X eofspec": the first special attack of a weapon that is neither wielded nor carried is the one stored in the EoF
-    if (!loadout.eofSpec && loadout.equipment.neck?.id.includes('essence-of-finality')) {
-      const carried = new Set([...wielded, ...loadout.inventory.filter((r) => r?.kind === 'weapon').map((r) => r!.id)]);
-      const ownSpecs = new Set([...carried].map((id) => this.data.weaponById().get(id)?.spec).filter((x): x is string => !!x));
-      const eof = steps.find((st) => st.kind === 'spec' && !ownSpecs.has(st.id));
-      if (eof) loadout.eofSpec = eof.id;
+    // "X eofspec": every special attack of a weapon that is neither wielded nor carried is stored in an Essence of Finality.
+    // PvME players carry one amulet per stored special and swap them: the first goes on the neck, the others into the backpack
+    const carried = new Set([...wielded, ...loadout.inventory.filter((r) => r?.kind === 'weapon').map((r) => r!.id)]);
+    const ownSpecs = new Set([...carried].map((id) => this.data.weaponById().get(id)?.spec).filter((x): x is string => !!x));
+    const stored = [...new Set(steps.filter((st) => st.kind === 'spec' && !ownSpecs.has(st.id)).map((st) => st.id))];
+    const isEof = (r: ItemRef | null | undefined) => !!r && r.kind === 'gear' && r.id.includes('essence-of-finality');
+    const amulets = [isEof(loadout.equipment.neck) ? loadout.equipment.neck! : null, ...loadout.inventory.filter(isEof)].filter((r): r is ItemRef => !!r && !r.spec);
+    for (const id of stored) {
+      const free = amulets.shift();
+      if (free) free.spec = id;
+      else {
+        const r = addItem(loadout, { kind: 'gear', id: 'essence-of-finality-amulet', spec: id });
+        if (!r.error) loadout.inventory = r.state.inventory;
+      }
     }
+    if (!loadout.eofSpec && isEof(loadout.equipment.neck)) loadout.eofSpec = loadout.equipment.neck!.spec ?? null;
+    // the switches the guide leaves out (style changes, 2h abilities, specs of backpack weapons)
+    const cat: SwitchCatalog = {
+      weapon: (id) => this.data.weaponById().get(id),
+      spec: (id) => this.data.specById().get(id),
+      ability: (id) => {
+        const e = this.data.get('ability:' + id);
+        return e?.ability ? { style: e.ability.style, gcd: this.data.toEngineEntity(e).gcd } : undefined;
+      },
+    };
+    for (const r of parsed) r.steps = insertSwitches(r.steps, loadout, cat);
     // a familiar scroll in the rotations (Crit-i-Kal, Death from Above …) means that familiar is out
     if (!loadout.familiar) {
       const fam = steps.filter((st) => st.kind === 'special').map((st) => this.data.familiars().find((f) => f.scroll.id === st.id)).find((f) => !!f);
       if (fam) loadout.familiar = fam.id;
     }
-    // Vengeance / Disruption Shield need the Lunar book, Smoke Cloud / Exsanguinate the Ancient one
+    // Vengeance / Disruption Shield need the Lunar book, Smoke Cloud / Exsanguinate the Ancient one: the book most of the
+    // rotations' spells belong to (a guide that mixes books expects the reader to pick one per phase)
     const books = steps.filter((st) => st.kind === 'spell').map((st) => this.data.spellById().get(st.id)?.book);
-    if (books.includes('lunar')) loadout.spellbook = 'lunar';
-    else if (books.includes('ancient')) loadout.spellbook = 'ancient';
+    const votes = (b: string) => books.filter((x) => x === b).length;
+    if (votes('lunar') > votes('ancient') && votes('lunar') > votes('standard')) loadout.spellbook = 'lunar';
+    else if (votes('ancient') > votes('standard')) loadout.spellbook = 'ancient';
     await this.storage.saveLoadout(loadout);
     await this.storage.setActiveLoadout(loadout.id);
 

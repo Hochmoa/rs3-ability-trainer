@@ -124,8 +124,10 @@ export interface ResolvedLoadout {
   weaponType: 'bow' | 'crossbow' | 'other' | null;
   /** special attack of the wielded weapon, as an entity */
   weaponSpec: EngineEntity | null;
-  /** special attack stored in the Essence of Finality, as an entity */
+  /** special attack stored in the Essence of Finality worn, as an entity */
   eofSpec: EngineEntity | null;
+  /** every special attack stored in an Essence of Finality the player carries (worn + backpack): PvME players swap amulets mid-fight, the swap is free */
+  eofSpecs: EngineEntity[];
   /** player ability damage for the wielded weapons (engine/damage.ts abilityDamageOf: the boosted level of the style's damage skill, the weapons' tier part, the gear's damage bonus) */
   abilityDamage: number;
   /** level of the wielded style's damage skill the ability damage was computed with (Loadout.levels under the overload: 99 â†’ 116 / 118 / 120, Necromancy 120 â†’ 145) */
@@ -239,6 +241,7 @@ export function defaultResolvedLoadout(): ResolvedLoadout {
     weaponType: null,
     weaponSpec: null,
     eofSpec: null,
+    eofSpecs: [],
     abilityDamage: 0,
     combatLevel: 99,
     levels: { ...DEFAULT_LEVELS },

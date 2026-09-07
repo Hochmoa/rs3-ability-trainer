@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import ABILITIES from '../../../public/data/abilities.json';
 import { Ability } from '../core/models';
 import { defaultResolvedLoadout } from './loadout-resolved';
-import { EngineConfig, EngineEntity, EngineEvent, STUCK_COOLDOWN_TICKS, TICK_MS, TrainerEngine } from './trainer-engine';
+import { EOF_KEY, EngineConfig, EngineEntity, EngineEvent, STUCK_COOLDOWN_TICKS, TICK_MS, TrainerEngine } from './trainer-engine';
 import { SPEC_KEY } from '../core/models';
 
 const T = TICK_MS;
@@ -31,8 +31,8 @@ const SPEC: EngineEntity = { key: 'spec:crystal-rain', id: 'crystal-rain', kind:
 /** the generic special-attack slot step ("spec" in a PvME rotation) */
 const GENERIC = ability('ability:weapon-special-attack', { id: 'weapon-special-attack', name: 'Weapon Special Attack', adrenaline: 0 });
 
-function make(steps: EngineEntity[], cfg: Partial<EngineConfig> = {}): TrainerEngine {
-  const catalog = new Map([A, B, LONG, SHORT, SCROLL, SPEC, GENERIC].map((e) => [e.key, e]));
+function make(steps: EngineEntity[], cfg: Partial<EngineConfig> = {}, extra: EngineEntity[] = []): TrainerEngine {
+  const catalog = new Map([A, B, LONG, SHORT, SCROLL, SPEC, GENERIC, ...extra].map((e) => [e.key, e]));
   const e = new TrainerEngine(steps, catalog, { ...off, ...cfg });
   e.random = () => 0.99;
   e.start(0);
@@ -186,6 +186,46 @@ describe('stuck marker', () => {
     expect(kinds(e)).not.toContain('wrong-fired');
     expect(e.index).toBe(1);
     expect(e.stuck).toBeNull();
+  });
+
+  it('a spec stored in a second Essence of Finality in the backpack fires from the EoF slot', () => {
+    const e = make([SPEC, A], { loadout: { ...defaultResolvedLoadout(), style: 'Ranged', eofSpecs: [SPEC], startAdrenaline: 100 } });
+    press(e, EOF_KEY, 1);
+    e.update(2 * T + 1);
+    expect(kinds(e)).not.toContain('wrong-weapon');
+    expect(e.stuck).toBeNull();
+    expect(e.index).toBe(1);
+  });
+
+  it('a stored spec of another style than the wielded weapon cannot fire: three EoF presses end the session stuck', () => {
+    const e = make([SPEC, A], { loadout: { ...defaultResolvedLoadout(), style: 'Melee', eofSpecs: [SPEC], startAdrenaline: 100 } });
+    press(e, EOF_KEY, 1);
+    press(e, EOF_KEY, 2);
+    press(e, EOF_KEY, 3);
+    expect(e.stuck).toMatchObject({ key: SPEC.key, reason: 'weapon' });
+  });
+
+  it('the slot holding another special than the one due: three presses end the session stuck, nothing fires', () => {
+    const other: EngineEntity = { ...SPEC, key: 'spec:other', id: 'other', name: 'Other' };
+    const e = make([SPEC, A, other], { loadout: { ...defaultResolvedLoadout(), style: 'Ranged', weaponSpec: other, startAdrenaline: 100 } }, [other]);
+    press(e, SPEC_KEY, 1);
+    press(e, SPEC_KEY, 2);
+    expect(e.stuck).toBeNull();
+    press(e, SPEC_KEY, 3);
+    expect(kinds(e)).not.toContain('wrong-fired');
+    expect(e.stuck).toMatchObject({ key: SPEC.key, reason: 'weapon' });
+  });
+
+  it('another special fired by its own key three times in a row while a special is due ends the session stuck', () => {
+    const other: EngineEntity = { ...SPEC, key: 'spec:other', id: 'other', name: 'Other', cooldownTicks: 0 };
+    const e = make([SPEC, A], { loadout: { ...defaultResolvedLoadout(), style: 'Ranged', weaponSpec: other, startAdrenaline: 100 } }, [other]);
+    press(e, other.key, 1);
+    press(e, other.key, 4);
+    expect(e.stuck).toBeNull();
+    press(e, other.key, 7);
+    expect(kinds(e).filter((k) => k === 'wrong-fired').length).toBe(3);
+    expect(e.stuck).toMatchObject({ key: SPEC.key, reason: 'weapon' });
+    expect(e.stuck?.text).toContain('did not fire');
   });
 
   it('start() clears the marker', () => {

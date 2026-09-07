@@ -415,6 +415,8 @@ export class TrainerEngine {
   private wrong = 0;
   /** wrong-weapon refusals of the expected step in a row (three in a row = stuck: the rotation never switches to the weapon it needs) */
   private wrongWeaponStrikes = 0;
+  /** wrong-fired presses in a row while the same special-attack step is expected (see wrongFiredStrike) */
+  private wrongFired: { key: string; count: number } | null = null;
   private readyTick = new Map<string, number>();
   private chargeReady = new Map<string, number[]>();
   private sequences = new Map<string, SequenceState>();
@@ -489,6 +491,7 @@ export class TrainerEngine {
     this.settleUntil = null;
     this.stuck = null;
     this.wrongWeaponStrikes = 0;
+    this.wrongFired = null;
     this.castTick = null;
     this.wield = { mainHand: null, offHand: null, twoHand: null, ...(this.config.startWield ?? {}) };
     this.adrenaline = this.config.fullAdrenaline ? this.maxAdrenaline : Math.max(0, Math.min(this.maxAdrenaline, this.loadout.startAdrenaline));
@@ -773,10 +776,10 @@ export class TrainerEngine {
 
   /** Why the wielded weapon cannot use this entity: wrong style, or a spec the weapon does not have. */
   weaponFailure(e: EngineEntity): 'weapon' | 'spec' | null {
-    if (e.kind === 'spec') return this.loadout.weaponSpec?.id === e.id || this.eofSpecReady()?.id === e.id ? null : 'spec';
+    if (e.kind === 'spec') return this.loadout.weaponSpec?.id === e.id || this.eofSpecReady(e.id)?.id === e.id ? null : 'spec';
     if (e.kind !== 'ability') return null;
     // the stored special needs a wielded weapon of its own style – greyed out like in the game
-    if (e.id === 'essence-of-finality' && this.loadout.eofSpec && !this.eofSpecReady()) return 'weapon';
+    if (e.id === 'essence-of-finality' && (this.loadout.eofSpecs.length || this.loadout.eofSpec) && !this.eofSpecReady()) return 'weapon';
     // utility abilities off the GCD (Surge, Escape, Dive) work with any weapon; only real casts need the style
     if (this.isGcdStep(e) && e.style && isStyle4(e.style) && this.style !== e.style) return 'weapon';
     if (e.id === 'weapon-special-attack' && !this.loadout.weaponSpec) return 'spec';
@@ -847,18 +850,21 @@ export class TrainerEngine {
     if (slot) {
       // the special-attack / Essence of Finality slot fires the wielded / stored weapon's spec; a rotation step written as that spec counts
       const fired = input.key === SPEC_KEY ? this.loadout.weaponSpec?.id : this.eofSpecReady()?.id;
-      const spec = fired ? this.steps.find((s, i) => i >= this.index && !this.done.has(i) && s.kind === 'spec' && s.id === fired) : undefined;
-      if (spec) input = { ...input, key: spec.key };
-      else {
-        // the slot cannot fire the spec the rotation expects (its weapon is not in hand, it is not stored in the EoF): counted
-        // as a wrong-weapon press of that step, nothing fires; three in a row end the session stuck like a missing weapon switch
-        const expected = this.steps[this.index];
-        if (expected && expected.kind === 'spec' && !this.done.has(this.index)) {
+      const expected = this.steps[this.index];
+      if (expected && expected.kind === 'spec' && !this.done.has(this.index)) {
+        // a spec is due: the slot fires it when it holds it – else (its weapon is not in hand, no amulet stores it, the
+        // slot holds another special) the press counts as a wrong-weapon press of that step and nothing fires; three in
+        // a row end the session stuck like a missing weapon switch
+        if (fired === expected.id) input = { ...input, key: expected.key };
+        else {
           this.wrong++;
           this.events.push({ kind: 'wrong-weapon', key: expected.key, reason: 'spec' });
           this.weaponStrike(expected, 'spec');
           return;
         }
+      } else {
+        const spec = fired ? this.steps.find((s, i) => i >= this.index && !this.done.has(i) && s.kind === 'spec' && s.id === fired) : undefined;
+        if (spec) input = { ...input, key: spec.key };
       }
     }
     let entity = this.catalog.get(input.key);
@@ -997,8 +1003,30 @@ export class TrainerEngine {
     if (++this.wrongWeaponStrikes < 3) return;
     const text = wf === 'weapon'
       ? entity.name + ' needs a ' + (entity.style ?? '') + ' weapon wielded – the rotation has no switch to one and you wield ' + (this.style ?? 'nothing')
-      : entity.name + ' is not the special attack of the wielded weapon – switch to its weapon or store it in the Essence of Finality';
+      : this.loadout.eofSpecs.some((s) => s.id === entity.id) || this.loadout.eofSpec?.id === entity.id
+        ? entity.name + ' is stored in an Essence of Finality but needs a ' + (entity.style ?? '') + ' weapon wielded – the rotation has no switch to one and you wield ' + (this.style ?? 'nothing')
+        : entity.name + ' is not the special attack of the wielded weapon and no Essence of Finality you carry stores it – switch to its weapon or store it in an amulet';
     const info: StuckInfo = { key: entity.key, step: this.stepIndexOf(entity.key), reason: 'weapon', text };
+    this.stuck = info;
+    this.pending = null;
+    this.inflight = [];
+    this.settleUntil = null;
+    this.events.push({ kind: 'stuck', ...info });
+    this.state = 'finished';
+    this.events.push({ kind: 'finished' });
+  }
+
+  /**
+   * The special-attack slot fired another special than the step expects three times in a row: the weapon in hand or the
+   * amulet holds a different special and the rotation never switches – stuck like a missing weapon. Only specials count:
+   * three ordinary wrong keys are the player's mistakes, not the rotation's.
+   */
+  private wrongFiredStrike(expected: EngineEntity | undefined, fired: EngineEntity): void {
+    if (!expected || this.stuck || this.state !== 'running') return;
+    if (fired.kind !== 'spec' && expected.kind !== 'spec') return;
+    if (this.wrongFired?.key !== expected.key) this.wrongFired = { key: expected.key, count: 0 };
+    if (++this.wrongFired.count < 3) return;
+    const info: StuckInfo = { key: expected.key, step: this.stepIndexOf(expected.key), reason: 'weapon', text: expected.name + ' did not fire – the slot fires ' + fired.name + ' (the weapon in hand or the amulet holds another special attack and the rotation has no switch)' };
     this.stuck = info;
     this.pending = null;
     this.inflight = [];
@@ -1203,6 +1231,7 @@ export class TrainerEngine {
       if (p.auto) return;
       this.wrong++;
       this.events.push({ kind: 'wrong-fired', key: entity.key, expected: expected?.key ?? '', tick: p.tick });
+      this.wrongFiredStrike(expected, entity);
       return;
     }
     const expectedIndex = this.steps.indexOf(expected, this.index);
@@ -2252,7 +2281,7 @@ export class TrainerEngine {
         case 'defender-or-shield': if (!l.hasShield && !l.hasDefender && !bone) return false; break;
         case 'conduit': if (!l.hasConduit) return false; break;
         case 'spec-weapon': if (!l.weaponSpec) return false; break;
-        case 'eof': if (!l.eofSpec || (l.style && l.eofSpec.style && l.eofSpec.style !== l.style)) return false; break;
+        case 'eof': if (!this.eofSpecReady()) return false; break;
       }
     }
     return true;
@@ -2608,21 +2637,34 @@ export class TrainerEngine {
     const e = this.catalog.get(key);
     if (e) return e;
     const l = this.loadout;
-    return l.weaponSpec?.key === key ? l.weaponSpec : l.eofSpec?.key === key ? l.eofSpec : undefined;
+    return l.weaponSpec?.key === key ? l.weaponSpec : l.eofSpecs.find((s) => s.key === key) ?? (l.eofSpec?.key === key ? l.eofSpec : undefined);
   }
 
-  /** the special stored in the Essence of Finality when a weapon of its style is wielded (otherwise it cannot fire) */
-  eofSpecReady(): EngineEntity | null {
+  /**
+   * The special the Essence of Finality slot fires: the one the rotation expects next when an amulet the player carries
+   * stores it (swapping amulets is free, so the amulet in the neck slot is the one needed), else the one worn – and only
+   * while a weapon of its style is wielded (otherwise it cannot fire). With `wantId`: that special, when carried and ready.
+   */
+  eofSpecReady(wantId?: string): EngineEntity | null {
     const l = this.loadout;
-    if (!l.eofSpec) return null;
-    return l.style && l.eofSpec.style && l.eofSpec.style !== l.style ? null : l.eofSpec;
+    const all = l.eofSpecs.length ? l.eofSpecs : l.eofSpec ? [l.eofSpec] : [];
+    const ready = (s: EngineEntity | undefined | null) => (s && !(l.style && s.style && s.style !== l.style) ? s : null);
+    if (wantId !== undefined) return ready(all.find((s) => s.id === wantId));
+    for (let i = this.index; i < this.steps.length; i++) {
+      const st = this.steps[i];
+      if (st.kind !== 'spec' || this.done.has(i)) continue;
+      const stored = ready(all.find((s) => s.id === st.id));
+      if (stored) return stored;
+      break;
+    }
+    return ready(l.eofSpec ?? all[0]);
   }
 
   /** Weapon Special Attack / Essence of Finality steps act as the wielded weapon's spec; spec steps act as themselves. */
   specFor(e: EngineEntity): EngineEntity | null {
     if (e.kind === 'spec') return this.loadout.weaponSpec?.id === e.id ? this.loadout.weaponSpec : e;
     if (e.id === 'weapon-special-attack') return this.loadout.weaponSpec;
-    if (e.id === 'essence-of-finality') return this.loadout.eofSpec;
+    if (e.id === 'essence-of-finality') return this.eofSpecReady() ?? this.loadout.eofSpec;
     return null;
   }
 

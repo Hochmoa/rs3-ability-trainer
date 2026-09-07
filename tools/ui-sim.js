@@ -107,13 +107,13 @@
     for (const p of chosen) {
       window.__sim.progress.current = p.id;
       let added;
-      try { added = await ps.add(p); } catch (err) { results.push({ mode: window.__sim.progress.mode, preset: p.id, boss: p.boss, style: p.style, outcome: 'add-failed', error: String(err) }); window.__sim.progress.done++; continue; }
+      try { added = await ps.add(p); } catch (err) { results.push({ mode: window.__sim.progress.mode, preset: p.id, boss: p.boss, style: p.style, outcome: 'add-failed', error: String(err && err.stack || err).slice(0, 400) }); window.__sim.progress.done++; continue; }
       let prebuild = null, prebuildFrom = null;
       for (const r of added.rotations) {
         if (opts.rotationFilter && !opts.rotationFilter(r)) continue;
         const playable = r.steps.filter(x => x.kind !== 'note').length;
         const short = r.name.replace(p.boss + ' – ', '');
-        const rec = { mode: window.__sim.progress.mode, preset: p.id, boss: p.boss, style: p.style, variant: p.variant || p.title, rotation: short, steps: r.steps.length, playable, left: added.left };
+        const rec = { mode: window.__sim.progress.mode, preset: p.id, boss: p.boss, style: p.style, variant: p.variant || p.title, rotation: short, steps: r.steps.length, playable, left: added.left, switches: r.steps.filter(x => x.kind === 'weapon' && x.hint === 'switch added').length };
         if (playable === 0) { rec.outcome = 'notes-only'; results.push(rec); continue; }
         const isPrebuild = PREBUILD_RE.test(short);
         try {
