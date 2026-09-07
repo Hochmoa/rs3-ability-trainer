@@ -12,6 +12,11 @@ import { AbilityRule, ChannelSpec, Condition, Effect, GlobalRule, Requirement, S
 /** the Essence of Finality slot: fires the special stored in the amulet with a weapon of the same style */
 export const EOF_KEY = 'ability:essence-of-finality';
 
+/** Frost Surge (Incite Fear at five Glacial Embrace stacks): 10–50% ability damage, 12 s cooldown, up to 8 enemies around the target */
+const FROST_SURGE_STACKS = 5;
+const FROST_SURGE_COOLDOWN = 20;
+const FROST_SURGE_EXTRA_TARGETS = 8;
+const FROST_SURGE_DAMAGE = { min: 0.1, max: 0.5 };
 /** Threads of Fate: "up to 4 additional enemies within 4 tiles of the target" (runescape.wiki/w/Threads_of_Fate) */
 const THREADS_EXTRA_TARGETS = 4;
 /** Temporal Anomaly: chance per point of magic damage bonus, and its cap */
@@ -438,6 +443,8 @@ export class TrainerEngine {
   private wrongWeaponStrikes = 0;
   /** wrong-fired presses in a row while the same special-attack step is expected (see wrongFiredStrike) */
   private wrongFired: { key: string; count: number } | null = null;
+  /** the tick Frost Surge can proc again (Incite Fear at five Glacial Embrace stacks) */
+  private frostSurgeReady = 0;
   /** the cast started by a stall step and held until its release step (PvME "sassault → … → rassault") */
   private held: { key: string; tick: number; deferredCooldown: number } | null = null;
   private readyTick = new Map<string, number>();
@@ -516,6 +523,7 @@ export class TrainerEngine {
     this.wrongWeaponStrikes = 0;
     this.wrongFired = null;
     this.held = null;
+    this.frostSurgeReady = 0;
     this.castTick = null;
     this.wield = { mainHand: null, offHand: null, twoHand: null, ...(this.config.startWield ?? {}) };
     this.adrenaline = this.config.fullAdrenaline ? this.maxAdrenaline : Math.max(0, Math.min(this.maxAdrenaline, this.loadout.startAdrenaline));
@@ -1638,6 +1646,7 @@ export class TrainerEngine {
       }
       this.lastAttackTick = tick;
     }
+    this.frostSurge(entity, tick);
     this.processHits(tick);
   }
 
@@ -2126,11 +2135,36 @@ export class TrainerEngine {
       this.removeBuff('death-from-above');
       amount = a.damageMax * (2 + this.random() * 1.2);
     }
+    // Steel of Legends: the titan's next attack "inflicts four ranged or melee attacks ... instead of one"
+    let times = 1;
+    if (this.hasBuff('steel-of-legends')) {
+      this.removeBuff('steel-of-legends');
+      times = 4;
+    }
     const lp = this.config.targetLifePoints;
     if (fam.damagePerMissingLp && lp) amount *= 1 + fam.damagePerMissingLp * Math.max(0, 1 - this.targetHp / lp);
     amount *= this.targetDamageMult(false);
     amount += this.targetDamageAdd(amount);
-    this.applyDamage('familiar:' + fam.id, Math.floor(amount + 1e-6), false, false, tick);
+    for (let i = 0; i < times; i++) this.applyDamage('familiar:' + fam.id, Math.floor(amount + 1e-6), false, false, tick);
+  }
+
+  /**
+   * Frost Surge: with five Glacial Embrace stacks "your ability casts trigger Frost Surge (12s cooldown)", which "deals
+   * (10-50%) ability damage to the primary target and up to 8 adjacent enemies in a 5x5 area"
+   * (runescape.wiki/w/Incite_Fear). The extra enemies come from the enemy panel's target count.
+   */
+  private frostSurge(entity: EngineEntity, tick: number): void {
+    if (entity.style !== 'Magic' || !this.isGcdStep(entity)) return;
+    if (this.stack('glacial-embrace') < FROST_SURGE_STACKS || tick < this.frostSurgeReady) return;
+    this.frostSurgeReady = tick + FROST_SURGE_COOLDOWN;
+    const targets = Math.min(Math.max(1, Math.floor(this.config.enemy?.targets ?? 1)), 1 + FROST_SURGE_EXTRA_TARGETS);
+    for (let i = 0; i < targets; i++) {
+      const share = FROST_SURGE_DAMAGE.min + this.random() * (FROST_SURGE_DAMAGE.max - FROST_SURGE_DAMAGE.min);
+      let amount = share * this.loadout.abilityDamage;
+      amount *= this.targetDamageMult(false);
+      amount += this.targetDamageAdd(amount);
+      this.applyDamage('proc:frost-surge', Math.floor(amount), false, false, tick);
+    }
   }
 
   private applyDamage(key: string, amount: number, crit: boolean, dot: boolean, tick: number): void {

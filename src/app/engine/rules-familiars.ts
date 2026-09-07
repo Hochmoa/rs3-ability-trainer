@@ -15,6 +15,8 @@ export const FAMILIAR_BUFFS: BuffDef[] = [
     text: "Kal'gerion demon scroll: +5% critical strike chance for 60 seconds, every style. Recasting refreshes it.", source: W + "Kal'gerion_demon_(familiar)" },
   { id: 'death-from-above', name: 'Death From Above', kind: 'Buff', on: 'self', durationTicks: null, untilConsumed: true,
     text: "Ripper Demon scroll: the familiar's next attack deals 200–320% of its max hit.", source: W + 'Ripper_Demon_(familiar)' },
+  { id: 'steel-of-legends', name: 'Steel of Legends', kind: 'Buff', on: 'self', durationTicks: null, untilConsumed: true,
+    text: "Steel Titan scroll: the titan's next attack \"inflicts four ranged or melee attacks (depending on distance from target) instead of one\".", source: W + 'Steel_Titan_(familiar)' },
 ];
 
 /** scroll without a simulated effect: spends its special move points (and starts its cooldown, if any) */
@@ -40,7 +42,11 @@ export const SCROLL_RULES: AbilityRule[] = [
   pointsOnly('annihilate-shadow', 'Shadow_nihil_(familiar)', '20 special move points: attacks the target with a 50–60% chance to stun it for 3.6 s – the wiki gives no damage numbers, nothing extra is dealt'),
   pointsOnly('soul-food', 'Hellhound_(familiar)', '20 special move points: heals the hellhound for 10% of its max life points – not simulated'),
   pointsOnly('mammoth-feast', 'Pack_mammoth', "20 special move points: eats a piece of food from the mammoth's inventory and heals you without draining adrenaline – not simulated"),
-  pointsOnly('steel-of-legends', 'Steel_Titan_scroll_(Steel_of_Legends)', "18 special move points: the titan's next attack \"inflicts four ranged or melee attacks (depending on distance from target) instead of one\" – the extra hits are not simulated"),
+  {
+    ability: 'steel-of-legends',
+    notes: ['18 special move points: the titan\'s next attack "inflicts four ranged or melee attacks (depending on distance from target) instead of one" (' + W + 'Steel_Titan_scroll_(Steel_of_Legends) )'],
+    onCast: [{ kind: 'buff', id: 'steel-of-legends' }],
+  },
 ];
 
 const SCROLL_RULE_BY_ID = new Map(SCROLL_RULES.map((r) => [r.ability, r]));

@@ -77,6 +77,28 @@ describe('Tsunami', () => {
   });
 });
 
+describe('Frost Surge', () => {
+  it('procs at five stacks, at most every 20 ticks, and reaches the other enemies', () => {
+    const e = make(['spell:incite-fear', 'ability:magic', 'ability:magic', 'ability:magic', 'ability:magic', 'ability:magic', 'ability:magic', 'ability:magic'], { spellbook: 'ancient', abilityDamage: 1000 });
+    press(e, 'spell:incite-fear', 1);
+    for (let i = 0; i < 6; i++) press(e, 'ability:magic', 4 + i * 3);
+    e.update(30 * 600);
+    const procs = e.events.filter((x) => x.kind === 'hit' && x.key === 'proc:frost-surge');
+    expect(procs.length).toBeGreaterThan(0);
+    const ticks = [...new Set(procs.map((p) => ('tick' in p ? p.tick : 0)))].sort((a, b) => a - b);
+    for (let i = 1; i < ticks.length; i++) expect(ticks[i] - ticks[i - 1]).toBeGreaterThanOrEqual(20);
+  });
+
+  it('does not proc below five stacks', () => {
+    const e = make(['spell:incite-fear', 'ability:magic', 'ability:magic'], { spellbook: 'ancient', abilityDamage: 1000 });
+    press(e, 'spell:incite-fear', 1);
+    press(e, 'ability:magic', 4);
+    press(e, 'ability:magic', 7);
+    e.update(20 * 600);
+    expect(e.events.some((x) => x.kind === 'hit' && x.key === 'proc:frost-surge')).toBe(false);
+  });
+});
+
 describe('aspects of power', () => {
   it('a second aspect ends the first', () => {
     const e = make(['spell:animate-dead', 'spell:vampyrism'], { spellbook: 'ancient' });
