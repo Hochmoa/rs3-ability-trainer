@@ -673,15 +673,21 @@ export class TrainerEngine {
     return end === null ? 0 : Math.max(0, this.tickTime(end) - now);
   }
 
+  /** charges of an ability: the rule's (Bladed Dive …) plus the loadout's (Double Surge relic: Surge +1); 1 = a plain cooldown */
+  private chargesOf(e: EngineEntity, rule: AbilityRule | undefined): number {
+    return (rule?.charges ?? 1) + (this.loadout.chargesAdd?.[e.id] ?? 0);
+  }
+
   /** Ticks until `key` is off its own / shared cooldown at `tick` (0 = ready). */
   cooldownLeft(key: string, tick: number): number {
     const e = this.entityOf(key);
     if (!e) return 0;
     const rule = this.ruleOf(e);
     const acting = this.specFor(e) ?? e;
-    if (rule?.charges) {
+    const charges = this.chargesOf(e, rule);
+    if (charges > 1) {
       const ready = this.chargeReady.get(e.key) ?? [];
-      const available = ready.filter((t) => t <= tick).length + (rule.charges - ready.length);
+      const available = ready.filter((t) => t <= tick).length + (charges - ready.length);
       if (available > 0) return 0;
       return Math.max(0, Math.min(...ready) - tick);
     }
@@ -1001,7 +1007,9 @@ export class TrainerEngine {
       return;
     }
     if (++this.wrongWeaponStrikes < 3) return;
-    const text = wf === 'weapon'
+    const text = entity.id === 'essence-of-finality'
+      ? 'No Essence of Finality you carry stores a ' + (this.style ?? '') + ' special attack – the rotation has no switch to a weapon of the style of a stored special'
+      : wf === 'weapon'
       ? entity.name + ' needs a ' + (entity.style ?? '') + ' weapon wielded – the rotation has no switch to one and you wield ' + (this.style ?? 'nothing')
       : this.loadout.eofSpecs.some((s) => s.id === entity.id) || this.loadout.eofSpec?.id === entity.id
         ? entity.name + ' is stored in an Essence of Finality but needs a ' + (entity.style ?? '') + ' weapon wielded – the rotation has no switch to one and you wield ' + (this.style ?? 'nothing')
@@ -1343,9 +1351,10 @@ export class TrainerEngine {
     // cooldown (charges, own, shared)
     const stage = this.stageOf(rule);
     const cdTicks = rule?.stages && stage > 1 ? 0 : this.cooldownFor(acting, rule, tick);
-    if (rule?.charges) {
+    const charges = this.chargesOf(entity, rule);
+    if (charges > 1) {
       const list = (this.chargeReady.get(entity.key) ?? []).filter((t) => t > tick);
-      if (list.length < rule.charges) list.push(tick + cdTicks);
+      if (list.length < charges) list.push(tick + cdTicks);
       this.chargeReady.set(entity.key, list);
     } else if (cdTicks > 0) {
       this.readyTick.set(acting.key, tick + cdTicks);
@@ -2657,7 +2666,7 @@ export class TrainerEngine {
       if (stored) return stored;
       break;
     }
-    return ready(l.eofSpec ?? all[0]);
+    return ready(l.eofSpec) ?? all.map(ready).find((s) => !!s) ?? null;
   }
 
   /** Weapon Special Attack / Essence of Finality steps act as the wielded weapon's spec; spec steps act as themselves. */

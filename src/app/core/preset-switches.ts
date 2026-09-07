@@ -101,7 +101,15 @@ export function insertSwitches(steps: RotationStep[], loadout: Loadout, cat: Swi
       out.push(s);
       continue;
     }
-    if (s.kind === 'ability') {
+    if (s.kind === 'ability' && s.id === 'essence-of-finality') {
+      // a bare "eofspec": the amulet in the neck slot fires whatever it stores, so a stored special of the current style
+      // works – else switch to the style of a stored special the setup has weapons for
+      const styles = [...stored].map((id) => cat.spec(id)?.style).filter((x): x is Style => !!x);
+      if (styles.length && !styles.includes(styleOf(hand) as Style)) {
+        const target = styles.find((st) => setFor(pool, st, false).length);
+        if (target) switchTo(setFor(pool, target, false), s);
+      }
+    } else if (s.kind === 'ability') {
       const a = cat.ability(s.id);
       const two = needs2h(s.id);
       if (a && a.gcd && isStyle4(a.style)) {

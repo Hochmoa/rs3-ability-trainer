@@ -77,6 +77,8 @@ export interface ResolvedLoadout {
   buffDurationMult: Record<string, number>;
   /** ability id → cooldown multiplier (Mobile 0.5, Turtling, Preparation perk, Brief Respite) */
   cooldownMult: Record<string, number>;
+  /** extra charges of an ability (Double Surge relic: surge +1) – the charges recharge independently */
+  chargesAdd: Record<string, number>;
   /** conjure lifetime: (base + add) × mult */
   conjureDurationAdd: number;
   conjureDurationMult: number;
@@ -214,6 +216,7 @@ export function defaultResolvedLoadout(): ResolvedLoadout {
     buffDurationAdd: {},
     buffDurationMult: {},
     cooldownMult: {},
+    chargesAdd: {},
     conjureDurationAdd: 0,
     conjureDurationMult: 1,
     conjureDamageMult: 1,

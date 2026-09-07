@@ -65,6 +65,13 @@ describe('insertSwitches', () => {
     expect(ids(insertSwitches([ability('assault'), spec('crystal-rain')], l, cat))).toEqual(['assault', '+bow-of-the-last-guardian', 'crystal-rain']);
   });
 
+  it('a bare Essence of Finality step switches to the style of a stored special when the weapons in hand fit none', () => {
+    const l = loadout('dark-shard-of-leng', 'dark-sliver-of-leng', null, ['bow-of-the-last-guardian'], ['crystal-rain']);
+    expect(ids(insertSwitches([ability('essence-of-finality')], l, cat))).toEqual(['+bow-of-the-last-guardian', 'essence-of-finality']);
+    const fits = loadout('dark-shard-of-leng', 'dark-sliver-of-leng', null, ['bow-of-the-last-guardian'], ['blackhole']);
+    expect(ids(insertSwitches([ability('essence-of-finality')], fits, cat))).toEqual(['essence-of-finality']);
+  });
+
   it('a switch the rotation writes itself is kept and counted', () => {
     const l = loadout('dark-shard-of-leng', 'dark-sliver-of-leng', null, ['bow-of-the-last-guardian']);
     const out = insertSwitches([{ kind: 'weapon', id: 'bow-of-the-last-guardian' }, ability('greater-ricochet')], l, cat);

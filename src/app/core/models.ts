@@ -650,6 +650,7 @@ export const RELICS: { id: string; name: string; text: string }[] = [
   { id: 'persistent-rage', name: 'Persistent Rage', text: 'Out of combat adrenaline builds up instead of draining (no effect in the trainer).' },
   { id: 'berserker-s-fury', name: "Berserker's Fury", text: 'Up to +5.5% damage the lower your life points are (not bleeds). Life points are not simulated – listed only.' },
   { id: 'shadow-s-grace', name: "Shadow's Grace", text: 'Surge, Escape, Dive, Bladed Dive and Barge cooldowns −50% (does not stack with the Mobile perk).' },
+  { id: 'double-surge', name: 'Double Surge', text: 'Surge gains a second charge with its own cooldown – it can be used twice in a row.' },
 ];
 
 export function newLoadout(name = 'Default'): Loadout {

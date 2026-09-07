@@ -116,6 +116,12 @@ export class PresetsService {
       }
     }
     if (!loadout.eofSpec && isEof(loadout.equipment.neck)) loadout.eofSpec = loadout.equipment.neck!.spec ?? null;
+    // "surge → surge": the guide plays with the Double Surge relic (a second Surge charge)
+    for (const r of parsed) {
+      const acts = r.steps.filter((st) => st.kind !== 'note');
+      const twice = acts.some((st, i) => st.kind === 'ability' && st.id === 'surge' && acts.slice(i + 1, i + 4).some((x) => x.kind === 'ability' && x.id === 'surge'));
+      if (twice && !loadout.relics.includes('double-surge')) loadout.relics.push('double-surge');
+    }
     // the switches the guide leaves out (style changes, 2h abilities, specs of backpack weapons)
     const cat: SwitchCatalog = {
       weapon: (id) => this.data.weaponById().get(id),
