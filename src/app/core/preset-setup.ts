@@ -17,6 +17,12 @@ export interface BossPreset {
   inventory: (ItemRef | null)[];
   /** items of the PvME preset the trainer does not model (food, brews, familiars ...) */
   unknown: string[];
+  /** Archaeology relics of the preset maker (RELICS ids); the rotations' adrenaline assumes them */
+  relics?: string[];
+  /** familiars.json id of the familiar the preset summons */
+  familiar?: string | null;
+  /** gear.json id for the ammunition slot (Ful arrows, Deathspore arrows ...) */
+  ammo?: string | null;
   rotations: { name: string; text: string }[];
   /** index into `rotations` that "Load a demo" opens; missing = the first playable fight rotation (demoRotationIndex) */
   demoRotation?: number;
@@ -60,6 +66,11 @@ export function presetLoadout(p: BossPreset, slotOf: (ref: ItemRef) => EquipSlot
   l.equipment = eq;
   l.inventory = Array.from({ length: INVENTORY_SIZE }, (_, i) => (p.inventory[i] ? { ...p.inventory[i]! } : null));
   l.prayerBook = 'Curses';
+  // the preset maker keeps these next to the gear, and the rotations assume them: without Conservation of Energy and
+  // Fury of the Small the adrenaline never adds up, and a familiar's scroll cannot be pressed without the familiar
+  if (p.relics?.length) l.relics = [...p.relics];
+  if (p.familiar) l.familiar = p.familiar;
+  if (p.ammo && !eq.ammo) eq.ammo = { kind: 'gear', id: p.ammo };
   return l;
 }
 

@@ -82,7 +82,7 @@ export const DEFCON_RULES: AbilityRule[] = [
     ability: 'rejuvenate',
     sharedCooldown: 'rejuvenate',
     requires: [{ text: 'needs a shield or defender', equipment: 'defender-or-shield' }],
-    notes: ['Ultimate, shield or defender: heals 40% over 17 ticks; shares its 500-tick cooldown with Guthix\'s Blessing and Ice Asylum (Brief Respite -5% per rank) (' + W + 'Rejuvenate )'],
+    notes: ['Ultimate, shield or defender: "Restore 2.5% of your lifepoints every 0.6s (1 tick)" over 17 ticks, which the page sums to 40% (2.5 x 17 = 42.5 is not a figure the wiki gives); shares its 500-tick cooldown with Guthix\'s Blessing and Ice Asylum (Brief Respite -5% per rank) (' + W + 'Rejuvenate )'],
     onCast: [{ kind: 'buff', id: 'rejuvenate' }],
   },
   {
