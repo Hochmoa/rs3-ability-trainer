@@ -445,3 +445,20 @@ textarea {
 code {
   color: var(--gold);
 }
+
+/* search + boss filter above the saved rotations (the PvME library brings hundreds of cards) */
+.list-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+
+  input[type='search'] {
+    flex: 1 1 220px;
+    max-width: 340px;
+  }
+
+  select {
+    max-width: 280px;
+  }
+}

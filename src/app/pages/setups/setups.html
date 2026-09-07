@@ -35,7 +35,7 @@
       <span class="actions">
         <button class="btn btn-sm" (click)="toggle(row)">{{ open() === row.user_id ? 'Hide' : 'Details' }}</button>
         @if (row.user_id !== myId()) {
-          <button class="btn btn-sm btn-primary" (click)="loadSetup(row)" [disabled]="busy() === row.user_id">Load this setup</button>
+          <button class="btn btn-sm" (click)="loadSetup(row)" [disabled]="busy() === row.user_id" title="Replaces your settings, loadouts and enemy config – open Details to copy a single loadout instead">Replace mine…</button>
         }
       </span>
       <span class="muted small summary">{{ settingsSummary(row.settings) }}</span>
@@ -71,6 +71,11 @@
               <div class="loadout">
                 <b>{{ l.name }}</b>
                 @if (l.id === s.loadouts.active) { <span class="muted small">active</span> }
+                @if (row.user_id !== myId()) {
+                  <button class="btn btn-sm btn-primary copy-loadout" (click)="copyLoadout(row, l)" [disabled]="busy() === row.user_id" title="Adds this loadout to yours and makes it active – your keybinds, bars and other loadouts stay">
+                    Copy this loadout
+                  </button>
+                }
                 <div class="muted small">
                   {{ weapons(l) }}
                   @if (switches(l).length) { · switches: {{ switches(l).join(', ') }} }

@@ -49,6 +49,24 @@ export class Throttle {
 }
 
 /**
+ * What "load this setup" (Setups page) may write over the player's own configuration.
+ *
+ * A shared setup carries four halves, and the guide accounts publish two of them: settings and loadouts. Replacing
+ * keybinds and action bars "with nothing" is what cost players their key layout and their bars on the one path that
+ * was meant to hand them a boss's gear. A half the shared setup does not carry is therefore kept as it is: null means
+ * "leave mine alone". Keybinds are sanitised here as well – they come from another account's document.
+ */
+export function setupReplacement(b: SetupBundle): { keybinds: Record<string, Keybind> | null; actionBars: ActionBarSetup | null } {
+  const keybinds: Record<string, Keybind> = {};
+  for (const [key, kb] of Object.entries(b.keybinds ?? {})) {
+    if (kb && typeof kb.code === 'string') keybinds[key] = { code: kb.code, ctrl: !!kb.ctrl, shift: !!kb.shift, alt: !!kb.alt };
+  }
+  const bars = b.actionBars;
+  const hasBars = !!bars && ((bars.presets ?? []).some((p) => p.slots?.some((x) => !!x)) || Object.keys(bars.weaponKeybinds ?? {}).length > 0);
+  return { keybinds: Object.keys(keybinds).length ? keybinds : null, actionBars: hasBars ? bars : null };
+}
+
+/**
  * Holds all user data as signals and mirrors it into IndexedDB once the user has accepted
  * storage. Before consent everything lives in memory only.
  *
@@ -287,25 +305,30 @@ export class StorageService {
   }
 
   /**
-   * Replaces everything except the rotations with another user's setup (Setups page). Fires the
-   * change hooks, so while signed in the own online copy is replaced as well.
+   * Replaces settings, loadouts and the enemy with another user's setup (Setups page), and the keybinds and action
+   * bars only when the shared setup actually carries them (see setupReplacement). Fires the change hooks, so while
+   * signed in the own online copy follows.
    */
   async replaceSetup(b: SetupBundle): Promise<void> {
     await this.putSetup({ settings: b.settings, loadouts: b.loadouts, activeLoadoutId: b.activeLoadoutId, enemy: b.enemy ?? { ...DEFAULT_ENEMY } }, { updatedAt: Date.now() });
     this.setupChanged.next();
 
-    const keybinds: Record<string, Keybind> = {};
-    for (const [key, kb] of Object.entries(b.keybinds ?? {})) if (kb && typeof kb.code === 'string') keybinds[key] = { code: kb.code, ctrl: !!kb.ctrl, shift: !!kb.shift, alt: !!kb.alt };
-    this.keybinds.set(keybinds);
-    await this.write(async (db) => {
-      await db.clear('keybinds');
-      for (const [key, kb] of Object.entries(keybinds)) await db.put('keybinds', kb, key);
-    });
-    this.keybindsReplaced.next(keybinds);
+    const shared = setupReplacement(b);
+    if (shared.keybinds) {
+      const keybinds = shared.keybinds;
+      this.keybinds.set(keybinds);
+      await this.write(async (db) => {
+        await db.clear('keybinds');
+        for (const [key, kb] of Object.entries(keybinds)) await db.put('keybinds', kb, key);
+      });
+      this.keybindsReplaced.next(keybinds);
+    }
 
-    const bars = b.actionBars ? mergeActionBars(b.actionBars) : defaultActionBarsWithKeys();
-    delete bars.syncedAt;
-    await this.saveActionBars(bars);
+    if (shared.actionBars) {
+      const bars = mergeActionBars(shared.actionBars);
+      delete bars.syncedAt;
+      await this.saveActionBars(bars);
+    }
   }
 
   async saveLoadout(l: Loadout): Promise<void> {

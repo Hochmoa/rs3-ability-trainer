@@ -140,7 +140,23 @@
       <p class="muted small">or paste a PvME rotation above, or build one with "New rotation"</p>
     </div>
   }
-  @for (r of storage.rotations(); track r.id) {
+  @if (storage.rotations().length > 8) {
+    <div class="panel list-filter">
+      <input
+        type="search"
+        placeholder="Search rotations…"
+        aria-label="Search the rotations"
+        [ngModel]="listSearch()"
+        (ngModelChange)="listSearch.set($event)"
+      />
+      <select [ngModel]="listBoss()" (ngModelChange)="listBoss.set($event)" aria-label="Filter by boss">
+        <option value="">All bosses</option>
+        @for (b of listBosses(); track b) { <option [value]="b">{{ b }}</option> }
+      </select>
+      <span class="muted small">{{ listed().length }} of {{ storage.rotations().length }}</span>
+    </div>
+  }
+  @for (r of listed(); track r.id) {
     <div class="panel rotation">
       <div class="rotation-head">
         <h3>{{ r.name }}</h3>
@@ -163,6 +179,12 @@
         }
       </div>
     </div>
+  } @empty {
+    @if (storage.rotations().length) {
+      <div class="panel empty">
+        <p class="muted">No rotation matches the search.</p>
+      </div>
+    }
   }
 }
 

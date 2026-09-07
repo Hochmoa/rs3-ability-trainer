@@ -78,7 +78,7 @@ interface Cell {
               <div class="item" [class.dragging]="gearDrag.isSource('equip', c.slot)" (pointerdown)="startDrag($event, c.ref, { kind: 'equip', slot: c.slot }, c.view)">
                 @if (c.view.icon) { <img [src]="c.view.icon" [alt]="c.view.name" draggable="false" /> } @else { <span class="noicon">{{ c.view.name.slice(0, 3) }}</span> }
                 @if (c.ref.gizmos?.length) { <span class="badge perk" title="augmented">✦</span> }
-                @if (c.ref.spec) { <span class="badge spec" title="stored special attack">S</span> }
+                @if (c.ref.spec) { <span class="badge spec" [title]="specTitle(c.ref)">S</span> }
               </div>
             } @else if (c.ref) {
               <span class="noicon unknown" title="unknown item">?</span>
@@ -111,7 +111,7 @@ interface Cell {
               <div class="item" [class.dragging]="gearDrag.isSource('inv', $index)" (pointerdown)="startDrag($event, v.ref, { kind: 'inv', index: $index }, v)">
                 @if (v.icon) { <img [src]="v.icon" [alt]="v.name" draggable="false" /> } @else { <span class="noicon">{{ v.name.slice(0, 3) }}</span> }
                 @if (v.ref.gizmos?.length) { <span class="badge perk" title="augmented">✦</span> }
-                @if (v.ref.spec) { <span class="badge spec" title="stored special attack">S</span> }
+                @if (v.ref.spec) { <span class="badge spec" [title]="specTitle(v.ref)">S</span> }
                 @if (keyOf()(v.ref)) { <span class="key">{{ keyOf()(v.ref) }}</span> }
               </div>
             } @else if (inventory()[$index]) {
@@ -382,6 +382,16 @@ export class GearPanel implements OnDestroy {
 
   ngOnDestroy(): void {
     this.gearDrag.cancel(); // a drag in flight would keep its window listeners and ghost after a route change
+  }
+
+  /**
+   * Title of the "S" badge. A loadout may carry several Essence of Finality amulets, each with its own stored
+   * special, so the badge has to say which special this one holds – hovering the icon is how a player sees what is
+   * stored where.
+   */
+  specTitle(ref: ItemRef): string {
+    const name = ref.spec ? this.data.specById().get(ref.spec)?.name : null;
+    return 'stored special attack' + (name ? ': ' + name : '');
   }
 
   /** screen-reader name of a worn slot: "Head: Masterwork helm" / "Head: empty" */

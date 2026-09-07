@@ -62,6 +62,21 @@
   }
 }
 
+/* select plus its filter field: the rotation list holds hundreds of guide entries */
+.picker {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+
+  .picker-search {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 3px 6px;
+    font-size: 12px;
+  }
+}
+
 .options-row {
   display: flex;
   flex-wrap: wrap;

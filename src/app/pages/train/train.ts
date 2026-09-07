@@ -30,7 +30,9 @@ import { DialogService, isTypingTarget } from '../../shared/dialog';
 import { FeedbackService } from '../../core/feedback.service';
 import { ToastService } from '../../shared/toast';
 import { EntityTip } from '../../shared/tooltip';
+import { filterEntries, groupEntries } from '../../shared/picker-groups';
 import { CoolingEntry, CooldownView, catalogPass, cooldownViews, sameMorphs, sameUsable } from './live-state';
+import { FrameLoop, browserFrameLoopDeps } from './frame-loop';
 
 interface Feedback {
   text: string;
@@ -182,6 +184,22 @@ export class Train implements OnDestroy {
 
   readonly selectedId = signal<string | null>(null);
   readonly rotation = computed(() => this.storage.rotations().find((r) => r.id === this.selectedId()) ?? null);
+  /**
+   * The rotation picker: with every boss setup added the list holds hundreds of entries, so the select is grouped by
+   * boss and a search field narrows it (shared/picker-groups.ts). The selected rotation always stays in the list, and
+   * with a handful of hand-made rotations the grouping collapses to the plain list it used to be.
+   */
+  readonly rotationSearch = signal('');
+  readonly filteredRotations = computed(() => filterEntries(this.storage.rotations(), this.rotationSearch(), this.selectedId()));
+  readonly rotationGroups = computed(() => groupEntries(this.filteredRotations()));
+  /** "12 of 905" next to the search field, only while it filters something out */
+  readonly rotationCount = computed(() => {
+    const all = this.storage.rotations().length;
+    const shown = this.filteredRotations().length;
+    return shown === all ? '' : shown + ' of ' + all;
+  });
+  /** the loadout select is grouped the same way – a boss preset adds one loadout per setup */
+  readonly loadoutGroups = computed(() => groupEntries(this.storage.loadouts()));
   /** "42 steps · Necromancy" under the rotation select */
   readonly rotationCaption = computed(() => {
     const r = this.rotation();
@@ -809,8 +827,8 @@ export class Train implements OnDestroy {
   readonly focusBars = computed(() => this.bars().filter((b) => b.slots.some((s) => s.entity)));
 
   private engine: TrainerEngine | null = null;
-  private raf = 0;
-  private fallback = 0;
+  /** animation-frame loop with the stall watchdog: the session keeps running behind another window (frame-loop.ts) */
+  private readonly loop = new FrameLoop((now) => this.tick(now), browserFrameLoopDeps(this.doc));
   private flashUntil = 0;
   private startedAt = 0;
 
@@ -1072,20 +1090,13 @@ export class Train implements OnDestroy {
     this.expectedKey.set(this.engine.currentStep?.key ?? null);
     this.coachStart();
     this.coachTick(this.engine, performance.now());
-    this.raf = requestAnimationFrame(this.frame);
-    // a hidden tab gets no animation frames: a coarse interval keeps the session (and the coach) going there
+    this.loop.start();
+    // a tab that goes hidden fires this event, so the fallback starts at once instead of after the watchdog's delay;
+    // an occluded window fires nothing and stays "visible" – that case is the watchdog's (see frame-loop.ts)
     this.doc.addEventListener('visibilitychange', this.onVisibility);
-    this.onVisibility();
   }
 
-  private readonly onVisibility = (): void => {
-    if (this.doc.hidden) {
-      if (!this.fallback) this.fallback = window.setInterval(() => this.tick(performance.now()), 100);
-    } else if (this.fallback) {
-      window.clearInterval(this.fallback);
-      this.fallback = 0;
-    }
-  };
+  private readonly onVisibility = (): void => this.loop.syncVisibility();
 
   /** slot keys of the main bar (position 0) for `style`, null = empty slot – what Revolution scans */
   private mainBarKeys(style: Style4): (string | null)[] {
@@ -1155,14 +1166,8 @@ export class Train implements OnDestroy {
   /** switch key of a carried weapon, shown on its backpack cell */
   readonly gearKey = (ref: ItemRef): string => (ref.kind === 'weapon' ? keybindLabel(this.storage.actionBars().weaponKeybinds[ref.id]) : '');
 
-  private frame = (now: number): void => {
-    if (this.tick(now)) this.raf = requestAnimationFrame(this.frame);
-  };
-
   private stopLoops(): void {
-    cancelAnimationFrame(this.raf);
-    window.clearInterval(this.fallback);
-    this.fallback = 0;
+    this.loop.stop();
     this.doc.removeEventListener('visibilitychange', this.onVisibility);
   }
 

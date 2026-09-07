@@ -3,7 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { DataService, GearView } from '../../core/data.service';
 import { GearResult, GearState, addItem, equip, moveItem, removeItem, removeWorn, unequip, updateRef } from '../../core/equipment';
-import { EquipSlot, Gizmo, ItemRef, KwuarmPotency, Loadout as LoadoutModel, OVERLOAD_CHOICES, OverloadChoice, Perk, RELICS, SLOT_NAMES, STYLES4, Style, WEAPON_POISON_NAMES, WeaponPoisonTier, WeaponSpec, newLoadout, COMBAT_SKILLS, CombatSkill, SKILL_MAX, SKILL_NAMES, isStyle4, loadoutLevels } from '../../core/models';
+import { EquipSlot, GearItem, Gizmo, ItemRef, KwuarmPotency, Loadout as LoadoutModel, OVERLOAD_CHOICES, OverloadChoice, Perk, RELICS, SLOT_NAMES, STYLES4, Style, WEAPON_POISON_NAMES, WeaponPoisonTier, WeaponSpec, newLoadout, COMBAT_SKILLS, CombatSkill, SKILL_MAX, SKILL_NAMES, isStyle4, loadoutLevels } from '../../core/models';
 import { OVERLOADS, boostedLevel, critMultiplier, damageSkillOf, levelPart, poisonPct } from '../../engine/damage';
 import { ResolvedLoadout } from '../../engine/loadout-resolved';
 import { isObscureGear, isObscurePerk, isObscureSpec, isObscureWeapon } from '../../core/obscure';
@@ -13,6 +13,7 @@ import { DialogService } from '../../shared/dialog';
 import { GearDragService } from '../../shared/gear-drag';
 import { GearAction, GearDrag, GearPanel, GearSource } from '../../shared/gear-panel';
 import { ToastService } from '../../shared/toast';
+import { filterEntries, groupEntries } from '../../shared/picker-groups';
 import { GearTip } from '../../shared/tooltip';
 
 /** catalog tabs: weapon slots, worn slots, potions */
@@ -65,6 +66,44 @@ interface EofEdit {
   where: Where;
   ref: ItemRef;
   spec: string | null;
+}
+
+/** one Essence of Finality amulet the loadout carries, worn or in the backpack, with the special it stores */
+export interface EofAmulet {
+  /** the worn neck slot, or the backpack slot (0-based) */
+  where: 'worn' | 'backpack';
+  index: number;
+  name: string;
+  spec: WeaponSpec | null;
+}
+
+/**
+ * Every Essence of Finality amulet a loadout carries – the worn one first, then the backpack in slot order.
+ *
+ * A loadout may hold several, each with its own stored special (`ItemRef.spec`), and the engine fires whichever the
+ * rotation asks for (`ResolvedLoadout.eofSpecs`). The effects panel used to read the neck slot alone, so a player
+ * with three amulets in the backpack was told they carried none.
+ */
+export function carriedEofAmulets(l: Pick<LoadoutModel, 'equipment' | 'inventory'>, gearById: Map<string, GearItem>, specById: Map<string, WeaponSpec>): EofAmulet[] {
+  const amulet = (ref: ItemRef | null | undefined): GearItem | null => {
+    const item = ref?.kind === 'gear' ? gearById.get(ref.id) ?? null : null;
+    return item?.passive === 'essence-of-finality' ? item : null;
+  };
+  const of = (ref: ItemRef, item: GearItem, where: EofAmulet['where'], index: number): EofAmulet => ({
+    where,
+    index,
+    name: item.name,
+    spec: ref.spec ? specById.get(ref.spec) ?? null : null,
+  });
+  const out: EofAmulet[] = [];
+  const neck = l.equipment?.neck;
+  const worn = amulet(neck);
+  if (neck && worn) out.push(of(neck, worn, 'worn', -1));
+  (l.inventory ?? []).forEach((ref, i) => {
+    const item = amulet(ref);
+    if (ref && item) out.push(of(ref, item, 'backpack', i));
+  });
+  return out;
 }
 
 @Component({
@@ -207,15 +246,8 @@ export class Loadout {
     }
     return null;
   });
-  readonly eofSpec = computed(() => {
-    const neck = this.l().equipment.neck;
-    const id = neck?.spec ?? null;
-    return id ? this.data.specById().get(id) ?? null : null;
-  });
-  readonly hasEof = computed(() => {
-    const neck = this.l().equipment.neck;
-    return neck?.kind === 'gear' && this.data.gearById().get(neck.id)?.passive === 'essence-of-finality';
-  });
+  /** every Essence of Finality amulet the loadout carries, worn or in the backpack (see carriedEofAmulets) */
+  readonly eofAmulets = computed<EofAmulet[]>(() => (this.data.loadoutReady() ? carriedEofAmulets(this.l(), this.data.gearById(), this.data.specById()) : []));
 
   private state(): GearState {
     return { equipment: this.l().equipment, inventory: this.l().inventory };
@@ -237,6 +269,21 @@ export class Loadout {
   }
 
   // ---------------------------------------------------------------- loadout list
+
+  /**
+   * The loadout picker: a boss preset adds one loadout per setup, so the chip row grew to over a hundred entries.
+   * The chips are grouped by boss and a search field narrows them (shared/picker-groups.ts); the loadout being edited
+   * always stays visible, so the page never shows a name the row does not hold.
+   */
+  readonly loadoutSearch = signal('');
+  readonly filteredLoadouts = computed(() => filterEntries(this.storage.loadouts(), this.loadoutSearch(), this.l().id));
+  readonly loadoutGroups = computed(() => groupEntries(this.filteredLoadouts()));
+  readonly loadoutCount = computed(() => {
+    const all = this.storage.loadouts().length;
+    const shown = this.filteredLoadouts().length;
+    return shown === all ? all + (all === 1 ? ' loadout' : ' loadouts') : shown + ' of ' + all;
+  });
+
 
   select(id: string): void {
     void this.storage.setActiveLoadout(id);

@@ -1,8 +1,27 @@
 <div class="panel head">
   <h1>Loadouts</h1>
+  @if (storage.loadouts().length > 8) {
+    <div class="loadout-filter">
+      <input
+        type="search"
+        placeholder="Filter loadouts by boss or name…"
+        aria-label="Filter the loadouts"
+        [ngModel]="loadoutSearch()"
+        (ngModelChange)="loadoutSearch.set($event)"
+      />
+      <span class="muted small">{{ loadoutCount() }}</span>
+    </div>
+  }
   <div class="chips">
-    @for (lo of storage.loadouts(); track lo.id) {
-      <button class="chip" [class.active]="lo.id === l().id" (click)="select(lo.id)">{{ lo.name }}</button>
+    @for (g of loadoutGroups(); track g.label) {
+      <div class="chip-group">
+        @if (g.label) { <span class="chip-group-label">{{ g.label }}</span> }
+        @for (e of g.items; track e.item.id) {
+          <button class="chip" [class.active]="e.item.id === l().id" (click)="select(e.item.id)" [title]="e.item.name">{{ e.label }}</button>
+        }
+      </div>
+    } @empty {
+      <span class="muted small">No loadout matches the filter.</span>
     }
     <button class="btn btn-sm" (click)="create()">New</button>
     <button class="btn btn-sm" (click)="duplicate()">Duplicate</button>
@@ -73,12 +92,26 @@
       </div>
       <div class="effect">
         <span class="slot-label">Essence of Finality</span>
-        @if (!hasEof()) {
-          <span class="muted">no Essence of Finality amulet worn (Neck)</span>
-        } @else if (eofSpec(); as s) {
-          <span><b>{{ s.name }}</b> <small class="muted">{{ s.adrenaline }}%</small></span>
-          @if (s.eof.notes) { <small class="muted">{{ s.eof.notes }}</small> }
-        } @else { <span class="muted">empty – right-click the amulet to store a special</span> }
+        @if (!eofAmulets().length) {
+          <span class="muted">no Essence of Finality amulet worn or carried</span>
+        } @else {
+          <ul class="eof-list">
+            @for (a of eofAmulets(); track a.where + a.index) {
+              <li>
+                <span class="eof-where">{{ a.where === 'worn' ? 'worn (Neck)' : 'backpack ' + (a.index + 1) }}</span>
+                @if (a.spec; as s) {
+                  <span><b>{{ s.name }}</b> <small class="muted">{{ s.adrenaline }}% adrenaline{{ s.cooldownTicks ? ' · ' + s.cooldownTicks * 0.6 + ' s cooldown' : '' }}</small></span>
+                  @if (s.eof.notes) { <small class="muted">{{ s.eof.notes }}</small> }
+                } @else {
+                  <span class="muted">empty – right-click the amulet to store a special</span>
+                }
+              </li>
+            }
+          </ul>
+          @if (eofAmulets().length > 1) {
+            <small class="muted">The rotation picks the amulet that holds the special it asks for; a carried one is marked "S" in the backpack.</small>
+          }
+        }
       </div>
       @for (s of sets(); track s.set.id) {
         <div class="effect">

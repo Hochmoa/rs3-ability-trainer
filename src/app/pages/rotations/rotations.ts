@@ -18,6 +18,7 @@ import { ruleFor } from '../../engine/rules';
 import { AbilityIcon } from '../../shared/ability-icon';
 import { EntityTip } from '../../shared/tooltip';
 import { DialogService } from '../../shared/dialog';
+import { filterEntries, groupLabels, groupOf } from '../../shared/picker-groups';
 
 const TABS = [...STYLES, 'Prayers', 'Curses', 'Spells', 'Special', 'Weapons', 'Specs', 'Actions'] as const;
 type Tab = (typeof TABS)[number];
@@ -51,6 +52,20 @@ export class Rotations {
   readonly importText = signal('');
   readonly importOpen = signal(false);
   readonly importReport = signal<string | null>(null);
+
+  /**
+   * The saved-rotation list below the editor: one card per rotation, and the PvME library brings hundreds of them.
+   * A search field and a boss filter narrow the list (shared/picker-groups.ts); with a few own rotations both are
+   * empty and the list is the plain one it was.
+   */
+  readonly listSearch = signal('');
+  readonly listBoss = signal('');
+  readonly listBosses = computed(() => groupLabels(this.storage.rotations()));
+  readonly listed = computed(() => {
+    const boss = this.listBoss();
+    const rows = boss ? this.storage.rotations().filter((r) => groupOf(r) === boss) : this.storage.rotations();
+    return filterEntries(rows, this.listSearch());
+  });
 
   /** same setting as on the action bars page: hide abilities / prayers / weapons nobody uses (core/obscure.ts) */
   readonly hideObscure = computed(() => this.storage.settings().hideObscureAbilities);

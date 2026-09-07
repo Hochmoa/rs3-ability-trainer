@@ -8,9 +8,15 @@
     }
   </select>
   <label class="chip" [class.active]="guides()" title="Only the rotations of the guide accounts – one per boss, maintained by the trainer from the PvME guide">
-    <input type="checkbox" [checked]="guides()" (change)="guides.set(!guides())" />
+    <input type="checkbox" [checked]="guides()" (change)="toggleGuides()" />
     Guides
   </label>
+  @if (guides() && accounts().length) {
+    <select [ngModel]="owner()" (ngModelChange)="owner.set($event)" aria-label="Filter by boss" title="Pick the boss whose guide rotations you want">
+      <option value="">All bosses</option>
+      @for (a of accounts(); track a) { <option [value]="a">{{ a }}</option> }
+    </select>
+  }
   <select [ngModel]="sort()" (ngModelChange)="sort.set($event)" [disabled]="guides()" [title]="guides() ? 'Guide rotations are sorted by boss and name' : ''">
     <option value="new">Newest</option>
     <option value="copies">Most copied</option>
@@ -70,5 +76,16 @@
         }
       }
     </div>
+  </div>
+}
+
+@if (rows().length) {
+  <div class="panel more">
+    @if (hasMore()) {
+      <button class="btn" type="button" (click)="loadMore()" [disabled]="loadingMore()">{{ loadingMore() ? 'Loading…' : 'Load more' }}</button>
+      <span class="muted small">{{ rows().length }} shown{{ guides() && !owner() ? ' – or pick a boss above' : '' }}</span>
+    } @else {
+      <span class="muted small">{{ rows().length }} {{ rows().length === 1 ? 'rotation' : 'rotations' }} – that is all of them.</span>
+    }
   </div>
 }
