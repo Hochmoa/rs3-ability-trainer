@@ -11,6 +11,9 @@ import { StorageService } from './storage.service';
 
 export type { BossPreset } from './preset-setup';
 
+/** rotation names PvME uses for what happens before the fight – those build the state, the others assume it */
+const PREBUILD_ROTATION = /pre-?build|pre-?fight|war'?s? retreat|^[^–]*–\s*wars?\b|prep|pre-?kill|fort forinthry/i;
+
 export interface ParsedRotation {
   name: string;
   steps: RotationStep[];
@@ -87,6 +90,11 @@ export class PresetsService {
       const eof = steps.find((st) => st.kind === 'spec' && !ownSpecs.has(st.id));
       if (eof) loadout.eofSpec = eof.id;
     }
+    // a familiar scroll in the rotations (Crit-i-Kal, Death from Above …) means that familiar is out
+    if (!loadout.familiar) {
+      const fam = steps.filter((st) => st.kind === 'special').map((st) => this.data.familiars().find((f) => f.scroll.id === st.id)).find((f) => !!f);
+      if (fam) loadout.familiar = fam.id;
+    }
     // Vengeance / Disruption Shield need the Lunar book, Smoke Cloud / Exsanguinate the Ancient one
     const books = steps.filter((st) => st.kind === 'spell').map((st) => this.data.spellById().get(st.id)?.book);
     if (books.includes('lunar')) loadout.spellbook = 'lunar';
@@ -97,6 +105,14 @@ export class PresetsService {
     const now = Date.now();
     const rotations: Rotation[] = parsed.map((r, i) => ({ id: crypto.randomUUID(), name: p.boss + ' – ' + r.name, steps: r.steps, updatedAt: now - i, presetId: p.id, presetIndex: i }));
     for (const r of rotations) await this.storage.saveRotation(r);
+    // PvME's necromancy fight rotations start mid-fight ("build 12 necrosis and 5 souls first"): every conjure out and the
+    // stacks built – the pre-build of those rotations, editable on the Train page
+    if (p.style === 'Necromancy') {
+      for (const r of rotations) {
+        if (PREBUILD_ROTATION.test(r.name)) continue;
+        await this.storage.savePrebuild(r.id, { stacks: { necrosis: 12, 'residual-souls': 5 }, spirits: ['skeleton-warrior', 'putrid-zombie', 'vengeful-ghost'], abilities: [], prayers: [] });
+      }
+    }
 
     const layout = keybindLayout(DEFAULT_LAYOUT_ID);
     const bars = presetBars(p, presetSlotKeys(parsed), this.storage.actionBars(), layout, loadout);

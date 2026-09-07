@@ -23,7 +23,7 @@ export const KEYBIND_LAYOUTS: KeybindLayout[] = [
   {
     id: 'rows',
     name: 'Number row + QWERTY',
-    description: 'Main bar 1-0 - = [ ], the Q, A and Z rows for additional bars 1-3 (Shift+ fills their last slots), Shift+1-0 on bar 4, F1-F4 for weapon switches, Tab for target cycle.',
+    description: 'Main bar 1-0 - = [ ], the Q, A and Z rows for additional bars 1-3 (Shift+ fills their last slots), Shift+1-0 on bar 4, F1-F4 and F6-F10 for weapon switches, Tab for target cycle, ` for the combat dummy.',
     bars: [
       DIGIT_ROW,
       ['KeyQ', 'KeyW', 'KeyE', 'KeyR', 'KeyT', 'KeyY', 'KeyU', 'KeyI', 'KeyO', 'KeyP', 'Backslash', ...shifted(['KeyQ', 'KeyW', 'KeyE'])],
@@ -31,13 +31,13 @@ export const KEYBIND_LAYOUTS: KeybindLayout[] = [
       ['KeyZ', 'KeyX', 'KeyC', 'KeyV', 'KeyB', 'KeyN', 'KeyM', 'Comma', 'Period', 'Slash', ...shifted(['KeyZ', 'KeyX', 'KeyC', 'KeyV'])],
       shifted(DIGIT_ROW),
     ],
-    weapons: ['F1', 'F2', 'F3', 'F4'],
-    actions: { 'target-cycle': 'Tab' },
+    weapons: ['F1', 'F2', 'F3', 'F4', 'F6', 'F7', 'F8', 'F9', 'F10'],
+    actions: { 'target-cycle': 'Tab', 'combat-dummy': 'Backquote' },
   },
   {
     id: 'numpad',
     name: 'Numpad + QWER (WASD free)',
-    description: 'Main bar on the numpad, the number row and the keys around WASD for the additional bars - W A S D and the arrows stay free for the camera. F1-F4 for weapon switches, Tab for target cycle.',
+    description: 'Main bar on the numpad, the number row and the keys around WASD for the additional bars - W A S D and the arrows stay free for the camera. F1-F4 and F6-F10 for weapon switches, Tab for target cycle, ` for the combat dummy.',
     bars: [
       ['Numpad1', 'Numpad2', 'Numpad3', 'Numpad4', 'Numpad5', 'Numpad6', 'Numpad7', 'Numpad8', 'Numpad9', 'Numpad0', 'NumpadDecimal', 'NumpadAdd', 'NumpadSubtract', 'NumpadMultiply'],
       [...DIGIT_ROW.slice(0, 12), 'KeyQ', 'KeyE'],
@@ -45,8 +45,8 @@ export const KEYBIND_LAYOUTS: KeybindLayout[] = [
       ['KeyZ', 'KeyX', 'KeyC', 'KeyV', 'KeyB', 'KeyN', 'KeyM', 'Comma', 'Period', 'Slash', 'Quote', 'BracketLeft', 'BracketRight', 'Backslash'],
       [...shifted(DIGIT_ROW.slice(0, 12)), 'Shift+KeyQ', 'Shift+KeyE'],
     ],
-    weapons: ['F1', 'F2', 'F3', 'F4'],
-    actions: { 'target-cycle': 'Tab' },
+    weapons: ['F1', 'F2', 'F3', 'F4', 'F6', 'F7', 'F8', 'F9', 'F10'],
+    actions: { 'target-cycle': 'Tab', 'combat-dummy': 'Backquote' },
   },
   {
     id: 'empty',

@@ -64,7 +64,7 @@ describe('preset bars', () => {
     expect(setup.weaponKeybinds['omni-guard']?.code).toBe('F1');
     expect(setup.weaponKeybinds['soulbound-lantern']?.code).toBe('F2');
     expect(setup.weaponKeybinds['ek-zekkil']?.code).toBe('F3');
-    expect(filled).toBe(5 * BAR_SLOTS + 3 + 1);
+    expect(filled).toBe(5 * BAR_SLOTS + 3 + 2); // + target cycle + combat dummy
   });
 
   it('keeps the player\'s own keys and only fills the rest', () => {

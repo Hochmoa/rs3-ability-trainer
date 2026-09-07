@@ -1243,7 +1243,9 @@ export class TrainerEngine {
   private autoSatisfied(i: number, tick: number): boolean {
     const s = this.steps[i];
     if (this.done.has(i)) return true;
-    if (s.kind !== 'prayer' || !this.activePrayers.has(prayerId(s.key))) return false;
+    // a prayer already on, or a switch to the weapon already in hand ("omniguard spec" while wielding it), needs no press
+    const wieldedSwitch = s.kind === 'weapon' && [this.wield.mainHand, this.wield.offHand, this.wield.twoHand].includes(s.id);
+    if (!wieldedSwitch && (s.kind !== 'prayer' || !this.activePrayers.has(prayerId(s.key)))) return false;
     this.done.add(i);
     const result: StepResult = {
       step: i, key: s.key, name: s.name, kind: s.kind, outcome: 'done', lateTicks: 0, offsetMs: 0, tooEarly: 0, wrong: 0,

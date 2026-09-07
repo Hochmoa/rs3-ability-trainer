@@ -406,6 +406,9 @@ export class Train implements OnDestroy {
     for (const [id, kb] of Object.entries(s.weaponKeybinds)) {
       if (kb) m.set('weapon:' + id, keybindLabel(kb));
     }
+    // a switch to the weapon already in hand needs no key: the engine completes that step on its own
+    const eq = this.storage.loadout().equipment;
+    for (const ref of [eq.mainHand, eq.offHand, eq.twoHand]) if (ref?.kind === 'weapon' && !m.has('weapon:' + ref.id)) m.set('weapon:' + ref.id, 'wielded');
     for (const [id, kb] of Object.entries(s.actionKeybinds ?? {})) {
       if (kb) m.set('action:' + id, keybindLabel(kb));
     }
