@@ -248,7 +248,11 @@ export class SyncService {
     if (opts.search?.trim()) q = q.ilike('name', '%' + opts.search.trim().replace(/[%_]/g, '') + '%');
     if (opts.style) q = q.contains('styles', [opts.style]);
     if (opts.guides) q = q.eq('owner_kind', 'guide').order('owner_name').order('name');
-    else q = opts.sort === 'copies' ? q.order('copies', { ascending: false }).order('updated_at', { ascending: false }) : q.order('updated_at', { ascending: false });
+    else {
+      // the guide accounts hold hundreds of rotations – they have their own chip and would bury the players' feed, but a search finds them
+      if (!opts.search?.trim()) q = q.neq('owner_kind', 'guide');
+      q = opts.sort === 'copies' ? q.order('copies', { ascending: false }).order('updated_at', { ascending: false }) : q.order('updated_at', { ascending: false });
+    }
     const { data, error } = await q;
     if (error) throw error;
     return data as RotationRow[];
