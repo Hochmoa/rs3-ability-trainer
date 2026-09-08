@@ -97,7 +97,9 @@ function page(route, { notFound = false } = {}) {
   html = replaceOrFail(html, /<meta name="twitter:title" content="[^"]*">/, `<meta name="twitter:title" content="${esc(route.title)}">`, 'twitter:title');
   html = replaceOrFail(html, /<meta name="twitter:description" content="[^"]*">/, `<meta name="twitter:description" content="${esc(route.description)}">`, 'twitter:description');
   html = replaceOrFail(html, /<script type="application\/ld\+json" id="ld-json">[\s\S]*?<\/script>/, `<script type="application/ld+json" id="ld-json">${JSON.stringify(jsonLd(route))}</script>`, 'ld+json');
-  html = replaceOrFail(html, /<app-root>[\s\S]*?<\/app-root>/, `<app-root>${staticBody(route)}</app-root>`, '<app-root>');
+  // the content must not contain another <app-root>: a comment in the head that names the tag would otherwise start the
+  // match there, and everything from it up to the real closing tag – head script, boot styles – would be replaced
+  html = replaceOrFail(html, /<app-root>((?!<app-root>)[\s\S])*?<\/app-root>/, `<app-root>${staticBody(route)}</app-root>`, 'the app-root element');
   return html;
 }
 

@@ -1,8 +1,13 @@
 /**
  * Crawlable static content per route, injected into <app-root> by postbuild.mjs. Angular replaces
- * it as soon as it bootstraps, so it is only ever seen by crawlers without JavaScript, link
- * previews and users on a very slow connection. Keep it truthful to what the page really offers.
+ * it as soon as it bootstraps, and a browser with JavaScript hides it right away (the `js` class in
+ * src/index.html) in favour of the loading indicator, so it is only ever read by crawlers without
+ * JavaScript and by link previews. Keep it truthful to what the page really offers.
  */
+
+/** what a visitor sees until Angular boots – the same markup src/index.html carries */
+const boot = `
+<div class="boot" role="status"><div class="boot-sweep" aria-hidden="true"></div><p id="boot-msg">Loading RS3 Ability Trainer…</p></div>`;
 const nav = `
 <nav aria-label="Pages">
   <a href="/">Train</a> · <a href="/rotations">Rotations</a> · <a href="/bars">Action bars</a> · <a href="/keybinds">Keybinds</a> ·
@@ -78,6 +83,6 @@ With an optional account the same data is synced to a database hosted in the EU 
 
 export function staticBody(route) {
   const body = content[route.path] ?? `<p>${route.description}</p>`;
-  return `<div class="seo-static" style="max-width:900px;margin:0 auto;padding:16px">
+  return `${boot}<div class="seo-static" style="max-width:900px;margin:0 auto;padding:16px">
 <h1>${route.h1}</h1>${body}${nav}${footer}</div>`;
 }
