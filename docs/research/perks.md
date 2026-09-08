@@ -39,7 +39,9 @@ repeated perk ("… is on 2 gizmos: perks do not stack with themselves, only ran
   'positive' perks to reach a higher rank (that is not possible in normal gizmos)". Two ancient-only combat perks:
   Relentless (max 5, ancient weapon + ancient armour) and Ruthless (max 3, ancient weapon only); Fortune is tool-only.
 * Each gizmo holds up to two perks (or one two-slot perk). Two-handed weapons take two weapon gizmos, one-handed weapons
-  one; body, legs and shields take one armour gizmo each (Invention page, quoted in perks-and-set-effects.md A.2).
+  one; body and legs take **two** armour gizmos each, a shield one (runescape.wiki/w/Augmentation and the augmented item
+  pages, re-read 2026-09-08: "As a torso slot item, the augmented Torva platebody can hold two gizmos, allowing up to four
+  perks (two on each)." The trainer models this in core/augment.ts, where an augmentable item counts as augmented).
 * Max ranks (Perks page table, `max rank standard` / `max rank ancient`): Precise 5/6, Spendthrift 5/6, Trophy-taker's 5/6,
   Lucky 5/6, Aftershock 3/4, Biting 3/4, Equilibrium 3/4, Eruptive 3/4, Crackling 3/4, Lunging 3/4, Caroming 3/4,
   Flanking 3/4, Ultimatums 3/4, Impatient 3/4, Invigorating 3/4, Clear Headed 3/4, Preparation 3/4, Turtling 3/4,

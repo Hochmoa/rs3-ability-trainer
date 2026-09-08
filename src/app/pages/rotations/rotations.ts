@@ -112,7 +112,7 @@ export class Rotations {
     for (const id of set) {
       const rule = ruleFor(id);
       if (rule?.replaces && set.has(rule.replaces)) {
-        out.push(this.data.get('ability:' + id)?.name + ' replaces ' + this.data.get('ability:' + rule.replaces)?.name + ' in game – both cannot be on the action bar.');
+        out.push(this.data.get('ability:' + id)?.name + ' replaces ' + this.data.get('ability:' + rule.replaces)?.name + ' in game, so both cannot be on the action bar.');
       }
     }
     // what the rotation asks for but never brings about itself: a command without its conjure, Volley without souls,
@@ -122,7 +122,7 @@ export class Rotations {
       const name = this.data.get('ability:' + a.id)?.name ?? a.id;
       const from = a.from ? this.data.get('ability:' + a.from)?.name : null;
       out.push(
-        'Step ' + (a.step + 1) + ', ' + name + ' ' + a.text + ' – ' +
+        'Step ' + (a.step + 1) + ', ' + name + ' ' + a.text + '. ' +
           (from ? 'cast ' + from + ' earlier in the rotation, or' : 'the rotation assumes it from before, so') +
           ' start the session with it (pre-build on the Train page).',
       );

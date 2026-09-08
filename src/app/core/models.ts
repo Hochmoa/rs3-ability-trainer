@@ -172,7 +172,7 @@ export interface Action {
 export const ACTIONS: Action[] = [
   { id: 'target-cycle', name: 'Target cycle', description: 'Switches to the next target (client keybind). Instant, no cooldown, no tick.', icon: 'assets/actions/target-cycle.png' },
   { id: 'combat-dummy', name: 'Combat dummy MKII', description: 'Deploys a combat dummy for 60 seconds (100 ticks): hitting it builds adrenaline, modelled as +10% per tick like the "recharge adrenaline" option. Instant, no GCD.', icon: 'assets/actions/combat-dummy.png' },
-  { id: 'eat-food', name: 'Eat food', description: 'Eating solid food costs 3% adrenaline (10% before the Combat Style Modernisation). Brews, blubber and drinks cost none – that is why rotations reach for those. Off the global cooldown; life points are not simulated.', icon: 'assets/actions/eat-food.png' },
+  { id: 'eat-food', name: 'Eat food', description: 'Eating solid food costs 3% adrenaline (10% before the Combat Style Modernisation). Brews, blubber and drinks cost none, which is why rotations reach for those. Off the global cooldown; life points are not simulated.', icon: 'assets/actions/eat-food.png' },
 ];
 /** pressing the "Weapon Special Attack" slot counts for whichever spec the rotation expects with the wielded weapon */
 export const SPEC_KEY = 'ability:weapon-special-attack';
@@ -287,7 +287,7 @@ export interface Setup {
 
 export const GENERAL_SETUP_NAME = 'General';
 /** what the pickers put between the boss and the setup's name */
-export const SETUP_SEPARATOR = ' – ';
+export const SETUP_SEPARATOR = ' · ';
 
 /** "Nex – solo ranged", "General" */
 export function setupTitle(s: Pick<Setup, 'boss' | 'name'>): string {
@@ -367,7 +367,7 @@ export type HitChanceMode = 'scaled' | 'roll' | 'off';
 export const HIT_CHANCE_MODES: { id: HitChanceMode; label: string }[] = [
   { id: 'scaled', label: 'Scaled damage (PvM, wiki)' },
   { id: 'roll', label: 'Roll to hit (misses)' },
-  { id: 'off', label: 'Off – every hit lands' },
+  { id: 'off', label: 'Off, every hit lands' },
 ];
 export type CombatMode = 'manual' | 'revolution';
 export type BoneShieldChoice = 'none' | 'lesser' | 'greater';
@@ -720,7 +720,7 @@ export const RELICS: { id: string; name: string; text: string }[] = [
   { id: 'conservation-of-energy', name: 'Conservation of Energy', text: 'Regain 10% adrenaline after an ultimate (stacks with Ring of vigour).' },
   { id: 'heightened-senses', name: 'Heightened Senses', text: 'Maximum adrenaline +10%.' },
   { id: 'persistent-rage', name: 'Persistent Rage', text: 'Out of combat adrenaline builds up instead of draining (no effect in the trainer).' },
-  { id: 'berserker-s-fury', name: "Berserker's Fury", text: 'Up to +5.5% damage the lower your life points are (not bleeds). Life points are not simulated – listed only.' },
+  { id: 'berserker-s-fury', name: "Berserker's Fury", text: 'Up to +5.5% damage the lower your life points are (not bleeds). Life points are not simulated, so this is listed only.' },
   { id: 'shadow-s-grace', name: "Shadow's Grace", text: 'Surge, Escape, Dive, Bladed Dive and Barge cooldowns −50% (does not stack with the Mobile perk).' },
 ];
 // Double Surge is an unlockable (Surge's second charge), not a relic: every loadout has it (engine/loadout-resolver.ts).

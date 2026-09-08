@@ -1,11 +1,11 @@
 <h1 class="sr-only">Action bars</h1>
 @if (data.loadError()) {
-  <p class="bad" role="alert">Could not load the ability data – check your connection. <button class="btn btn-sm" type="button" (click)="data.retry()">Retry</button></p>
+  <p class="bad" role="alert">Could not load the ability data. Check your connection. <button class="btn btn-sm" type="button" (click)="data.retry()">Retry</button></p>
 } @else if (!data.loaded()) {
   <p class="muted">Loading…</p>
 } @else {
   <div class="panel head">
-    <p class="muted small">Five bars like in game, 18 presets to fill them. They are yours alone – no setup you use and nothing you import writes into them.</p>
+    <p class="muted small">Five bars like in game, 18 presets to fill them. They belong to you alone: no setup you use and nothing you import writes into them.</p>
   </div>
   <div class="layout">
     <div class="panel presets" data-tour="bar-presets">
@@ -33,7 +33,7 @@
           <label class="copy">
             <span class="muted small">Copy from</span>
             <select [value]="copyPick()" (change)="pickCopy($any($event.target).value)">
-              <option value="">– preset –</option>
+              <option value="">no preset</option>
               @for (p of setup().presets; track p.id) {
                 @if (p.id !== preset().id && filled(p.id)) {
                   <option [value]="p.id">{{ p.id }} · {{ p.name }}</option>
@@ -115,7 +115,7 @@
                 <span class="revo-slot">{{ s.slot }}</span>
                 <span class="revo-name">{{ s.name }}</span>
                 @if (s.fires) {
-                  <span class="revo-why">{{ s.lastResort ? 'fires only when nothing else can – the basic attack is the last resort' : 'Revolution fires this' }}</span>
+                  <span class="revo-why">{{ s.lastResort ? 'fires only when nothing else can, the basic attack is the last resort' : 'Revolution fires this' }}</span>
                 } @else {
                   <span class="revo-why">{{ s.why }}</span>
                 }
@@ -141,7 +141,7 @@
             <label>
               <span>{{ name }}</span>
               <select [ngModel]="setup().positions[$index]" (ngModelChange)="setPosition($index, $event)">
-                <option [ngValue]="null">– empty –</option>
+                <option [ngValue]="null">empty</option>
                 @for (p of setup().presets; track p.id) {
                   <option [ngValue]="p.id">{{ p.id }} · {{ p.name }}</option>
                 }

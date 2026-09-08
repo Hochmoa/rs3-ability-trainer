@@ -66,12 +66,12 @@ export class Account {
       const email = this.email().trim();
       if (this.mode() === 'signup') {
         const name = this.displayName().trim();
-        if (!DISPLAY_NAME_RE.test(name)) throw new Error('Display name: 3–20 characters, letters, digits, space, _ or -.');
+        if (!DISPLAY_NAME_RE.test(name)) throw new Error('Display name: 3 to 20 characters, letters, digits, space, _ or -.');
         if (await this.supabase.displayNameTaken(name)) throw new Error('That display name is taken.');
         const { needsConfirmation } = await this.supabase.signUp(email, this.password(), name);
         this.message.set({
           text: needsConfirmation
-            ? 'Almost there – we sent a confirmation link to ' + email + '. Open it, then come back and sign in.'
+            ? 'Check your mail: we sent a confirmation link to ' + email + '. Open it, then come back and sign in.'
             : 'Registered and signed in.',
           cls: 'good',
         });
@@ -96,7 +96,7 @@ export class Account {
   async saveName(): Promise<void> {
     const name = this.newName().trim();
     if (!DISPLAY_NAME_RE.test(name)) {
-      this.message.set({ text: 'Display name: 3–20 characters, letters, digits, space, _ or -.', cls: 'bad' });
+      this.message.set({ text: 'Display name: 3 to 20 characters, letters, digits, space, _ or -.', cls: 'bad' });
       return;
     }
     this.busy.set(true);

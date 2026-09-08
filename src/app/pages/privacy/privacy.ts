@@ -17,12 +17,14 @@ import { environment } from '../../../environments/environment';
       <h3>With an account</h3>
       <p>
         If you register, your e-mail address, a hashed password and your display name are stored by
-        <a href="https://supabase.com" target="_blank" rel="noopener">Supabase</a> in {{ region }}. Your rotations
-        (with the "public" flag), your keybinds, action bars, loadouts, settings and summaries of your training sessions are
-        stored there too, so they follow you across browsers. Public rotations and your display name are visible to everyone
-        in the explorer; private ones only to you. Your settings, loadouts, keybinds and action bars are listed on the Setups
-        page for everyone (also without an account) unless you switch "Share my setup" off on the account page. Supabase
-        sends the confirmation and password-reset e-mails.
+        <a href="https://supabase.com" target="_blank" rel="noopener">Supabase</a> in {{ region }}. Your setups with their gear
+        and rotations, your action bars and keys, your settings and the summaries of your training sessions go there too, so they
+        follow you from browser to browser. Supabase also sends the confirmation and password reset mails.
+      </p>
+      <p>
+        A setup becomes visible to other people only when you mark it public. Its gear, its rotations and your display name are
+        then listed on the Setups page for everyone, signed in or not. Your action bars, your keys, your settings and your session
+        results are never shared, and neither are the setups you keep private.
       </p>
       <p>"Delete my account" on the <a routerLink="/account">account page</a> removes everything stored online.</p>
       <h3>Feedback</h3>

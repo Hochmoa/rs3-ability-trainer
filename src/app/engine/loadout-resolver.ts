@@ -106,7 +106,7 @@ export function loadoutWarnings(l: Loadout, data: LoadoutData): string[] {
   for (const g of wn.gear) {
     if (g.slot !== 'ammo' || !g.item.passive) continue;
     const needs = data.setEffectById.get(g.item.passive)?.effect?.['requiresWeapon'] as string | undefined;
-    if (needs && held && weaponType(held) !== needs) out.push(g.item.name + ' only fire from a ' + needs + ' – their effect is off with ' + held.name + '.');
+    if (needs && held && weaponType(held) !== needs) out.push(g.item.name + ' only fire from a ' + needs + ', so their effect is off with ' + held.name + '.');
   }
   return out;
 }
@@ -152,10 +152,10 @@ function checkPerkConflicts(gizmos: Worn['gizmos'], data: LoadoutData, out: stri
   const pair = (a: string, b: string, text: string) => {
     if (has(a) && has(b)) out.push(text);
   };
-  pair('devoted', 'enhanced-devoted', 'Enhanced Devoted does not stack with Devoted – Devoted is wasted.');
+  pair('devoted', 'enhanced-devoted', 'Enhanced Devoted does not stack with Devoted, so Devoted is wasted.');
   pair('efficient', 'enhanced-efficient', 'Enhanced Efficient does not stack with Efficient on the same item.');
-  pair('biting', 'equilibrium', 'Equilibrium prevents critical strikes – Biting has no effect.');
-  pair('shield-bashing', 'bulwark', 'Bulwark makes Debilitate deal no damage – Shield Bashing has no effect.');
+  pair('biting', 'equilibrium', 'Equilibrium prevents critical strikes, so Biting has no effect.');
+  pair('shield-bashing', 'bulwark', 'Bulwark makes Debilitate deal no damage, so Shield Bashing has no effect.');
 }
 
 export function mainStyle(l: Loadout, data: LoadoutData): Style | null {
@@ -312,15 +312,15 @@ export function resolveLoadout(l: Loadout, data: LoadoutData): ResolvedLoadout {
  * kind in the data is either applied by applyEffect() or listed here, so a new kind cannot go unnoticed.
  */
 export const NOT_SIMULATED_EFFECT_KINDS: Record<string, string> = {
-  'bolt-proc': 'the set fires Dragonstone / Onyx / Hydrix bolt effects with any bolts – those are not modelled; equipped Hydrix / Ruby bakriminel bolts (e) are (Sirenic / Elite sirenic)',
-  'armour-reduction': 'the target armour it lowers builds up per hit over 12 minutes – not modelled in the hit chance (Black stone arrows)',
+  'bolt-proc': 'the set fires Dragonstone, Onyx and Hydrix bolt effects with any bolts, which is not modelled; equipped Hydrix or Ruby bakriminel bolts (e) are (Sirenic / Elite sirenic)',
+  'armour-reduction': 'the target armour it lowers builds up per hit over 12 minutes, which the hit chance does not model (Black stone arrows)',
   'heal': "the player's life points are not simulated (scrimshaw of vampyrism)",
   'damage-delay': 'incoming damage is not simulated (Trimmed masterwork)',
   'strength-bonus': 'the strength bonus Achto gains with a shield / defender has no numbers on the wiki (the damage bonus of the pieces themselves counts)',
   'defensive-cooldown-reset-on-hit': 'incoming damage is not simulated (Achto)',
   'damage-taken': 'incoming damage is not simulated (Cryptbloom)',
   'proc': 'Croesus Deathspores / Fungal Shield depend on position and life points (Cryptbloom)',
-  'death-mark': 'Death Mark executes below 20% life points – boss immunities are not modelled (Deathdealer)',
+  'death-mark': 'Death Mark executes below 20% life points; boss immunities are not modelled (Deathdealer)',
   'cooldown-chance': 'numbers are not documented on the wiki (Warpriest of Armadyl / Bandos)',
   'crit-proc': 'numbers are not documented on the wiki (Warpriest of Tuska)',
   'daemonheim-only': 'the 15 class upgrades are "active at all times within Daemonheim" and nowhere else (Ring of kinship)',

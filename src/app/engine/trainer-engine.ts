@@ -1063,12 +1063,12 @@ export class TrainerEngine {
     }
     if (++this.wrongWeaponStrikes < 3) return;
     const text = entity.id === 'essence-of-finality'
-      ? 'No Essence of Finality you carry stores a ' + (this.style ?? '') + ' special attack – the rotation has no switch to a weapon of the style of a stored special'
+      ? 'No Essence of Finality you carry stores a ' + (this.style ?? '') + ' special attack. The rotation has no switch to a weapon of the style of a stored special'
       : wf === 'weapon'
-      ? entity.name + ' needs a ' + (entity.style ?? '') + ' weapon wielded – the rotation has no switch to one and you wield ' + (this.style ?? 'nothing')
+      ? entity.name + ' needs a ' + (entity.style ?? '') + ' weapon wielded. The rotation has no switch to one and you wield ' + (this.style ?? 'nothing')
       : this.loadout.eofSpecs.some((s) => s.id === entity.id) || this.loadout.eofSpec?.id === entity.id
-        ? entity.name + ' is stored in an Essence of Finality but needs a ' + (entity.style ?? '') + ' weapon wielded – the rotation has no switch to one and you wield ' + (this.style ?? 'nothing')
-        : entity.name + ' is not the special attack of the wielded weapon and no Essence of Finality you carry stores it – switch to its weapon or store it in an amulet';
+        ? entity.name + ' is stored in an Essence of Finality but needs a ' + (entity.style ?? '') + ' weapon wielded. The rotation has no switch to one and you wield ' + (this.style ?? 'nothing')
+        : entity.name + ' is not the special attack of the wielded weapon, and no Essence of Finality you carry stores it. Switch to its weapon or store it in an amulet';
     const info: StuckInfo = { key: entity.key, step: this.stepIndexOf(entity.key), reason: 'weapon', text };
     this.stuck = info;
     this.pending = null;
@@ -1095,7 +1095,7 @@ export class TrainerEngine {
     }
     if (this.wrongFired?.key !== expected.key) this.wrongFired = { key: expected.key, count: 0 };
     if (++this.wrongFired.count < 3) return;
-    const info: StuckInfo = { key: expected.key, step: this.stepIndexOf(expected.key), reason: 'weapon', text: expected.name + ' did not fire – the slot fires ' + fired.name + ' (the weapon in hand or the amulet holds another special attack and the rotation has no switch)' };
+    const info: StuckInfo = { key: expected.key, step: this.stepIndexOf(expected.key), reason: 'weapon', text: expected.name + ' did not fire, the slot fires ' + fired.name + ' (the weapon in hand or the amulet holds another special attack and the rotation has no switch)' };
     this.stuck = info;
     this.pending = null;
     this.inflight = [];

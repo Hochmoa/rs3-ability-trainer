@@ -149,7 +149,7 @@ export class Admin {
   }
 
   async rename(u: AdminUser): Promise<void> {
-    const name = await this.dialogs.prompt('New display name for ' + u.display_name + ' (3–20 characters, letters, digits, space, _ -):', { title: 'Rename user', value: u.display_name, ok: 'Rename' });
+    const name = await this.dialogs.prompt('New display name for ' + u.display_name + ' (3 to 20 characters, letters, digits, space, _ -):', { title: 'Rename user', value: u.display_name, ok: 'Rename' });
     if (name === null) return;
     if (!DISPLAY_NAME_RE.test(name.trim())) {
       await this.dialogs.alert('That name is not valid.', 'Rename user');
@@ -245,7 +245,7 @@ export class Admin {
     setTimeout(() => {
       throw new Error('Test error from the admin panel (' + new Date().toISOString() + ')');
     });
-    this.toasts.show('Test error thrown – reload in a moment to see it');
+    this.toasts.show('Test error thrown. Reload in a moment to see it');
   }
 
   async deleteFeedback(f: FeedbackRow): Promise<void> {

@@ -250,9 +250,9 @@ describe('gizmo validation (loadoutWarnings)', () => {
   });
 
   it('perks that cancel each other', () => {
-    expect(warnings({ two: SCYTHE, body: gizmo([['devoted', 4]]), legs: gizmo([['enhanced-devoted', 4]]) })).toEqual(['Enhanced Devoted does not stack with Devoted – Devoted is wasted.']);
-    expect(warnings({ two: SCYTHE, weapon: [gizmo([['equilibrium', 4]])], body: gizmo([['biting', 4]]) })).toEqual(['Equilibrium prevents critical strikes – Biting has no effect.']);
-    expect(warnings({ two: SCYTHE, weapon: [gizmo([['shield-bashing', 4]])], body: gizmo([['bulwark', 4]]) })).toEqual(['Bulwark makes Debilitate deal no damage – Shield Bashing has no effect.']);
+    expect(warnings({ two: SCYTHE, body: gizmo([['devoted', 4]]), legs: gizmo([['enhanced-devoted', 4]]) })).toEqual(['Enhanced Devoted does not stack with Devoted, so Devoted is wasted.']);
+    expect(warnings({ two: SCYTHE, weapon: [gizmo([['equilibrium', 4]])], body: gizmo([['biting', 4]]) })).toEqual(['Equilibrium prevents critical strikes, so Biting has no effect.']);
+    expect(warnings({ two: SCYTHE, weapon: [gizmo([['shield-bashing', 4]])], body: gizmo([['bulwark', 4]]) })).toEqual(['Bulwark makes Debilitate deal no damage, so Shield Bashing has no effect.']);
     expect(warnings({ two: SCYTHE, weapon: [gizmo([['efficient', 4]])], body: gizmo([['enhanced-efficient', 4]]) })).toEqual(['Enhanced Efficient does not stack with Efficient on the same item.']);
   });
 });

@@ -1,11 +1,11 @@
 <div class="panel head">
   <h1>Keybinds</h1>
-  <p class="muted small">Same as in game: a key belongs to a bar slot, whatever sits there fires on it. Click a slot, press the key – the middle mouse button and the side buttons (mouse 4 / 5) work too.</p>
+  <p class="muted small">Same as in game: a key belongs to a bar slot, whatever sits there fires on it. Click a slot, press the key. The middle mouse button and the side buttons (mouse 4 and 5) work too.</p>
 </div>
 
 <div class="panel tools" data-tour="keys">
   @if (coarse) {
-    <p class="muted small">Keybinds need a keyboard – on a phone you tap the slots.</p>
+    <p class="muted small">Keybinds need a keyboard. On a phone you tap the slots instead.</p>
   } @else {
     <div class="tool">
       <button class="btn btn-primary" (click)="startWizard()" [disabled]="!!wizard()">Bind all keys by pressing them</button>
@@ -73,7 +73,7 @@
             <span class="idx">{{ i + 1 }}</span>
           }
           <span class="key" [class.waiting]="isCapturing({ pos: pos, slot: i })">
-            {{ isCapturing({ pos: pos, slot: i }) ? '…' : label(pos, i) || '–' }}
+            {{ isCapturing({ pos: pos, slot: i }) ? '…' : label(pos, i) || '-' }}
           </span>
           @if (label(pos, i) && !isCapturing({ pos: pos, slot: i })) {
             <span class="clear" (click)="clear({ pos: pos, slot: i }); $event.stopPropagation()" title="Clear keybind">×</span>
@@ -105,7 +105,7 @@
       >
         <img [src]="w.icon" [alt]="w.name" />
         <span class="name">{{ w.name }}</span>
-        <span class="key" [class.waiting]="isCapturing({ weapon: w.id })">{{ isCapturing({ weapon: w.id }) ? 'Press a key…' : weaponLabel(w.id) || '–' }}</span>
+        <span class="key" [class.waiting]="isCapturing({ weapon: w.id })">{{ isCapturing({ weapon: w.id }) ? 'Press a key…' : weaponLabel(w.id) || '-' }}</span>
         @if (weaponLabel(w.id)) {
           <span class="clear" (click)="clear({ weapon: w.id }); $event.stopPropagation()" title="Clear">×</span>
         }
@@ -129,7 +129,7 @@
       >
         <img [src]="a.icon" [alt]="a.name" />
         <span class="name">{{ a.name }}</span>
-        <span class="key" [class.waiting]="isCapturing({ action: a.id })">{{ isCapturing({ action: a.id }) ? 'Press a key…' : actionLabel(a.id) || '–' }}</span>
+        <span class="key" [class.waiting]="isCapturing({ action: a.id })">{{ isCapturing({ action: a.id }) ? 'Press a key…' : actionLabel(a.id) || '-' }}</span>
         @if (actionLabel(a.id)) {
           <span class="clear" (click)="clear({ action: a.id }); $event.stopPropagation()" title="Clear">×</span>
         }

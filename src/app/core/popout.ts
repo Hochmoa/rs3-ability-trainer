@@ -44,7 +44,7 @@ export async function openFocusWindow(url: string, width = POPOUT_WIDTH, height 
       d.body.style.cssText = 'margin:0;height:100%;background:#0f0f12;overflow:hidden';
       const frame = d.createElement('iframe');
       frame.src = url;
-      frame.title = 'RS3 Ability Trainer – focus view';
+      frame.title = 'RS3 Ability Trainer, focus view';
       frame.style.cssText = 'border:0;width:100%;height:100%;display:block';
       frame.addEventListener('load', () => frame.contentWindow?.focus());
       d.body.appendChild(frame);

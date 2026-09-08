@@ -197,7 +197,7 @@ describe('parsePvme – targets', () => {
 
   it('a target followed by prose keeps the prose in the hint', () => {
     const r = parsePvme('aod if it is close', resolve);
-    expect(r.steps).toEqual([{ kind: 'action', id: 'target-cycle', hint: 'Angel of Death – if it is close' }]);
+    expect(r.steps).toEqual([{ kind: 'action', id: 'target-cycle', hint: 'Angel of Death: if it is close' }]);
     expect(r.unknown).toEqual([]);
   });
 });

@@ -56,7 +56,7 @@ const GIZMO_PERKS = 2; // a gizmo holds up to two perks
 
 /**
  * Puts the guide's Invention perks on the gear: weapon perks into the wielded weapon's gizmos (a two-hander takes
- * two, a pair one each), the rest into the body and legs gizmos. Ancient perks make their gizmo ancient. Perks that
+ * two, a pair one each), the rest into the four armour gizmos of body and legs. Ancient perks make their gizmo ancient. Perks that
  * find no free gizmo are dropped – the loadout page can still add them by hand.
  */
 export function applyPresetPerks(l: Loadout, perks: { id: string; rank: number }[], perkGizmos: (id: string) => string[] | undefined): void {
@@ -68,8 +68,8 @@ export function applyPresetPerks(l: Loadout, perks: { id: string; rank: number }
   add(eq.twoHand, 'weapon', 2);
   add(eq.mainHand, 'weapon', 1);
   add(eq.offHand?.kind === 'weapon' ? eq.offHand : null, 'weapon', 1);
-  add(eq.body, 'armour', 1);
-  add(eq.legs, 'armour', 1);
+  add(eq.body, 'armour', 2); // torso and legs hold two armour gizmos each (core/augment.ts)
+  add(eq.legs, 'armour', 2);
   const gizmos = new Map<ItemRef, { ancient: boolean; perks: { perk: string; rank: number }[] }[]>();
   for (const { ref, kind } of slots) {
     void kind;

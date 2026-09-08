@@ -176,7 +176,7 @@ export class Setups {
   }
 
   async newSetup(): Promise<void> {
-    const name = await this.dialogs.prompt('Name of the new setup – the boss can be set afterwards:', { title: 'New setup', placeholder: 'e.g. solo ranged', ok: 'Create' });
+    const name = await this.dialogs.prompt('Name of the new setup. You can set the boss afterwards:', { title: 'New setup', placeholder: 'e.g. solo ranged', ok: 'Create' });
     if (name === null || !name.trim()) return;
     if (await this.storage.acceptConsentOnSave()) this.toast.show('Saved in this browser', 'info', 2000);
     const s = await this.storage.createSetup({ name: name.trim().slice(0, 60) });
@@ -197,7 +197,7 @@ export class Setups {
 
   async togglePublic(s: Setup): Promise<void> {
     if (!this.supabase.user()) {
-      this.toast.show('Sign in to share a setup – then it is listed for everyone.', 'info');
+      this.toast.show('Sign in to share a setup. Then it is listed for everyone.', 'info');
       return;
     }
     await this.storage.saveSetup({ ...s, isPublic: !s.isPublic });

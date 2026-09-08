@@ -43,7 +43,7 @@ export interface SlotView {
   selector: 'action-bar',
   imports: [EntityTip, CdkDropList, CdkDrag],
   template: `
-    <div class="bar" [class.main]="position() === 0" [class.compact]="compact()" [class.editable]="editable()" role="group" [attr.aria-label]="(position() === 0 ? 'Main bar' : 'Bar ' + position()) + (presetName() ? ' – ' + presetName() : '')">
+    <div class="bar" [class.main]="position() === 0" [class.compact]="compact()" [class.editable]="editable()" role="group" [attr.aria-label]="(position() === 0 ? 'Main bar' : 'Bar ' + position()) + (presetName() ? ', ' + presetName() : '')">
       <div class="slots">
         @for (s of slots(); track $index) {
           <div

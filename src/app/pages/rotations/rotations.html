@@ -21,17 +21,17 @@
     <div class="steps" cdkDropList cdkDropListOrientation="mixed" (cdkDropListDropped)="reorder($event)">
       @for (s of r.steps; track $index) {
         @if (s.kind === 'note') {
-          <div class="tile note" [class.phase]="s.phase" [class.todo]="s.requiresAction" cdkDrag [cdkDragStartDelay]="{ touch: 250, mouse: 0 }" [title]="(s.phase ? 'Phase: ' : 'Note: ') + s.note + ' – click to edit'" (click)="editNote($index)">
+          <div class="tile note" [class.phase]="s.phase" [class.todo]="s.requiresAction" cdkDrag [cdkDragStartDelay]="{ touch: 250, mouse: 0 }" [title]="(s.phase ? 'Phase: ' : 'Note: ') + s.note + ' (click to edit)'" (click)="editNote($index)">
             <span class="num">{{ $index + 1 }}</span>
             <span class="note-text">{{ s.note }}</span>
             @if (s.requiresAction) {
-              <button class="tag action-tag" (click)="editActionTicks($index); $event.stopPropagation()" title="How long the action takes – click to change (1 tick = 0.6 s)">
+              <button class="tag action-tag" (click)="editActionTicks($index); $event.stopPropagation()" title="How long the action takes. Click to change (1 tick = 0.6 s)">
                 do this · {{ s.actionTicks ?? NOTE_ACTION_TICKS }}t
               </button>
             }
             <span class="tile-actions">
               @if (!s.phase) {
-                <button class="act" [class.on]="s.requiresAction" (click)="toggleNoteAction($index); $event.stopPropagation()" [title]="s.requiresAction ? 'The player has to click this note during the session – click: back to a plain note' : 'Make it something the player has to do: the rotation stops here until the button is clicked'">✋</button>
+                <button class="act" [class.on]="s.requiresAction" (click)="toggleNoteAction($index); $event.stopPropagation()" [title]="s.requiresAction ? 'The player has to click this note during the session. Click here to make it a plain note again' : 'Make it something the player has to do: the rotation stops here until the button is clicked'">✋</button>
               }
               <button class="act" (click)="editNote($index); $event.stopPropagation()" title="Edit text">✎</button>
               <button class="act danger" (click)="removeStep($index); $event.stopPropagation()" title="Remove">×</button>
@@ -45,13 +45,13 @@
             @else if (s.sameTick && !(e.ability?.triggersGcd || e.spec)) { <span class="tag">same tick</span> }
             <span class="tile-actions">
               @if (e.kind !== 'ability' && e.kind !== 'spec') {
-                <button class="act" [class.on]="s.sameTick" (click)="toggleSameTick($index)" [title]="s.sameTick ? 'Same tick as the previous input – click: any time before the next ability' : 'Any time before the next ability – click: same tick as the previous input (PvME +)'">{{ s.sameTick ? '+' : '·' }}</button>
+                <button class="act" [class.on]="s.sameTick" (click)="toggleSameTick($index)" [title]="s.sameTick ? 'Same tick as the previous input. Click for: any time before the next ability' : 'Any time before the next ability. Click for: same tick as the previous input (PvME +)'">{{ s.sameTick ? '+' : '·' }}</button>
               }
               <button class="act danger" (click)="removeStep($index)" title="Remove">×</button>
             </span>
           </div>
         } @else {
-          <div class="tile unknown" cdkDrag [cdkDragStartDelay]="{ touch: 250, mouse: 0 }" [title]="s.id + ' – removed from the game'">
+          <div class="tile unknown" cdkDrag [cdkDragStartDelay]="{ touch: 250, mouse: 0 }" [title]="s.id + ' (removed from the game)'">
             <span class="num">{{ $index + 1 }}</span>
             <span class="removed-mark">?</span>
             <span class="tile-actions"><button class="act danger" (click)="removeStep($index)" title="Remove">×</button></span>
@@ -107,7 +107,7 @@
 } @else {
   <div class="panel list-head">
     <h1>Rotations</h1>
-    <label class="setup-pick" title="The setup these rotations belong to – switch here or on the Train page">
+    <label class="setup-pick" title="The setup these rotations belong to. Switch here or on the Train page">
       <span class="muted small">of setup</span>
       <select [ngModel]="storage.activeSetupId()" (ngModelChange)="pickSetup($event)">
         @for (g of setupGroups(); track g.label) {

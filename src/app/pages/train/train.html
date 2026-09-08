@@ -1,12 +1,12 @@
 @if (focus()) {
-<!-- /focus popout (route data `focus`): the compact view for a small window next to the game – same session, no panels (styles: train-focus.scss) -->
+<!-- /focus popout (route data `focus`): the compact view for a small window next to the game: same session, no panels (styles: train-focus.scss) -->
 <div class="focus" [class.running]="running()">
   @if (data.loadError()) {
-    <p class="bad focus-msg">Could not load the ability data – check your connection. <button class="btn btn-sm" type="button" (click)="data.retry()">Retry</button></p>
+    <p class="bad focus-msg">Could not load the ability data. Check your connection. <button class="btn btn-sm" type="button" (click)="data.retry()">Retry</button></p>
   } @else if (!storage.ready() || !data.loaded()) {
     <p class="muted focus-msg">Loading…</p>
   } @else if (!storage.rotations().length) {
-    <p class="muted focus-msg">No rotation yet – create one on the <a routerLink="/" target="_blank">Train page</a>.</p>
+    <p class="muted focus-msg">No rotation yet. Create one on the <a routerLink="/" target="_blank">Train page</a>.</p>
   } @else {
     <div class="focus-head">
       <select [ngModel]="storage.activeSetupId()" (ngModelChange)="pickSetup($event)" [disabled]="running()" title="Setup">
@@ -45,7 +45,7 @@
             }
           </div>
         } @else {
-          <div class="fslot" [class.current]="s.kind === 'current'" [title]="s.entity.name + (s.hint ? ' – ' + s.hint : '')">
+          <div class="fslot" [class.current]="s.kind === 'current'" [title]="s.entity.name + (s.hint ? ': ' + s.hint : '')">
             <ability-icon
               [ability]="s.entity"
               [keyLabel]="s.key"
@@ -87,7 +87,7 @@
             @if (h.step !== undefined) { <span class="step">{{ h.step + 1 }}</span> }
           </div>
         } @empty {
-          <span class="muted none">–</span>
+          <span class="muted none">-</span>
         }
       </div>
     </div>
@@ -95,7 +95,7 @@
       @for (b of focusBars(); track b.position) {
         <action-bar [position]="b.position" [presetName]="b.presetName" [slots]="b.slots" [revolutionSlots]="revolutionSlots()" (slotClick)="slotClick(b.position, $event)" />
       } @empty {
-        <p class="muted focus-msg">No abilities on your bars – set them up on the main Train page.</p>
+        <p class="muted focus-msg">No abilities on your bars. Set them up on the main Train page.</p>
       }
     </div>
     @if (running() || finished()) {
@@ -112,9 +112,9 @@
   }
 </div>
 } @else {
-<h1 class="sr-only">RS3 Ability Trainer – practise RuneScape 3 rotations</h1>
+<h1 class="sr-only">RS3 Ability Trainer, for practising RuneScape 3 rotations</h1>
 @if (data.loadError()) {
-  <p class="bad" role="alert">Could not load the ability data – check your connection. <button class="btn btn-sm" type="button" (click)="data.retry()">Retry</button></p>
+  <p class="bad" role="alert">Could not load the ability data. Check your connection. <button class="btn btn-sm" type="button" (click)="data.retry()">Retry</button></p>
 } @else if (!storage.ready() || !data.loaded()) {
   <p class="muted">Loading…</p>
 } @else if (!storage.rotations().length) {
@@ -122,7 +122,7 @@
     <h2>No rotation yet</h2>
     <p>Press Start, hit the keys, see if you are on tick.</p>
     <div class="empty-actions">
-      <button class="btn btn-primary" type="button" (click)="presets.addDemo()">Try the demo – Rasial, keys 1–0</button>
+      <button class="btn btn-primary" type="button" (click)="presets.addDemo()">Try the demo: Rasial, keys 1 to 0</button>
       <a class="btn" routerLink="/rotations">Create a rotation</a>
     </div>
   </div>
@@ -241,7 +241,7 @@
       } @else {
         <button class="btn btn-sm popout" type="button" (click)="popout()" title="Opens the focus view in a small window you can keep next to the game. Stays on top in Chrome and Edge.">Popout</button>
       }
-      <label class="pill adv" title="Shows the enemy with its incoming attacks, the pre-build, the HUD, the gear panel and the bar layout editor. Same simulation – but incoming attacks only happen in the advanced view.">
+      <label class="pill adv" title="Shows the enemy with its incoming attacks, the pre-build, the HUD, the gear panel and the bar layout editor. The simulation is the same, but incoming attacks only happen in the advanced view.">
         <input type="checkbox" [checked]="advanced()" (change)="setUiMode(!advanced())" [disabled]="running()" />
         Advanced view
       </label>
@@ -323,7 +323,7 @@
           <span>First attack after (ticks)</span>
           <input type="number" inputmode="decimal" min="1" max="50" [ngModel]="enemy().firstAttackTicks" (ngModelChange)="setEnemy('firstAttackTicks', numberOf($event, 1, 50))" [disabled]="running()" />
         </label>
-        <div class="field" title="Affinity per style from the wiki: 90 against its weakness, 55–70 otherwise, 100 = always hit.">
+        <div class="field" title="Affinity per style from the wiki: 90 against its weakness, 55 to 70 otherwise, 100 = always hit.">
           <span>Affinity (%)</span>
           <div class="affinity">
             @for (st of STYLES4; track st) {
@@ -464,7 +464,7 @@
       </div>
       @for (a of assumptions(); track a.step + ':' + a.id) {
         <div class="assume">
-          <b>Step {{ a.step + 1 }}, {{ a.name }}</b> {{ a.text }}@if (a.fromName) { <span class="muted"> – {{ a.fromName }} is what conjures it</span> }
+          <b>Step {{ a.step + 1 }}, {{ a.name }}</b> {{ a.text }}@if (a.fromName) { <span class="muted">, {{ a.fromName }} is what conjures it</span> }
         </div>
       }
       <div class="fixes">
@@ -497,7 +497,7 @@
           }
         </div>
       }
-      <span class="muted small">You can still train – those steps are refused like in game. <a routerLink="/loadout">Loadout</a></span>
+      <span class="muted small">You can still train. Those steps are refused like in game. <a routerLink="/loadout">Loadout</a></span>
     </div>
   }
 
@@ -505,7 +505,7 @@
    <div class="arena-main">
     <div class="hitsplats" aria-live="off">
       @for (h of hitsplats(); track h.id) {
-        <div class="hitsplat" [class.crit]="h.crit" [class.dot]="h.dot" [class.miss]="h.miss" [title]="h.name + (h.miss ? ' – missed' : '')">{{ h.miss ? 'MISS' : (h.amount | number: '1.0-0') }}</div>
+        <div class="hitsplat" [class.crit]="h.crit" [class.dot]="h.dot" [class.miss]="h.miss" [title]="h.name + (h.miss ? ', missed' : '')">{{ h.miss ? 'MISS' : (h.amount | number: '1.0-0') }}</div>
       }
     </div>
     @if (finishReason(); as why) {
@@ -539,7 +539,7 @@
               @if (next(); as n) {
                 <button class="btn" type="button" (click)="playNext(n.id)">Next: {{ nextLabel() }} ▸</button>
                 <button class="btn" type="button" (click)="playNextFromHere(n.id)"
-                        title="Carries this session's adrenaline, stacks, conjures, buffs and prayers into the next rotation as its pre-build – the way a boss's next phase starts where this one stopped">Next from here ▸</button>
+                        title="Carries this session's adrenaline, stacks, conjures, buffs and prayers into the next rotation as its pre-build, the way a boss's next phase starts where this one stopped">Next from here ▸</button>
               }
               <button class="btn" (click)="finishDismissed.set(true)">Close</button>
             </div>
@@ -559,7 +559,7 @@
         @if (s.note !== undefined) {
           <div class="slot note" [class]="'slot note ' + s.kind" [class.phase]="s.phase" [class.todo]="s.requiresAction" [title]="s.note">
             @if (s.requiresAction && s.kind === 'current' && running()) {
-              <button class="btn btn-primary note-action" type="button" (click)="pressNote(s.stepIndex)" [title]="'Click when you have done this – the rotation goes on ' + s.actionTicks + ' ticks later'">
+              <button class="btn btn-primary note-action" type="button" (click)="pressNote(s.stepIndex)" [title]="'Click when you have done this. The rotation goes on ' + s.actionTicks + ' ticks later'">
                 {{ s.note }}
               </button>
             } @else {
@@ -599,7 +599,7 @@
       {{ feedback()?.text ?? idleText() }}@if (feedback()?.detail; as d) { <small class="detail muted">{{ d }}</small> }
     </div>
 
-    <!-- what the server made of every press, in order – compare with the rotation strip above; always rendered so nothing below moves -->
+    <!-- what the server made of every press, in order; compare with the rotation strip above. Always rendered so nothing below moves -->
     <div class="history" title="What actually cast, in order. Refused presses are not listed. Green on time, yellow late, red wrong, blue Revolution, grey prayer or switch. Number = rotation step.">
       <span class="bar-label">Pressed</span>
       <div class="history-strip" #historyStrip>
@@ -609,7 +609,7 @@
             @if (h.step !== undefined) { <span class="step">{{ h.step + 1 }}</span> }
           </div>
         } @empty {
-          <span class="muted none">–</span>
+          <span class="muted none">-</span>
         }
       </div>
     </div>
@@ -629,7 +629,7 @@
       @if (channel(); as c) {
         <div class="bar-row">
           <span class="bar-label">Channel <small>{{ c.name }}</small></span>
-          <div class="bar channel" [title]="c.name + ': ' + c.hitsDone + ' of ' + c.hits + ' hits – another ability cancels the rest'">
+          <div class="bar channel" [title]="c.name + ': ' + c.hitsDone + ' of ' + c.hits + ' hits, another ability cancels the rest'">
             <div class="fill" [style.width.%]="c.phase * 100"></div>
             <span class="value">{{ c.phase * 100 | number: '1.0-0' }}% · {{ c.hitsDone }}/{{ c.hits }} hits · {{ c.remainingS | number: '1.1-1' }} s</span>
           </div>
@@ -637,7 +637,7 @@
       } @else if (rotationHasChannel()) {
         <div class="bar-row">
           <span class="bar-label">Channel</span>
-          <div class="bar channel"><span class="value muted">–</span></div>
+          <div class="bar channel"><span class="value muted">-</span></div>
         </div>
       }
       <div class="bar-row">
@@ -661,7 +661,7 @@
       }
     </div>
 
-    <!-- HUD: buffs, target debuffs, prayers, carried weapons and the incoming attack – fixed height, so the bars below never move; the simple view omits it (the view cannot change during a session) -->
+    <!-- HUD: buffs, target debuffs, prayers, carried weapons and the incoming attack. Fixed height, so the bars below never move; the simple view omits it (the view cannot change during a session) -->
     @if (advanced()) {
     <div class="hud">
       <div class="hud-rows">
@@ -669,13 +669,13 @@
           <span class="label">Buffs</span>
           <div class="icons">
             @for (b of selfBuffs(); track b.id) {
-              <div class="status buff" [class.stacking]="b.stacks" [title]="b.name + (b.stacks ? ' ' + b.stacks + (b.max ? '/' + b.max : '') + (b.remainingS === null ? ' (no timer – until consumed)' : '') : '')">
+              <div class="status buff" [class.stacking]="b.stacks" [title]="b.name + (b.stacks ? ' ' + b.stacks + (b.max ? '/' + b.max : '') + (b.remainingS === null ? ' (no timer, it lasts until consumed)' : '') : '')">
                 @if (b.icon) { <img [src]="b.icon" [alt]="b.name" /> } @else { <span class="fallback">{{ b.name.slice(0, 2) }}</span> }
                 @if (b.stacks) { <span class="stacks">{{ b.stacks }}</span> }
                 @if (b.remainingS !== null) { <span class="timer">{{ b.remainingS | number: '1.0-0' }}</span> }
               </div>
             } @empty {
-              <span class="muted none">–</span>
+              <span class="muted none">-</span>
             }
           </div>
         </div>
@@ -688,7 +688,7 @@
                 @if (b.remainingS !== null) { <span class="timer">{{ b.remainingS | number: '1.0-0' }}</span> }
               </div>
             } @empty {
-              <span class="muted none">–</span>
+              <span class="muted none">-</span>
             }
           </div>
         </div>
@@ -704,17 +704,17 @@
             }
           </div>
           @if (carriedWeapons().length || actionChips().length) {
-            <div class="weapons" title="carried weapons and client actions – the lit weapon is wielded">
+            <div class="weapons" title="carried weapons and client actions; the lit weapon is wielded">
               @for (w of carriedWeapons(); track w.entity.id) {
                 <div class="weapon" [class.active]="wielded().includes(w.entity.id)" [title]="w.entity.name" [entityTip]="w.entity" (click)="clickWeapon(w.entity.id)">
                   <img [src]="w.entity.icon" [alt]="w.entity.name" />
-                  <span class="key">{{ w.key || '–' }}</span>
+                  <span class="key">{{ w.key || '-' }}</span>
                 </div>
               }
               @for (a of actionChips(); track a.entity.id) {
                 <div class="weapon" [title]="a.entity.name" [entityTip]="a.entity" (click)="clickAction(a.entity.id)">
                   <img [src]="a.entity.icon" [alt]="a.entity.name" />
-                  <span class="key">{{ a.key || '–' }}</span>
+                  <span class="key">{{ a.key || '-' }}</span>
                 </div>
               }
             </div>
@@ -743,7 +743,7 @@
               </div>
             </div>
           } @else {
-            <div class="info"><span class="muted small">{{ running() ? 'waiting for the enemy' : enemy().name + ' – attacks start ' + (enemy().firstAttackTicks * TICK_MS) / 1000 + ' s after Start' }}</span></div>
+            <div class="info"><span class="muted small">{{ running() ? 'waiting for the enemy' : enemy().name + ', attacks start ' + (enemy().firstAttackTicks * TICK_MS) / 1000 + ' s after Start' }}</span></div>
           }
           <div class="score">
             <b>{{ prayerScore().score }}</b><span class="muted">/{{ prayerScore().max }}</span>
@@ -756,18 +756,18 @@
 
     @if (!advanced() && (carriedWeapons().length || actionChips().length)) {
       <!-- simple view has no HUD: the weapon switches and client actions still need a place to tap and show their keys -->
-      <div class="weapons simple-weapons" title="carried weapons and client actions – press the key or tap; the lit weapon is wielded">
+      <div class="weapons simple-weapons" title="carried weapons and client actions; press the key or tap, the lit weapon is wielded">
         <span class="muted small">Switches</span>
         @for (w of carriedWeapons(); track w.entity.id) {
           <div class="weapon" [class.active]="wielded().includes(w.entity.id)" [title]="w.entity.name" [entityTip]="w.entity" (click)="clickWeapon(w.entity.id)">
             <img [src]="w.entity.icon" [alt]="w.entity.name" />
-            <span class="key">{{ w.key || '–' }}</span>
+            <span class="key">{{ w.key || '-' }}</span>
           </div>
         }
         @for (a of actionChips(); track a.entity.id) {
           <div class="weapon" [title]="a.entity.name" [entityTip]="a.entity" (click)="clickAction(a.entity.id)">
             <img [src]="a.entity.icon" [alt]="a.entity.name" />
-            <span class="key">{{ a.key || '–' }}</span>
+            <span class="key">{{ a.key || '-' }}</span>
           </div>
         }
       </div>
@@ -835,7 +835,7 @@
     @if (advanced() && enemy().enabled && attackLog().length) {
       <div class="attack-log">
         @for (a of attackLog(); track a.tick) {
-          <span class="hit" [class.good]="a.prayed || a.absorbed" [class.bad]="!a.prayed && !a.absorbed" [title]="a.style + (a.absorbed ? ' – absorbed by ' + buffName(a.absorbed) : a.prayed ? ' – prayed' : ' – hit')">
+          <span class="hit" [class.good]="a.prayed || a.absorbed" [class.bad]="!a.prayed && !a.absorbed" [title]="a.style + (a.absorbed ? ', absorbed by ' + buffName(a.absorbed) : a.prayed ? ', prayed' : ', hit')">
             <img [src]="weaponIcon(a.style)" [alt]="a.style" />
           </span>
         }
@@ -856,7 +856,7 @@
   @if (finished() && (results().length || stuck() || (enemyOn() && prayerStats().attacks))) {
     <div class="panel summary">
       <div class="summary-head">
-        <h2>Session summary{{ results().length ? ' – ' + accuracy() + '% clean' : '' }}</h2>
+        <h2>Session summary{{ results().length ? ': ' + accuracy() + '% clean' : '' }}</h2>
         @if (results().length) {
           <button class="btn btn-sm" type="button" (click)="showAllResults.set(!showAllResults())">{{ showAllResults() ? 'Only the steps that were off' : 'Show all ' + results().length + ' steps' }}</button>
         }
@@ -864,7 +864,7 @@
       @if (stuck(); as st) {
         <div class="stuck-panel" data-stuck="1" role="alert">
           <b>Rotation stuck at step {{ st.step + 1 }}: {{ st.name }}</b>
-          <p class="stuck-reason">{{ st.text }} – this rotation cannot be played as written from here.</p>
+          <p class="stuck-reason">{{ st.text }} This rotation cannot be played as written from here.</p>
           <p class="stuck-hint">{{ stuckHint }}</p>
         </div>
       }

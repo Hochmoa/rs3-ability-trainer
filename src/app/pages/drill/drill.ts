@@ -255,7 +255,7 @@ export class DrillPage implements OnDestroy {
         queued: false,
         flash: flash && flash.pos === pos && flash.slot === i ? flash.kind : null,
       }));
-      return { position: pos, presetName: preset?.name ?? '– empty –', slots, shape: layout.shape[pos], on: on[pos] };
+      return { position: pos, presetName: preset?.name ?? 'empty', slots, shape: layout.shape[pos], on: on[pos] };
     });
   });
 
@@ -286,7 +286,7 @@ export class DrillPage implements OnDestroy {
   start(): void {
     const pool = this.pool();
     if (!pool.length) {
-      this.toast.show(this.anyKeys() ? 'Nothing to drill with these options – widen the filter.' : 'No keybound slots yet – bind some keys first.', 'warn');
+      this.toast.show(this.anyKeys() ? 'Nothing to drill with these options. Widen the filter.' : 'No keybound slots yet. Bind some keys first.', 'warn');
       return;
     }
     const o = this.options();
@@ -452,7 +452,7 @@ export class DrillPage implements OnDestroy {
   // ---- formatting
 
   ms(v: number | null): string {
-    return v === null ? '–' : v >= 1000 ? (v / 1000).toFixed(2) + ' s' : v + ' ms';
+    return v === null ? '-' : v >= 1000 ? (v / 1000).toFixed(2) + ' s' : v + ' ms';
   }
 
   pct(v: number): string {

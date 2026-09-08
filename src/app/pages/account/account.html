@@ -7,7 +7,7 @@
       Signed in as <b>{{ supabase.profile()?.display_name ?? '…' }}</b> <span class="muted">({{ user.email }})</span>
     </p>
     <p class="muted small">
-      Your setups (gear + rotations), action bars, keys and settings are stored online (Supabase, EU) and synced to every browser you sign in with. Only the setups you mark public are visible to others – never your bars or keys.
+      Your setups (gear + rotations), action bars, keys and settings are stored online (Supabase, EU) and synced to every browser you sign in with. Only the setups you mark public are visible to others. Your bars and keys never are.
       @if (sync.syncing()) { · syncing… }
       @else if (sync.error()) { · <span class="bad">sync error: {{ sync.error() }}</span> }
       @else if (sync.lastSync()) { · synced }
@@ -25,7 +25,7 @@
       <input type="text" [ngModel]="newName()" (ngModelChange)="newName.set($event)" name="newName" [placeholder]="supabase.profile()?.display_name ?? 'new name'" maxlength="20" />
       <button class="btn" type="submit" [disabled]="busy() || !newName().trim()">Change</button>
     </form>
-    <p class="muted small">3–20 characters: letters, digits, space, _ or -. Shown next to your public setups.</p>
+    <p class="muted small">3 to 20 characters: letters, digits, space, _ or -. Shown next to your public setups.</p>
   </div>
 
   <div class="panel">
@@ -71,7 +71,7 @@
           <span>Display name</span>
           <input type="text" [ngModel]="displayName()" (ngModelChange)="onNameInput($event)" name="displayName" required maxlength="20" autocomplete="nickname" />
           <small>
-            3–20 characters: letters, digits, space, _ or -. Shown next to your public rotations.
+            3 to 20 characters: letters, digits, space, _ or -. Shown next to your public setups.
             @if (displayName() && !nameValid()) { <span class="bad">Not allowed yet.</span> }
             @else if (nameTaken() === true) { <span class="bad">Taken.</span> }
             @else if (nameTaken() === false) { <span class="good">Available.</span> }

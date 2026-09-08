@@ -1,5 +1,5 @@
 import { Injectable, effect, inject, signal } from '@angular/core';
-import { Loadout, ProfileKind, Rotation, Session, Setup, newSetup } from './models';
+import { Loadout, ProfileKind, Rotation, SETUP_SEPARATOR, Session, Setup, newSetup } from './models';
 import { necroPrebuild } from './presets.service';
 import { StorageService } from './storage.service';
 import { SupabaseService, errorText } from './supabase.service';
@@ -366,5 +366,5 @@ export class SyncService {
 const PREBUILD_ROTATION = /pre-?build|pre-?fight|war'?s? retreat|^[^–]*–\s*wars?\b|prep|pre-?kill|fort forinthry/i;
 
 function setupTitleOf(s: Pick<SetupRow, 'boss' | 'name'>): string {
-  return s.boss ? s.boss + ' – ' + s.name : s.name;
+  return s.boss ? s.boss + SETUP_SEPARATOR + s.name : s.name;
 }

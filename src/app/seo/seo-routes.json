@@ -6,96 +6,96 @@
     "name": "Martin Hochmair",
     "url": "https://hochware.com"
   },
-  "description": "Practise RuneScape 3 rotations on the real tick clock. Paste a PvME rotation, press the keys, see if you were on tick.",
+  "description": "Practise RuneScape 3 rotations on the game clock. Paste a PvME rotation, press your keys, see whether you were on tick.",
   "routes": [
     {
       "path": "focus",
-      "title": "Focus view – RS3 Ability Trainer",
+      "title": "Focus view | RS3 Ability Trainer",
       "h1": "Focus view",
-      "description": "Compact popout of the RS3 Ability Trainer for a small window next to the game or inside Alt1: rotation strip, tick and GCD bars, feedback and action bars.",
+      "description": "The compact popout of the RS3 Ability Trainer for a small window next to the game or inside Alt1: rotation strip, tick and GCD bars, feedback, action bars.",
       "noindex": true
     },
     {
       "path": "",
-      "title": "RS3 Ability Trainer – Practise RuneScape 3 Rotations",
+      "title": "RS3 Ability Trainer | Practise RuneScape 3 Rotations",
       "h1": "RS3 Ability Trainer",
-      "description": "Practise RuneScape 3 rotations on the real tick clock. Paste a PvME rotation, press the keys, see if you were on tick.",
+      "description": "Practise RuneScape 3 rotations on the game clock. Paste a PvME rotation, press your keys, see whether you were on tick.",
       "priority": 1.0,
       "changefreq": "weekly"
     },
     {
       "path": "rotations",
-      "title": "Rotation Builder & PvME Import – RS3 Ability Trainer",
+      "title": "Rotation Builder and PvME Import | RS3 Ability Trainer",
       "h1": "Rotations",
-      "description": "Build RuneScape 3 ability rotations step by step or import PvME notation. Abilities, prayers, weapon switches and special attacks with wiki data: cooldown, adrenaline, damage.",
+      "description": "Build a RuneScape 3 rotation step by step or paste it in PvME notation. Abilities, prayers, weapon switches and special attacks carry the wiki numbers: cooldown, adrenaline, damage.",
       "priority": 0.9,
       "changefreq": "weekly"
     },
     {
       "path": "setups",
-      "title": "Boss Setups: Gear & Rotations – RS3 Ability Trainer",
+      "title": "Boss Setups: Gear and Rotations | RS3 Ability Trainer",
       "h1": "Setups",
-      "description": "RuneScape 3 boss setups from the PvME guides and from other players: gear, backpack and rotations for Rasial, Zamorak, Nakatra, Kerapac, Nex, Telos and more – copied into the trainer in one click.",
+      "description": "RuneScape 3 boss setups from the PvME guides and from other players. Gear, backpack and rotations for Rasial, Zamorak, Nakatra, Kerapac, Nex, Telos and more, copied into the trainer with one click.",
       "priority": 0.9,
       "changefreq": "daily"
     },
     {
       "path": "bars",
-      "title": "Action Bar Setup – RS3 Ability Trainer",
+      "title": "Action Bar Setup | RS3 Ability Trainer",
       "h1": "Action bars",
-      "description": "Recreate your RuneScape 3 action bars: presets, slot layout and bar binding exactly like in the game, so the trainer matches your real interface.",
+      "description": "Rebuild your RuneScape 3 action bars: 18 presets, where each bar sits, which one a combat style shows. The trainer then matches your real interface.",
       "priority": 0.7,
       "changefreq": "monthly"
     },
     {
       "path": "keybinds",
-      "title": "Keybinds – RS3 Ability Trainer",
+      "title": "Keybinds | RS3 Ability Trainer",
       "h1": "Keybinds",
-      "description": "Bind keys and modifier combinations (Ctrl, Shift, Alt) to action bar slots and weapon switches, exactly like your RuneScape 3 setup.",
+      "description": "Bind keys and Ctrl, Shift or Alt combinations to action bar slots and weapon switches, the way your RuneScape 3 setup does it.",
       "priority": 0.7,
       "changefreq": "monthly"
     },
     {
       "path": "loadout",
-      "title": "Loadouts: Weapons, Perks & Relics – RS3 Ability Trainer",
-      "h1": "Loadouts",
-      "description": "Set up your RuneScape 3 loadout: weapons and switches, armour, perks, relics and prayer book. The trainer applies their effects to cooldowns and adrenaline.",
+      "title": "Gear: Weapons, Perks and Relics | RS3 Ability Trainer",
+      "h1": "Gear",
+      "description": "Set up the gear of a RuneScape 3 setup: weapons and switches, armour, perks, relics, prayer book. The trainer applies what they do to cooldowns and adrenaline.",
       "priority": 0.7,
       "changefreq": "monthly"
     },
     {
       "path": "settings",
-      "title": "Trainer Settings – RS3 Ability Trainer",
+      "title": "Trainer Settings | RS3 Ability Trainer",
       "h1": "Settings",
-      "description": "Trainer settings: ability queueing like in game, simulated ping and jitter, hit delay, the coach voice and metronome, hit chance model, Alt1.",
+      "description": "Trainer settings: ability queueing as in game, simulated ping and jitter, hit delay, the coach voice and metronome, hit chance, Alt1.",
       "priority": 0.4,
       "changefreq": "monthly"
     },
     {
       "path": "privacy",
-      "title": "Privacy – RS3 Ability Trainer",
+      "title": "Privacy | RS3 Ability Trainer",
       "h1": "Privacy",
-      "description": "What the RS3 Ability Trainer stores in your browser and online, where the data lives and how to delete it.",
+      "description": "What the RS3 Ability Trainer keeps in your browser and online, where that data lives and how to delete it.",
       "priority": 0.3,
       "changefreq": "yearly"
     },
     {
       "path": "account",
-      "title": "Account – RS3 Ability Trainer",
+      "title": "Account | RS3 Ability Trainer",
       "h1": "Account",
-      "description": "Sign in to sync your rotations and keybinds.",
+      "description": "Sign in to sync your setups, bars and keys between devices.",
       "noindex": true
     },
     {
       "path": "admin",
-      "title": "Admin – RS3 Ability Trainer",
+      "title": "Admin | RS3 Ability Trainer",
       "h1": "Admin",
       "description": "Staff area.",
       "noindex": true
     },
     {
       "path": "auth/callback",
-      "title": "Signing in – RS3 Ability Trainer",
+      "title": "Signing in | RS3 Ability Trainer",
       "h1": "Signing in",
       "description": "Finishing sign-in.",
       "noindex": true

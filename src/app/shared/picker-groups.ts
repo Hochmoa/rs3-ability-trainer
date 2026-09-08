@@ -8,8 +8,10 @@
  * like the plain list it was.
  */
 
-/** what the preset import puts between the boss and the rest of the name */
-export const GROUP_SEPARATOR = ' – ';
+/** what a setup title puts between the boss and the rest of the name (core/models.ts setupTitle) */
+export const GROUP_SEPARATOR = ' · ';
+/** builds up to Sept 2026 wrote a dash there; names stored back then still split correctly */
+const LEGACY_SEPARATOR = ' – ';
 
 export interface PickerEntry {
   id: string;
@@ -30,9 +32,10 @@ export interface PickerGroup<T extends PickerEntry> {
  * because a rotation name may carry more of them ("Zamorak – 4-man – p2 only").
  */
 export function splitName(name: string): { group: string; rest: string } {
-  const i = name.indexOf(GROUP_SEPARATOR);
+  const sep = name.includes(GROUP_SEPARATOR) ? GROUP_SEPARATOR : LEGACY_SEPARATOR;
+  const i = name.indexOf(sep);
   if (i <= 0) return { group: '', rest: name };
-  const rest = name.slice(i + GROUP_SEPARATOR.length).trim();
+  const rest = name.slice(i + sep.length).trim();
   return rest ? { group: name.slice(0, i).trim(), rest } : { group: '', rest: name };
 }
 

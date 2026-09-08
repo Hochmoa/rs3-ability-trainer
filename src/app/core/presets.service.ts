@@ -165,7 +165,7 @@ export class PresetsService {
 
   /** One sentence for the toast after an add. */
   describe(a: AddedPreset): string {
-    return 'Added "' + a.loadoutName + '": loadout and ' + a.rotations.length + (a.rotations.length === 1 ? ' rotation' : ' rotations') + '. Your bars and keys are untouched – the Train page shows what is not on them yet.';
+    return 'Added "' + a.loadoutName + '": loadout and ' + a.rotations.length + (a.rotations.length === 1 ? ' rotation' : ' rotations') + '. Your bars and keys are untouched; the Train page shows what is not on them yet.';
   }
 
   /**
@@ -194,7 +194,7 @@ export class PresetsService {
     // asked for a ready-made demo: the same free-slots-only path as the Train page's "Auto-place on my bars"
     // (core/bar-place.ts) – nothing of theirs is overwritten, empty slots get the default layout keys.
     this.placeDemoOnBars(added.rotations[added.demoIndex] ?? added.rotations[0]);
-    this.toast.show('Demo loaded – press Start.');
+    this.toast.show('Demo loaded. Press Start.');
     void this.router.navigate(['/'], { queryParams: { rotation: added.rotations[added.demoIndex]?.id } });
     return true;
   }

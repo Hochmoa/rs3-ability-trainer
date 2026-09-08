@@ -128,7 +128,7 @@ const NARROW_QUERY = '(max-width: 640px)';
 /** localStorage: the simple view's "Options" disclosure */
 const OPTIONS_KEY = 'rs3trainer.train.options';
 /** one-line hint under the stuck marker (finish overlay, session summary) */
-const STUCK_HINT = "A game update may have changed the ability, or the trainer has a bug – check the ability's cooldown in the tooltip and the rotation text";
+const STUCK_HINT = "A game update may have changed the ability, or the trainer has a bug. Check the ability's cooldown in the tooltip and the rotation text";
 
 /** the stuck marker's reason line: "Death Skulls is still on cooldown for 20 s" / "Conjure Skeleton Warrior: a skeleton warrior is already active" */
 function stuckReason(name: string, ev: Extract<EngineEvent, { kind: 'stuck' }>): string {
@@ -234,7 +234,7 @@ export class Train implements OnDestroy {
     const n = this.next();
     const cur = this.rotation();
     if (!n) return '';
-    const sep = ' – ';
+    const sep = ' · ';
     const prefix = cur && cur.name.includes(sep) ? cur.name.slice(0, cur.name.indexOf(sep) + sep.length) : '';
     return prefix && n.name.startsWith(prefix) ? n.name.slice(prefix.length) : n.name;
   });
@@ -536,14 +536,14 @@ export class Train implements OnDestroy {
     const layout = keybindLayout(DEFAULT_LAYOUT_ID);
     const r = placeOnBars(this.storage.actionBars(), this.startStyle(), this.unreachable().map((e) => e.key), layout);
     if (!r.placed.length) {
-      this.toast.show('No free slot on your bars – clear one below or use the Action bars page.', 'warn');
+      this.toast.show('No free slot on your bars. Clear one below, or use the Action bars page.', 'warn');
       return;
     }
     void this.storage.saveActionBars(r.setup);
     this.toast.show(
       'Placed ' + r.placed.length + (r.placed.length === 1 ? ' step' : ' steps') + ' on your bars' +
         (r.filled ? ', ' + r.filled + (r.filled === 1 ? ' key' : ' keys') + ' from the "' + layout.name + '" layout' : '') +
-        (r.left.length ? ' – ' + r.left.length + ' did not fit' : ''),
+        (r.left.length ? ', ' + r.left.length + ' did not fit' : ''),
     );
   }
 
@@ -719,7 +719,7 @@ export class Train implements OnDestroy {
           pressed: running && !!entity && (pressed.has(entity.key) || (!!shown && pressed.has(shown.key))),
         };
       });
-      return { position: pos, presetName: preset?.name ?? '– empty –', slots, shape: layout.shape[pos] };
+      return { position: pos, presetName: preset?.name ?? 'empty', slots, shape: layout.shape[pos] };
     });
   });
 
@@ -1009,9 +1009,9 @@ export class Train implements OnDestroy {
   async popout(): Promise<void> {
     const url = new URL(focusUrl(this.selectedId()), this.doc.baseURI).toString();
     const how = await openFocusWindow(url);
-    if (how === 'pip') this.toast.show('Focus view opened in a picture-in-picture window – it stays on top. Click into it, then press your keys.');
+    if (how === 'pip') this.toast.show('Focus view opened in a picture-in-picture window. It stays on top: click into it, then press your keys.');
     else if (how === 'popup') this.toast.show('Focus view opened in a popup window. Click into it, then press your keys.');
-    else this.toast.show('The browser blocked the popup – allow popups for this site, or open /focus in a new window yourself.', 'warn');
+    else this.toast.show('The browser blocked the popup. Allow popups for this site, or open /focus in a new window yourself.', 'warn');
   }
 
   /** a rotation belongs to a setup: picking it makes that setup – its gear – the active one */
@@ -1152,7 +1152,7 @@ export class Train implements OnDestroy {
     this.tooEarlyShown = false;
     this.maxAdrenaline.set(this.engine.maxAdrenaline);
     const first = this.slots().find((s) => s.kind === 'current');
-    if (this.revolution()) this.feedback.set({ text: 'Revolution is on – the yellow slots of the main bar fire on their own; press what the rotation needs beyond that.', cls: 'info' });
+    if (this.revolution()) this.feedback.set({ text: 'Revolution is on: the yellow slots of the main bar fire on their own, so press what the rotation needs beyond that.', cls: 'info' });
     else this.feedback.set({ text: (this.coarsePointer() ? 'Tap ' : 'Press ') + first?.key + ' (' + first?.entity.name + ') to start.', cls: 'info' });
     this.finished.set(false);
     this.finishReason.set(null);
@@ -1390,7 +1390,7 @@ export class Train implements OnDestroy {
     }
     if (e.settling && !this.settleNoted) {
       this.settleNoted = true;
-      this.feedback.set({ text: 'All inputs done – waiting for the last hits to land (Esc ends now)', cls: 'info' });
+      this.feedback.set({ text: 'All inputs done, waiting for the last hits to land (Esc ends now)', cls: 'info' });
     }
     const cp = e.channelProgress(now);
     this.channel.set(cp ? { ...cp, name: this.name(cp.key), icon: e.catalog.get(cp.key)?.icon ?? null, remainingS: cp.remainingMs / 1000 } : null);
@@ -1430,7 +1430,7 @@ export class Train implements OnDestroy {
     if (!cs.callouts && !cs.lead && !cs.metronome) return;
     this.coach.configure(cs);
     void this.coach.enable().then((ok) => {
-      if (!ok) this.toast.show('The browser blocked the sound – allow audio for this site and press Start again.', 'warn');
+      if (!ok) this.toast.show('The browser blocked the sound. Allow audio for this site and press Start again.', 'warn');
     });
   }
 
@@ -1582,9 +1582,9 @@ export class Train implements OnDestroy {
       case 'queued': {
         const inMs = Math.max(0, Math.round(e.tickTime(ev.fireTick) - now));
         if (ev.key === ev.expected) {
-          this.feedback.set({ text: 'Queued – casts in ' + inMs + ' ms', cls: 'info' });
+          this.feedback.set({ text: 'Queued, casts in ' + inMs + ' ms', cls: 'info' });
         } else {
-          this.feedback.set({ text: 'Wrong ability queued: ' + this.name(ev.key) + ' – expected ' + this.name(ev.expected), cls: 'bad' });
+          this.feedback.set({ text: 'Wrong ability queued: ' + this.name(ev.key) + ', expected ' + this.name(ev.expected), cls: 'bad' });
           this.flash('wrong', ev.key, now, inMs + 200);
         }
         break;
@@ -1597,20 +1597,20 @@ export class Train implements OnDestroy {
           // Revolution (or the automatic basic attack) completed the step on its own – counted like a press, but flagged as automatic
           this.counts.update((c) => (r.outcome === 'late' ? { ...c, late: c.late + 1 } : { ...c, perfect: c.perfect + 1 }));
           const who = r.autoAttack ? 'Auto-attack: ' : 'Revolution: ';
-          this.feedback.set({ text: who + r.name + (r.outcome === 'late' ? ' – late by ' + r.lateTicks + (r.lateTicks === 1 ? ' tick' : ' ticks') + ' (nothing was usable earlier)' : ' – automatic'), cls: r.outcome === 'late' ? 'warn' : 'good' });
+          this.feedback.set({ text: who + r.name + (r.outcome === 'late' ? ', late by ' + r.lateTicks + (r.lateTicks === 1 ? ' tick' : ' ticks') + ' (nothing was usable earlier)' : ', automatic'), cls: r.outcome === 'late' ? 'warn' : 'good' });
         } else if (r.outcome === 'perfect') {
           this.counts.update((c) => ({ ...c, perfect: c.perfect + 1 }));
-          this.feedback.set({ text: r.name + ' – on tick', detail: this.advanced() && r.offsetMs ? r.offsetMs + ' ms early' : undefined, cls: 'good' });
+          this.feedback.set({ text: r.name + ', on tick', detail: this.advanced() && r.offsetMs ? r.offsetMs + ' ms early' : undefined, cls: 'good' });
         } else if (r.outcome === 'late') {
           this.counts.update((c) => ({ ...c, late: c.late + 1 }));
-          const hint = this.lateHintShown ? '' : ' – press when the GCD bar empties';
+          const hint = this.lateHintShown ? '' : '. Press when the GCD bar empties';
           this.lateHintShown = true;
-          this.feedback.set({ text: r.name + ' – ' + this.offText(r) + hint, detail: this.advanced() && r.offsetMs ? '+' + r.offsetMs + ' ms' : undefined, cls: 'warn' });
+          this.feedback.set({ text: r.name + ', ' + this.offText(r) + hint, detail: this.advanced() && r.offsetMs ? '+' + r.offsetMs + ' ms' : undefined, cls: 'warn' });
         } else if (r.outcome === 'early') {
           this.counts.update((c) => ({ ...c, late: c.late + 1 }));
-          this.feedback.set({ text: r.name + ' – ' + -r.lateTicks + (r.lateTicks === -1 ? ' tick' : ' ticks') + ' early', cls: 'warn' });
+          this.feedback.set({ text: r.name + ', ' + -r.lateTicks + (r.lateTicks === -1 ? ' tick' : ' ticks') + ' early', cls: 'warn' });
         } else {
-          this.feedback.set({ text: r.name + (r.kind === 'weapon' ? ' wielded' : ' – activated'), cls: 'good' });
+          this.feedback.set({ text: r.name + (r.kind === 'weapon' ? ' wielded' : ' activated'), cls: 'good' });
         }
         this.appendCancelNote();
         this.log(r.key, r.auto ? 'auto' : r.outcome === 'perfect' || r.outcome === 'done' ? 'ok' : 'late', this.feedback()?.text ?? r.name, r.step);
@@ -1622,7 +1622,7 @@ export class Train implements OnDestroy {
         // late cast now waits for the basic attack's GCD (a matching "(auto)" step gets its 'fired' result right after)
         this.counts.update((c) => ({ ...c, autoAttacks: c.autoAttacks + 1 }));
         if (!ev.matched) {
-          this.feedback.set({ text: 'Auto-attack slipped in – you were late, the next cast waits for its GCD', cls: 'warn' });
+          this.feedback.set({ text: 'Auto-attack slipped in. You were late, so the next cast waits for its GCD', cls: 'warn' });
           this.appendCancelNote();
           this.log(ev.key, 'auto', this.feedback()?.text ?? '');
           this.flash('fired', ev.key, now, 200);
@@ -1632,7 +1632,7 @@ export class Train implements OnDestroy {
         // Revolution's own cast: never a mistake; a matching step gets its 'fired' result right after this event
         this.counts.update((c) => ({ ...c, auto: c.auto + 1 }));
         if (!ev.matched) {
-          this.feedback.set({ text: 'Revolution cast ' + this.name(ev.key) + (ev.expected ? ' – the rotation still waits for ' + this.name(ev.expected) : ''), cls: 'info' });
+          this.feedback.set({ text: 'Revolution cast ' + this.name(ev.key) + (ev.expected ? ', the rotation still waits for ' + this.name(ev.expected) : ''), cls: 'info' });
           this.appendCancelNote();
           this.log(ev.key, 'auto', this.feedback()?.text ?? '');
           this.flash('fired', ev.key, now, 200);
@@ -1640,7 +1640,7 @@ export class Train implements OnDestroy {
         break;
       case 'wrong-fired':
         this.counts.update((c) => ({ ...c, wrong: c.wrong + 1 }));
-        this.feedback.set({ text: this.name(ev.key) + (this.data.get(ev.key)?.kind === 'ability' ? ' cast' : ' activated') + ' instead of ' + this.name(ev.expected) + ' – try again', cls: 'bad' });
+        this.feedback.set({ text: this.name(ev.key) + (this.data.get(ev.key)?.kind === 'ability' ? ' cast' : ' activated') + ' instead of ' + this.name(ev.expected) + '. Try again', cls: 'bad' });
         this.appendCancelNote();
         this.log(ev.key, 'wrong', this.feedback()?.text ?? '');
         this.flash('wrong', ev.key, now, 300);
@@ -1649,18 +1649,18 @@ export class Train implements OnDestroy {
         // queueing off: players spam the key during the global cooldown – normal play, not a mistake; said once per session
         if (!queueing && !this.tooEarlyShown) {
           this.tooEarlyShown = true;
-          this.feedback.set({ text: 'Too early – queueing is off (Settings)', cls: 'warn' });
+          this.feedback.set({ text: 'Too early, and queueing is off (Settings)', cls: 'warn' });
         }
         break;
       case 'wrong':
         this.counts.update((c) => ({ ...c, wrong: c.wrong + 1 }));
-        this.feedback.set({ text: 'Wrong ability: ' + this.name(ev.key) + ' – ignored, on cooldown', cls: 'bad' });
+        this.feedback.set({ text: 'Wrong ability: ' + this.name(ev.key) + ', ignored, on cooldown', cls: 'bad' });
         this.flash('wrong', ev.key, now, 250);
         break;
       case 'wrong-weapon':
         this.counts.update((c) => ({ ...c, wrong: c.wrong + 1 }));
         this.feedback.set({
-          text: this.name(ev.key) + (ev.reason === 'weapon' ? ' needs a ' + (this.data.get(ev.key)?.ability?.style ?? this.data.get(ev.key)?.spec?.style ?? '') + ' weapon – you wield ' + (e.style ?? 'nothing') : ' is not the special attack of the wielded weapon'),
+          text: this.name(ev.key) + (ev.reason === 'weapon' ? ' needs a ' + (this.data.get(ev.key)?.ability?.style ?? this.data.get(ev.key)?.spec?.style ?? '') + ' weapon, you wield ' + (e.style ?? 'nothing') : ' is not the special attack of the wielded weapon'),
           cls: 'bad',
         });
         this.flash('wrong', ev.key, now, 300);
@@ -1671,7 +1671,7 @@ export class Train implements OnDestroy {
       case 'prayer': {
         const name = this.data.name('prayer:' + ev.id);
         if (ev.on) {
-          this.feedback.set({ text: name + ' on' + (ev.replaced.length ? ' – replaced ' + ev.replaced.map((r) => this.data.name('prayer:' + r)).join(', ') : ''), cls: 'info' });
+          this.feedback.set({ text: name + ' on' + (ev.replaced.length ? ', replaced ' + ev.replaced.map((r) => this.data.name('prayer:' + r)).join(', ') : ''), cls: 'info' });
         } else {
           this.feedback.set({ text: name + ' off', cls: 'info' });
         }
@@ -1680,32 +1680,32 @@ export class Train implements OnDestroy {
       }
       case 'wrong-book':
         this.counts.update((c) => ({ ...c, wrong: c.wrong + 1 }));
-        this.feedback.set({ text: this.data.name('prayer:' + ev.id) + ' is a ' + (ev.book === 'Curses' ? 'curse' : 'standard prayer') + ' – your book is ' + (this.prayerBook() === 'Curses' ? 'Ancient Curses' : 'standard prayers') + ' (Loadout)', cls: 'bad' });
+        this.feedback.set({ text: this.data.name('prayer:' + ev.id) + ' is a ' + (ev.book === 'Curses' ? 'curse' : 'standard prayer') + '. Your book is ' + (this.prayerBook() === 'Curses' ? 'Ancient Curses' : 'standard prayers') + ' (Gear page)', cls: 'bad' });
         this.flash('wrong', 'prayer:' + ev.id, now, 300);
         break;
       case 'attack': {
         this.attackLog.update((l) => [...l.slice(-19), { style: ev.style, prayed: ev.prayed, tick: ev.tick, absorbed: ev.absorbed }]);
         const needed = this.data.name('prayer:' + ev.needed);
-        const veng = ev.reflected ? ' – Vengeance hit back' : '';
+        const veng = ev.reflected ? ', Vengeance hit back' : '';
         if (ev.absorbed) {
           this.feedback.set({ text: ev.style + ' attack absorbed by ' + this.buffName(ev.absorbed), cls: 'good' });
         } else if (ev.prayed) {
           this.feedback.set({ text: ev.style + ' attack blocked by ' + needed + veng, cls: 'good' });
         } else {
-          this.feedback.set({ text: 'Hit by a ' + ev.style + ' attack – ' + needed + ' was not active' + veng, cls: 'bad' });
+          this.feedback.set({ text: 'Hit by a ' + ev.style + ' attack, ' + needed + ' was not active' + veng, cls: 'bad' });
         }
         break;
       }
       case 'no-adrenaline':
-        this.feedback.set({ text: this.name(ev.key) + ' needs ' + ev.need + '% adrenaline, you have ' + Math.floor(ev.have) + '%' + (this.storage.settings().abilityQueueing ? ' – queued until you have it' : ''), cls: 'bad' });
+        this.feedback.set({ text: this.name(ev.key) + ' needs ' + ev.need + '% adrenaline, you have ' + Math.floor(ev.have) + '%' + (this.storage.settings().abilityQueueing ? ', queued until you have it' : ''), cls: 'bad' });
         this.flash('wrong', ev.key, now, 300);
         break;
       case 'on-cooldown':
-        this.feedback.set({ text: this.name(ev.key) + ' is on cooldown for ' + (ev.readyInTicks * TICK_MS) / 1000 + ' s' + (this.storage.settings().abilityQueueing ? ' – queued' : ''), cls: 'bad' });
+        this.feedback.set({ text: this.name(ev.key) + ' is on cooldown for ' + (ev.readyInTicks * TICK_MS) / 1000 + ' s' + (this.storage.settings().abilityQueueing ? ', queued' : ''), cls: 'bad' });
         this.flash('wrong', ev.key, now, 300);
         break;
       case 'requirement':
-        this.feedback.set({ text: this.name(ev.key) + ': ' + ev.text + (queueing ? ' – queued' : ''), cls: 'bad' });
+        this.feedback.set({ text: this.name(ev.key) + ': ' + ev.text + (queueing ? ', queued' : ''), cls: 'bad' });
         this.flash('wrong', ev.key, now, 300);
         break;
       case 'recast':
@@ -1730,7 +1730,7 @@ export class Train implements OnDestroy {
       case 'killed': {
         const ms = Math.round(e.tickTime(ev.tick) - e.t0);
         this.killedAtMs.set(ms);
-        this.feedback.set({ text: 'Target killed after ' + (ms / 1000).toFixed(1) + ' s – ' + Math.round(e.damageDealt).toLocaleString() + ' damage', cls: 'good' });
+        this.feedback.set({ text: 'Target killed after ' + (ms / 1000).toFixed(1) + ' s, ' + Math.round(e.damageDealt).toLocaleString() + ' damage', cls: 'good' });
         break;
       }
       case 'missed':
@@ -1742,7 +1742,7 @@ export class Train implements OnDestroy {
         const info: SessionStuck = { key: ev.key, step: ev.step, name, reason: ev.reason, readyInTicks: ev.readyInTicks, text: stuckReason(name, ev) };
         this.stuck.set(info);
         this.finishReason.set('stuck');
-        this.feedback.set({ text: 'Stuck at step ' + (ev.step + 1) + ': ' + info.text + ' – this rotation cannot be played as written from here', cls: 'bad' });
+        this.feedback.set({ text: 'Stuck at step ' + (ev.step + 1) + ': ' + info.text + '. This rotation cannot be played as written from here', cls: 'bad' });
         this.flash('wrong', ev.key, now, 600);
         this.log(ev.key, 'wrong', this.feedback()?.text ?? '', ev.step);
         break;

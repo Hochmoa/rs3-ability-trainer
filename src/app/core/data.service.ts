@@ -1,3 +1,4 @@
+import { GizmoType, gearGizmos, weaponGizmos } from './augment';
 import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { firstValueFrom, forkJoin } from 'rxjs';
@@ -59,8 +60,8 @@ export interface GearView {
   slot: EquipSlot | null;
   tier: number;
   style: Style | 'Hybrid' | null;
-  /** can hold Invention gizmos (2 for a two-handed weapon) */
-  gizmoSlots: number;
+  /** the gizmos it carries, in order: an augmentable item is always augmented (core/augment.ts) */
+  gizmos: GizmoType[];
   /** armour set it belongs to */
   set: SetEffect | null;
   /** passive effect (set-effects.json, kind "item") */
@@ -263,7 +264,7 @@ export class DataService {
         slot: weaponSlot(w),
         tier: w.tier,
         style: w.style,
-        gizmoSlots: w.slot === '2h' ? 2 : 1,
+        gizmos: weaponGizmos(w),
         set: null,
         passive: passive?.kind === 'item' ? passive : null,
         weapon: w,
@@ -281,7 +282,7 @@ export class DataService {
         slot: g.slot,
         tier: g.tier,
         style: g.style,
-        gizmoSlots: g.augmentable && (g.slot === 'body' || g.slot === 'legs') ? 1 : 0,
+        gizmos: gearGizmos(g),
         set: g.set ? this.setEffectById().get(g.set) ?? null : null,
         passive: g.passive ? this.setEffectById().get(g.passive) ?? null : null,
         gear: g,
@@ -290,7 +291,7 @@ export class DataService {
     }
     const sp = this.specialById().get(ref.id);
     if (!sp) return null;
-    return { ref, name: sp.name, icon: sp.icon, slot: null, tier: 0, style: null, gizmoSlots: 0, set: null, passive: null, special: sp, entityKey: entityKey('special', sp.id) };
+    return { ref, name: sp.name, icon: sp.icon, slot: null, tier: 0, style: null, gizmos: [], set: null, passive: null, special: sp, entityKey: entityKey('special', sp.id) };
   }
 
   /** the weapons a loadout carries (in hand + backpack) as entities, in `loadoutWeapons` order – unknown items are skipped */

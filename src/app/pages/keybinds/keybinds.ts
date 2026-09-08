@@ -88,7 +88,7 @@ export class Keybinds {
 
   presetName(pos: number): string {
     const id = this.setup().positions[pos];
-    return id === null ? '– empty –' : (this.setup().presets.find((p) => p.id === id)?.name ?? 'Bar ' + id);
+    return id === null ? 'empty' : (this.setup().presets.find((p) => p.id === id)?.name ?? 'Bar ' + id);
   }
 
   /** entity sitting in that slot of the position's default preset – as a hint */
@@ -240,7 +240,7 @@ export class Keybinds {
     }
     const { data, filled } = applyLayout(s, layout, { overwrite, weaponIds: this.carried().map((w) => w.id) });
     await this.storage.saveActionBars(data);
-    this.toasts.show(overwrite ? 'Applied "' + layout.name + '" – ' + filled + ' keys' : filled ? 'Filled ' + filled + ' empty slots from "' + layout.name + '"' : 'Nothing to fill – every slot already has a key or its layout key is taken');
+    this.toasts.show(overwrite ? 'Applied "' + layout.name + '": ' + filled + ' keys' : filled ? 'Filled ' + filled + ' empty slots from "' + layout.name + '"' : 'Nothing to fill: every slot already has a key, or its layout key is taken');
   }
 
   // ---------------------------------------------------------------- bind by pressing
@@ -295,7 +295,7 @@ export class Keybinds {
     if (!w) return;
     this.wizard.set(null);
     if (!save) {
-      this.toasts.show('Binding cancelled – nothing changed');
+      this.toasts.show('Binding cancelled, nothing changed');
       return;
     }
     if (await this.storage.acceptConsentOnSave()) this.toasts.show('Saved in this browser', 'info', 2000);
@@ -362,7 +362,7 @@ export class Keybinds {
   private captureBind(kb: Keybind): void {
     if (isMouseCode(kb.code)) this.mouseBoundUntil = Date.now() + 1000;
     if (isReservedKeybind(kb)) {
-      this.toasts.show(keybindLabel(kb) + ' is reserved by the browser – pick another key', 'warn');
+      this.toasts.show(keybindLabel(kb) + ' is reserved by the browser. Pick another key', 'warn');
       return;
     }
     const w = this.wizard();

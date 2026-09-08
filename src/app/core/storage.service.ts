@@ -14,10 +14,10 @@ const DB_VERSION = 2;
 const CONSENT_KEY = 'rs3trainer.consent';
 /** one "could not save" toast per this many ms – a burst of failing puts (quota) is one problem, not twenty */
 const WRITE_TOAST_MS = 30_000;
-const WRITE_FAILED_TEXT = "Could not save to this browser's storage – your change is kept for this visit only.";
+const WRITE_FAILED_TEXT = "Could not save to this browser's storage. Your change is kept for this visit only.";
 /** local session history: only the newest ones are kept (every session carries a copy of the settings and the loadout) */
 export const SESSIONS_KEPT = 50;
-const LOAD_FAILED_TEXT = "Could not read this browser's storage – running with defaults, nothing is saved until you reload.";
+const LOAD_FAILED_TEXT = "Could not read this browser's storage. It is running on defaults and saves nothing until you reload.";
 
 /**
  * Runs a storage operation and never throws: a failure (QuotaExceededError, Safari's UnknownError, a closed

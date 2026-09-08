@@ -1,6 +1,6 @@
 <h1 class="sr-only">Key drill</h1>
 @if (data.loadError()) {
-  <p class="bad" role="alert">Could not load the ability data – check your connection. <button class="btn btn-sm" type="button" (click)="data.retry()">Retry</button></p>
+  <p class="bad" role="alert">Could not load the ability data. Check your connection. <button class="btn btn-sm" type="button" (click)="data.retry()">Retry</button></p>
 } @else if (!storage.ready() || !data.loaded()) {
   <p class="muted">Loading…</p>
 } @else if (!anyKeys()) {
@@ -71,7 +71,7 @@
       <span class="hint muted">
         {{ pool().length }} slot{{ pool().length === 1 ? '' : 's' }}, {{ poolEntities() }} abilit{{ poolEntities() === 1 ? 'y' : 'ies' }} in the pool
         @if (rotation() && !pool().length) {
-          – none of this rotation's abilities sits on a keybound slot
+          none of this rotation's abilities sits on a keybound slot
         }
       </span>
       <div class="actions">
@@ -107,7 +107,7 @@
       } @else {
         <div class="idle">
           <div class="name muted">Press Start, then hit the key of whatever lights up.</div>
-          <div class="where muted small">No cooldowns, no adrenaline, no rotation – only key → slot. Esc stops. Clicking a slot counts too.</div>
+          <div class="where muted small">No cooldowns, no adrenaline, no rotation, just key to slot. Esc stops. Clicking a slot counts too.</div>
         </div>
       }
     </div>

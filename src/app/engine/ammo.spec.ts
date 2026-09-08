@@ -104,7 +104,7 @@ describe('ammunition: resolves from gear.json / set-effects.json only with the m
     const wrong = resolve({ weapons: ['eldritch-crossbow'], gear: ['ful-arrow'] });
     expect(wrong.styleDamageMult).toEqual([]);
     expect(wrong.items.has('ful-arrow')).toBe(false);
-    expect(loadoutWarnings(wear({ weapons: ['eldritch-crossbow'], gear: ['ful-arrow'] }), DATA)).toEqual(['Ful arrow only fire from a bow – their effect is off with Eldritch crossbow.']);
+    expect(loadoutWarnings(wear({ weapons: ['eldritch-crossbow'], gear: ['ful-arrow'] }), DATA)).toEqual(['Ful arrow only fire from a bow, so their effect is off with Eldritch crossbow.']);
     expect(loadoutWarnings(wear({ weapons: ['zaryte-bow'], gear: ['ful-arrow'] }), DATA)).toEqual([]);
     expect(resolve({ weapons: ['eldritch-crossbow'], gear: ['hydrix-bakriminel-bolts-e'] }).hitProcs).toHaveLength(1);
     expect(resolve({ weapons: ['zaryte-bow'], gear: ['hydrix-bakriminel-bolts-e'] }).hitProcs).toEqual([]);

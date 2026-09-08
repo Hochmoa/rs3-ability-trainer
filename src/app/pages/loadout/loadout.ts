@@ -56,8 +56,8 @@ interface PerkEdit {
   ref: ItemRef;
   view: GearView;
   gizmos: Gizmo[];
-  /** gizmo type the item takes (weapons: weapon gizmos; body / legs / shields: armour gizmos) */
-  type: GizmoType;
+  /** the type of each gizmo, in the same order (core/augment.ts): a shieldbow holds one of each */
+  types: GizmoType[];
   /** the gizmo the next tile click fills (0-based) */
   slot: number;
 }
@@ -495,7 +495,7 @@ export class Loadout {
   private askSubOptions(refs: ItemRef[]): void {
     const wanting = refs.filter((r) => {
       const v = this.data.view(r);
-      return !!v && (v.passive?.id === 'essence-of-finality' || v.gizmoSlots > 0);
+      return !!v && (v.passive?.id === 'essence-of-finality' || v.gizmos.length > 0);
     });
     if (!wanting.length) return;
     this.pending.push(...wanting);
@@ -550,7 +550,7 @@ export class Loadout {
     } else {
       items.push({ label: 'Take off', run: () => this.takeOff(from.slot) });
     }
-    if (where && view.gizmoSlots > 0) items.push({ label: 'Gizmos…', run: () => this.editPerks(where, ref, view) });
+    if (where && view.gizmos.length) items.push({ label: 'Gizmos…', run: () => this.editPerks(where, ref, view) });
     if (where && view.passive?.id === 'essence-of-finality') items.push({ label: 'Stored special attack…', run: () => this.editEof(where, ref) });
     if (from.kind === 'inv') items.push({ label: 'Drop', danger: true, run: () => this.apply(removeItem(this.state(), from.index)) });
     if (from.kind === 'equip') items.push({ label: 'Drop', danger: true, run: () => this.apply(removeWorn(this.state(), from.slot)) });
@@ -579,22 +579,28 @@ export class Loadout {
     const e = this.perkEdit();
     if (!e) return [];
     const out = new Map<ComboTier, GizmoCombo[]>();
-    for (const c of combosFor(e.type)) out.set(c.tier, [...(out.get(c.tier) ?? []), c]);
+    for (const c of combosFor(this.gizmoType())) out.set(c.tier, [...(out.get(c.tier) ?? []), c]);
     return [...out].map(([tier, combos]) => ({ tier, combos }));
   });
 
+  /** the type of the gizmo being filled right now (a shieldbow's second one takes armour perks) */
+  readonly gizmoType = computed<GizmoType>(() => {
+    const e = this.perkEdit();
+    return e?.types[e.slot] ?? 'weapon';
+  });
+
   private editPerks(where: Where, ref: ItemRef, view: GearView): void {
-    const type: GizmoType = ref.kind === 'weapon' && view.weapon?.slot !== 'shield' ? 'weapon' : 'armour';
-    const gizmos: Gizmo[] = Array.from({ length: view.gizmoSlots }, (_, i) => ({ ancient: !!ref.gizmos?.[i]?.ancient, perks: [...(ref.gizmos?.[i]?.perks ?? [])] }));
-    const slot = Math.max(0, gizmos.findIndex((g) => !g.perks.length));
-    this.perkEdit.set({ where, ref, view, gizmos, type, slot: slot < 0 ? 0 : slot });
+    const types = view.gizmos;
+    const gizmos: Gizmo[] = types.map((_, i) => ({ ancient: !!ref.gizmos?.[i]?.ancient, perks: [...(ref.gizmos?.[i]?.perks ?? [])] }));
+    const slot = gizmos.findIndex((g) => !g.perks.length);
+    this.perkEdit.set({ where, ref, view, gizmos, types, slot: slot < 0 ? 0 : slot });
   }
 
   /** "Precise 6 + Aftershock 1" or the PvME shorthand for a stored gizmo; "empty" when it has no perks */
   gizmoLabel(g: Gizmo): string {
     if (!g.perks.length) return 'empty';
     const combo = comboOf(g);
-    return (combo ? combo.short + ' – ' : '') + comboLabel(g.perks, this.data.perkById());
+    return (combo ? combo.short + ': ' : '') + comboLabel(g.perks, this.data.perkById());
   }
 
   comboText(c: GizmoCombo): string {

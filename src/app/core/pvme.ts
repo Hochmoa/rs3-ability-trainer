@@ -367,7 +367,7 @@ function resolveAction(action: string, resolve: AliasResolver): RotationStep[] |
   // "aod omni": switch target, then the input; "click dummy" / "on aod" / "tc telos": just the target
   if (PVME_TARGETS[first]) {
     const r = resolveAction(rest(1), resolve);
-    return r ? [targetCycle(PVME_TARGETS[first]), ...r] : [targetCycle(PVME_TARGETS[first] + ' – ' + rest(1))];
+    return r ? [targetCycle(PVME_TARGETS[first]), ...r] : [targetCycle(PVME_TARGETS[first] + ': ' + rest(1))];
   }
   if (PVME_TARGETS[last] && words.slice(0, -1).every((w) => TARGET_PROSE.has(w.toLowerCase()))) return [targetCycle(PVME_TARGETS[last])];
   // "warsretreatteleport dba" / "ballista at 2.4 seconds left": the mechanic, then whatever follows it

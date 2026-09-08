@@ -74,7 +74,7 @@
                   }
                 </td>
                 <td class="muted">{{ u.created_at | date: 'yyyy-MM-dd' }}</td>
-                <td class="muted">{{ u.last_sign_in_at ? (u.last_sign_in_at | date: 'yyyy-MM-dd HH:mm') : '–' }}</td>
+                <td class="muted">{{ u.last_sign_in_at ? (u.last_sign_in_at | date: 'yyyy-MM-dd HH:mm') : '-' }}</td>
                 <td class="muted small">
                   {{ u.setups }} setups ({{ u.public_setups }} public) ·
                   <button class="link" (click)="toggleRotations(u)" [disabled]="!isAdmin()">{{ u.rotations }} rotations</button>
@@ -120,7 +120,7 @@
                             <tr>
                               <td>{{ r.name }}</td>
                               <td>{{ r.steps.length }}</td>
-                              <td class="muted tiny">{{ r.setup_id ? r.setup_id.slice(0, 8) : '–' }}</td>
+                              <td class="muted tiny">{{ r.setup_id ? r.setup_id.slice(0, 8) : '-' }}</td>
                               <td class="muted">{{ r.updated_at | date: 'yyyy-MM-dd HH:mm' }}</td>
                               <td class="actions">
                                 <button class="btn btn-sm" (click)="renameRotation(r)">Rename</button>
@@ -148,7 +148,7 @@
       <input type="search" placeholder="Search message, page, user, build…" [ngModel]="errorSearch()" (ngModelChange)="errorSearch.set($event)" />
       <span class="muted small">{{ errorStats().total }} reports · {{ errorStats().groups }} distinct · {{ errorStats().today }} in the last 24 h · newest 1000 loaded</span>
       <span class="spacer"></span>
-      <button class="btn btn-sm" (click)="testError()" title="Throws an error in this browser – it should show up here after a reload">Throw test error</button>
+      <button class="btn btn-sm" (click)="testError()" title="Throws an error in this browser. It should show up here after a reload">Throw test error</button>
       @if (isAdmin() && errors().length) {
         <button class="btn btn-sm danger" (click)="clearErrors()">Clear all</button>
       }

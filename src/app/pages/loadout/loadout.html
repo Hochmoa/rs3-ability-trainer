@@ -1,7 +1,7 @@
 <div class="panel head">
   <div class="setup-pick">
     <h1>Gear</h1>
-    <label class="field" title="The setup whose gear this is – switch here or on the Train page">
+    <label class="field" title="The setup whose gear this is. Switch here or on the Train page">
       <span>of setup</span>
       <div class="picker">
         <select [ngModel]="storage.activeSetupId()" (ngModelChange)="select($event)">
@@ -28,7 +28,7 @@
     Hide obscure equipment
   </label>
   <p class="muted small">
-    Sorted by how many PvME setups use an item. Everything comes in groups – a weapon with its off-hand, an armour set, the variants of one item – and each item is listed once. Click or drag a card for the whole group, click or drag one icon for that piece alone; a single item: click for the backpack, double-click to wear. An Essence of Finality or an augmentable item asks for its special / gizmos as it lands.
+    Sorted by how often PvME setups use an item, and everything comes in groups: a weapon with its off-hand, an armour set, the variants of one item. Click a card to take the whole group, one icon for that piece alone. A single item lands in the backpack, or on your character with a double-click. Anything that stores a special attack or holds gizmos asks about it straight away.
   </p>
   @if (warnings().length) {
     <div class="warnings">
@@ -86,7 +86,7 @@
         <p class="muted">{{ data.loadoutReady() ? 'Nothing matches.' : 'Loading…' }}</p>
       }
     </div>
-    <p class="muted small">{{ hideObscure() ? 'Items no PvME setup uses are hidden – untick above or search for them. ' : '' }}{{ shownCount() < entryCount() ? 'Only the first ' + shownCount() + ' are drawn – narrow it down with the search or the tier filter. ' : '' }}Drop an item here to remove it from the loadout.</p>
+    <p class="muted small">{{ hideObscure() ? 'Items no PvME setup uses are hidden. Untick above or search for them. ' : '' }}{{ shownCount() < entryCount() ? 'Only the first ' + shownCount() + ' are drawn. Narrow it down with the search or the tier filter. ' : '' }}Drop an item here to remove it from the loadout.</p>
   </div>
 
   <div class="worn">
@@ -152,10 +152,10 @@
     <label>
       <span>Spirit Pact</span>
       <select [ngModel]="l().spiritPact" (ngModelChange)="setSpiritPact($event)">
-        <option [ngValue]="0">none – conjures last 42 s</option>
-        <option [ngValue]="1">Spirit Pact I – 48 s</option>
-        <option [ngValue]="2">Spirit Pact II – 54 s</option>
-        <option [ngValue]="3">Spirit Pact III – 60 s</option>
+        <option [ngValue]="0">none, conjures last 42 s</option>
+        <option [ngValue]="1">Spirit Pact I, 48 s</option>
+        <option [ngValue]="2">Spirit Pact II, 54 s</option>
+        <option [ngValue]="3">Spirit Pact III, 60 s</option>
       </select>
     </label>
     <h3>Combat levels</h3>
@@ -181,7 +181,7 @@
         </div>
         <div>
           <span class="slot-label">Damage bonus</span>
-          <small class="muted">@for (s of STYLES4; track s) {{{ s }} +{{ r.damageBonus[s] }}{{ $last ? '' : ' · ' }}} – power armour, jewellery, capes and pocket items (runescape.wiki: Damage bonus)</small>
+          <small class="muted">@for (s of STYLES4; track s) {{{ s }} +{{ r.damageBonus[s] }}{{ $last ? '' : ' · ' }}} from power armour, jewellery, capes and pocket items (runescape.wiki: Damage bonus)</small>
         </div>
         <div>
           <span class="slot-label">Critical strike damage</span> <b>+{{ critPct(r) }}%</b>
@@ -198,7 +198,7 @@
       <span>Overload</span>
       <select [ngModel]="l().overload ?? 'elder'" (ngModelChange)="setOverload($event)">
         @for (o of OVERLOAD_CHOICES; track o) {
-          <option [ngValue]="o">{{ OVERLOADS[o].name }}{{ o === 'none' ? ' – level 99' : ' – level ' + boostedLevel(o) }}</option>
+          <option [ngValue]="o">{{ OVERLOADS[o].name }}{{ o === 'none' ? ', level 99' : ', level ' + boostedLevel(o) }}</option>
         }
       </select>
       <small class="muted">Boosts all combat levels for the session; ability damage rises with them. Rotations don't press it.</small>
@@ -207,7 +207,7 @@
       <span>Weapon poison</span>
       <select [ngModel]="l().weaponPoison ?? 4" (ngModelChange)="setWeaponPoison($event)">
         @for (t of WEAPON_POISON_TIERS; track t) {
-          <option [ngValue]="t">{{ WEAPON_POISON_NAMES[t] }}{{ t ? ' – 1/8 per hit, ' + poisonPct(t) + '% of the ability damage every 10 s' : '' }}</option>
+          <option [ngValue]="t">{{ WEAPON_POISON_NAMES[t] }}{{ t ? ': 1/8 per hit, ' + poisonPct(t) + '% of the ability damage every 10 s' : '' }}</option>
         }
       </select>
       <small class="muted">Every hit has a 1/8 chance to poison the target; cinderbane gloves raise the tier by one and roll their own 1/8.</small>
@@ -216,10 +216,10 @@
       <span>Kwuarm incense sticks</span>
       <select [ngModel]="l().kwuarmPotency ?? 0" (ngModelChange)="setKwuarmPotency($event)">
         <option [ngValue]="0">none</option>
-        <option [ngValue]="1">potency 1 – +2.5% poison damage</option>
-        <option [ngValue]="2">potency 2 – +5% poison damage</option>
-        <option [ngValue]="3">potency 3 – +7.5% poison damage</option>
-        <option [ngValue]="4">potency 4 – +10% poison damage</option>
+        <option [ngValue]="1">potency 1: +2.5% poison damage</option>
+        <option [ngValue]="2">potency 2: +5% poison damage</option>
+        <option [ngValue]="3">potency 3: +7.5% poison damage</option>
+        <option [ngValue]="4">potency 4: +10% poison damage</option>
       </select>
     </label>
   </div>
@@ -259,7 +259,7 @@
                     <span><b>{{ s.name }}</b> <small class="muted">{{ s.adrenaline }}% adrenaline{{ s.cooldownTicks ? ' · ' + s.cooldownTicks * 0.6 + ' s cooldown' : '' }}</small></span>
                     @if (s.eof.notes) { <small class="muted">{{ s.eof.notes }}</small> }
                   } @else {
-                    <span class="muted">empty – right-click the amulet to store a special</span>
+                    <span class="muted">empty. Right-click the amulet to store a special</span>
                   }
                 </li>
               }
@@ -304,12 +304,12 @@
 @if (perkEdit(); as e) {
   <div class="backdrop" (click)="closePerks()">
     <div class="modal wide" (click)="$event.stopPropagation()">
-      <h3>Gizmos – {{ e.view.name }}</h3>
-      <p class="muted small">The combinations PvM players put in a {{ e.type }} gizmo, best first (PvME perks guide). Pick a gizmo, then a combo; it is saved at once. Perks that touch adrenaline, cooldowns or durations are simulated, damage perks are stored.</p>
+      <h3>Gizmos: {{ e.view.name }}</h3>
+      <p class="muted small">The combinations PvM players put in a {{ gizmoType() }} gizmo, best first (PvME perks guide). Pick a gizmo, then a combo, and it is saved at once. Perks that touch adrenaline, cooldowns or durations are simulated; damage perks are stored.</p>
       <div class="gizmo-slots">
         @for (g of e.gizmos; track $index; let i = $index) {
           <button class="gizmo-slot" type="button" [class.active]="e.slot === i" (click)="pickGizmoSlot(i)">
-            <span class="gizmo-name">Gizmo {{ i + 1 }}{{ g.ancient ? ' · ancient' : '' }}</span>
+            <span class="gizmo-name">{{ e.types[i] }} gizmo {{ i + 1 }}{{ g.ancient ? ' · ancient' : '' }}</span>
             <span class="gizmo-perks">{{ gizmoLabel(g) }}</span>
           </button>
         }
@@ -338,7 +338,7 @@
 @if (eofEdit(); as e) {
   <div class="backdrop" (click)="closeEof()">
     <div class="modal wide" (click)="$event.stopPropagation()">
-      <h3>Essence of Finality – stored special attack</h3>
+      <h3>Essence of Finality: the stored special attack</h3>
       <p class="muted small">
         The specials PvME setups store, most used first.
         <label class="check inline"><input type="checkbox" [checked]="eofShowAll()" (change)="eofShowAll.set(!eofShowAll())" /> show every storable special</label>

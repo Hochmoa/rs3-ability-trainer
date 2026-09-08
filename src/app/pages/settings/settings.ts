@@ -21,7 +21,7 @@ import { TourService } from '../../shared/tour';
           <span>Ability queueing</span>
         </label>
         <small class="indent">The in-game setting. On: a press during the global cooldown (GCD) queues and casts when it ends. Off: it is ignored, press in the last tick.</small>
-        <label class="check"><input type="checkbox" [ngModel]="s().autoAttacks" (ngModelChange)="set('autoAttacks', $event)" /><span>Auto basic attacks – a late press lets the basic attack fire first and waits a whole GCD, like in game</span></label>
+        <label class="check"><input type="checkbox" [ngModel]="s().autoAttacks" (ngModelChange)="set('autoAttacks', $event)" /><span>Auto basic attacks: a late press lets the basic attack fire first and then waits a whole GCD, like in game</span></label>
         <label class="check">
           <input type="checkbox" [ngModel]="s().loop" (ngModelChange)="set('loop', $event)" />
           <span>Loop the rotation until stopped (Esc)</span>
@@ -69,7 +69,7 @@ import { TourService } from '../../shared/tour';
         <small class="indent">After every cast the next keys are said at once ("Q, then 3").</small>
         <label class="check">
           <input type="checkbox" [ngModel]="s().coach.lead" (ngModelChange)="setCoach('lead', $event)" />
-          <span>Key by key – each key called at its tick</span>
+          <span>Key by key: each key called at its tick</span>
         </label>
         <small class="indent">Each key is called at its tick. Falls behind with you; scoring is unchanged.</small>
         <label class="check">
@@ -126,19 +126,19 @@ import { TourService } from '../../shared/tour';
       <p class="muted small">
         Runs the focus view inside the game client. Install <a href="https://runeapps.org/alt1" target="_blank" rel="noopener">Alt1</a>, click the link, accept the app.
       </p>
-      <a class="btn" [href]="ALT1_ADD_URL" title="alt1://addapp/… – needs the Alt1 Toolkit installed">Add to Alt1</a>
+      <a class="btn" [href]="ALT1_ADD_URL" title="alt1://addapp/… , needs the Alt1 Toolkit installed">Add to Alt1</a>
     </div>
 
     <div class="panel">
       <h2>Tour</h2>
-      <p class="muted small">The short walk through the trainer – setups, the queue, your bars and keys.</p>
+      <p class="muted small">The short walk through the trainer: setups, the queue, your bars and keys.</p>
       <button class="btn" (click)="tour.start()">Show me around</button>
     </div>
 
     <div class="panel">
       <h2>Data</h2>
       <p class="muted small">
-        Storage consent: <b>{{ storage.consent() ? 'accepted' : 'not given – nothing is saved' }}</b>
+        Storage consent: <b>{{ storage.consent() ? 'accepted' : 'not given, nothing is saved' }}</b>
       </p>
       <button class="btn danger" (click)="clearAll()">Delete all stored data</button>
     </div>
@@ -214,7 +214,7 @@ export class Settings {
     this.testing.set(true);
     this.coach.configure(this.s().coach);
     const ok = await this.coach.test();
-    if (!ok) this.toast.show('The browser blocked the sound – allow audio for this site and try again.', 'warn');
+    if (!ok) this.toast.show('The browser blocked the sound. Allow audio for this site and try again.', 'warn');
     window.setTimeout(() => {
       this.testing.set(false);
       this.coach.disable();

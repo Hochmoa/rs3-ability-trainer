@@ -9,7 +9,7 @@
   </div>
   <p class="muted small">
     A setup is a boss, the gear for it and the rotations played with it. Use one from the
-    <a href="https://github.com/pvme/pvme-guides" target="_blank" rel="noopener">PvME</a> guides (player "PVME") or from another player, or build your own – your action bars and keys are never part of a setup.
+    <a href="https://github.com/pvme/pvme-guides" target="_blank" rel="noopener">PvME</a> guides (player "PVME") or from another player, or build your own. Your action bars and keys are never part of a setup.
   </p>
   @if (view() !== 'players') {
     <div class="filters">
@@ -26,7 +26,7 @@
         </div>
       } @else {
         <button class="btn btn-primary btn-sm" (click)="newSetup()">New setup</button>
-        <span class="muted small">Gear on the <a routerLink="/loadout">Loadout</a> page, rotations on the <a routerLink="/rotations">Rotations</a> page – both edit the setup that is active on the Train page.</span>
+        <span class="muted small">Gear on the <a routerLink="/loadout">Loadout</a> page, rotations on the <a routerLink="/rotations">Rotations</a> page. Both edit whichever setup is active on the Train page.</span>
       }
     </div>
   }
@@ -71,12 +71,12 @@
           </div>
           @if (editing() === s.id) {
             <div class="edit-row">
-              <label>Boss <input type="text" [ngModel]="s.boss" (ngModelChange)="setField(s, 'boss', $event)" maxlength="60" placeholder="none – general practice" /></label>
+              <label>Boss <input type="text" [ngModel]="s.boss" (ngModelChange)="setField(s, 'boss', $event)" maxlength="60" placeholder="none, general practice" /></label>
               <label>Name <input type="text" [ngModel]="s.name" (ngModelChange)="setField(s, 'name', $event)" maxlength="60" /></label>
               <label>
                 Style
                 <select [ngModel]="s.style" (ngModelChange)="setField(s, 'style', $event)">
-                  <option value="">–</option>
+                  <option value="">any</option>
                   @for (st of STYLES; track st) { <option [value]="st">{{ st }}</option> }
                 </select>
               </label>

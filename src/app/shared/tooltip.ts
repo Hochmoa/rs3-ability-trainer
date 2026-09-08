@@ -261,7 +261,7 @@ interface Note {
             <tr><th>Adrenaline</th><td [class]="(a.adrenaline ?? 0) > 0 ? 'good' : (a.adrenaline ?? 0) < 0 ? 'bad' : ''">{{ adrenaline(a.adrenaline) }}</td></tr>
             @if (a.cooldownTicks) { <tr><th>Cooldown</th><td>{{ seconds(a.cooldownTicks) }}</td></tr> }
             @if (a.damageMin !== null) {
-              <tr><th>Damage</th><td>{{ a.damageMin }}%–{{ a.damageMax }}%{{ a.hits && a.hits > 1 ? ' × ' + a.hits + ' hits' : '' }} <span class="muted">(avg {{ a.damageText }})</span></td></tr>
+              <tr><th>Damage</th><td>{{ a.damageMin }}% to {{ a.damageMax }}%{{ a.hits && a.hits > 1 ? ' × ' + a.hits + ' hits' : '' }} <span class="muted">(avg {{ a.damageText }})</span></td></tr>
             } @else if (a.damageText && a.damageText !== 'None' && a.damageText !== 'N/A') {
               <tr><th>Damage</th><td>{{ a.damageText }}</td></tr>
             }
@@ -333,7 +333,7 @@ interface Note {
             @if (sp.damageText && sp.damageText !== 'None' && sp.damageText !== 'N/A') { <tr><th>Damage</th><td>{{ sp.damageText }}</td></tr> }
             <tr><th>Target</th><td>{{ sp.target }}{{ sp.channelled ? ' · channelled' : '' }}</td></tr>
             <tr><th>GCD</th><td [class]="sp.ignoresGcd ? 'warn' : ''">{{ sp.ignoresGcd ? 'off the GCD' : 'on the GCD' }}</td></tr>
-            @if (sp.eof.storable === true) { <tr><th>Essence of Finality</th><td>storable{{ sp.eof.notes ? ' – ' + sp.eof.notes : '' }}</td></tr> }
+            @if (sp.eof.storable === true) { <tr><th>Essence of Finality</th><td>storable{{ sp.eof.notes ? ' (' + sp.eof.notes + ')' : '' }}</td></tr> }
           </table>
           <p class="desc">{{ describe(sp.description) }}</p>
         } @else if (e.special; as sp) {
@@ -585,7 +585,7 @@ export class EntityTooltip {
     else if (g.gear) parts.push(g.gear.slot.charAt(0).toUpperCase() + g.gear.slot.slice(1) + (g.gear.type ? ' · ' + g.gear.type : ''));
     if (g.tier) parts.push('tier ' + g.tier);
     if (g.style) parts.push(g.style);
-    if (g.gizmoSlots && (g.weapon || g.gear?.augmentable)) parts.push('augmentable');
+    if (g.gizmos.length) parts.push(g.gizmos.length === 1 ? 'augmented, 1 gizmo' : 'augmented, ' + g.gizmos.length + ' gizmos');
     return parts.join(' · ');
   }
 

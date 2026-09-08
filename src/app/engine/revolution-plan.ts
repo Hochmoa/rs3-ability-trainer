@@ -40,11 +40,11 @@ function reason(e: EngineEntity | undefined, r: RevolutionSettings, style: Style
   if (e.kind === 'weapon') return 'a weapon switch, not an ability';
   if (e.kind !== 'ability') return e.kind === 'spec' || e.kind === 'special' ? 'Revolution never fires special attacks or items' : 'not an ability';
   if (REVOLUTION_NEVER.has(e.id)) return 'Revolution never fires this slot';
-  if (!e.gcd || ruleFor(e.id)?.offGcd) return 'off the global cooldown – Revolution only fires abilities that start it';
+  if (!e.gcd || ruleFor(e.id)?.offGcd) return 'off the global cooldown, and Revolution only fires abilities that start it';
   if (e.style && isStyle4(e.style) && style && e.style !== style) return 'a ' + e.style + ' ability while you wield ' + style;
   const toggles: Partial<Record<string, boolean>> = { Basic: r.basics, Incantation: r.basics, Enhanced: r.enhanced, Threshold: r.thresholds, Ultimate: r.ultimates };
   const type = e.abilityType ?? 'Basic';
-  if (toggles[type] === undefined) return 'a ' + type.toLowerCase() + ' ability – Revolution never fires those';
+  if (toggles[type] === undefined) return 'a ' + type.toLowerCase() + ' ability, and Revolution never fires those';
   if (!toggles[type]) return TYPE_LABEL[type] + ' are switched off in the Revolution settings';
   return undefined;
 }
@@ -57,7 +57,7 @@ export function revolutionPlan(bar: (string | null)[], get: (key: string) => Eng
   const row = (key: string | null, i: number): RevolutionSlot => {
     const e = key ? get(key) : undefined;
     const why = reason(e, r, style);
-    return { slot: i + 1, key, name: e?.name ?? (key ? key : '—'), fires: !why, lastResort: !!e && isBasicAttackId(e.id), why };
+    return { slot: i + 1, key, name: e?.name ?? (key ? key : '-'), fires: !why, lastResort: !!e && isBasicAttackId(e.id), why };
   };
   const scanned = bar.slice(0, size).map(row);
   const ignored = bar.slice(size).map((k, i) => row(k, size + i)).filter((s) => !!s.key);
@@ -67,7 +67,7 @@ export function revolutionPlan(bar: (string | null)[], get: (key: string) => Eng
   if (!firing.length) warnings.push('Revolution has nothing to fire in the first ' + size + ' slots: it will only auto-attack.');
   const firstBasicAttack = firing.findIndex((s) => s.lastResort);
   if (firstBasicAttack >= 0 && firstBasicAttack < firing.length - 1) {
-    warnings.push('The basic attack is the last resort whatever its position – Revolution only falls back to it when no other slot in range can fire, so the slots after it still go off.');
+    warnings.push('The basic attack is the last resort whatever its position: Revolution only falls back to it when no other slot in range can fire, so the slots after it still go off.');
   }
   const wrongStyle = scanned.filter((s) => s.why?.startsWith('a ') && s.why.includes('while you wield'));
   if (wrongStyle.length) {
@@ -76,7 +76,7 @@ export function revolutionPlan(bar: (string | null)[], get: (key: string) => Eng
       : wrongStyle.length + ' slots are of another style and stay silent until you switch weapons.');
   }
   if (ignored.some((s) => !reason(s.key ? get(s.key) : undefined, r, style))) {
-    warnings.push('Abilities past slot ' + size + ' are never scanned – raise the Revolution size or move them left.');
+    warnings.push('Abilities past slot ' + size + ' are never scanned. Raise the Revolution size or move them left.');
   }
   if (r.ultimates && scanned.some((s) => s.fires && get(s.key ?? '')?.abilityType === 'Ultimate')) {
     warnings.push('An ultimate on the bar fires the moment it is affordable, which is rarely when you want the damage window.');

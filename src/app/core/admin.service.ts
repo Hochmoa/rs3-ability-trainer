@@ -111,13 +111,13 @@ export class AdminService {
   async updateRotation(id: string, patch: { name?: string }): Promise<void> {
     const { data, error } = await (await this.db()).from('rotations').update(patch).eq('id', id).select('id');
     if (error) throw error;
-    if (!data?.length) throw new Error('Not changed – only admins may edit rotations of other users');
+    if (!data?.length) throw new Error('Not changed: only admins may edit rotations of other users');
   }
 
   async deleteRotation(id: string): Promise<void> {
     const { data, error } = await (await this.db()).from('rotations').delete().eq('id', id).select('id');
     if (error) throw error;
-    if (!data?.length) throw new Error('Not deleted – only admins may delete rotations of other users');
+    if (!data?.length) throw new Error('Not deleted: only admins may delete rotations of other users');
   }
 
   async listFeedback(): Promise<FeedbackRow[]> {
