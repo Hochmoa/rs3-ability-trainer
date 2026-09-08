@@ -41,17 +41,17 @@
 
 <div class="panel gear-page">
   <div class="catalog">
-    <div class="tabs small">
-      @for (t of TABS; track t.id) {
-        <button class="tab" [class.active]="tab() === t.id" (click)="tab.set(t.id)">{{ t.label }}</button>
-      }
-    </div>
-    <div class="picker-controls">
+    <div class="catalog-head">
+      <div class="tabs small">
+        @for (t of TABS; track t.id) {
+          <button class="tab" [class.active]="tab() === t.id" (click)="tab.set(t.id)">{{ t.label }}</button>
+        }
+      </div>
+      <input type="search" placeholder="Search…" [ngModel]="search()" (ngModelChange)="search.set($event)" />
       @if (tiered()) {
         <label class="tier">Tier ≥ <input type="number" min="1" max="100" [ngModel]="minTier()" (ngModelChange)="minTier.set(+$event || 1)" /></label>
       }
-      <span class="muted small">{{ entryCount() }} {{ entryCount() === 1 ? 'entry' : 'entries' }}</span>
-      <input type="search" placeholder="Search…" [ngModel]="search()" (ngModelChange)="search.set($event)" />
+      <span class="muted small count">{{ entryCount() }} {{ entryCount() === 1 ? 'entry' : 'entries' }}</span>
     </div>
     <div class="item-grid" id="catalog" [class.can-receive]="catalogReceives()" [class.receiving]="gearDrag.hover() === 'catalog'" [attr.data-gear-drop]="catalogReceives() ? 'catalog' : null" (gear-drop)="dropOnCatalog($event)">
       @for (sec of sections(); track sec.key) {
