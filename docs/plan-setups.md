@@ -31,3 +31,16 @@ Approved by Martin on 2026-09-08. One page "Setups" replaces Boss setups (/prese
 ## Stages
 1. bars profiles out  2. Setup model + storage + local migration  3. server migration + sync  4. Setups page
 5. Train / Rotations / Loadout / Account  6. seed pipeline + PVME content  7. docs, memory
+
+## Follow-up round (Martin, 2026-09-08): the Loadout page itself
+- every item gets a usage score = how often the PvME presets use it; default sort by that score
+- "Hide obscure equipment" = hide everything below a hard-coded score threshold (tune together)
+- dropping gear into the backpack opens its sub-options at once: EoF special, gizmos
+- EoF special: no dropdown – small tiles, grouped by weapon style, sorted by how often PvME stores that special
+- gizmos: no free composition; research the gizmo combos players use (a4e2 …), score by usage, sort; normal/ancient
+  distinction disappears
+- weapons: main-hand + off-hand pairs as one group (Ode of Deceit + Roar of Awakening), 2h alone; grouped by style
+- gear: grouped by style, whole sets together; think about how set items and the usage score fit together
+- the block of text under the gear becomes an "i" icon → modal with everything about the current gear
+- bottom: the relics section text/format (checkbox – name – text spacing), Double Surge is an unlockable, not a relic:
+  remove it, always unlocked
