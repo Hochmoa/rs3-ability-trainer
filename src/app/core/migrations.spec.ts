@@ -28,12 +28,12 @@ describe('migrateSettings', () => {
 
 describe('migrateRotation – steps stored as plain ability ids', () => {
   it('turns strings into ability steps and leaves objects alone', () => {
-    const r = migrateRotation({ id: 'r', name: 'x', updatedAt: 1, steps: ['sever', { kind: 'prayer', id: 'turmoil' }] });
+    const r = migrateRotation({ id: 'r', name: 'x', updatedAt: 1, setupId: 's', steps: ['sever', { kind: 'prayer', id: 'turmoil' }] });
     expect(r.steps).toEqual([{ kind: 'ability', id: 'sever' }, { kind: 'prayer', id: 'turmoil' }]);
   });
 
   it('is a no-op for current rotations', () => {
-    const r: Rotation = { id: 'r', name: 'x', updatedAt: 1, steps: [{ kind: 'spec', id: 'death-essence', sameTick: true }] };
+    const r: Rotation = { id: 'r', name: 'x', updatedAt: 1, setupId: 's', steps: [{ kind: 'spec', id: 'death-essence', sameTick: true }] };
     expect(migrateRotation(r)).toEqual(r);
   });
 });

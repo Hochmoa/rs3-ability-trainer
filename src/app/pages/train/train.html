@@ -155,22 +155,6 @@
         <small class="caption muted">{{ rotationCaption() }}{{ rotationCount() ? ' · ' + rotationCount() : '' }}</small>
       </label>
       @if (advanced() || optionsOpen()) {
-        @if (storage.loadouts().length > 1) {
-          <label class="field" title="Gear, backpack and prayer book (Loadout page)">
-            <span>Loadout</span>
-            <select [ngModel]="storage.activeLoadoutId()" (ngModelChange)="pickLoadout($event)" [disabled]="running()">
-              @for (g of loadoutGroups(); track g.label) {
-                @if (g.label) {
-                  <optgroup [label]="g.label">
-                    @for (e of g.items; track e.item.id) { <option [value]="e.item.id">{{ e.label }}</option> }
-                  </optgroup>
-                } @else {
-                  @for (e of g.items; track e.item.id) { <option [value]="e.item.id">{{ e.label }}</option> }
-                }
-              }
-            </select>
-          </label>
-        }
       }
       <div class="actions">
         @if (!running()) {

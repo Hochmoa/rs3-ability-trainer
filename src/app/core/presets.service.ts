@@ -3,8 +3,9 @@ import { Router } from '@angular/router';
 import { ToastService } from '../shared/toast';
 import { DataService } from './data.service';
 import { addItem, stockSpecials } from './equipment';
-import { ItemRef, Prebuild, Rotation, RotationStep } from './models';
+import { ItemRef, Prebuild, Rotation, RotationStep, Setup, newSetup } from './models';
 import { BossPreset, assignEofSpecs, demoRotationIndex, presetLoadout } from './preset-setup';
+import { splitName } from '../shared/picker-groups';
 import { SwitchCatalog, insertSwitches } from './preset-switches';
 import { parsePvme } from './pvme';
 import { StorageService } from './storage.service';
@@ -37,6 +38,7 @@ export interface ParsedRotation {
 }
 
 export interface AddedPreset {
+  setup: Setup;
   loadoutName: string;
   /** in guide order (presetIndex) */
   rotations: Rotation[];
@@ -78,7 +80,7 @@ export class PresetsService {
     });
   }
 
-  /** Creates the loadout and the rotations of the preset and makes them active. Nothing of the player's is replaced. */
+  /** Creates the setup – loadout and rotations – of the preset and makes it active. Nothing of the player's is replaced. */
   async add(p: BossPreset): Promise<AddedPreset> {
     // adding a preset is an explicit save: it stands in for the consent banner's OK
     if (await this.storage.acceptConsentOnSave()) this.toast.show('Saved in this browser', 'info', 2000);
@@ -133,11 +135,13 @@ export class PresetsService {
     const votes = (b: string) => books.filter((x) => x === b).length;
     if (votes('lunar') > votes('ancient') && votes('lunar') > votes('standard')) loadout.spellbook = 'lunar';
     else if (votes('ancient') > votes('standard')) loadout.spellbook = 'ancient';
-    await this.storage.saveLoadout(loadout);
-    await this.storage.setActiveLoadout(loadout.id);
+    // "Nex – solo ranged": the boss is the setup's boss, the rest its name
+    const setup = newSetup({ boss: p.boss, name: splitName(p.title).rest || p.style, style: p.style, loadoutId: loadout.id, presetId: p.id });
+    await this.storage.addSetup(setup, loadout);
+    await this.storage.setActiveSetup(setup.id);
 
     const now = Date.now();
-    const rotations: Rotation[] = parsed.map((r, i) => ({ id: crypto.randomUUID(), name: p.boss + ' – ' + r.name, steps: r.steps, updatedAt: now - i, presetId: p.id, presetIndex: i }));
+    const rotations: Rotation[] = parsed.map((r, i) => ({ id: crypto.randomUUID(), name: r.name, steps: r.steps, updatedAt: now - i, setupId: setup.id, presetIndex: i }));
     for (const r of rotations) await this.storage.saveRotation(r);
     // PvME's necromancy fight rotations start mid-fight ("build 12 necrosis and 5 souls first"): every conjure out and the
     // stacks built – the pre-build of those rotations, editable on the Train page
@@ -148,7 +152,7 @@ export class PresetsService {
       }
     }
 
-    return { loadoutName: loadout.name, rotations, demoIndex: demoRotationIndex(p, parsed) };
+    return { setup, loadoutName: loadout.name, rotations, demoIndex: demoRotationIndex(p, parsed) };
   }
 
   /** One sentence for the toast after an add. */

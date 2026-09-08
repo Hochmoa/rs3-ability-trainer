@@ -9,7 +9,7 @@ import { DataService, EOF_ICON, Entity, SPEC_KEY } from '../../core/data.service
 import { applyWield, equip, hasSpecial, unequip } from '../../core/equipment';
 import { DEFAULT_LAYOUT_ID, keybindLayout } from '../../core/keybind-layouts';
 import { keybindFromEvent, keybindFromMouse, keybindKey, keybindLabel, resolvePress } from '../../core/keybind.util';
-import { ActionBarSetup, AttackPattern, Keybind, BAR_POSITIONS, BONE_SHIELD_ABILITY, INVENTORY_SIZE, NOTE_ACTION_TICKS, BAR_SLOTS, BarShape, barLayout, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, TARGET_TYPES, EquipSlot, ItemRef, Loadout, PrayerStats, Prebuild, REVOLUTION_MAX_SLOTS, REVOLUTION_MIN_SLOTS, RevolutionSettings, Rotation, STYLES4, Settings, StepResult, Style, Style4, WeaponSpec, emptyPrebuild, entityKey, isStyle4, loadoutStyle, loadoutWield, parseEntityKey, prebuildIsEmpty, visiblePresets, RotationStep, CoachSettings, SessionStuck } from '../../core/models';
+import { ActionBarSetup, AttackPattern, Keybind, BAR_POSITIONS, BONE_SHIELD_ABILITY, INVENTORY_SIZE, NOTE_ACTION_TICKS, BAR_SLOTS, BarShape, barLayout, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, TARGET_TYPES, EquipSlot, ItemRef, Loadout, PrayerStats, Prebuild, REVOLUTION_MAX_SLOTS, REVOLUTION_MIN_SLOTS, RevolutionSettings, Rotation, STYLES4, Settings, StepResult, Style, Style4, WeaponSpec, emptyPrebuild, entityKey, isStyle4, loadoutStyle, loadoutWield, parseEntityKey, prebuildIsEmpty, visiblePresets, RotationStep, CoachSettings, SessionStuck, setupTitle } from '../../core/models';
 import { alt1Announce, focusUrl, openFocusWindow } from '../../core/popout';
 import { CoachService, spokenLabel, spokenSequence } from '../../core/coach.service';
 import { PresetsService } from '../../core/presets.service';
@@ -209,8 +209,6 @@ export class Train implements OnDestroy {
     const shown = this.filteredRotations().length;
     return shown === all ? '' : shown + ' of ' + all;
   });
-  /** the loadout select is grouped the same way – a boss preset adds one loadout per setup */
-  readonly loadoutGroups = computed(() => groupEntries(this.storage.loadouts()));
   /** "42 steps · Necromancy" under the rotation select */
   readonly rotationCaption = computed(() => {
     const r = this.rotation();
@@ -956,7 +954,7 @@ export class Train implements OnDestroy {
     }
   }
 
-  /** Rotation dropdown: a rotation from a PvME preset brings its loadout along. */
+  /** Rotation dropdown: a rotation brings its setup (gear) along. */
   pickRotation(id: string): void {
     this.selectedId.set(id);
     const r = this.storage.rotations().find((x) => x.id === id);
@@ -984,8 +982,8 @@ export class Train implements OnDestroy {
     this.playNext(id);
   }
 
-  pickLoadout(id: string): void {
-    void this.storage.setActiveLoadout(id);
+  pickSetup(id: string): void {
+    void this.storage.setActiveSetup(id);
   }
 
   /**
@@ -1000,13 +998,9 @@ export class Train implements OnDestroy {
     else this.toast.show('The browser blocked the popup – allow popups for this site, or open /focus in a new window yourself.', 'warn');
   }
 
+  /** a rotation belongs to a setup: picking it makes that setup – its gear – the active one */
   private async linkPreset(r: Rotation): Promise<void> {
-    if (!r.presetId) return;
-    const loadout = this.storage.loadouts().find((l) => l.presetId === r.presetId);
-    if (loadout && loadout.id !== this.storage.activeLoadoutId()) {
-      await this.storage.setActiveLoadout(loadout.id);
-      this.toast.show('Switched to loadout "' + loadout.name + '" for this preset.');
-    }
+    if (await this.storage.activateSetupOf(r)) this.toast.show('Switched to the setup "' + setupTitle(this.storage.setup()) + '".');
   }
 
   ngOnDestroy(): void {

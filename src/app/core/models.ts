@@ -246,22 +246,56 @@ export interface Rotation {
   name: string;
   steps: RotationStep[];
   updatedAt: number;
-  /** PvME boss preset this came from (presets.json id) – the Train page switches loadout and bars along with it */
-  presetId?: string;
-  /** position in the preset's guide (0 = first) – "Next" on the session end follows it */
+  /** the setup (boss + gear) this rotation belongs to – every rotation has one (docs/plan-setups.md) */
+  setupId: string;
+  /** position inside the setup (0 = first): the order of the guide, "Next" on the session end follows it */
   presetIndex?: number;
-  /** visible in the online explorer (missing = true) */
+  /** server updated_at (ms) of the last successful sync; missing = never synced */
+  syncedAt?: number;
+  /** builds before the setups: the PvME preset the rotation came from – read once by the migration */
+  presetId?: string;
+}
+
+/**
+ * A setup is what a player trains a boss with: the boss, one loadout (gear, backpack, prayer book …) and the
+ * rotations played with it. It is the unit that is shared (`isPublic`) and copied on the Setups page; the PvME
+ * guide account "PVME" holds one per boss variant. Every rotation and every loadout belongs to exactly one setup.
+ */
+export interface Setup {
+  id: string;
+  /** boss the setup is for; '' = general practice ("General") */
+  boss: string;
+  /** what tells the setups of one boss apart: "solo ranged", "HM 7-man magic" – the whole name when there is no boss */
+  name: string;
+  /** combat style(s) of the gear, for the filter chips: "Ranged", "Magic/Melee"; '' = not known yet */
+  style: string;
+  /** the gear – exactly one loadout, owned by this setup */
+  loadoutId: string;
+  /** listed on the Setups page for everyone (missing = false) */
   isPublic?: boolean;
-  /** origin when copied from the explorer */
+  /** PvME boss preset this came from (presets.json id) */
+  presetId?: string;
+  /** origin when copied from another player's setup */
   sourceId?: string;
   sourceName?: string;
   sourceOwner?: string;
-  /** kind of the account the copy came from (guide accounts hold the PvME guide's rotations) */
   sourceOwnerKind?: ProfileKind;
+  updatedAt: number;
   /** server updated_at (ms) of the last successful sync; missing = never synced */
   syncedAt?: number;
-  /** explorer copy counter, read-only mirror */
-  copies?: number;
+}
+
+export const GENERAL_SETUP_NAME = 'General';
+/** what the pickers put between the boss and the setup's name */
+export const SETUP_SEPARATOR = ' – ';
+
+/** "Nex – solo ranged", "General" */
+export function setupTitle(s: Pick<Setup, 'boss' | 'name'>): string {
+  return s.boss ? s.boss + SETUP_SEPARATOR + s.name : s.name || GENERAL_SETUP_NAME;
+}
+
+export function newSetup(p: Partial<Setup> & Pick<Setup, 'loadoutId'>): Setup {
+  return { id: crypto.randomUUID(), boss: '', name: GENERAL_SETUP_NAME, style: '', updatedAt: Date.now(), ...p };
 }
 
 export interface Settings {
@@ -359,17 +393,7 @@ export interface RevolutionSettings {
 
 export const DEFAULT_REVOLUTION: RevolutionSettings = { slots: 9, basics: true, enhanced: true, thresholds: false, ultimates: false };
 
-/** Everything the Setups page shares and "Load this setup" replaces: all local data except the rotations. */
-export interface SetupBundle {
-  settings: Settings;
-  loadouts: Loadout[];
-  activeLoadoutId: string;
-  enemy: EnemyConfig | null;
-  keybinds: Record<string, Keybind>;
-  actionBars: ActionBarSetup | null;
-}
-
-/** sync bookkeeping for settings + loadouts + enemy (one document on the server) */
+/** sync bookkeeping for settings + enemy (one private document on the server, table user_settings) */
 export interface SetupMeta {
   /** last local edit (ms); missing = never edited */
   updatedAt?: number;
@@ -623,7 +647,7 @@ export interface Loadout {
   name: string;
   /** base combat levels (unboosted); missing = the cap. Overloads boost them (engine/damage.ts boostedLevels) */
   levels?: Partial<Record<CombatSkill, number>>;
-  /** PvME boss preset this came from (presets.json id) */
+  /** builds before the setups: the PvME preset the loadout came from – read once by the migration, the setup carries it now */
   presetId?: string;
   /** start of a training session, 0..100 */
   startAdrenaline: number;

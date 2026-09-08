@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { Rotation, StepResult } from './models';
-import { nextRotation, pickRotation, presetSiblings, worstStep } from './rotation-pick';
+import { nextRotation, pickRotation, setupRotations, worstStep } from './rotation-pick';
 
-const rot = (id: string, extra: Partial<Rotation> = {}): Rotation => ({ id, name: id, steps: [], updatedAt: 0, ...extra });
+const rot = (id: string, extra: Partial<Rotation> = {}): Rotation => ({ id, name: id, steps: [], updatedAt: 0, setupId: 'own', ...extra });
 
 describe('pickRotation', () => {
   const list = [rot('a'), rot('b'), rot('c')];
@@ -24,15 +24,15 @@ describe('pickRotation', () => {
 
 describe('nextRotation', () => {
   const rasial = [
-    rot('p4', { name: 'Rasial – Phase 4', presetId: 'rasial', presetIndex: 2 }),
-    rot('pre', { name: 'Rasial – Pre-build', presetId: 'rasial', presetIndex: 0 }),
-    rot('p13', { name: 'Rasial – Phase 1-3', presetId: 'rasial', presetIndex: 1 }),
-    rot('other', { name: 'Zamorak – Phase 1', presetId: 'zamorak' }),
+    rot('p4', { name: 'Rasial – Phase 4', setupId: 'rasial', presetIndex: 2 }),
+    rot('pre', { name: 'Rasial – Pre-build', setupId: 'rasial', presetIndex: 0 }),
+    rot('p13', { name: 'Rasial – Phase 1-3', setupId: 'rasial', presetIndex: 1 }),
+    rot('other', { name: 'Zamorak – Phase 1', setupId: 'zamorak' }),
     rot('mine', { name: 'My rotation' }),
   ];
 
-  it('orders the siblings of a preset by their guide index', () => {
-    expect(presetSiblings(rasial, 'rasial').map((r) => r.id)).toEqual(['pre', 'p13', 'p4']);
+  it('orders the rotations of a setup by their guide index', () => {
+    expect(setupRotations(rasial, 'rasial').map((r) => r.id)).toEqual(['pre', 'p13', 'p4']);
   });
 
   it('returns the sibling after the current one, and null after the last', () => {
@@ -41,14 +41,14 @@ describe('nextRotation', () => {
     expect(nextRotation(rasial, rasial[0])).toBeNull();
   });
 
-  it('has no next for a rotation without a preset', () => {
+  it('has no next for the only rotation of its setup', () => {
     expect(nextRotation(rasial, rasial[4])).toBeNull();
     expect(nextRotation(rasial, null)).toBeNull();
   });
 
   it('orders by name with numbers compared as numbers when the index is missing (older imports)', () => {
-    const list = [rot('b', { name: 'Boss – Phase 10', presetId: 'x' }), rot('a', { name: 'Boss – Phase 2', presetId: 'x' }), rot('c', { name: 'Boss – Phase 1', presetId: 'x' })];
-    expect(presetSiblings(list, 'x').map((r) => r.id)).toEqual(['c', 'a', 'b']);
+    const list = [rot('b', { name: 'Boss – Phase 10', setupId: 'x' }), rot('a', { name: 'Boss – Phase 2', setupId: 'x' }), rot('c', { name: 'Boss – Phase 1', setupId: 'x' })];
+    expect(setupRotations(list, 'x').map((r) => r.id)).toEqual(['c', 'a', 'b']);
     expect(nextRotation(list, list[1])?.id).toBe('b');
   });
 });

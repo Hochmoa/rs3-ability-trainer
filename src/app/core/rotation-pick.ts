@@ -8,17 +8,17 @@ export function pickRotation<T extends { id: string }>(rotations: readonly T[], 
   return rotations.find((r) => r.id === wantedId) ?? rotations.find((r) => r.id === currentId) ?? rotations[0] ?? null;
 }
 
-/** The rotations of one preset in guide order: by `presetIndex` where both have one, else by name (numbers compared as numbers). */
-export function presetSiblings(rotations: readonly Rotation[], presetId: string): Rotation[] {
+/** The rotations of one setup in order: by `presetIndex` where both have one, else by name (numbers compared as numbers). */
+export function setupRotations(rotations: readonly Rotation[], setupId: string): Rotation[] {
   return rotations
-    .filter((r) => r.presetId === presetId)
+    .filter((r) => r.setupId === setupId)
     .sort((a, b) => (a.presetIndex !== undefined && b.presetIndex !== undefined ? a.presetIndex - b.presetIndex : a.name.localeCompare(b.name, undefined, { numeric: true })));
 }
 
-/** "Next: Phase 4" – the rotation after `current` in its preset, null when it is the last one or from no preset. */
+/** "Next: Phase 4" – the rotation after `current` in its setup, null when it is the last one. */
 export function nextRotation(rotations: readonly Rotation[], current: Rotation | null): Rotation | null {
-  if (!current?.presetId) return null;
-  const siblings = presetSiblings(rotations, current.presetId);
+  if (!current) return null;
+  const siblings = setupRotations(rotations, current.setupId);
   const i = siblings.findIndex((r) => r.id === current.id);
   return i >= 0 ? siblings[i + 1] ?? null : null;
 }

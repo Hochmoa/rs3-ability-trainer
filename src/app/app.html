@@ -7,12 +7,10 @@
     <a routerLink="/bars" routerLinkActive="active">Action bars</a>
     <a routerLink="/keybinds" routerLinkActive="active">Keybinds</a>
     <a routerLink="/drill" routerLinkActive="active">Key drill</a>
-    <a routerLink="/presets" routerLinkActive="active">Boss setups</a>
+    <a routerLink="/setups" routerLinkActive="active">Setups</a>
     <a routerLink="/settings" routerLinkActive="active">Settings</a>
     @if (advanced()) {
       <a routerLink="/loadout" routerLinkActive="active">Loadout</a>
-      <a routerLink="/explore" routerLinkActive="active">Explore</a>
-      <a routerLink="/setups" routerLinkActive="active">Shared setups</a>
     }
     @if (supabase.isStaff()) {
       <a routerLink="/admin" routerLinkActive="active" class="admin-link">Admin</a>

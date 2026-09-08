@@ -5,7 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { groupCatalog } from '../../core/catalog-groups';
 import { DataService, Entity } from '../../core/data.service';
-import { keybindLabel } from '../../core/keybind.util';
+import { keybindLabel, slotKeybinds } from '../../core/keybind.util';
 import { parsePvme } from '../../core/pvme';
 import { NOTE_ACTION_MAX_TICKS, NOTE_ACTION_TICKS, Rotation, RotationStep, SPELLBOOKS, SPELLBOOK_NAMES, STYLES } from '../../core/models';
 import { isObscureEntity } from '../../core/obscure';
@@ -126,8 +126,11 @@ export class Rotations {
     return [...new Set(out)];
   });
 
+  /** entity key → the key of the first bar slot holding it (all five positions, as the bars are laid out for no style) */
+  private readonly slotKeys = computed(() => slotKeybinds(this.storage.actionBars()));
+
   keyOf(e: Entity): string {
-    return keybindLabel(this.storage.keybinds()[e.key]);
+    return keybindLabel(this.slotKeys().get(e.key));
   }
 
   entity(step: RotationStep): Entity | undefined {
@@ -182,7 +185,7 @@ export class Rotations {
     }
     const heading = steps.find((s) => s.kind === 'note' && s.phase)?.note?.trim();
     const name = (heading || 'Imported rotation').slice(0, 60);
-    await this.storage.saveRotation({ id: crypto.randomUUID(), name, steps, updatedAt: Date.now(), isPublic: false });
+    await this.storage.saveRotation({ id: crypto.randomUUID(), name, steps, updatedAt: Date.now(), setupId: this.storage.activeSetupId() });
     this.importReport.set('"' + name + '" saved: ' + inputs + ' input' + (inputs === 1 ? '' : 's') + (unknown.length ? ', kept as notes: ' + unknown.join(' · ') : '') + '.');
     this.importText.set('');
   }
@@ -241,7 +244,7 @@ export class Rotations {
   }
 
   newRotation(): void {
-    this.editing.set({ id: crypto.randomUUID(), name: 'New rotation', steps: [], updatedAt: Date.now(), isPublic: false });
+    this.editing.set({ id: crypto.randomUUID(), name: 'New rotation', steps: [], updatedAt: Date.now(), setupId: this.storage.activeSetupId() });
   }
 
   edit(r: Rotation): void {
@@ -289,10 +292,6 @@ export class Rotations {
 
   setName(name: string): void {
     this.editing.update((r) => (r ? { ...r, name } : r));
-  }
-
-  setPublic(isPublic: boolean): void {
-    this.editing.update((r) => (r ? { ...r, isPublic } : r));
   }
 
   async save(): Promise<void> {

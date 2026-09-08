@@ -4,7 +4,7 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } fro
 import { filter, map } from 'rxjs';
 import { BarsSyncService } from './core/bars-sync.service';
 import { FeedbackService } from './core/feedback.service';
-import { SetupSyncService } from './core/setup-sync.service';
+import { SettingsSyncService } from './core/settings-sync.service';
 import { StorageService } from './core/storage.service';
 import { SupabaseService } from './core/supabase.service';
 import { SyncService } from './core/sync.service';
@@ -50,6 +50,6 @@ export class App {
     // the sync services are created at start-up so their login effects and change hooks are wired immediately
     inject(SyncService);
     inject(BarsSyncService);
-    inject(SetupSyncService);
+    inject(SettingsSyncService);
   }
 }

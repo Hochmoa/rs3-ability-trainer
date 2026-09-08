@@ -3,7 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { StorageService } from '../../core/storage.service';
 import { DISPLAY_NAME_RE, SupabaseService, errorText } from '../../core/supabase.service';
-import { SetupSyncService } from '../../core/setup-sync.service';
+import { SettingsSyncService } from '../../core/settings-sync.service';
 import { SyncService } from '../../core/sync.service';
 import { DialogService } from '../../shared/dialog';
 
@@ -19,7 +19,7 @@ export class Account {
   private dialogs = inject(DialogService);
   readonly supabase = inject(SupabaseService);
   readonly sync = inject(SyncService);
-  readonly setups = inject(SetupSyncService);
+  readonly settingsSync = inject(SettingsSyncService);
   readonly storage = inject(StorageService);
 
   readonly mode = signal<Mode>('signin');
@@ -133,23 +133,14 @@ export class Account {
     this.message.set({ text: 'Signed out. Your rotations stay in this browser.', cls: 'info' });
   }
 
-  async setShare(value: boolean): Promise<void> {
-    try {
-      await this.setups.setPublic(value);
-      this.message.set({ text: value ? 'Your setup is listed on the Shared setups page.' : 'Your setup is hidden from the Shared setups page.', cls: 'info' });
-    } catch (err) {
-      this.message.set({ text: errorText(err), cls: 'bad' });
-    }
-  }
-
   async resync(): Promise<void> {
-    await this.setups.pullAndMerge();
+    await this.settingsSync.pullAndMerge();
     await this.sync.pullAndMerge();
     this.message.set({ text: this.sync.error() ? 'Sync failed: ' + this.sync.error() : 'Synced.', cls: this.sync.error() ? 'bad' : 'good' });
   }
 
   async deleteAccount(): Promise<void> {
-    if (!(await this.dialogs.confirm('Delete your account and everything stored online (profile, rotations, keybinds, sessions)? Local data in this browser stays.', { title: 'Delete account', ok: 'Delete account', danger: true }))) return;
+    if (!(await this.dialogs.confirm('Delete your account and everything stored online (profile, setups, rotations, action bars, sessions)? Local data in this browser stays.', { title: 'Delete account', ok: 'Delete account', danger: true }))) return;
     this.busy.set(true);
     try {
       await this.supabase.deleteAccount();

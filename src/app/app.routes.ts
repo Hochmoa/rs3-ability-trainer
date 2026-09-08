@@ -13,9 +13,10 @@ export const routes: Routes = [
   { path: 'drill', loadComponent: () => import('./pages/drill/drill').then((m) => m.DrillPage), title: 'Keybind drill – RS3 Ability Trainer' },
   { path: 'loadout', loadComponent: () => import('./pages/loadout/loadout').then((m) => m.Loadout), title: 'Loadout – RS3 Ability Trainer' },
   { path: 'settings', loadComponent: () => import('./pages/settings/settings').then((m) => m.Settings), title: 'Settings – RS3 Ability Trainer' },
-  { path: 'explore', loadComponent: () => import('./pages/explore/explore').then((m) => m.Explore), title: 'Explore – RS3 Ability Trainer' },
-  { path: 'setups', loadComponent: () => import('./pages/setups/setups').then((m) => m.Setups), title: 'Shared setups – RS3 Ability Trainer' },
-  { path: 'presets', loadComponent: () => import('./pages/presets/presets').then((m) => m.Presets), title: 'Boss setups – RS3 Ability Trainer' },
+  { path: 'setups', loadComponent: () => import('./pages/presets/presets').then((m) => m.Presets), title: 'Setups – RS3 Ability Trainer' },
+  // the pages the Setups page replaced (Sept 2026): old links keep working
+  { path: 'explore', redirectTo: 'setups' },
+  { path: 'presets', redirectTo: 'setups' },
   { path: 'account', loadComponent: () => import('./pages/account/account').then((m) => m.Account), title: 'Account – RS3 Ability Trainer' },
   { path: 'admin', loadComponent: () => import('./pages/admin/admin').then((m) => m.Admin), canActivate: [staffGuard], title: 'Admin – RS3 Ability Trainer' },
   { path: 'auth/callback', loadComponent: () => import('./pages/auth-callback/auth-callback').then((m) => m.AuthCallback), title: 'RS3 Ability Trainer' },

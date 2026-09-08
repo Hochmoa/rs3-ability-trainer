@@ -1,4 +1,4 @@
-import { ActionBarSetup, BAR_POSITIONS, Keybind } from './models';
+import { ActionBarSetup, BAR_POSITIONS, Keybind, SPEC_KEY, entityKey } from './models';
 
 const MODIFIER_CODES = new Set([
   'ControlLeft', 'ControlRight', 'ShiftLeft', 'ShiftRight', 'AltLeft', 'AltRight', 'MetaLeft', 'MetaRight',
@@ -116,4 +116,22 @@ export function resolvePress(setup: ActionBarSetup, key: string, carriedIds: Ite
     }
   }
   return null;
+}
+
+/**
+ * Entity key → the key of the first bar slot holding that entity, over the five positions as they show for no
+ * style (the Rotations page prints it on the tiles). A weapon special attack slot maps to SPEC_KEY.
+ */
+export function slotKeybinds(setup: ActionBarSetup): Map<string, Keybind> {
+  const out = new Map<string, Keybind>();
+  setup.positions.forEach((presetId, pos) => {
+    const preset = presetId === null ? undefined : setup.presets.find((p) => p.id === presetId);
+    preset?.slots.forEach((slot, i) => {
+      const kb = setup.slotKeybinds[pos]?.[i];
+      if (!slot || !kb || slot.kind === 'note') return;
+      const key = slot.kind === 'spec' ? SPEC_KEY : entityKey(slot.kind, slot.id);
+      if (!out.has(key)) out.set(key, kb);
+    });
+  });
+  return out;
 }

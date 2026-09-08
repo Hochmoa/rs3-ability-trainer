@@ -286,24 +286,23 @@ export class Loadout {
 
 
   select(id: string): void {
-    void this.storage.setActiveLoadout(id);
+    const setup = this.storage.setupOfLoadout(id);
+    if (setup) void this.storage.setActiveSetup(setup.id);
   }
 
-  create(): void {
-    const l = newLoadout('Loadout ' + (this.storage.loadouts().length + 1));
-    void this.storage.saveLoadout(l).then(() => this.storage.setActiveLoadout(l.id));
+  async create(): Promise<void> {
+    const s = await this.storage.createSetup({ name: 'Setup ' + (this.storage.setups().length + 1) });
+    await this.storage.setActiveSetup(s.id);
   }
 
-  duplicate(): void {
-    const copy = JSON.parse(JSON.stringify(this.l())) as LoadoutModel;
-    copy.id = crypto.randomUUID();
-    copy.name = this.l().name + ' (copy)';
-    void this.storage.saveLoadout(copy).then(() => this.storage.setActiveLoadout(copy.id));
+  async duplicate(): Promise<void> {
+    const copy = await this.storage.duplicateSetup(this.storage.setup().id);
+    if (copy) await this.storage.setActiveSetup(copy.id);
   }
 
   async remove(): Promise<void> {
-    if (!(await this.dialogs.confirm('Delete loadout "' + this.l().name + '"?', { ok: 'Delete', danger: true }))) return;
-    void this.storage.deleteLoadout(this.l().id);
+    if (!(await this.dialogs.confirm('Delete the setup "' + this.l().name + '" with its gear and rotations?', { ok: 'Delete', danger: true }))) return;
+    void this.storage.deleteSetup(this.storage.setup().id);
   }
 
   rename(name: string): void {

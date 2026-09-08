@@ -1,89 +1,107 @@
 import { Injectable, effect, inject, signal } from '@angular/core';
-import { DataService } from './data.service';
-import { Keybind, ProfileKind, Rotation, Session } from './models';
+import { Loadout, ProfileKind, Rotation, Session, Setup, newSetup } from './models';
+import { necroPrebuild } from './presets.service';
 import { StorageService } from './storage.service';
 import { SupabaseService, errorText } from './supabase.service';
 
-/** Row shape of public.rotations / public.public_rotations. */
+/** Row shape of public.setups (the loadout travels inside the row). */
+export interface SetupRow {
+  id: string;
+  owner_id?: string;
+  boss: string;
+  name: string;
+  style: string;
+  loadout: Loadout;
+  is_public: boolean;
+  source_id: string | null;
+  preset_id: string | null;
+  updated_at: string;
+}
+
+/** Row shape of public.rotations. */
 export interface RotationRow {
   id: string;
   owner_id?: string;
+  setup_id: string | null;
   name: string;
   steps: Rotation['steps'];
-  is_public: boolean;
-  source_id: string | null;
-  styles: string[];
-  copies: number;
+  position: number | null;
   updated_at: string;
-  owner_name?: string;
-  /** public_rotations only: 'guide' = the owner is a boss's guide account (PvME rotations) */
-  owner_kind?: ProfileKind;
 }
 
-/** rows per request in the players' feed */
-export const EXPLORE_LIMIT = 60;
-/**
- * Rows per request under the "Guides" chip. The guide accounts hold roughly a thousand rotations – far more than one
- * request should carry, and a fixed cap simply hid everything after it (the bosses from "S" on were invisible). The
- * page fetches this many at a time and asks for the next range when the player presses "Load more".
- */
-export const EXPLORE_GUIDES_LIMIT = 120;
-
-/** rows one `explore()` call returns – a full page means there may be more */
-export function explorePageSize(guides: boolean | undefined): number {
-  return guides ? EXPLORE_GUIDES_LIMIT : EXPLORE_LIMIT;
+/** Row of the public_setups view: what the Setups page lists (no loadout – that is fetched on demand). */
+export interface PublicSetupRow {
+  id: string;
+  owner_id: string;
+  owner_name: string;
+  /** 'guide' = the PVME guide account */
+  owner_kind: ProfileKind;
+  boss: string;
+  name: string;
+  style: string;
+  preset_id: string | null;
+  rotation_count: number;
+  rotation_names: string[];
+  updated_at: string;
 }
 
-/** the inclusive `[from, to]` bounds postgrest's `.range()` wants for the page that follows `offset` rows */
-export function exploreRange(opts: { guides?: boolean; offset?: number }): [number, number] {
-  const from = Math.max(0, Math.floor(opts.offset ?? 0));
-  return [from, from + explorePageSize(opts.guides) - 1];
+/** Row of the setup_users view: every account with at least one public setup. */
+export interface SetupUserRow {
+  owner_id: string;
+  display_name: string;
+  kind: ProfileKind;
+  setups: number;
+  updated_at: string;
 }
 
-export interface ExploreOptions {
-  search?: string;
-  style?: string;
-  sort: 'new' | 'copies';
-  /** only rotations of guide accounts */
-  guides?: boolean;
-  /** display name of one account (the Explore page's boss filter picks a guide account) */
-  owner?: string;
-  /** first row of the page – the rows already shown, for "Load more" */
-  offset?: number;
+/** A server setup with its rotations – what "Use this setup" copies. */
+export interface FetchedSetup {
+  setup: SetupRow;
+  rotations: RotationRow[];
 }
 
-/** A server row as a local rotation; `local` carries what only the browser knows (where a copy came from). */
-export function rotationFromRow(row: RotationRow, local: Pick<Rotation, 'sourceName' | 'sourceOwner' | 'sourceOwnerKind'> | undefined): Rotation {
+/** A server row as a local rotation; `local` carries what only the browser knows. */
+export function rotationFromRow(row: RotationRow, local: Pick<Rotation, 'setupId'> | undefined): Rotation {
+  const ms = Date.parse(row.updated_at);
+  const r: Rotation = { id: row.id, name: row.name, steps: row.steps, updatedAt: ms, syncedAt: ms, setupId: row.setup_id ?? local?.setupId ?? '' };
+  if (row.position !== null && row.position !== undefined) r.presetIndex = row.position;
+  return r;
+}
+
+/** A server row as a local setup; the copy's origin (name, owner) stays local. */
+export function setupFromRow(row: SetupRow, local: Pick<Setup, 'sourceName' | 'sourceOwner' | 'sourceOwnerKind'> | undefined): Setup {
   const ms = Date.parse(row.updated_at);
   return {
     id: row.id,
+    boss: row.boss,
     name: row.name,
-    steps: row.steps,
-    updatedAt: ms,
-    syncedAt: ms,
+    style: row.style,
+    loadoutId: row.loadout.id,
     isPublic: row.is_public,
     sourceId: row.source_id ?? undefined,
+    presetId: row.preset_id ?? undefined,
     sourceName: local?.sourceName,
     sourceOwner: local?.sourceOwner,
     sourceOwnerKind: local?.sourceOwnerKind,
-    copies: row.copies,
+    updatedAt: ms,
+    syncedAt: ms,
   };
 }
 
 /** clock skew we tolerate before calling a local edit "newer" than the server copy */
 const SKEW_MS = 5000;
 
-export type RotationMergeDecision = 'upload' | 'download' | 'delete';
+export type MergeDecision = 'upload' | 'download' | 'delete';
 
 /**
- * What happens to one local rotation on login, given the server's `updated_at` (ms) of the same id – or null when
- * the server has no such row:
+ * What happens to one local row (setup or rotation) on login, given the server's `updated_at` (ms) of the same id
+ * – or null when the server has no such row:
  * - not on the server: synced before → it was deleted on another device → delete locally; never synced → upload
  * - synced before and edited after that sync, clearly newer than the server copy → upload
  * - never synced but edited clearly after the server copy → upload
  * - otherwise the server copy wins → download
  */
-export function decideRotationMerge(mine: Pick<Rotation, 'updatedAt' | 'syncedAt'>, serverMs: number | null): RotationMergeDecision {
+export function decideMerge(mine: { updatedAt: number; syncedAt?: number }, serverMs: number | null): MergeDecision {
   if (serverMs === null) return mine.syncedAt !== undefined ? 'delete' : 'upload';
   if (mine.syncedAt !== undefined && mine.updatedAt > mine.syncedAt && mine.updatedAt > serverMs + SKEW_MS) return 'upload';
   if (mine.syncedAt === undefined && mine.updatedAt > serverMs + SKEW_MS) return 'upload';
@@ -91,20 +109,23 @@ export function decideRotationMerge(mine: Pick<Rotation, 'updatedAt' | 'syncedAt
 }
 
 /**
- * Mirrors rotations, keybinds and session summaries to Supabase while logged in.
- * Local IndexedDB stays the cache; the server is the truth once a user is signed in:
- * on login the account's rows are pulled, local-only rows are uploaded, and for the same id
- * the newer updatedAt wins. Every later edit goes local first, then to the server.
+ * Mirrors setups (with their loadouts), rotations and session summaries to Supabase while logged in, and reads the
+ * public setups for the Setups page. Local IndexedDB stays the cache; the server is the truth once a user is
+ * signed in: on login the account's rows are pulled, local-only rows are uploaded, and for the same id the newer
+ * updatedAt wins. Every later edit goes local first, then to the server – writes run one after the other, so a
+ * rotation never reaches the server before the setup it belongs to.
  */
 @Injectable({ providedIn: 'root' })
 export class SyncService {
   private storage = inject(StorageService);
   private supabase = inject(SupabaseService);
-  private data = inject(DataService);
 
   readonly syncing = signal(false);
   readonly error = signal<string | null>(null);
   readonly lastSync = signal<number | null>(null);
+
+  /** the write queue: one server write at a time, in the order the edits happened */
+  private chain: Promise<void> = Promise.resolve();
 
   private get uid(): string | null {
     return this.supabase.user()?.id ?? null;
@@ -119,22 +140,25 @@ export class SyncService {
       last = uid;
       if (uid) void this.pullAndMerge();
     });
-    this.storage.rotationSaved.subscribe((r) => void this.guard(() => this.upsertRotation(r)));
-    this.storage.rotationDeleted.subscribe((id) => void this.guard(() => this.deleteRotation(id)));
-    this.storage.keybindChanged.subscribe(({ key, kb }) => void this.guard(() => this.upsertKeybind(key, kb)));
-    this.storage.keybindsReplaced.subscribe((kb) => void this.guard(() => this.replaceKeybinds(kb)));
-    this.storage.sessionAdded.subscribe((s) => void this.guard(() => this.uploadSession(s)));
+    this.storage.setupSaved.subscribe((s) => this.guard(() => this.upsertSetup(s)));
+    this.storage.setupDeleted.subscribe((id) => this.guard(() => this.deleteSetup(id)));
+    this.storage.rotationSaved.subscribe((r) => this.guard(() => this.upsertRotation(r)));
+    this.storage.rotationDeleted.subscribe((id) => this.guard(() => this.deleteRotation(id)));
+    this.storage.sessionAdded.subscribe((s) => this.guard(() => this.uploadSession(s)));
   }
 
-  private async guard(fn: () => Promise<void>): Promise<void> {
+  private guard(fn: () => Promise<void>): void {
     if (!this.uid) return;
-    try {
-      await fn();
-      this.error.set(null);
-    } catch (err) {
-      console.error('sync failed', err);
-      this.error.set(errorText(err));
-    }
+    this.chain = this.chain.then(async () => {
+      if (!this.uid) return;
+      try {
+        await fn();
+        this.error.set(null);
+      } catch (err) {
+        console.error('sync failed', err);
+        this.error.set(errorText(err));
+      }
+    });
   }
 
   // ------------------------------------------------------------------ merge on login
@@ -144,8 +168,11 @@ export class SyncService {
     if (!uid) return;
     this.syncing.set(true);
     try {
+      await this.chain;
+      await this.mergeSetups(uid);
       await this.mergeRotations(uid);
-      await this.mergeKeybinds(uid);
+      // rows from before the setups (no setup_id) are given a home and the assignment goes back up
+      for (const r of await this.storage.reconcileAfterSync()) await this.upsertRotation(r);
       this.lastSync.set(Date.now());
       this.error.set(null);
     } catch (err) {
@@ -153,6 +180,27 @@ export class SyncService {
       this.error.set(errorText(err));
     } finally {
       this.syncing.set(false);
+    }
+  }
+
+  private async mergeSetups(uid: string): Promise<void> {
+    const { data, error } = await (await this.supabase.db()).from('setups').select('*').eq('owner_id', uid);
+    if (error) throw error;
+    const server = new Map((data as SetupRow[]).map((r) => [r.id, r]));
+    const local = new Map(this.storage.setups().map((s) => [s.id, s]));
+
+    for (const [id, row] of server) {
+      const mine = local.get(id);
+      if (mine && decideMerge(mine, Date.parse(row.updated_at)) === 'upload') await this.upsertSetup(mine);
+      else {
+        await this.storage.putLoadout(row.loadout);
+        await this.storage.putSetup(setupFromRow(row, mine));
+      }
+    }
+    for (const [id, mine] of local) {
+      if (server.has(id)) continue;
+      if (decideMerge(mine, null) === 'delete') await this.storage.removeSetup(id);
+      else await this.upsertSetup(mine);
     }
   }
 
@@ -164,76 +212,70 @@ export class SyncService {
 
     for (const [id, row] of server) {
       const mine = local.get(id);
-      if (mine && decideRotationMerge(mine, Date.parse(row.updated_at)) === 'upload') await this.upsertRotation(mine);
+      if (mine && decideMerge(mine, Date.parse(row.updated_at)) === 'upload') await this.upsertRotation(mine);
       else await this.storage.putRotation(rotationFromRow(row, mine));
     }
     for (const [id, mine] of local) {
       if (server.has(id)) continue;
-      if (decideRotationMerge(mine, null) === 'delete') await this.storage.removeRotation(id);
+      if (decideMerge(mine, null) === 'delete') await this.storage.removeRotation(id);
       else await this.upsertRotation(mine);
-    }
-  }
-
-  private async mergeKeybinds(uid: string): Promise<void> {
-    const { data, error } = await (await this.supabase.db()).from('keybinds').select('entity_key, keybind, updated_at').eq('user_id', uid);
-    if (error) throw error;
-    const server = new Map((data as { entity_key: string; keybind: Keybind }[]).map((k) => [k.entity_key, k.keybind]));
-    const local = this.storage.keybinds();
-    for (const [key, kb] of server) await this.storage.putKeybind(key, kb);
-    const missing = Object.entries(local).filter(([key]) => !server.has(key));
-    if (missing.length) {
-      const rows = missing.map(([entity_key, keybind]) => ({ user_id: uid, entity_key, keybind }));
-      const res = await (await this.supabase.db()).from('keybinds').upsert(rows);
-      if (res.error) throw res.error;
     }
   }
 
   // ------------------------------------------------------------------ single writes
 
+  async upsertSetup(s: Setup): Promise<void> {
+    const uid = this.uid;
+    if (!uid) return;
+    const loadout = this.storage.loadoutOf(s);
+    if (!loadout) return;
+    const row = {
+      id: s.id,
+      owner_id: uid,
+      boss: s.boss,
+      name: s.name,
+      style: s.style,
+      loadout,
+      is_public: s.isPublic ?? false,
+      source_id: s.sourceId ?? null,
+      preset_id: s.presetId ?? null,
+    };
+    const { data, error } = await (await this.supabase.db()).from('setups').upsert(row).select('updated_at').single();
+    if (error) throw error;
+    const ms = Date.parse((data as { updated_at: string }).updated_at);
+    const cur = this.storage.setups().find((x) => x.id === s.id) ?? s;
+    await this.storage.putSetup({ ...cur, updatedAt: ms, syncedAt: ms });
+  }
+
+  async deleteSetup(id: string): Promise<void> {
+    const { error } = await (await this.supabase.db()).from('setups').delete().eq('id', id);
+    if (error) throw error;
+  }
+
   async upsertRotation(r: Rotation): Promise<void> {
     const uid = this.uid;
     if (!uid) return;
+    // the setup row must exist before a rotation can point to it
+    const setup = this.storage.setups().find((s) => s.id === r.setupId);
+    if (setup && setup.syncedAt === undefined) await this.upsertSetup(setup);
     const row = {
       id: r.id,
       owner_id: uid,
+      setup_id: setup ? r.setupId : null,
       name: r.name,
       steps: r.steps,
-      is_public: r.isPublic ?? true,
-      source_id: r.sourceId ?? null,
-      styles: this.stylesOf(r),
+      position: r.presetIndex ?? null,
     };
-    const { data, error } = await (await this.supabase.db()).from('rotations').upsert(row).select('updated_at, copies').single();
+    const { data, error } = await (await this.supabase.db()).from('rotations').upsert(row).select('updated_at').single();
     if (error) throw error;
     const ms = Date.parse((data as { updated_at: string }).updated_at);
-    await this.storage.putRotation({ ...r, updatedAt: ms, syncedAt: ms, copies: (data as { copies: number }).copies });
+    const cur = this.storage.rotations().find((x) => x.id === r.id) ?? r;
+    await this.storage.putRotation({ ...cur, updatedAt: ms, syncedAt: ms });
   }
 
   async deleteRotation(id: string): Promise<void> {
     const { error } = await (await this.supabase.db()).from('rotations').delete().eq('id', id);
     if (error) throw error;
-  }
-
-  async upsertKeybind(key: string, kb: Keybind | null): Promise<void> {
-    const uid = this.uid;
-    if (!uid) return;
-    const q = kb
-      ? (await this.supabase.db()).from('keybinds').upsert({ user_id: uid, entity_key: key, keybind: kb, updated_at: new Date().toISOString() })
-      : (await this.supabase.db()).from('keybinds').delete().eq('user_id', uid).eq('entity_key', key);
-    const { error } = await q;
-    if (error) throw error;
-  }
-
-  /** Replaces all keybinds of the account (after loading another user's setup). */
-  async replaceKeybinds(keybinds: Record<string, Keybind>): Promise<void> {
-    const uid = this.uid;
-    if (!uid) return;
-    const del = await (await this.supabase.db()).from('keybinds').delete().eq('user_id', uid);
-    if (del.error) throw del.error;
-    const rows = Object.entries(keybinds).map(([entity_key, keybind]) => ({ user_id: uid, entity_key, keybind }));
-    if (rows.length) {
-      const { error } = await (await this.supabase.db()).from('keybinds').upsert(rows);
-      if (error) throw error;
-    }
   }
 
   async uploadSession(s: Session): Promise<void> {
@@ -261,63 +303,68 @@ export class SyncService {
     if (error) throw error;
   }
 
-  // ------------------------------------------------------------------ explorer
+  // ------------------------------------------------------------------ the Setups page
 
-  /** One page of the explorer; `opts.offset` continues the list ("Load more"), so every guide rotation is reachable. */
-  async explore(opts: ExploreOptions): Promise<RotationRow[]> {
-    const [from, to] = exploreRange(opts);
-    let q = (await this.supabase.db()).from('public_rotations').select('*').range(from, to);
-    if (opts.search?.trim()) q = q.ilike('name', '%' + opts.search.trim().replace(/[%_]/g, '') + '%');
-    if (opts.style) q = q.contains('styles', [opts.style]);
-    if (opts.owner) q = q.eq('owner_name', opts.owner);
-    if (opts.guides) q = q.eq('owner_kind', 'guide').order('owner_name').order('name');
-    else {
-      // the guide accounts hold hundreds of rotations – they have their own chip and would bury the players' feed, but a search or the boss filter finds them
-      if (!opts.search?.trim() && !opts.owner) q = q.neq('owner_kind', 'guide');
-      q = opts.sort === 'copies' ? q.order('copies', { ascending: false }).order('updated_at', { ascending: false }) : q.order('updated_at', { ascending: false });
-    }
-    // the paging needs a total order: two rows with the same name / timestamp would otherwise be free to swap pages
-    const { data, error } = await q.order('id');
+  /** Every public setup, newest first – the whole list, the page filters it (a few hundred rows at most). */
+  async listPublicSetups(): Promise<PublicSetupRow[]> {
+    const { data, error } = await (await this.supabase.db()).from('public_setups').select('*').order('boss').order('name').limit(2000);
     if (error) throw error;
-    return data as RotationRow[];
+    return data as PublicSetupRow[];
   }
 
-  /** Display names of the guide accounts (one per boss) – the Explore page's boss filter. */
-  async guideAccounts(): Promise<string[]> {
-    const { data, error } = await (await this.supabase.db()).from('public_profiles').select('display_name').eq('kind', 'guide').order('display_name');
+  /** Every account with at least one public setup; the guide account first. */
+  async listSetupUsers(): Promise<SetupUserRow[]> {
+    const { data, error } = await (await this.supabase.db()).from('setup_users').select('*').order('kind', { ascending: false }).order('setups', { ascending: false }).limit(1000);
     if (error) throw error;
-    return (data as { display_name: string }[]).map((r) => r.display_name);
+    return data as SetupUserRow[];
   }
 
-  /** Copies an explorer rotation into "my rotations": through the RPC when logged in (counts the copy), else locally. */
-  async copyFromExplorer(row: RotationRow): Promise<Rotation> {
-    const id = crypto.randomUUID();
-    if (this.uid) {
-      const { data, error } = await (await this.supabase.db()).rpc('copy_rotation', { source: row.id, new_id: id });
-      if (error) throw error;
-      const copy = rotationFromRow(data as RotationRow, { sourceName: row.name, sourceOwner: row.owner_name, sourceOwnerKind: row.owner_kind });
-      return this.storage.putRotation(copy);
-    }
-    return this.storage.putRotation({
-      id,
-      name: row.name,
-      steps: row.steps,
-      updatedAt: Date.now(),
+  /** A public setup with its loadout and rotations (RLS lets everyone read the rows of a public setup). */
+  async fetchSetup(id: string): Promise<FetchedSetup | null> {
+    const db = await this.supabase.db();
+    const { data, error } = await db.from('setups').select('*').eq('id', id).maybeSingle();
+    if (error) throw error;
+    if (!data) return null;
+    const rot = await db.from('rotations').select('*').eq('setup_id', id).order('position').order('name');
+    if (rot.error) throw rot.error;
+    return { setup: data as SetupRow, rotations: rot.data as RotationRow[] };
+  }
+
+  /**
+   * "Use this setup": a copy of a public setup – loadout and rotations – under new ids, as the player's own. The
+   * copy is saved locally and, while signed in, uploaded like any edit. Necromancy fight rotations get the pre-build
+   * PvME assumes (12 Necrosis, 5 souls, the conjures out), exactly as the preset import does.
+   */
+  async copySetup(f: FetchedSetup, origin: { ownerName: string; ownerKind: ProfileKind }): Promise<Setup> {
+    const src = f.setup;
+    const loadout: Loadout = { ...structuredClone(src.loadout), id: crypto.randomUUID() };
+    const setup = newSetup({
+      boss: src.boss,
+      name: src.name,
+      style: src.style,
+      loadoutId: loadout.id,
       isPublic: false,
-      sourceId: row.id,
-      sourceName: row.name,
-      sourceOwner: row.owner_name,
-      sourceOwnerKind: row.owner_kind,
+      presetId: src.preset_id ?? undefined,
+      sourceId: src.id,
+      sourceName: setupTitleOf(src),
+      sourceOwner: origin.ownerName,
+      sourceOwnerKind: origin.ownerKind,
     });
-  }
-
-  stylesOf(r: Rotation): string[] {
-    const set = new Set<string>();
-    for (const s of r.steps) {
-      const e = this.data.step(s);
-      if (e?.ability) set.add(e.ability.style);
+    await this.storage.addSetup(setup, loadout);
+    const now = Date.now();
+    const rotations = [...f.rotations].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+    for (const [i, row] of rotations.entries()) {
+      const r: Rotation = { id: crypto.randomUUID(), name: row.name, steps: row.steps, updatedAt: now - i, setupId: setup.id, presetIndex: row.position ?? i };
+      await this.storage.saveRotation(r);
+      if (/necromancy/i.test(src.style) && !PREBUILD_ROTATION.test(r.name)) await this.storage.savePrebuild(r.id, necroPrebuild(r.steps));
     }
-    return [...set];
+    return setup;
   }
+}
 
+/** rotation names PvME uses for what happens before the fight – those build the state, the others assume it */
+const PREBUILD_ROTATION = /pre-?build|pre-?fight|war'?s? retreat|^[^–]*–\s*wars?\b|prep|pre-?kill|fort forinthry/i;
+
+function setupTitleOf(s: Pick<SetupRow, 'boss' | 'name'>): string {
+  return s.boss ? s.boss + ' – ' + s.name : s.name;
 }
