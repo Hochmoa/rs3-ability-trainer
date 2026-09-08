@@ -53,7 +53,7 @@
       }
       <span class="muted small count">{{ shownCount() < entryCount() ? shownCount() + ' of ' + entryCount() : entryCount() }} {{ entryCount() === 1 ? 'entry' : 'entries' }}</span>
     </div>
-    <div class="item-grid" id="catalog" [class.can-receive]="catalogReceives()" [class.receiving]="gearDrag.hover() === 'catalog'" [attr.data-gear-drop]="catalogReceives() ? 'catalog' : null" (gear-drop)="dropOnCatalog($event)">
+    <div class="item-grid" id="catalog" data-tour="catalog" [class.can-receive]="catalogReceives()" [class.receiving]="gearDrag.hover() === 'catalog'" [attr.data-gear-drop]="catalogReceives() ? 'catalog' : null" (gear-drop)="dropOnCatalog($event)">
       @for (sec of shownSections(); track sec.key) {
         <div class="section-head"><span>{{ sec.label }}</span><span class="count">{{ sec.entries.length }}</span></div>
         @for (e of sec.entries; track e.key) {

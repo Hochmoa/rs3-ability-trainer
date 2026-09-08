@@ -6,6 +6,7 @@ import { CoachService } from '../../core/coach.service';
 import { StorageService } from '../../core/storage.service';
 import { DialogService } from '../../shared/dialog';
 import { ToastService } from '../../shared/toast';
+import { TourService } from '../../shared/tour';
 
 @Component({
   selector: 'app-settings',
@@ -13,7 +14,7 @@ import { ToastService } from '../../shared/toast';
   template: `
     <div class="panel">
       <h1>Settings</h1>
-      <h2>Game options</h2>
+      <h2 data-tour="game-options">Game options</h2>
       <div class="form">
         <label class="check">
           <input type="checkbox" [ngModel]="s().abilityQueueing" (ngModelChange)="set('abilityQueueing', $event)" />
@@ -129,6 +130,12 @@ import { ToastService } from '../../shared/toast';
     </div>
 
     <div class="panel">
+      <h2>Tour</h2>
+      <p class="muted small">The short walk through the trainer – setups, the queue, your bars and keys.</p>
+      <button class="btn" (click)="tour.start()">Show me around</button>
+    </div>
+
+    <div class="panel">
       <h2>Data</h2>
       <p class="muted small">
         Storage consent: <b>{{ storage.consent() ? 'accepted' : 'not given – nothing is saved' }}</b>
@@ -175,6 +182,7 @@ export class Settings {
   private dialogs = inject(DialogService);
   private toast = inject(ToastService);
   readonly coach = inject(CoachService);
+  readonly tour = inject(TourService);
   readonly storage = inject(StorageService);
   readonly testing = signal(false);
   readonly s = this.storage.settings;

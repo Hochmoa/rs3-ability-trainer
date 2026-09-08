@@ -1,7 +1,7 @@
 <div class="panel controls">
   <div class="head-row">
     <h1>Setups</h1>
-    <div class="tabs">
+    <div class="tabs" data-tour="setup-tabs">
       <button class="tab" [class.active]="view() === 'mine'" (click)="show('mine')">My setups <span class="count">{{ storage.setups().length }}</span></button>
       <button class="tab" [class.active]="view() === 'all'" (click)="show('all')">All setups @if (rows().length) { <span class="count">{{ rows().length }}</span> }</button>
       <button class="tab" [class.active]="view() === 'players'" (click)="show('players')">Players @if (users().length) { <span class="count">{{ users().length }}</span> }</button>

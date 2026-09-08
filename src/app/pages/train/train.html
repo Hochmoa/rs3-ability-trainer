@@ -129,7 +129,7 @@
 } @else {
   <div class="panel controls" [class.simple]="!advanced()">
     <div class="setup-row">
-      <label class="field grow" title="Setup: the boss and the gear it is fought with (Setups page)">
+      <label class="field grow" data-tour="setup" title="Setup: the boss and the gear it is fought with (Setups page)">
         <span>Setup</span>
         <div class="picker">
           <select [ngModel]="storage.activeSetupId()" (ngModelChange)="pickSetup($event)" [disabled]="running()">
@@ -157,7 +157,7 @@
         </div>
         <small class="caption muted">{{ setupCaption() }}{{ setupCount() ? ' · ' + setupCount() : '' }}</small>
       </label>
-      <label class="field grow" title="Rotation of the setup to practise (Rotations page)">
+      <label class="field grow" data-tour="rotation" title="Rotation of the setup to practise (Rotations page)">
         <span>Rotation</span>
         <select [ngModel]="selectedId()" (ngModelChange)="pickRotation($event)" [disabled]="running()">
           @for (r of setupRotationList(); track r.id) { <option [value]="r.id">{{ r.name }}</option> }
@@ -168,7 +168,7 @@
       }
       <div class="actions">
         @if (!running()) {
-          <button class="btn btn-primary btn-start" (click)="start()" [disabled]="!canStart() || !data.loadoutReady()">{{ data.loadoutReady() ? 'Start' : 'Loading…' }}</button>
+          <button class="btn btn-primary btn-start" data-tour="start" (click)="start()" [disabled]="!canStart() || !data.loadoutReady()">{{ data.loadoutReady() ? 'Start' : 'Loading…' }}</button>
           @if (!advanced()) {
             <button class="btn options-toggle" type="button" [class.active]="optionsOpen()" [attr.aria-expanded]="optionsOpen()" (click)="toggleOptions()">Options {{ optionsOpen() ? '▴' : '▾' }}</button>
           }
@@ -554,7 +554,7 @@
         <button class="btn btn-sm" (click)="restart()" [disabled]="!canStart()" title="Reset and start again from the first step">↻ Restart</button>
       }
     </div>
-    <div class="queue-strip">
+    <div class="queue-strip" data-tour="queue">
       @for (s of slots(); track s.stepIndex + '-' + s.kind) {
         @if (s.note !== undefined) {
           <div class="slot note" [class]="'slot note ' + s.kind" [class.phase]="s.phase" [class.todo]="s.requiresAction" [title]="s.note">
@@ -779,7 +779,7 @@
         @if (!editLayout()) { <span class="muted small">order the bars, make them half width or move a slot</span> }
       </div>
     }
-    <div class="action-bars" [class.editing]="editLayout() && !running()">
+    <div class="action-bars" data-tour="bars" [class.editing]="editLayout() && !running()">
       @for (b of bars(); track b.position) {
         <div class="bar-cell" [class]="'bar-cell ' + b.shape">
           @if (editLayout() && !running()) {

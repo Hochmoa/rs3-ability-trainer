@@ -48,3 +48,9 @@ Approved by Martin on 2026-09-08. One page "Setups" replaces Boss setups (/prese
 Done 2026-09-08 (branch feature/loadout): usage scores (tools/usage-stats.py → public/data/usage.json, core/gear-catalog.ts),
 USAGE_THRESHOLD in core/obscure.ts, sub-options on landing, EoF tiles, gizmo combos (core/gizmo-combos.ts from the PvME
 perks guide), weapon pairs / armour sets / style sections, the "i" modal, relics grid, Double Surge always on.
+
+## Guided tour (2026-09-08)
+core/tour.ts holds the script (TOUR_STEPS) and the pure geometry (spotlight, blockers, cardPosition, visibleSteps),
+shared/tour.ts the TourService + the overlay component (mounted in app.html). Targets are `data-tour="…"` attributes
+on the pages, so no CSS class is load-bearing. It starts itself once per browser (localStorage rs3trainer.tour) after
+the consent banner is answered, and Settings → Tour replays it.
