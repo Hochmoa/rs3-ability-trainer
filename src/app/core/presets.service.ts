@@ -3,7 +3,10 @@ import { Router } from '@angular/router';
 import { ToastService } from '../shared/toast';
 import { DataService } from './data.service';
 import { addItem, stockSpecials } from './equipment';
-import { ItemRef, Prebuild, Rotation, RotationStep, Setup, newSetup } from './models';
+import { ItemRef, Prebuild, Rotation, RotationStep, Setup, loadoutStyle, newSetup } from './models';
+import { placeOnBars, unboundKeys } from './bar-place';
+import { slotKeybinds } from './keybind.util';
+import { DEFAULT_LAYOUT_ID, keybindLayout } from './keybind-layouts';
 import { BossPreset, assignEofSpecs, demoRotationIndex, presetLoadout } from './preset-setup';
 import { splitName } from '../shared/picker-groups';
 import { SwitchCatalog, insertSwitches } from './preset-switches';
@@ -149,6 +152,17 @@ export class PresetsService {
     return { setup, loadoutName: loadout.name, rotations, demoIndex: demoRotationIndex(p, parsed) };
   }
 
+  /** the demo's steps onto free bar slots with keys, so "press Start" is true on a fresh browser (see addDemo) */
+  private placeDemoOnBars(rotation: Rotation | undefined): void {
+    if (!rotation) return;
+    const setup = this.storage.actionBars();
+    const keys = unboundKeys(setup, rotation.steps, slotKeybinds(setup));
+    if (!keys.length) return;
+    const style = loadoutStyle(this.storage.loadout(), this.data.weaponById());
+    const r = placeOnBars(setup, style, keys, keybindLayout(DEFAULT_LAYOUT_ID));
+    if (r.placed.length) void this.storage.saveActionBars(r.setup);
+  }
+
   /** One sentence for the toast after an add. */
   describe(a: AddedPreset): string {
     return 'Added "' + a.loadoutName + '": loadout and ' + a.rotations.length + (a.rotations.length === 1 ? ' rotation' : ' rotations') + '. Your bars and keys are untouched – the Train page shows what is not on them yet.';
@@ -176,6 +190,10 @@ export class PresetsService {
     const added = await this.add(p);
     // the demo must play at once: its fight rotation opens with an adrenaline cost, so the session starts at 100%
     if (!this.storage.settings().fullAdrenaline) await this.storage.saveSettings({ ...this.storage.settings(), fullAdrenaline: true });
+    // ... and its abilities have to be on a key. This is the one place that touches the bars, because the player
+    // asked for a ready-made demo: the same free-slots-only path as the Train page's "Auto-place on my bars"
+    // (core/bar-place.ts) – nothing of theirs is overwritten, empty slots get the default layout keys.
+    this.placeDemoOnBars(added.rotations[added.demoIndex] ?? added.rotations[0]);
     this.toast.show('Demo loaded – press Start.');
     void this.router.navigate(['/'], { queryParams: { rotation: added.rotations[added.demoIndex]?.id } });
     return true;

@@ -10,7 +10,7 @@ import { environment } from '../../../environments/environment';
       <h2>Privacy</h2>
       <h3>In your browser</h3>
       <p>
-        Rotations, keybinds, loadout, settings and training results are stored in this browser (IndexedDB and local
+        Setups (gear and rotations), action bars, keys, settings and training results are stored in this browser (IndexedDB and local
         storage) after you accept the banner. Nothing is sent anywhere unless you sign in. "Delete all stored data" on the
         <a routerLink="/settings">settings page</a> removes it.
       </p>

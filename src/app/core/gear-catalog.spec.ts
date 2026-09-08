@@ -143,6 +143,23 @@ describe('gear families – sets, name families and variants', () => {
     ]);
   });
 
+  it('an id the data holds twice is listed once, and wearing a multi-style set stays in one style', () => {
+    const dupes = [...items, gear('kal-zuk', { name: 'Igneous Kal-Zuk (copy)', slot: 'cape', style: 'Hybrid', tier: 95 })];
+    const all = gearEntries(dupes, sets, usage).flatMap((e) => e.refs.map((r) => r.id));
+    expect(all.filter((id) => id === 'kal-zuk')).toHaveLength(1);
+
+    const achto = [
+      gear('primeval-top', { name: 'Achto Primeval robe top', slot: 'body', style: 'Melee', set: 'achto', tier: 92 }),
+      gear('primeval-legs', { name: 'Achto Primeval robe legs', slot: 'legs', style: 'Melee', set: 'achto', tier: 92 }),
+      gear('tempest-top', { name: 'Achto Tempest cowl', slot: 'body', style: 'Ranged', set: 'achto', tier: 92 }),
+      gear('tempest-legs', { name: 'Achto Tempest chaps', slot: 'legs', style: 'Ranged', set: 'achto', tier: 92 }),
+    ];
+    const e = gearEntries(achto, new Map([['achto', { id: 'achto', name: 'Achto', kind: 'set' } as SetEffect]]), null)[0];
+    expect(e.refs).toHaveLength(4);
+    const styles = new Set(e.chosen.map((r) => achto.find((g) => g.id === r.id)!.style));
+    expect(styles.size).toBe(1);
+  });
+
   it('potions sit in one section', () => {
     const pot = potionSections([{ id: 'vuln', name: 'Vulnerability bomb', kind: 'bomb' } as Special, { id: 'scroll', name: 'Scroll', kind: 'scroll' } as Special], usage, filter);
     expect(pot[0].entries.map((e) => e.name)).toEqual(['Vulnerability bomb']);

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { placeOnBars } from './bar-place';
+import { placeOnBars, unboundKeys } from './bar-place';
 import { keybindLayout } from './keybind-layouts';
-import { keybindKey } from './keybind.util';
-import { BAR_SLOTS, defaultActionBars } from './models';
+import { keybindKey, slotKeybinds } from './keybind.util';
+import { BAR_SLOTS, RotationStep, SPEC_KEY, defaultActionBars } from './models';
 
 const rows = keybindLayout('rows');
 const code = (kb: { code: string } | null | undefined) => kb?.code ?? null;
@@ -78,5 +78,42 @@ describe('placeOnBars', () => {
     const before = JSON.stringify(setup);
     placeOnBars(setup, 'Melee', ['ability:sever', 'weapon:ek-zekkil'], rows);
     expect(JSON.stringify(setup)).toBe(before);
+  });
+});
+
+/**
+ * "Try the demo" and "Auto-place on my bars" place exactly what is not bound yet. This is what made the demo
+ * unplayable once the preset import stopped writing bars: everything looked bound, nothing was.
+ */
+describe('unboundKeys – what of a rotation is not on a key yet', () => {
+  const steps: RotationStep[] = [
+    { kind: 'ability', id: 'sever' },
+    { kind: 'note', id: '', note: 'enter instance' },
+    { kind: 'ability', id: 'sever' },
+    { kind: 'spec', id: 'devour' },
+    { kind: 'weapon', id: 'ek-zekkil' },
+    { kind: 'action', id: 'target-cycle' },
+    { kind: 'prayer', id: 'turmoil' },
+  ];
+
+  it('lists every input once, in press order, and skips notes', () => {
+    const s = defaultActionBars();
+    expect(unboundKeys(s, steps, slotKeybinds(s))).toEqual(['ability:sever', SPEC_KEY, 'weapon:ek-zekkil', 'action:target-cycle', 'prayer:turmoil']);
+  });
+
+  it('a slot with the entity and a key, a bound weapon and a bound action are left out', () => {
+    const s = defaultActionBars();
+    s.presets[0].slots[0] = { kind: 'ability', id: 'sever' }; // main bar slot 1, key "1"
+    s.presets[0].slots[1] = { kind: 'spec', id: 'anything' };
+    s.weaponKeybinds['ek-zekkil'] = { code: 'F1', ctrl: false, shift: false, alt: false };
+    s.actionKeybinds = { 'target-cycle': { code: 'Tab', ctrl: false, shift: false, alt: false } };
+    expect(unboundKeys(s, steps, slotKeybinds(s))).toEqual(['prayer:turmoil']);
+  });
+
+  it('an entity on a slot without a key still counts as unbound', () => {
+    const s = defaultActionBars();
+    s.presets[1].slots[0] = { kind: 'ability', id: 'sever' }; // bar 2 has no keys by default
+    s.positions[1] = 2;
+    expect(unboundKeys(s, steps, slotKeybinds(s))).toContain('ability:sever');
   });
 });

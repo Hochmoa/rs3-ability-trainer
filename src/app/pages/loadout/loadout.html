@@ -51,10 +51,10 @@
       @if (tiered()) {
         <label class="tier">Tier ≥ <input type="number" min="1" max="100" [ngModel]="minTier()" (ngModelChange)="minTier.set(+$event || 1)" /></label>
       }
-      <span class="muted small count">{{ entryCount() }} {{ entryCount() === 1 ? 'entry' : 'entries' }}</span>
+      <span class="muted small count">{{ shownCount() < entryCount() ? shownCount() + ' of ' + entryCount() : entryCount() }} {{ entryCount() === 1 ? 'entry' : 'entries' }}</span>
     </div>
     <div class="item-grid" id="catalog" [class.can-receive]="catalogReceives()" [class.receiving]="gearDrag.hover() === 'catalog'" [attr.data-gear-drop]="catalogReceives() ? 'catalog' : null" (gear-drop)="dropOnCatalog($event)">
-      @for (sec of sections(); track sec.key) {
+      @for (sec of shownSections(); track sec.key) {
         <div class="section-head"><span>{{ sec.label }}</span><span class="count">{{ sec.entries.length }}</span></div>
         @for (e of sec.entries; track e.key) {
           @if (views(e); as vs) {
@@ -86,7 +86,7 @@
         <p class="muted">{{ data.loadoutReady() ? 'Nothing matches.' : 'Loading…' }}</p>
       }
     </div>
-    <p class="muted small">{{ hideObscure() ? 'Items no PvME setup uses are hidden – untick above or search for them. ' : '' }}Drop an item here to remove it from the loadout.</p>
+    <p class="muted small">{{ hideObscure() ? 'Items no PvME setup uses are hidden – untick above or search for them. ' : '' }}{{ shownCount() < entryCount() ? 'Only the first ' + shownCount() + ' are drawn – narrow it down with the search or the tier filter. ' : '' }}Drop an item here to remove it from the loadout.</p>
   </div>
 
   <div class="worn">

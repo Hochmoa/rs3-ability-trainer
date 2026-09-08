@@ -27,6 +27,12 @@ const TABS: { id: Tab; label: string }[] = [
 ];
 /** tabs whose catalog gets a tier filter */
 const TIERED: Tab[] = ['weapons', 'armour'];
+/**
+ * How many entries the catalog draws at once. Without "hide obscure equipment" the game's whole wardrobe is in the
+ * list – 1500 weapon groups with 1900 icons – and rendering that takes seconds; the rest is reached with the search
+ * or the tier filter.
+ */
+const CATALOG_LIMIT = 300;
 const STYLE_ORDER: Style[] = ['Melee', 'Ranged', 'Magic', 'Necromancy'];
 
 interface MenuItem {
@@ -161,10 +167,22 @@ export class Loadout {
     }
   });
   readonly entryCount = computed(() => this.sections().reduce((n, s) => n + s.entries.length, 0));
-  /** the items of every listed entry, resolved once per catalog */
+  /** the first CATALOG_LIMIT entries, sections kept in order (see CATALOG_LIMIT) */
+  readonly shownSections = computed<CatalogSection[]>(() => {
+    let left = CATALOG_LIMIT;
+    const out: CatalogSection[] = [];
+    for (const s of this.sections()) {
+      if (left <= 0) break;
+      out.push(s.entries.length <= left ? s : { ...s, entries: s.entries.slice(0, left) });
+      left -= s.entries.length;
+    }
+    return out;
+  });
+  readonly shownCount = computed(() => this.shownSections().reduce((n, s) => n + s.entries.length, 0));
+  /** the items of every drawn entry, resolved once per catalog */
   private readonly entryViews = computed(() => {
     const out = new Map<string, GearView[]>();
-    for (const s of this.sections()) for (const e of s.entries) out.set(e.key, e.refs.map((r) => this.data.view(r)).filter((v): v is GearView => !!v));
+    for (const s of this.shownSections()) for (const e of s.entries) out.set(e.key, e.refs.map((r) => this.data.view(r)).filter((v): v is GearView => !!v));
     return out;
   });
 

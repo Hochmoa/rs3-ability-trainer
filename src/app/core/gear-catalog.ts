@@ -208,7 +208,10 @@ export function familyLabel(name: string): string {
  */
 export function gearEntries(gear: GearItem[], setById: Map<string, SetEffect>, usage: UsageStats | null): CatalogEntry[] {
   const families = new Map<string, GearItem[]>();
+  const seen = new Set<string>();
   for (const g of gear) {
+    if (seen.has(g.id)) continue; // gear.json holds one id twice (steel-bolts-p): the catalog shows it once
+    seen.add(g.id);
     const key = g.set ? 'set:' + g.set : 'fam:' + familyKey(g.name);
     families.set(key, [...(families.get(key) ?? []), g]);
   }
@@ -225,8 +228,11 @@ export function gearEntries(gear: GearItem[], setById: Map<string, SetEffect>, u
     const ordered = pieces
       .filter((g) => g.tier >= (top.get(g.slot + '|' + (g.style ?? '')) ?? 0))
       .sort((a, b) => SLOT_ORDER.indexOf(a.slot) - SLOT_ORDER.indexOf(b.slot) || itemUsage(usage, ref(b)) - itemUsage(usage, ref(a)) || b.tier - a.tier || a.name.localeCompare(b.name));
+    // "wear the group" stays inside one style: a set effect covering three sets (Achto Primeval / Tempest /
+    // Teralith) would otherwise put a melee top on ranged legs
     const slots = new Set(ordered.map((p) => p.slot));
-    const chosen = [...slots].map((slot) => ordered.find((p) => p.slot === slot)!);
+    const chosenStyle = ordered[0].style;
+    const chosen = [...slots].map((slot) => ordered.find((p) => p.slot === slot && p.style === chosenStyle) ?? ordered.find((p) => p.slot === slot)!);
     const kind: EntryKind = ordered.length === 1 ? 'single' : slots.size > 1 ? 'set' : 'variants';
     const setName = key.startsWith('set:') ? setById.get(key.slice(4))?.name.replace(VARIANT_SUFFIX, '') : undefined;
     // variants of one item keep the best one's name (Gloves of passage · 2 variants); the TzHaar capes their line

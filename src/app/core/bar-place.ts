@@ -1,6 +1,6 @@
 import { KeybindLayout } from './keybind-layouts';
 import { isReservedKeybind, keybindKey, parseKeybind } from './keybind.util';
-import { ActionBarSetup, BAR_POSITIONS, BAR_SLOTS, Keybind, RotationStep, SPEC_KEY, Style4, visiblePresets } from './models';
+import { ActionBarSetup, BAR_POSITIONS, BAR_SLOTS, Keybind, RotationStep, SPEC_KEY, Style4, entityKey, visiblePresets } from './models';
 
 export interface PlaceResult {
   setup: ActionBarSetup;
@@ -103,4 +103,20 @@ export function placeOnBars(setup: ActionBarSetup, style: Style4, keys: string[]
     placed.push(key);
   }
   return { setup: s, placed, left, filled };
+}
+
+/**
+ * The entity keys of a rotation that are not on a keybound slot / weapon key / action key yet – what
+ * `placeOnBars` has to place, in the order the rotation presses them. Notes are skipped, a special attack step
+ * maps to the one weapon-special slot, and every key is listed once.
+ */
+export function unboundKeys(setup: ActionBarSetup, steps: RotationStep[], slotKeys: Map<string, unknown>): string[] {
+  const out: string[] = [];
+  for (const st of steps) {
+    if (st.kind === 'note') continue;
+    const key = st.kind === 'spec' ? SPEC_KEY : entityKey(st.kind, st.id);
+    const bound = st.kind === 'weapon' ? !!setup.weaponKeybinds[st.id] : st.kind === 'action' ? !!setup.actionKeybinds?.[st.id] : slotKeys.has(key);
+    if (!bound && !out.includes(key)) out.push(key);
+  }
+  return out;
 }
