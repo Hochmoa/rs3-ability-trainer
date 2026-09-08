@@ -21,7 +21,7 @@ import { resolveLoadout } from '../../engine/loadout-resolver';
 import { BUFF_BY_ID, ruleFor, stackMax, stackName } from '../../engine/rules';
 import { STYLE_STACKS, StackId } from '../../engine/rules-model';
 import { COMMAND_READY_AFTER, CONJURE_BASE_TICKS } from '../../engine/rules-necromancy';
-import { ActiveBuff, BASIC_ATTACK_OF, EngineEntity, EngineEvent, TICK_MS, TrainerEngine, UsableReason, Wield } from '../../engine/trainer-engine';
+import { ActiveBuff, BASIC_ATTACK_OF, EOF_KEY, EngineEntity, EngineEvent, TICK_MS, TrainerEngine, UsableReason, Wield } from '../../engine/trainer-engine';
 import { SOUL_SPLIT } from '../../engine/prayer-rules';
 import { slotAbilities } from '../../engine/morphs';
 import { AbilityIcon, IconState } from '../../shared/ability-icon';
@@ -446,9 +446,25 @@ export class Train implements OnDestroy {
       if (r?.kind === 'special' && !m.has('special:' + r.id)) m.set('special:' + r.id, 'click');
       if (r?.kind === 'weapon' && !m.has('weapon:' + r.id)) m.set('weapon:' + r.id, 'click');
     }
-    // the generic "Weapon Special Attack" slot fires every spec
+    // ┌─ TWO SPECIAL-ATTACK SLOTS, TWO KEYS – DO NOT COLLAPSE THIS INTO "every spec = the Weapon Special Attack key" ─┐
+    // A rotation step "spec:<id>" is fired from one of two bar slots, and the queue must show the key of the RIGHT one:
+    //   · the wielded weapon's own special → the "Weapon Special Attack" slot (SPEC_KEY)
+    //   · a special stored in an Essence of Finality the loadout wears or carries → the "Essence of Finality" slot (EOF_KEY)
+    // Showing the Weapon Special Attack key for an EoF special ("click 4" for Split Soul while Split Soul sits in the
+    // amulet on slot 5) sends the player to the wrong slot – that was bug #1 of the EoF report of 8 Sep 2026. The icon
+    // side of the same rule lives in `eofIcon` / the morph build in syncTick (bug #2). Change one, check the other.
     const specKey = m.get(SPEC_KEY);
-    if (specKey) for (const sp of this.data.specs()) if (!m.has('spec:' + sp.id)) m.set('spec:' + sp.id, specKey);
+    const eofKey = m.get(EOF_KEY);
+    const r = this.resolved();
+    const weaponSpec = r.weaponSpec?.id ?? null;
+    const stored = new Set([...r.eofSpecs.map((x) => x.id), ...(r.eofSpec ? [r.eofSpec.id] : [])]);
+    for (const sp of this.data.specs()) {
+      const key = 'spec:' + sp.id;
+      if (m.has(key)) continue;
+      if (sp.id === weaponSpec && specKey) m.set(key, specKey);
+      else if (stored.has(sp.id) && eofKey) m.set(key, eofKey);
+      else if (specKey) m.set(key, specKey); // any other special: the generic slot fires it once its weapon is wielded
+    }
     return m;
   });
   readonly unreachable = computed(() => {
@@ -1327,7 +1343,14 @@ export class Train implements OnDestroy {
       const morphs = new Map<string, { entity: Entity; stage: number }>();
       for (const [key, m] of pass.morphs) {
         const ent = this.data.get(m.key);
-        if (ent) morphs.set(key, { entity: ent, stage: m.stage });
+        if (!ent) continue;
+        // ┌─ THE ESSENCE OF FINALITY SLOT KEEPS ITS OWN ICON WHILE A SESSION RUNS – DO NOT DROP THIS ─┐
+        // Every spec entity carries the generic "Weapon Special Attack" icon (data.service SPEC_ICON). While a session
+        // runs, both special slots morph into the spec they fire, so without this the EoF slot turns into a second
+        // Weapon Special Attack icon the moment Start is pressed – bug #2 of the EoF report of 8 Sep 2026. The idle
+        // bars get the same icon through `eofIcon`; the key side of the rule is in `reachable`. Change one, check the others.
+        const entity = key === EOF_KEY && ent.kind === 'spec' ? { ...ent, icon: EOF_ICON } : ent;
+        morphs.set(key, { entity, stage: m.stage });
       }
       this.morphs.set(morphs);
     }
