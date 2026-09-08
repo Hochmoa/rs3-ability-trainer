@@ -214,6 +214,13 @@ export interface RotationStep {
   note?: string;
   /** notes: section heading ("Phase 2") */
   phase?: boolean;
+  /**
+   * notes: the note is something the player has to do ("enter the instance", "run to the pillar"). The queue stops
+   * on it and shows a button; the rotation goes on when it is pressed, `actionTicks` after the press.
+   */
+  requiresAction?: boolean;
+  /** notes with `requiresAction`: how long the action takes – the next step is due this many ticks after the click (default NOTE_ACTION_TICKS) */
+  actionTicks?: number;
   /** PvME "+": belongs to the same tick as the previous input */
   sameTick?: boolean;
   /** PvME "2t x": x is expected this many ticks after the previous input */
@@ -229,6 +236,10 @@ export interface RotationStep {
   /** PvME "r<ability>": the held cast is released here – it lands now and costs nothing more */
   release?: boolean;
 }
+
+/** how long a note's action takes when it says nothing else: 4 ticks = 2.4 s, about a click and a step in game */
+export const NOTE_ACTION_TICKS = 4;
+export const NOTE_ACTION_MAX_TICKS = 100;
 
 export interface Rotation {
   id: string;

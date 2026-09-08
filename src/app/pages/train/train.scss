@@ -11,14 +11,19 @@
   align-items: flex-end;
   gap: 10px 14px;
 
+  /* the caption line under the rotation select (4 px gap + 14 px text) – the others get it back as padding, so every control sits on the same baseline */
+  --caption-h: 18px;
+
   .field {
     flex: 1 1 180px;
     min-width: 0;
     max-width: 320px;
+    padding-bottom: var(--caption-h);
 
     &.grow {
       flex-basis: 260px;
       max-width: 420px;
+      padding-bottom: 0;
     }
     /* "42 steps · Necromancy" under the rotation select */
     .caption {
@@ -34,6 +39,7 @@
     display: flex;
     gap: 8px;
     margin-left: auto;
+    padding-bottom: var(--caption-h);
   }
 
   .btn-start {
@@ -570,6 +576,30 @@
   }
 }
 
+/* the row above the bars: the layout editor sits with the bars it edits, in reach without scrolling back up */
+/* "this rotation starts mid-fight": what it uses but never sets up (core/rotation-requires.ts) */
+.assumes .assume {
+  margin-top: 4px;
+  font-size: 13px;
+
+  b {
+    color: var(--gold);
+  }
+}
+
+.bars-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin: 10px 0 4px;
+
+  .bar-label {
+    color: var(--muted);
+    font-size: 12px;
+  }
+}
+
 .slot.note .note-card {
   display: flex;
   align-items: center;
@@ -591,6 +621,42 @@
     font-size: 13px;
     color: var(--text);
   }
+}
+
+/* a note the player has to act on: a button that carries the note's own words ("enter the instance") */
+.slot.note .note-action,
+.fslot.note .note-action {
+  max-width: 220px;
+  padding: 10px 14px;
+  font-size: 13px;
+  line-height: 1.25;
+  white-space: normal;
+  text-align: center;
+  animation: note-pulse 1.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slot.note .note-action,
+  .fslot.note .note-action {
+    animation: none;
+  }
+}
+
+@keyframes note-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 rgba(201, 162, 39, 0);
+  }
+  50% {
+    box-shadow: 0 0 12px rgba(201, 162, 39, 0.75);
+  }
+}
+
+.slot.note.todo .note-card {
+  border-style: solid;
+  border-color: var(--gold);
+  color: var(--gold);
+  font-style: normal;
 }
 
 .slot.note.phase .note-card {

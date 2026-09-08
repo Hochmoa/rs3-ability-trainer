@@ -51,16 +51,19 @@
               <button class="btn btn-sm btn-primary" (click)="load(v.preset)" [disabled]="busy() === v.preset.id">Use this setup</button>
             </span>
           </div>
-          <div class="gear-row">
-            @for (g of v.worn; track g.ref.kind + g.ref.id) {
-              <span class="gear" [gearTip]="g">@if (g.icon) { <img [src]="g.icon" [alt]="g.name" /> } @else { <span class="noicon">{{ g.name.slice(0, 3) }}</span> }</span>
-            }
-            @if (v.carried.length) { <span class="sep">backpack</span> }
-            @for (g of v.carried; track $index) {
-              <span class="gear" [gearTip]="g">@if (g.icon) { <img [src]="g.icon" [alt]="g.name" /> } @else { <span class="noicon">{{ g.name.slice(0, 3) }}</span> }</span>
-            }
-            @if (!v.worn.length && !v.carried.length) { <span class="muted small">The guide links no gear preset – rotations only.</span> }
-          </div>
+          @if (v.worn.length || v.carried.length) {
+            <div class="gear-row">
+              <gear-panel [equipment]="v.equipment" [inventory]="v.inventory" [side]="true" />
+              <div class="gear-extras muted small">
+                @if (v.preset.relics?.length) { <div><b>Relics</b> {{ relics(v.preset).join(', ') }}</div> }
+                @if (v.preset.familiar) { <div><b>Familiar</b> {{ familiarName(v.preset) }}</div> }
+                @if (v.preset.perks?.length) { <div><b>Perks</b> {{ perks(v.preset).join(', ') }}</div> }
+                <div>Hover an item for its stats. Empty worn slots show what goes there.@if (v.preset.unknown.length) { The gaps in the backpack are the {{ v.preset.unknown.length }} items the trainer does not simulate – food, brews, auras; "Details" lists them. }</div>
+              </div>
+            </div>
+          } @else {
+            <div class="gear-row"><span class="muted small">The guide links no gear preset – rotations only.</span></div>
+          }
           @if (open() === v.preset.id) {
             <div class="details">
               <div>

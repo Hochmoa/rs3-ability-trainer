@@ -11,7 +11,7 @@ export type IconState = 'idle' | 'queued' | 'too-early' | 'wrong' | 'fired' | 'd
       [style.width.px]="px()"
       [style.height.px]="px()"
       [style.font-size.px]="px() / 4"
-      [title]="ability().name"
+      [title]="ability().name + (keyLabel() ? ' – key ' + keyLabel() : '')"
     >
       <img [src]="ability().icon" [alt]="ability().name" draggable="false" />
       @if (gcdPhase() < 1) {

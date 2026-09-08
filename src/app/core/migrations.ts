@@ -45,6 +45,12 @@ export function cleanStep(s: RotationStep): RotationStep {
   if (s.offsetTicks !== undefined) out.offsetTicks = s.offsetTicks;
   if (s.cancelAfterTicks) out.cancelAfterTicks = s.cancelAfterTicks;
   if (s.afterHits) out.afterHits = s.afterHits;
+  if (s.stall) out.stall = true;
+  if (s.release) out.release = true;
+  if (s.requiresAction) {
+    out.requiresAction = true;
+    if (s.actionTicks !== undefined) out.actionTicks = s.actionTicks;
+  }
   if (s.hint && !s.hint.startsWith('/')) out.hint = s.hint; // "/ fingerofdeath": an "either – or" alternative from older imports, not a hint
   return out;
 }

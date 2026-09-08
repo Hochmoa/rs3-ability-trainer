@@ -34,7 +34,13 @@
     <div class="focus-strip">
       @for (s of focusSlots(); track s.stepIndex + '-' + s.kind) {
         @if (s.note !== undefined) {
-          <div class="fslot note" [class.current]="s.kind === 'current'" [title]="s.note"><div class="note-card">{{ s.note }}</div></div>
+          <div class="fslot note" [class.current]="s.kind === 'current'" [class.todo]="s.requiresAction" [title]="s.note">
+            @if (s.requiresAction && s.kind === 'current' && running()) {
+              <button class="btn btn-primary note-action" type="button" (click)="pressNote(s.stepIndex)">{{ s.note }}</button>
+            } @else {
+              <div class="note-card">{{ s.note }}</div>
+            }
+          </div>
         } @else {
           <div class="fslot" [class.current]="s.kind === 'current'" [title]="s.entity.name + (s.hint ? ' – ' + s.hint : '')">
             <ability-icon
@@ -179,9 +185,7 @@
       <div class="actions">
         @if (!running()) {
           <button class="btn btn-primary btn-start" (click)="start()" [disabled]="!canStart() || !data.loadoutReady()">{{ data.loadoutReady() ? 'Start' : 'Loading…' }}</button>
-          @if (advanced()) {
-            <button class="btn" [class.active]="editLayout()" (click)="editLayout.set(!editLayout())" title="Arrange the action bars: move with the arrows, toggle half width, rearrange slots">{{ editLayout() ? 'Done' : 'Layout' }}</button>
-          } @else {
+          @if (!advanced()) {
             <button class="btn options-toggle" type="button" [class.active]="optionsOpen()" [attr.aria-expanded]="optionsOpen()" (click)="toggleOptions()">Options {{ optionsOpen() ? '▴' : '▾' }}</button>
           }
         } @else {
@@ -253,7 +257,7 @@
       } @else {
         <button class="btn btn-sm popout" type="button" (click)="popout()" title="Opens the focus view in a small window you can keep next to the game. Stays on top in Chrome and Edge.">Popout</button>
       }
-      <label class="pill adv" title="Shows the enemy, pre-build, HUD, gear panel and layout editor. Same simulation.">
+      <label class="pill adv" title="Shows the enemy with its incoming attacks, the pre-build, the HUD, the gear panel and the bar layout editor. Same simulation – but incoming attacks only happen in the advanced view.">
         <input type="checkbox" [checked]="advanced()" (change)="setUiMode(!advanced())" [disabled]="running()" />
         Advanced view
       </label>
@@ -469,6 +473,24 @@
       {{ unknownSteps() }} step(s) use abilities that are no longer in the game. <a routerLink="/rotations">Edit the rotation</a>.
     </div>
   }
+  @if (assumptions().length) {
+    <div class="panel warning assumes">
+      <div>
+        This rotation starts mid-fight: it uses things it never sets up.
+      </div>
+      @for (a of assumptions(); track a.step + ':' + a.id) {
+        <div class="assume">
+          <b>Step {{ a.step + 1 }}, {{ a.name }}</b> {{ a.text }}@if (a.fromName) { <span class="muted"> – {{ a.fromName }} is what conjures it</span> }
+        </div>
+      }
+      <div class="fixes">
+        @if (assumptionsFixable()) {
+          <button class="btn btn-sm btn-primary" (click)="applyAssumptions()" [disabled]="running()" title="Puts the conjures and stacks the rotation expects into its pre-build, so the session starts the way the guide assumes">Start the session with them</button>
+        }
+        <span class="muted small">or <a routerLink="/rotations">edit the rotation</a>. Steps that cannot be used are refused like in game.</span>
+      </div>
+    </div>
+  }
   @if (adrenalineShort(); as a) {
     <div class="panel warning">
       {{ a.name }} needs {{ a.need }}% adrenaline; the session starts with {{ a.have }}%.
@@ -551,9 +573,15 @@
     <div class="queue-strip">
       @for (s of slots(); track s.stepIndex + '-' + s.kind) {
         @if (s.note !== undefined) {
-          <div class="slot note" [class]="'slot note ' + s.kind" [class.phase]="s.phase" [title]="s.note">
-            <div class="note-card" [class.big]="s.kind === 'current'">{{ s.note }}</div>
-            <span class="name muted">{{ s.phase ? 'phase' : 'note' }}</span>
+          <div class="slot note" [class]="'slot note ' + s.kind" [class.phase]="s.phase" [class.todo]="s.requiresAction" [title]="s.note">
+            @if (s.requiresAction && s.kind === 'current' && running()) {
+              <button class="btn btn-primary note-action" type="button" (click)="pressNote(s.stepIndex)" [title]="'Click when you have done this – the rotation goes on ' + s.actionTicks + ' ticks later'">
+                {{ s.note }}
+              </button>
+            } @else {
+              <div class="note-card" [class.big]="s.kind === 'current'">{{ s.note }}</div>
+            }
+            <span class="name muted">{{ s.phase ? 'phase' : s.requiresAction ? 'do this · ' + s.actionTicks + 't' : 'note' }}</span>
           </div>
         } @else {
           <div class="slot" [class]="'slot ' + s.kind + ' ' + s.entity.kind" [entityTip]="s.entity" [tipHint]="s.hint">
@@ -760,6 +788,13 @@
         }
       </div>
     }
+    @if (advanced() && !running()) {
+      <div class="bars-head">
+        <span class="bar-label">Action bars</span>
+        <button class="btn btn-sm" [class.active]="editLayout()" (click)="editLayout.set(!editLayout())" title="Arrange the action bars: move them with the arrows, toggle half width, drag the slots">{{ editLayout() ? 'Done' : 'Layout' }}</button>
+        @if (!editLayout()) { <span class="muted small">order the bars, make them half width or move a slot</span> }
+      </div>
+    }
     <div class="action-bars" [class.editing]="editLayout() && !running()">
       @for (b of bars(); track b.position) {
         <div class="bar-cell" [class]="'bar-cell ' + b.shape">
@@ -834,7 +869,7 @@
 
   </div>
 
-  @if (finished() && (results().length || stuck() || (enemy().enabled && prayerStats().attacks))) {
+  @if (finished() && (results().length || stuck() || (enemyOn() && prayerStats().attacks))) {
     <div class="panel summary">
       <div class="summary-head">
         <h2>Session summary{{ results().length ? ' – ' + accuracy() + '% clean' : '' }}</h2>

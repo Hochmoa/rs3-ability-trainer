@@ -104,10 +104,11 @@ export function applyPresetPerks(l: Loadout, perks: { id: string; rank: number }
   }
 }
 
-/** The loadout of a preset: every item re-slotted (a two-hander sits in the main-hand slot of the PvME preset), the backpack as-is. */
-export function presetLoadout(p: BossPreset, slotOf: (ref: ItemRef) => EquipSlot | null, perkGizmos: (id: string) => string[] | undefined = () => undefined): Loadout {
-  const l: Loadout = newLoadout(p.title.slice(0, 40));
-  l.presetId = p.id;
+/**
+ * The worn items of a preset in the trainer's slots: the PvME preset keeps a two-hander in the main-hand slot and
+ * knows no ammunition field, so every item is re-slotted with the catalog's `slotOf` (the gear panel draws this).
+ */
+export function presetEquipment(p: Pick<BossPreset, 'equipment' | 'ammo'>, slotOf: (ref: ItemRef) => EquipSlot | null): Equipment {
   const eq: Equipment = {};
   for (const ref of Object.values(p.equipment)) {
     if (!ref) continue;
@@ -118,14 +119,27 @@ export function presetLoadout(p: BossPreset, slotOf: (ref: ItemRef) => EquipSlot
     delete eq.mainHand;
     delete eq.offHand;
   }
+  if (p.ammo && !eq.ammo) eq.ammo = { kind: 'gear', id: p.ammo };
+  return eq;
+}
+
+/** The backpack of a preset, padded to the 28 slots the panel draws. */
+export function presetInventory(p: Pick<BossPreset, 'inventory'>): (ItemRef | null)[] {
+  return Array.from({ length: INVENTORY_SIZE }, (_, i) => (p.inventory[i] ? { ...p.inventory[i]! } : null));
+}
+
+/** The loadout of a preset: every item re-slotted (a two-hander sits in the main-hand slot of the PvME preset), the backpack as-is. */
+export function presetLoadout(p: BossPreset, slotOf: (ref: ItemRef) => EquipSlot | null, perkGizmos: (id: string) => string[] | undefined = () => undefined): Loadout {
+  const l: Loadout = newLoadout(p.title.slice(0, 40));
+  l.presetId = p.id;
+  const eq: Equipment = presetEquipment(p, slotOf);
   l.equipment = eq;
-  l.inventory = Array.from({ length: INVENTORY_SIZE }, (_, i) => (p.inventory[i] ? { ...p.inventory[i]! } : null));
+  l.inventory = presetInventory(p);
   l.prayerBook = 'Curses';
   // the preset maker keeps these next to the gear, and the rotations assume them: without Conservation of Energy and
   // Fury of the Small the adrenaline never adds up, and a familiar's scroll cannot be pressed without the familiar
   if (p.relics?.length) l.relics = [...p.relics];
   if (p.familiar) l.familiar = p.familiar;
-  if (p.ammo && !eq.ammo) eq.ammo = { kind: 'gear', id: p.ammo };
   if (p.perks?.length) applyPresetPerks(l, p.perks, perkGizmos);
   return l;
 }

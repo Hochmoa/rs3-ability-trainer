@@ -211,6 +211,10 @@ export interface EngineEntity {
   offsetTicks?: number;
   /** rotation steps only: free text from an imported rotation, skipped automatically */
   isNote?: boolean;
+  /** notes only: the player has to do this ("enter the instance") – the rotation waits for the press instead of skipping the note */
+  awaitAction?: boolean;
+  /** notes with `awaitAction`: the action takes this long, so the next step is due this many ticks after the press */
+  actionTicks?: number;
   /** rotation steps only: PvME "asphyx (4t)" – the next ability cancels this channel this many ticks after the cast, so it is due there */
   cancelAfterTicks?: number;
   /** rotation steps only: PvME "7 hit rapid" – the next ability is due on the tick this channel's n-th hit lands */
@@ -414,6 +418,8 @@ export class TrainerEngine {
   private lastChannelEnd: number | null = null;
   /** tick the next step was due at before automatic basic attacks slipped in (null = none did): the late press is scored from it */
   private autoDue: number | null = null;
+  /** an action note was pressed: nothing is due before this tick, the player is busy doing what the note says */
+  private busyUntil: number | null = null;
   /** buffs applied with a conjured spirit's next hit (Haunted after Command Vengeful Ghost) */
   private spiritHitDeferred: { spirit: string; apply: (tick: number) => void }[] = [];
   /** weapons in hand */
@@ -535,6 +541,7 @@ export class TrainerEngine {
     this.channel = null;
     this.lastChannelEnd = null;
     this.autoDue = null;
+    this.busyUntil = null;
     this.spiritHitDeferred = [];
     this.inflight = [];
     this.pending = null;
@@ -1170,6 +1177,8 @@ export class TrainerEngine {
       outcome = deviation === 0 ? 'perfect' : deviation > 0 ? 'late' : 'early';
     }
     this.lastInputTick = Math.max(tick, this.lastInputTick ?? 0);
+    // "enter the instance": what the note asks for takes time in game, so the next ability is only due after it
+    if (step.awaitAction && step.actionTicks) this.busyUntil = tick + step.actionTicks;
     const result: StepResult = {
       step: stepIndex,
       key: entity.key,
@@ -1193,7 +1202,7 @@ export class TrainerEngine {
     for (let i = from; i < this.steps.length; i++) {
       const s = this.steps[i];
       if (this.isGcdStep(s)) break;
-      if (!this.done.has(i) && !s.isNote && s.key === key) return i;
+      if (!this.done.has(i) && (!s.isNote || s.awaitAction) && s.key === key) return i;
     }
     return -1;
   }
@@ -1299,7 +1308,7 @@ export class TrainerEngine {
     const expectedIndex = this.steps.indexOf(expected, this.index);
     const missed: string[] = [];
     for (let i = this.index; i < expectedIndex; i++) {
-      if (this.steps[i].isNote || this.autoSatisfied(i, p.tick)) {
+      if ((this.steps[i].isNote && !this.steps[i].awaitAction) || this.autoSatisfied(i, p.tick)) {
         this.done.add(i);
         continue;
       }
@@ -1314,7 +1323,9 @@ export class TrainerEngine {
     }
     if (missed.length) this.events.push({ kind: 'missed', keys: missed });
 
-    const dueTick = autoDue !== null ? autoDue : gcdEnd === null ? null : channelEnd !== null && channelEnd > gcdEnd ? channelEnd : gcdEnd;
+    let dueTick = autoDue !== null ? autoDue : gcdEnd === null ? null : channelEnd !== null && channelEnd > gcdEnd ? channelEnd : gcdEnd;
+    if (this.busyUntil !== null) dueTick = dueTick === null ? this.busyUntil : Math.max(dueTick, this.busyUntil);
+    this.busyUntil = null;
     this.autoDue = null;
     const lateTicks = dueTick === null ? 0 : Math.max(0, p.tick - dueTick);
     const result: StepResult = {
@@ -2610,6 +2621,8 @@ export class TrainerEngine {
    */
   private autoAttackTick(tick: number): void {
     if (this.config.autoAttacks === false || this.revolutionOn || this.pending || this.castTick === null || this.settleUntil !== null) return;
+    // doing what an action note asks for ("enter the instance") takes the player away from the target
+    if (this.busyUntil !== null && tick < this.busyUntil) return;
     const gcdEnd = this.gcdEndTick!;
     if (tick < gcdEnd) return;
     if (this.channel && !this.channel.cancelled && tick < this.channel.endTick) return;
@@ -2706,6 +2719,7 @@ export class TrainerEngine {
    */
   private revolutionTick(tick: number): void {
     if (!this.revolutionOn || this.pending || this.settleUntil !== null) return;
+    if (this.busyUntil !== null && tick < this.busyUntil) return; // busy with what an action note asks for
     const gcdEnd = this.gcdEndTick;
     if (gcdEnd !== null && tick < gcdEnd) return;
     if (this.channel && !this.channel.cancelled && tick < this.channel.endTick) return;
@@ -2716,7 +2730,7 @@ export class TrainerEngine {
   private advanceIndex(): void {
     for (;;) {
       while (this.index < this.steps.length && this.done.has(this.index)) this.index++;
-      if (this.index < this.steps.length && this.steps[this.index].isNote) {
+      if (this.index < this.steps.length && this.steps[this.index].isNote && !this.steps[this.index].awaitAction) {
         this.done.add(this.index);
         continue;
       }

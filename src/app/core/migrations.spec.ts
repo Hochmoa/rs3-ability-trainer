@@ -45,6 +45,10 @@ describe('cleanStep – only the known step fields survive a save', () => {
     { what: 'PvME channel cuts: "(4t)" and "7 hit"', step: { kind: 'ability', id: 'asphyxiate', cancelAfterTicks: 4, afterHits: 7 }, expect: { kind: 'ability', id: 'asphyxiate', cancelAfterTicks: 4, afterHits: 7 } },
     { what: 'a note with a phase heading', step: { kind: 'note', id: '', note: 'Phase 2', phase: true }, expect: { kind: 'note', id: '', note: 'Phase 2', phase: true } },
     { what: 'a hint', step: { kind: 'ability', id: 'sever', hint: '(DW)' }, expect: { kind: 'ability', id: 'sever', hint: '(DW)' } },
+    { what: 'PvME stalling: "sassault" / "rassault"', step: { kind: 'ability', id: 'assault', stall: true }, expect: { kind: 'ability', id: 'assault', stall: true } },
+    { what: 'the release of a stalled cast', step: { kind: 'ability', id: 'assault', release: true }, expect: { kind: 'ability', id: 'assault', release: true } },
+    { what: 'a note the player has to act on', step: { kind: 'note', id: '', note: 'enter instance', requiresAction: true, actionTicks: 4 }, expect: { kind: 'note', id: '', note: 'enter instance', requiresAction: true, actionTicks: 4 } },
+    { what: 'the time of an action note is only kept with the flag', step: { kind: 'note', id: '', note: 'x', actionTicks: 9 }, expect: { kind: 'note', id: '', note: 'x' } },
     { what: '"/ alt" hints from older imports are dropped', step: { kind: 'ability', id: 'sever', hint: '/ fingerofdeath' }, expect: { kind: 'ability', id: 'sever' } },
     { what: 'false flags, zero cuts and unknown fields are dropped', step: { kind: 'ability', id: 'sever', sameTick: false, phase: false, cancelAfterTicks: 0, afterHits: 0, foo: 'bar' }, expect: { kind: 'ability', id: 'sever' } },
   ];

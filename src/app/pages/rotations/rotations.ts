@@ -7,9 +7,10 @@ import { groupCatalog } from '../../core/catalog-groups';
 import { DataService, Entity } from '../../core/data.service';
 import { keybindLabel } from '../../core/keybind.util';
 import { parsePvme } from '../../core/pvme';
-import { Rotation, RotationStep, SPELLBOOKS, SPELLBOOK_NAMES, STYLES } from '../../core/models';
+import { NOTE_ACTION_MAX_TICKS, NOTE_ACTION_TICKS, Rotation, RotationStep, SPELLBOOKS, SPELLBOOK_NAMES, STYLES } from '../../core/models';
 import { isObscureEntity } from '../../core/obscure';
 import { PresetsService } from '../../core/presets.service';
+import { rotationAssumptions } from '../../core/rotation-requires';
 import { StorageService } from '../../core/storage.service';
 import { SupabaseService } from '../../core/supabase.service';
 import { ToastService } from '../../shared/toast';
@@ -46,6 +47,7 @@ export class Rotations {
   private router = inject(Router);
 
   readonly TABS = TABS;
+  readonly NOTE_ACTION_TICKS = NOTE_ACTION_TICKS;
   readonly editing = signal<Rotation | null>(null);
   readonly tab = signal<Tab>('Melee');
   readonly search = signal('');
@@ -102,23 +104,24 @@ export class Rotations {
     const r = this.editing();
     if (!r) return [];
     const out: string[] = [];
-    const ids = r.steps.filter((s) => s.kind === 'ability').map((s) => s.id);
-    const set = new Set(ids);
+    const set = new Set(r.steps.filter((s) => s.kind === 'ability').map((s) => s.id));
     for (const id of set) {
       const rule = ruleFor(id);
       if (rule?.replaces && set.has(rule.replaces)) {
         out.push(this.data.get('ability:' + id)?.name + ' replaces ' + this.data.get('ability:' + rule.replaces)?.name + ' in game – both cannot be on the action bar.');
       }
-      for (const req of rule?.requires ?? []) {
-        if (req.spirit && !ids.slice(0, ids.indexOf(id)).includes('conjure-' + req.spirit) && !ids.slice(0, ids.indexOf(id)).includes('conjure-undead-army')) {
-          out.push(this.data.get('ability:' + id)?.name + ' needs its conjure earlier in the rotation.');
-        }
-        if (req.sequence) {
-          const prev = ids.slice(0, ids.indexOf(id));
-          const base = req.sequence.group === 'dismember' ? ['dismember', 'slaughter'][req.sequence.step - 2] : 'spectral-scythe';
-          if (base && !prev.includes(base)) out.push(this.data.get('ability:' + id)?.name + ' needs ' + this.data.get('ability:' + base)?.name + ' first (same action bar slot).');
-        }
-      }
+    }
+    // what the rotation asks for but never brings about itself: a command without its conjure, Volley without souls,
+    // Slaughter without Dismember. A PvME fight rotation means them – they are built before the pull – so this says
+    // where they would come from rather than calling it a mistake.
+    for (const a of rotationAssumptions(r.steps)) {
+      const name = this.data.get('ability:' + a.id)?.name ?? a.id;
+      const from = a.from ? this.data.get('ability:' + a.from)?.name : null;
+      out.push(
+        'Step ' + (a.step + 1) + ', ' + name + ' ' + a.text + ' – ' +
+          (from ? 'cast ' + from + ' earlier in the rotation, or' : 'the rotation assumes it from before, so') +
+          ' start the session with it (pre-build on the Train page).',
+      );
     }
     return [...new Set(out)];
   });
@@ -185,7 +188,7 @@ export class Rotations {
   }
 
   async addNote(): Promise<void> {
-    const text = await this.dialogs.prompt('Note text (shown in the queue, not an input):', { title: 'Add note', placeholder: 'e.g. wait for the boss to move' });
+    const text = await this.dialogs.prompt('Note text (shown in the queue, not an input). Use ✋ on the tile to make it something you have to click during the session:', { title: 'Add note', placeholder: 'e.g. wait for the boss to move' });
     if (text?.trim()) this.editing.update((r) => (r ? { ...r, steps: [...r.steps, { kind: 'note', id: '', note: text.trim() }] } : r));
   }
 
@@ -197,6 +200,36 @@ export class Rotations {
     const text = await this.dialogs.prompt(step.phase ? 'Phase text:' : 'Note text (shown in the queue, not an input):', { title: step.phase ? 'Edit phase' : 'Edit note', value: step.note ?? '', ok: 'Save' });
     if (text === null || !text.trim()) return;
     this.editing.update((cur) => (cur ? { ...cur, steps: cur.steps.map((st, k) => (k === i ? { ...st, note: text.trim() } : st)) } : cur));
+  }
+
+  /**
+   * "Requires action": the note stops the rotation until the player clicks it – "enter the instance", "run behind
+   * the pillar". What it asks for takes time, so the next ability is only due `actionTicks` after the click.
+   */
+  toggleNoteAction(i: number): void {
+    this.editing.update((r) => {
+      if (!r) return r;
+      const steps = r.steps.map((s, k) => {
+        if (k !== i || s.kind !== 'note') return s;
+        return s.requiresAction ? { ...s, requiresAction: undefined, actionTicks: undefined } : { ...s, requiresAction: true, actionTicks: s.actionTicks ?? NOTE_ACTION_TICKS };
+      });
+      return { ...r, steps };
+    });
+  }
+
+  /** how long the note's action takes, in ticks (1 tick = 0.6 s) */
+  async editActionTicks(i: number): Promise<void> {
+    const step = this.editing()?.steps[i];
+    if (step?.kind !== 'note') return;
+    const answer = await this.dialogs.prompt('How many ticks does "' + (step.note ?? 'this') + '" take? 1 tick = 0.6 s, so 4 ticks = 2.4 s.', {
+      title: 'Time for the action',
+      value: String(step.actionTicks ?? NOTE_ACTION_TICKS),
+      ok: 'Save',
+    });
+    const ticks = Math.round(Number(answer));
+    if (answer === null || !Number.isFinite(ticks)) return;
+    const clamped = Math.max(0, Math.min(NOTE_ACTION_MAX_TICKS, ticks));
+    this.editing.update((r) => (r ? { ...r, steps: r.steps.map((s, k) => (k === i ? { ...s, actionTicks: clamped } : s)) } : r));
   }
 
   toggleSameTick(i: number): void {

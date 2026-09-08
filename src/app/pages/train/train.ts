@@ -9,13 +9,14 @@ import { DataService, EOF_ICON, Entity, SPEC_KEY } from '../../core/data.service
 import { applyWield, equip, hasSpecial, unequip } from '../../core/equipment';
 import { DEFAULT_LAYOUT_ID, keybindLayout } from '../../core/keybind-layouts';
 import { keybindFromEvent, keybindFromMouse, keybindKey, keybindLabel, resolvePress } from '../../core/keybind.util';
-import { ActionBarSetup, AttackPattern, Keybind, BAR_POSITIONS, BONE_SHIELD_ABILITY, INVENTORY_SIZE, BAR_SLOTS, BarShape, barLayout, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, TARGET_TYPES, EquipSlot, ItemRef, Loadout, PrayerStats, Prebuild, REVOLUTION_MAX_SLOTS, REVOLUTION_MIN_SLOTS, RevolutionSettings, Rotation, STYLES4, Settings, StepResult, Style, Style4, WeaponSpec, emptyPrebuild, entityKey, isStyle4, loadoutStyle, loadoutWield, parseEntityKey, prebuildIsEmpty, visiblePresets, RotationStep, CoachSettings, SessionStuck } from '../../core/models';
+import { ActionBarSetup, AttackPattern, Keybind, BAR_POSITIONS, BONE_SHIELD_ABILITY, INVENTORY_SIZE, NOTE_ACTION_TICKS, BAR_SLOTS, BarShape, barLayout, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, TARGET_TYPES, EquipSlot, ItemRef, Loadout, PrayerStats, Prebuild, REVOLUTION_MAX_SLOTS, REVOLUTION_MIN_SLOTS, RevolutionSettings, Rotation, STYLES4, Settings, StepResult, Style, Style4, WeaponSpec, emptyPrebuild, entityKey, isStyle4, loadoutStyle, loadoutWield, parseEntityKey, prebuildIsEmpty, visiblePresets, RotationStep, CoachSettings, SessionStuck } from '../../core/models';
 import { alt1Announce, focusUrl, openFocusWindow } from '../../core/popout';
 import { CoachService, spokenLabel, spokenSequence } from '../../core/coach.service';
 import { PresetsService } from '../../core/presets.service';
 import { nextRotation, pickRotation as chooseRotation, worstStep } from '../../core/rotation-pick';
 import { noteEntity, stepToEngineEntity } from '../../core/step-entity';
 import { StorageService } from '../../core/storage.service';
+import { prebuildFor, rotationAssumptions } from '../../core/rotation-requires';
 import { resolveLoadout } from '../../engine/loadout-resolver';
 import { BUFF_BY_ID, ruleFor, stackMax, stackName } from '../../engine/rules';
 import { STYLE_STACKS, StackId } from '../../engine/rules-model';
@@ -63,6 +64,10 @@ interface QueueSlot {
   /** free-text step from an imported rotation */
   note?: string;
   phase?: boolean;
+  /** the note asks the player to do something: the queue stops here and shows a button */
+  requiresAction?: boolean;
+  /** how long that action takes, in ticks */
+  actionTicks?: number;
   hint?: string;
   sameTick?: boolean;
   offsetTicks?: number;
@@ -163,6 +168,12 @@ export class Train implements OnDestroy {
   readonly REVOLUTION_MAX_SLOTS = REVOLUTION_MAX_SLOTS;
   /** Settings.uiMode: 'advanced' shows every panel and option; 'simple' (default) only the core – the simulation is the same */
   readonly advanced = computed(() => this.storage.settings().uiMode === 'advanced');
+  /**
+   * The enemy attacks only in the advanced view: the incoming attack, the prayer score and the target's life points
+   * all live in panels the simple view leaves out, so a session there would be judged on a fight it cannot show.
+   * The enemy configuration is kept – switching the view back brings it and its prayer training straight back.
+   */
+  readonly enemyOn = computed(() => this.enemy().enabled && this.advanced());
   /** Revolution combat mode is selected (docs/research/revolution.md) */
   readonly revolution = computed(() => this.storage.settings().combatMode === 'revolution');
   /** slots of the main bar inside the yellow Revolution box (0 = full manual) */
@@ -446,6 +457,30 @@ export class Train implements OnDestroy {
     return this.stepEntities().filter((e): e is Entity => !!e && !e.key.startsWith('note:') && !r.has(e.key) && !seen.has(e.key) && !!seen.add(e.key));
   });
   /** the first ability of the rotation needs more adrenaline than the session starts with (a rotation that opens with an ultimate at 0%) */
+  /**
+   * What the rotation asks for but never does itself: "command skeleton warrior" with no conjure in front of it,
+   * Volley of Souls without the souls. PvME writes fight rotations that way because the conjures and stacks are
+   * built before the pull – so this is not a mistake in the rotation, it is its pre-build, and one click writes it.
+   */
+  readonly assumptions = computed(() => {
+    const r = this.rotation();
+    if (!r || !this.data.loaded()) return [];
+    return rotationAssumptions(r.steps, this.effectivePrebuild()).map((a) => ({
+      ...a,
+      name: this.data.get('ability:' + a.id)?.name ?? a.id,
+      fromName: a.from ? this.data.get('ability:' + a.from)?.name ?? null : null,
+    }));
+  });
+  /** the assumptions the pre-build can hold (a spirit, a stack count) – the bar-chain ones have to be cast */
+  readonly assumptionsFixable = computed(() => this.assumptions().some((a) => !!a.fix));
+
+  /** writes every assumption the pre-build can hold into it: the conjures out, the stacks at the count the rotation needs */
+  applyAssumptions(): void {
+    const caps = this.resolved().stackCaps;
+    this.setPrebuild(prebuildFor(this.prebuild(), this.assumptions(), (id) => stackMax(id as StackId, caps)));
+    this.prebuildOpen.set(true);
+  }
+
   readonly adrenalineShort = computed<{ name: string; need: number; have: number } | null>(() => {
     if (!this.data.loaded() || !this.data.loadoutReady()) return null;
     const first = this.stepEntities().find((e) => e && (e.kind === 'ability' || e.kind === 'spec'));
@@ -802,6 +837,8 @@ export class Train implements OnDestroy {
         done: running && done.has(j) && kind !== 'prev',
         note: rs?.kind === 'note' ? rs.note ?? '' : undefined,
         phase: rs?.phase,
+        requiresAction: rs?.kind === 'note' && rs.requiresAction ? true : undefined,
+        actionTicks: rs?.kind === 'note' && rs.requiresAction ? rs.actionTicks ?? NOTE_ACTION_TICKS : undefined,
         hint: rs?.hint,
         sameTick: rs?.sameTick,
         offsetTicks: rs?.offsetTicks,
@@ -977,6 +1014,11 @@ export class Train implements OnDestroy {
   );
 
   /** tap on an action chip while training = press it (touch / mouse) */
+  /** "Enter the instance": the button of an action note – the rotation goes on when it is pressed */
+  pressNote(stepIndex: number): void {
+    if (this.running()) this.press('note:' + stepIndex);
+  }
+
   clickAction(id: string): void {
     if (this.running()) this.press('action:' + id);
   }
@@ -1043,7 +1085,7 @@ export class Train implements OnDestroy {
       // Revolution scans the main bar of the wielded style (position 0, first N slots)
       revolution: this.revolution() ? { ...this.storage.settings().revolution, bar: this.mainBarKeys(this.startStyle()), resolveBar: (st: Style | null) => this.mainBarKeys(st && isStyle4(st) ? st : this.startStyle()) } : undefined,
       // the engine only attacks when the enemy is enabled; its affinity / Defence / armour count for the hit chance either way
-      enemy: { ...enemy, styles: [...enemy.styles] },
+      enemy: { ...enemy, enabled: this.enemyOn(), styles: [...enemy.styles] },
       targetLifePoints: enemy.lifePoints > 0 ? enemy.lifePoints : undefined,
       targetType: enemy.type ?? undefined,
       hitChanceDisabled: this.storage.settings().hitChance === 'off',
@@ -1689,7 +1731,7 @@ export class Train implements OnDestroy {
     const results = this.results();
     const stuck = this.stuck();
     // a session stuck on its first step has no results but is still worth keeping: the rotation cannot be played
-    if (!rot || (!results.length && !stuck && !(this.enemy().enabled && this.prayerStats().attacks))) return;
+    if (!rot || (!results.length && !stuck && !(this.enemyOn() && this.prayerStats().attacks))) return;
     void this.storage.addSession({
       rotationId: rot.id,
       rotationName: rot.name,
@@ -1698,8 +1740,8 @@ export class Train implements OnDestroy {
       settings: { ...this.storage.settings() },
       loadout: { ...this.storage.loadout() },
       results,
-      enemy: this.enemy().enabled ? { ...this.enemy() } : undefined,
-      prayerStats: this.enemy().enabled ? { ...this.prayerStats() } : undefined,
+      enemy: this.enemyOn() ? { ...this.enemy() } : undefined,
+      prayerStats: this.enemyOn() ? { ...this.prayerStats() } : undefined,
       damage: { total: this.damage(), hits: this.hits(), dps: Math.round(this.dps()), killedAtMs: this.killedAtMs(), misses: this.misses(), hitChance: this.hitChance() },
       stuck: stuck ?? undefined,
     });

@@ -48,7 +48,7 @@ interface Cell {
   selector: 'gear-panel',
   imports: [GearTip, CdkDropList],
   template: `
-    <div class="gear" [class.live]="live()" [class.editable]="editable()">
+    <div class="gear" [class.live]="live()" [class.editable]="editable()" [class.side]="side()">
       <div class="equipment" role="group" aria-label="Worn equipment">
         <!-- the thin lines joining the slots, like in the game -->
         <span class="line v mid"></span>
@@ -141,6 +141,14 @@ interface Cell {
       align-items: center;
       gap: 8px;
       width: 100%;
+    }
+    /* read-only previews (the boss setups) put worn equipment and backpack next to each other: half the height */
+    .gear.side {
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      justify-content: flex-start;
+      width: auto;
     }
     /* stone-framed panels like the game's interface windows */
     .equipment,
@@ -404,6 +412,8 @@ export class GearPanel implements OnDestroy {
   readonly inventory = input.required<(ItemRef | null)[]>();
   readonly editable = input(false);
   readonly live = input(false);
+  /** worn equipment and backpack side by side instead of stacked (read-only previews) */
+  readonly side = input(false);
   /** backpack cells take CDK drops from the page (the "missing abilities" list, bar slots) – emitted as `cdkDrop` */
   readonly cdkDrops = input(false);
   /** items can be dragged out of the panel onto `data-gear-drop` targets elsewhere on the page (bar slots) even when not editable */

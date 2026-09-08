@@ -36,10 +36,18 @@
     <div class="steps" cdkDropList cdkDropListOrientation="mixed" (cdkDropListDropped)="reorder($event)">
       @for (s of r.steps; track $index) {
         @if (s.kind === 'note') {
-          <div class="tile note" [class.phase]="s.phase" cdkDrag [cdkDragStartDelay]="{ touch: 250, mouse: 0 }" [title]="(s.phase ? 'Phase: ' : 'Note: ') + s.note + ' – click to edit'" (click)="editNote($index)">
+          <div class="tile note" [class.phase]="s.phase" [class.todo]="s.requiresAction" cdkDrag [cdkDragStartDelay]="{ touch: 250, mouse: 0 }" [title]="(s.phase ? 'Phase: ' : 'Note: ') + s.note + ' – click to edit'" (click)="editNote($index)">
             <span class="num">{{ $index + 1 }}</span>
             <span class="note-text">{{ s.note }}</span>
+            @if (s.requiresAction) {
+              <button class="tag action-tag" (click)="editActionTicks($index); $event.stopPropagation()" title="How long the action takes – click to change (1 tick = 0.6 s)">
+                do this · {{ s.actionTicks ?? NOTE_ACTION_TICKS }}t
+              </button>
+            }
             <span class="tile-actions">
+              @if (!s.phase) {
+                <button class="act" [class.on]="s.requiresAction" (click)="toggleNoteAction($index); $event.stopPropagation()" [title]="s.requiresAction ? 'The player has to click this note during the session – click: back to a plain note' : 'Make it something the player has to do: the rotation stops here until the button is clicked'">✋</button>
+              }
               <button class="act" (click)="editNote($index); $event.stopPropagation()" title="Edit text">✎</button>
               <button class="act danger" (click)="removeStep($index); $event.stopPropagation()" title="Remove">×</button>
             </span>

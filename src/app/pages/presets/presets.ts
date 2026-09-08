@@ -1,11 +1,13 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { DataService, GearView } from '../../core/data.service';
+import { Equipment, ItemRef, RELICS } from '../../core/models';
+import { presetEquipment, presetInventory } from '../../core/preset-setup';
+import { GearPanel } from '../../shared/gear-panel';
 import { cleanNotes } from './preset-notes';
 import { BossPreset, ParsedRotation, PresetsService } from '../../core/presets.service';
 import { StorageService } from '../../core/storage.service';
 import { DialogService } from '../../shared/dialog';
-import { GearTip } from '../../shared/tooltip';
 import { ToastService } from '../../shared/toast';
 
 export type { BossPreset } from '../../core/presets.service';
@@ -16,6 +18,9 @@ interface PresetView {
   label: string;
   worn: GearView[];
   carried: GearView[];
+  /** what the gear panel draws: the worn items in the trainer's slots and the 28 backpack slots */
+  equipment: Equipment;
+  inventory: (ItemRef | null)[];
 }
 
 /** the setups of one boss */
@@ -36,7 +41,7 @@ const STYLE_ORDER = ['Melee', 'Ranged', 'Magic', 'Necromancy'];
  */
 @Component({
   selector: 'app-presets',
-  imports: [GearTip],
+  imports: [GearPanel],
   templateUrl: './presets.html',
   styleUrl: './presets.scss',
 })
@@ -73,6 +78,8 @@ export class Presets {
           .map((r) => (r ? this.data.view(r) : null))
           .filter((v): v is GearView => !!v),
         carried: preset.inventory.map((r) => (r ? this.data.view(r) : null)).filter((v): v is GearView => !!v),
+        equipment: presetEquipment(preset, (r) => this.data.slotOf(r)),
+        inventory: presetInventory(preset),
       }));
   });
   /** the setups grouped by boss, in list order (the demo boss first) */
@@ -120,6 +127,20 @@ export class Presets {
   /** the rotation steps of a preset, resolved with the PvME parser (for the preview) */
   parse(p: BossPreset): ParsedRotation[] {
     return this.service.parse(p);
+  }
+
+  /** Archaeology relics the preset maker keeps next to the gear – the gear panel has no slot for them */
+  relics(p: BossPreset): string[] {
+    return (p.relics ?? []).map((id) => RELICS.find((r) => r.id === id)?.name ?? id);
+  }
+
+  familiarName(p: BossPreset): string {
+    return (p.familiar && this.data.familiarById().get(p.familiar)?.name) || p.familiar || '';
+  }
+
+  /** the Invention perks the guide names, "Biting 4" */
+  perks(p: BossPreset): string[] {
+    return (p.perks ?? []).map((x) => (this.data.perkById().get(x.id)?.name ?? x.id) + ' ' + x.rank);
   }
 
   notes(p: BossPreset): string {
