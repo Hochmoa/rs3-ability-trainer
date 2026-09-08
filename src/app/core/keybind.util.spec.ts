@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { isMouseCode, keybindFromMouse, keybindKey, keybindLabel, parseKeybind, resolvePress } from './keybind.util';
-import { ActionBarSetup, defaultActionBars } from './models';
+import { isMouseCode, keybindFromMouse, keybindKey, keybindLabel, parseKeybind, resolvePress, slotKeybinds } from './keybind.util';
+import { ActionBarSetup, SPEC_KEY, defaultActionBars } from './models';
 
 const Q = parseKeybind('KeyQ');
 const W = parseKeybind('KeyW');
@@ -74,5 +74,27 @@ describe('extra mouse buttons as keybinds', () => {
     const s = setup();
     s.slotKeybinds[0][1] = parseKeybind('Mouse5');
     expect(resolvePress(s, keybindKey(parseKeybind('Mouse5')), [])).toEqual({ kind: 'slot', pos: 0, slot: 1 });
+  });
+});
+
+describe('slotKeybinds – entity key → the key of its bar slot (the Rotations page prints it on the tiles)', () => {
+  it('walks the five positions as shown for no style; the first slot holding an entity wins, notes and empty slots are skipped', () => {
+    const s = defaultActionBars();
+    s.presets[0].slots[0] = { kind: 'ability', id: 'sever' };
+    s.presets[0].slots[1] = { kind: 'spec', id: 'devour' };
+    s.presets[0].slots[2] = { kind: 'note', id: '', note: 'x' };
+    s.presets[1].slots[0] = { kind: 'ability', id: 'sever' }; // a second copy on bar 2 – the main bar's key counts
+    s.slotKeybinds[1][0] = { code: 'KeyQ', ctrl: false, shift: false, alt: false };
+    const keys = slotKeybinds(s);
+    expect(keys.get('ability:sever')?.code).toBe('Digit1');
+    expect(keys.get(SPEC_KEY)?.code).toBe('Digit2');
+    expect(keys.size).toBe(2);
+  });
+
+  it('a slot without a key gives nothing, a position without a preset is skipped', () => {
+    const s = defaultActionBars();
+    s.presets[1].slots[0] = { kind: 'prayer', id: 'turmoil' }; // bar 2 has no keys by default
+    s.positions[2] = null;
+    expect(slotKeybinds(s).has('prayer:turmoil')).toBe(false);
   });
 });
