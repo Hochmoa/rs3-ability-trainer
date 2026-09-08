@@ -861,7 +861,7 @@
    @if (advanced()) {
    <aside class="gear-side">
     <div class="gear-head"><b>Equipment &amp; backpack</b> <a routerLink="/loadout">edit</a></div>
-    <gear-panel [equipment]="gearState().equipment" [inventory]="gearState().inventory" [live]="true" [cdkDrops]="!running()" [dragOut]="!running()" [usable]="gearUsable()" [keyOf]="gearKey" (action)="onGear($event)" (cdkDrop)="dropIntoInventory($event.index, $event.data)" />
+    <gear-panel [equipment]="gearState().equipment" [inventory]="gearState().inventory" [live]="true" [cdkDrops]="!running()" [dragOut]="!running()" [usable]="gearUsable()" [keyOf]="gearKey" [wanted]="wantedItem()" (action)="onGear($event)" (cdkDrop)="dropIntoInventory($event.index, $event.data)" />
     <p class="muted small">{{ running() ? 'Click to wield, drink, wear or take off. Not saved to the loadout.' : 'While training you can switch, drink and swap armour here. Drag a potion or weapon onto a bar slot.' }}</p>
    </aside>
    }

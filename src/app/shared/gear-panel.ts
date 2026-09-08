@@ -59,7 +59,7 @@ interface Cell {
         @for (c of cells(); track c.slot) {
           <div
             class="cell equip"
-            [class]="'cell equip slot-' + c.gear + (c.ref ? ' filled' : ' empty') + (c.blocked ? ' blocked' : '') + (isWielded(c) ? ' wielded' : '') + (canDrop(c) ? ' can-drop' : '') + (gearDrag.hover() === 'equip:' + c.gear ? ' hover' : '')"
+            [class]="'cell equip slot-' + c.gear + (c.ref ? ' filled' : ' empty') + (c.blocked ? ' blocked' : '') + (isWielded(c) ? ' wielded' : '') + (isWanted(c.ref) ? ' wanted' : '') + (canDrop(c) ? ' can-drop' : '') + (gearDrag.hover() === 'equip:' + c.gear ? ' hover' : '')"
             [attr.data-slot]="c.gear"
             [attr.data-gear-drop]="canDrop(c) ? 'equip:' + c.gear : null"
             [title]="c.ref ? '' : SLOT_NAMES[c.gear]"
@@ -90,7 +90,7 @@ interface Cell {
         @for (v of inv(); track $index) {
           <div
             class="cell inv"
-            [class]="'cell inv' + (v ? ' filled' : ' empty') + (v && usable() && !usable()!(v.ref) ? ' unusable' : '') + (canDropInv() ? ' can-drop' : '') + (gearDrag.hover() === 'inv:' + $index ? ' hover' : '')"
+            [class]="'cell inv' + (v ? ' filled' : ' empty') + (v && usable() && !usable()!(v.ref) ? ' unusable' : '') + (isWanted(v?.ref) ? ' wanted' : '') + (canDropInv() ? ' can-drop' : '') + (gearDrag.hover() === 'inv:' + $index ? ' hover' : '')"
             [gearTip]="v"
             [attr.data-gear-drop]="canDropInv() ? 'inv:' + $index : null"
             [id]="'inv-' + $index"
@@ -275,6 +275,22 @@ interface Cell {
       border-color: var(--gold);
       box-shadow: inset 0 0 6px rgba(201, 162, 39, 0.5);
     }
+    /* the item the current step needs: brighter than "wielded", and it pulses so the eye finds it mid-rotation */
+    .cell.wanted {
+      border-color: #ffe27a;
+      box-shadow: 0 0 0 1px #ffe27a, 0 0 10px rgba(255, 226, 122, 0.7);
+      animation: gear-wanted 1.1s ease-in-out infinite;
+    }
+    @keyframes gear-wanted {
+      50% {
+        box-shadow: 0 0 0 2px #ffe27a, 0 0 16px rgba(255, 226, 122, 0.95);
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .cell.wanted {
+        animation: none;
+      }
+    }
     /* every cell that could take the dragged item (pointer drag from shared/gear-drag.ts) */
     .cell.can-drop {
       border-color: var(--gold);
@@ -422,6 +438,11 @@ export class GearPanel implements OnDestroy {
   readonly usable = input<((ref: ItemRef) => boolean) | null>(null);
   /** live mode: key label shown on carried weapons */
   readonly keyOf = input<(ref: ItemRef) => string>(() => '');
+  /**
+   * live mode: the item the current step needs. A rotation that fires a special stored in an Essence of Finality means
+   * one particular amulet of the several a PvME setup carries – without this the player cannot tell which.
+   */
+  readonly wanted = input<((ref: ItemRef) => boolean) | null>(null);
   readonly action = output<GearAction>();
   /** a CDK drag (data of the dragged item) was dropped on backpack cell `index` */
   readonly cdkDrop = output<{ index: number; data: unknown }>();
@@ -451,6 +472,12 @@ export class GearPanel implements OnDestroy {
 
   dragOf(ref: ItemRef, from: GearSource): GearDrag {
     return { ref, from };
+  }
+
+  /** this item is what the current rotation step needs (the amulet holding its special, the weapon it switches to) */
+  isWanted(ref: ItemRef | null | undefined): boolean {
+    const f = this.wanted();
+    return !!ref && !!f && f(ref);
   }
 
   isWielded(c: Cell): boolean {

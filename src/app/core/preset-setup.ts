@@ -144,6 +144,27 @@ export function presetLoadout(p: BossPreset, slotOf: (ref: ItemRef) => EquipSlot
   return l;
 }
 
+/**
+ * "X eofspec": the specials a rotation fires from an Essence of Finality are spread over the amulets the setup
+ * carries – one special per amulet, as PvME plays it. The guide's own amulets already hold some of them (Nex solo
+ * ranged wears Split Soul and carries Shadowfall), so those are left alone; empty amulets are filled in order, and
+ * the specials with nowhere to go are returned for the caller to add an amulet for.
+ * `amulets` is mutated: an empty one gets its `spec`.
+ */
+export function assignEofSpecs(amulets: ItemRef[], stored: string[]): string[] {
+  const already = new Set(amulets.map((r) => r.spec).filter((x): x is string => !!x));
+  const empty = amulets.filter((r) => !r.spec);
+  const missing: string[] = [];
+  for (const id of stored) {
+    if (already.has(id)) continue;
+    already.add(id);
+    const free = empty.shift();
+    if (free) free.spec = id;
+    else missing.push(id);
+  }
+  return missing;
+}
+
 /** Entity keys of everything the rotations press on a bar, in order of first use (weapon switches and client actions are not bar slots). */
 export function presetSlotKeys(rotations: { steps: RotationStep[] }[]): string[] {
   const keys: string[] = [];

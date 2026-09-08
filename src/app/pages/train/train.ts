@@ -798,11 +798,15 @@ export class Train implements OnDestroy {
     void this.storage.saveActionBars({ ...this.storage.actionBars(), layout: { order: [...this.layout().order], shape } });
   }
 
-  /** the spec stored in the Essence of Finality wears the EoF icon; every other spec keeps the generic special-attack icon */
+  /**
+   * The spec stored in an Essence of Finality wears the EoF icon; every other spec keeps the generic special-attack
+   * icon. A loadout carries one amulet per stored special (the preset import builds them that way), so every one of
+   * them counts – not just the one on the neck, or the specs of the carried amulets look like any other spec.
+   */
   private eofIcon(e: Entity): string | null {
     if (e.kind !== 'spec') return null;
-    const eof = this.resolved().eofSpec;
-    return eof && eof.id === e.id ? EOF_ICON : null;
+    const r = this.resolved();
+    return r.eofSpecs.some((s) => s.id === e.id) || r.eofSpec?.id === e.id ? EOF_ICON : null;
   }
 
   readonly slots = computed<QueueSlot[]>(() => {
@@ -1221,6 +1225,23 @@ export class Train implements OnDestroy {
 
   /** switch key of a carried weapon, shown on its backpack cell */
   readonly gearKey = (ref: ItemRef): string => (ref.kind === 'weapon' ? keybindLabel(this.storage.actionBars().weaponKeybinds[ref.id]) : '');
+
+  /**
+   * The item the current step needs, marked in the gear panel. A PvME setup carries several Essence of Finality
+   * amulets, each with its own stored special, and they all look alike – so when the rotation asks for one of those
+   * specials, its amulet lights up. A weapon-switch step lights up the weapon the same way.
+   */
+  readonly wantedItem = computed<((ref: ItemRef) => boolean) | null>(() => {
+    if (!this.running()) return null;
+    const key = this.expectedKey();
+    if (!key) return null;
+    const { kind, id } = parseEntityKey(key);
+    if (kind === 'weapon') return (ref) => ref.kind === 'weapon' && ref.id === id;
+    if (kind !== 'spec') return null;
+    // the special of the wielded weapon needs no amulet – only a stored one points at an item
+    if (this.resolved().weaponSpec?.id === id) return null;
+    return (ref) => ref.kind === 'gear' && ref.spec === id;
+  });
 
   private stopLoops(): void {
     this.loop.stop();

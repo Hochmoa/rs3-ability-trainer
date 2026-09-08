@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { keybindLayout } from './keybind-layouts';
 import { BAR_SLOTS, EquipSlot, ItemRef, RotationStep, SPEC_KEY, defaultActionBars } from './models';
-import { BossPreset, demoRotationIndex, presetBars, presetLoadout, presetSlotKeys } from './preset-setup';
+import { BossPreset, assignEofSpecs, demoRotationIndex, presetBars, presetLoadout, presetSlotKeys } from './preset-setup';
 
 const preset: BossPreset = {
   id: 'demo-boss-necromancy',
@@ -65,6 +65,34 @@ describe('preset loadout', () => {
     expect(presetLoadout(preset, slotOf).familiar ?? null).toBeNull();
     const worn: BossPreset = { ...preset, ammo: 'deathspore-arrows', equipment: { ...preset.equipment, ammo: { kind: 'gear', id: 'ful-arrow' } } };
     expect(presetLoadout(worn, (r) => (r.id === 'ful-arrow' ? 'ammo' : slotOf(r))).equipment?.ammo?.id).toBe('ful-arrow');
+  });
+});
+
+describe('Essence of Finality amulets', () => {
+  const eof = (spec?: string): ItemRef => ({ kind: 'gear', id: 'essence-of-finality-amulet', ...(spec ? { spec } : {}) });
+
+  it("what the guide's own amulets already store is not stored a second time", () => {
+    const amulets = [eof('split-soul'), eof('shadowfall')];
+    expect(assignEofSpecs(amulets, ['split-soul', 'shadowfall'])).toEqual([]);
+    expect(amulets.map((a) => a.spec)).toEqual(['split-soul', 'shadowfall']);
+  });
+
+  it('empty amulets are filled in order, one special each', () => {
+    const amulets = [eof(), eof()];
+    expect(assignEofSpecs(amulets, ['reap', 'devour'])).toEqual([]);
+    expect(amulets.map((a) => a.spec)).toEqual(['reap', 'devour']);
+  });
+
+  it('a special with no amulet left is reported so the caller can add one', () => {
+    const amulets = [eof('split-soul'), eof()];
+    expect(assignEofSpecs(amulets, ['split-soul', 'reap', 'devour'])).toEqual(['devour']);
+    expect(amulets.map((a) => a.spec)).toEqual(['split-soul', 'reap']);
+  });
+
+  it('the same special asked for twice needs one amulet', () => {
+    const amulets = [eof()];
+    expect(assignEofSpecs(amulets, ['reap', 'reap'])).toEqual([]);
+    expect(amulets.map((a) => a.spec)).toEqual(['reap']);
   });
 });
 

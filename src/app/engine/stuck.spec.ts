@@ -205,6 +205,21 @@ describe('stuck marker', () => {
     expect(e.stuck).toMatchObject({ key: SPEC.key, reason: 'weapon' });
   });
 
+  it('pressing the weapon special slot when the EoF one was due is an ordinary wrong key, not a stuck rotation', () => {
+    // the setup can fire the special the step wants (a carried amulet holds it, the style fits): the player just
+    // pressed the other special slot, so the session goes on – three of them do not end it
+    const other: EngineEntity = { ...SPEC, key: 'spec:other', id: 'other', name: 'Other' };
+    const e = make([SPEC, A], { loadout: { ...defaultResolvedLoadout(), style: 'Ranged', weaponSpec: other, eofSpecs: [SPEC], startAdrenaline: 100 } }, [other]);
+    press(e, SPEC_KEY, 1);
+    press(e, SPEC_KEY, 5);
+    press(e, SPEC_KEY, 9);
+    expect(e.stuck).toBeNull();
+    expect(e.state).toBe('running');
+    // and the right slot still completes the step
+    press(e, EOF_KEY, 13);
+    expect(e.index).toBe(1);
+  });
+
   it('the slot holding another special than the one due: three presses end the session stuck, nothing fires', () => {
     const other: EngineEntity = { ...SPEC, key: 'spec:other', id: 'other', name: 'Other' };
     const e = make([SPEC, A, other], { loadout: { ...defaultResolvedLoadout(), style: 'Ranged', weaponSpec: other, startAdrenaline: 100 } }, [other]);

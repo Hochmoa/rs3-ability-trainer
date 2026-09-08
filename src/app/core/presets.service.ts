@@ -5,7 +5,7 @@ import { DataService } from './data.service';
 import { addItem, stockSpecials } from './equipment';
 import { DEFAULT_LAYOUT_ID, keybindLayout } from './keybind-layouts';
 import { ItemRef, Prebuild, Rotation, RotationStep } from './models';
-import { BossPreset, demoRotationIndex, presetBars, presetLoadout, presetSlotKeys } from './preset-setup';
+import { BossPreset, assignEofSpecs, demoRotationIndex, presetBars, presetLoadout, presetSlotKeys } from './preset-setup';
 import { SwitchCatalog, insertSwitches } from './preset-switches';
 import { parsePvme } from './pvme';
 import { StorageService } from './storage.service';
@@ -106,14 +106,10 @@ export class PresetsService {
     const ownSpecs = new Set([...carried].map((id) => this.data.weaponById().get(id)?.spec).filter((x): x is string => !!x));
     const stored = [...new Set(steps.filter((st) => st.kind === 'spec' && !ownSpecs.has(st.id)).map((st) => st.id))];
     const isEof = (r: ItemRef | null | undefined) => !!r && r.kind === 'gear' && r.id.includes('essence-of-finality');
-    const amulets = [isEof(loadout.equipment.neck) ? loadout.equipment.neck! : null, ...loadout.inventory.filter(isEof)].filter((r): r is ItemRef => !!r && !r.spec);
-    for (const id of stored) {
-      const free = amulets.shift();
-      if (free) free.spec = id;
-      else {
-        const r = addItem(loadout, { kind: 'gear', id: 'essence-of-finality-amulet', spec: id });
-        if (!r.error) loadout.inventory = r.state.inventory;
-      }
+    const amulets = [isEof(loadout.equipment.neck) ? loadout.equipment.neck! : null, ...loadout.inventory.filter(isEof)].filter((r): r is ItemRef => !!r);
+    for (const id of assignEofSpecs(amulets, stored)) {
+      const r = addItem(loadout, { kind: 'gear', id: 'essence-of-finality-amulet', spec: id });
+      if (!r.error) loadout.inventory = r.state.inventory;
     }
     if (!loadout.eofSpec && isEof(loadout.equipment.neck)) loadout.eofSpec = loadout.equipment.neck!.spec ?? null;
     // "surge → surge": the guide plays with the Double Surge relic (a second Surge charge)

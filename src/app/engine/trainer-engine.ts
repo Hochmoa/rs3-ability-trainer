@@ -916,7 +916,11 @@ export class TrainerEngine {
         else {
           this.wrong++;
           this.events.push({ kind: 'wrong-weapon', key: expected.key, reason: 'spec' });
-          this.weaponStrike(expected, 'spec');
+          // only a rotation that cannot fire the special at all is stuck. When the other slot can – the special sits in
+          // an Essence of Finality the player carries and the wielded style fits – the press was simply the wrong key
+          // of the two special slots, which ends no session (the gear panel marks the amulet that holds it).
+          if (this.weaponFailure(expected)) this.weaponStrike(expected, 'spec');
+          else this.wrongWeaponStrikes = 0;
           return;
         }
       } else {
@@ -1083,6 +1087,12 @@ export class TrainerEngine {
   private wrongFiredStrike(expected: EngineEntity | undefined, fired: EngineEntity): void {
     if (!expected || this.stuck || this.state !== 'running') return;
     if (fired.kind !== 'spec' && expected.kind !== 'spec') return;
+    // the special the step wants can be fired right now (the weapon holds it, or a carried Essence of Finality does):
+    // then the rotation is fine and the player pressed the other special slot – a wrong key like any other, not stuck
+    if (expected.kind === 'spec' && !this.weaponFailure(expected)) {
+      this.wrongFired = null;
+      return;
+    }
     if (this.wrongFired?.key !== expected.key) this.wrongFired = { key: expected.key, count: 0 };
     if (++this.wrongFired.count < 3) return;
     const info: StuckInfo = { key: expected.key, step: this.stepIndexOf(expected.key), reason: 'weapon', text: expected.name + ' did not fire – the slot fires ' + fired.name + ' (the weapon in hand or the amulet holds another special attack and the rotation has no switch)' };
