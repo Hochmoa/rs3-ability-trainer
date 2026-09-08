@@ -201,21 +201,15 @@
     grid-column: span 2;
   }
 
+  /* a group card is wider, but laid out like every card: icons on top, the name and the numbers underneath */
   &.set {
     grid-column: span 3;
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: flex-start;
-    gap: 4px 12px;
-    padding: 6px 10px;
-
-    .iname {
-      text-align: left;
-    }
   }
 
   .icons {
     display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
     gap: 4px;
   }
 

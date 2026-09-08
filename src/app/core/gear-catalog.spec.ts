@@ -110,7 +110,7 @@ describe('gear families – sets, name families and variants', () => {
     gear('old', { name: 'Bronze platebody', slot: 'body', tier: 1 }),
   ];
 
-  it('a set effect or a shared name makes a set; the same slot in several tiers makes variants inside it', () => {
+  it('a set effect or a shared name makes a set; of several tiers of a piece only the highest is offered', () => {
     const entries = gearEntries(items, sets, usage);
     const havoc = entries.find((e) => e.key === 'set:havoc')!;
     expect(havoc).toMatchObject({ kind: 'set', name: 'Vestments of Havoc', score: 55 });
@@ -119,11 +119,13 @@ describe('gear families – sets, name families and variants', () => {
     expect(sliske.kind).toBe('set');
     expect(sliske.chosen.map((r) => r.id)).toEqual(['sliske-helm', 'sliske-body']);
     const dd = entries.find((e) => e.key === 'set:deathdealer')!;
-    expect(dd.refs.map((r) => r.id)).toEqual(['dd-hood-90', 'dd-top-90', 'dd-top-70']); // best variant first inside a slot
+    expect(dd.name).toBe('Deathdealer robes');
+    expect(dd.refs.map((r) => r.id)).toEqual(['dd-hood-90', 'dd-top-90']); // the tier 70 top is not offered
     expect(dd.chosen.map((r) => r.id)).toEqual(['dd-hood-90', 'dd-top-90']);
-    // every item in exactly one entry
+    // every offered item in exactly one entry
     const all = entries.flatMap((e) => e.refs.map((r) => r.id));
-    expect(new Set(all).size).toBe(items.length);
+    expect(new Set(all).size).toBe(all.length);
+    expect(all.length).toBe(items.length - 1);
   });
 
   it('the Igneous capes are one variants entry that wears the most used one', () => {

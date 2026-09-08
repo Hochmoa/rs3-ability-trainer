@@ -8,8 +8,8 @@
  * Items come in groups, like the game gives them out, and every item sits in exactly one group – never once more
  * on its own: a two-hander alone, a main-hand with the off-hand that belongs to it (Roar of Awakening + Ode to
  * Deceit, Dark Shard + Dark Sliver of Leng), an armour set with all its pieces (a set effect, or pieces that share a name: Anima core of Sliske,
- * Masterwork ranged), and the variants of one item (the Igneous Kal-* capes, Deathdealer tier 70 / 80 / 90,
- * Blast diffusion and Enhanced blast diffusion boots). A group's score is its best piece's, so one popular piece
+ * Masterwork ranged), and the variants of one item (the Igneous Kal-* capes; of several tiers of a piece only the
+ * highest is offered). A group's score is its best piece's, so one popular piece
  * carries its set. `chosen` is what "wear the group" puts on: the best variant per slot.
  */
 import { EquipSlot, GearItem, ItemRef, SLOT_NAMES, STYLES4, SetEffect, Special, Style, UsageStats, Weapon } from './models';
@@ -215,11 +215,20 @@ export function gearEntries(gear: GearItem[], setById: Map<string, SetEffect>, u
   const ref = (g: GearItem): ItemRef => ({ kind: 'gear', id: g.id });
   const out: CatalogEntry[] = [];
   for (const [key, pieces] of families) {
-    const ordered = [...pieces].sort((a, b) => SLOT_ORDER.indexOf(a.slot) - SLOT_ORDER.indexOf(b.slot) || itemUsage(usage, ref(b)) - itemUsage(usage, ref(a)) || b.tier - a.tier || a.name.localeCompare(b.name));
+    // of one piece in several tiers only the highest is offered (Deathdealer tier 90, not 70 and 80; Enhanced blast
+    // diffusion boots, not the plain ones) – per style, so the Igneous Kal-* capes of every style stay
+    const top = new Map<string, number>();
+    for (const g of pieces) {
+      const k = g.slot + '|' + (g.style ?? '');
+      top.set(k, Math.max(top.get(k) ?? 0, g.tier));
+    }
+    const ordered = pieces
+      .filter((g) => g.tier >= (top.get(g.slot + '|' + (g.style ?? '')) ?? 0))
+      .sort((a, b) => SLOT_ORDER.indexOf(a.slot) - SLOT_ORDER.indexOf(b.slot) || itemUsage(usage, ref(b)) - itemUsage(usage, ref(a)) || b.tier - a.tier || a.name.localeCompare(b.name));
     const slots = new Set(ordered.map((p) => p.slot));
     const chosen = [...slots].map((slot) => ordered.find((p) => p.slot === slot)!);
     const kind: EntryKind = ordered.length === 1 ? 'single' : slots.size > 1 ? 'set' : 'variants';
-    const setName = key.startsWith('set:') ? setById.get(key.slice(4))?.name : undefined;
+    const setName = key.startsWith('set:') ? setById.get(key.slice(4))?.name.replace(VARIANT_SUFFIX, '') : undefined;
     // variants of one item keep the best one's name (Gloves of passage · 2 variants); the TzHaar capes their line
     const variantsLabel = setName ?? (KAL_CAPE.test(ordered[0].name) ? familyLabel(ordered[0].name) : ordered[0].name.replace(VARIANT_SUFFIX, '').replace(/^Enhanced\s+/i, '').trim());
     const name = kind === 'single' ? ordered[0].name : kind === 'variants' ? variantsLabel + ' · ' + ordered.length + ' variants' : setName ?? familyLabel(ordered[0].name);
