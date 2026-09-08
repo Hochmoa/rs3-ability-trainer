@@ -4,66 +4,47 @@
     margin-bottom: 8px;
   }
 
-  .chips {
+  /* the setup whose gear this is: grouped select + search, like the Train page's picker */
+  .setup-pick {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
     align-items: center;
+    gap: 8px 14px;
     margin-bottom: 10px;
-  }
 
-  /* one row per boss once the PvME setups are in: the boss is written once, the chips carry the variant */
-  .chip-group {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 6px;
-    width: 100%;
-  }
-
-  .chip-group-label {
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.4px;
-    text-transform: uppercase;
-    color: var(--muted);
-  }
-
-  .loadout-filter {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 8px;
-
-    input {
-      flex: 1 1 260px;
-      max-width: 360px;
+    h1 {
+      margin: 0;
     }
-  }
 
-  .chip {
-    padding: 5px 12px;
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    background: #26252c;
-    color: var(--muted);
-    font: inherit;
-    cursor: pointer;
+    .field {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1 1 320px;
 
-    &.active {
-      color: var(--gold);
-      border-color: var(--gold);
+      > span {
+        color: var(--muted);
+        font-size: 13px;
+        white-space: nowrap;
+      }
     }
-  }
 
-  .name {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 8px;
+    .picker {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
 
-    input {
-      max-width: 280px;
+      select {
+        flex: 1 1 220px;
+        max-width: 420px;
+      }
+
+      input {
+        flex: 1 1 160px;
+        max-width: 260px;
+      }
     }
   }
 

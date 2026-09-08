@@ -1,50 +1,45 @@
 #!/usr/bin/env python3
 """
-Turns a guide-content dump (tools/guide-seed.json) into a Supabase migration that seeds the guide accounts
-(supabase/migrations/0012_guide_accounts.sql) with their PvME rotations and loadouts.
+Turns the guide-content dump (tools/guide-seed.json, made by tools/guide-seed-dump.js) into a Supabase migration
+that seeds the PVME guide account (0012_guide_accounts.sql ensure_guide_account, 0018_setups.sql tables) with every
+PvME setup: one setups row per preset (loadout inside) and its rotations.
 
     python tools/guide-seed-to-sql.py                       # tools/guide-seed.json -> supabase/migrations/<next>_guide_content.sql
-    python tools/guide-seed-to-sql.py --number 0013         # explicit migration number
+    python tools/guide-seed-to-sql.py --number 0019         # explicit migration number
     python tools/guide-seed-to-sql.py --in dump.json --out /tmp/x.sql
     python tools/guide-seed-to-sql.py --selftest            # no files touched
 
-Input shape (one entry per guide account, the display name is the boss):
+Input shape (one entry per setup):
 
     [
       {
-        "name": "Vorkath",                       # 3-20 chars, [A-Za-z0-9 _-] (profiles.display_name check)
-        "loadouts": [Loadout, ...],              # src/app/core/models.ts Loadout, as the app stores it (id + name required)
+        "id": "<uuid>", "boss": "Nex", "name": "solo ranged", "style": "Ranged", "presetId": "nex-ranged",
+        "loadout": Loadout,                       # src/app/core/models.ts Loadout as the app stores it (id + name required)
         "rotations": [
-          { "id": "<uuid>", "name": "Vorkath – full kill", "steps": [RotationStep, ...],
-            "styles": ["Necromancy"], "updatedAt": 1757203200000 },
+          { "id": "<uuid>", "name": "Blood Phase", "steps": [RotationStep, ...], "position": 0 },
           ...
         ]
       },
       ...
     ]
 
-Output (per account, in this order):
+Output, in this order:
 
-    select public.ensure_guide_account('Vorkath');
-    insert into public.rotations (id, owner_id, name, steps, styles, is_public, created_at, updated_at) values (...)
-      on conflict (id) do update set name = ..., steps = ..., styles = ..., is_public = true, updated_at = ...;
-    insert into public.setups (user_id, settings, loadouts, enemy, is_public) values (public.guide_id('Vorkath'), ...)
-      on conflict (user_id) do update set loadouts = ..., settings = ..., is_public = true;
+    select public.ensure_guide_account('PVME');
+    insert into public.setups (id, owner_id, boss, name, style, loadout, is_public, preset_id) values (...)
+      on conflict (id) do update set boss = ..., name = ..., style = ..., loadout = ..., is_public = true, preset_id = ...;
+    delete from public.setups where owner_id = public.guide_id('PVME') and id not in (...);
+    insert into public.rotations (id, owner_id, setup_id, name, steps, position) values (...)
+      on conflict (id) do update set setup_id = ..., name = ..., steps = ..., position = ...;
+    delete from public.rotations where owner_id = public.guide_id('PVME') and id not in (...);
 
-Every statement is an upsert keyed by the deterministic ids (rotation id from the dump, account id from the name), so
-the generated migration – and a regenerated one with the same numbers – can be applied again without duplicates.
-Rotations that disappeared from the dump are deleted from the account; an account without loadouts gets
-its setups row removed so it is not listed with an empty setup.
-On a re-run the rotations' updated_at becomes server time (the rotations_protect_counters trigger sets it on every
-update) and copies / owner_id stay as they are.
+Every statement is an upsert keyed by the deterministic ids, so the generated migration – and a regenerated one with
+the same numbers – can be applied again without duplicates. Setups and rotations that disappeared from the dump are
+deleted from the account (a deleted setup takes its rotations with it).
 
-The settings of a guide setup are the app defaults (DEFAULT_SETTINGS in src/app/core/models.ts). They are mirrored as
-JSON between the DEFAULT_SETTINGS markers below; src/app/core/guide-seed.spec.ts fails when models.ts and this copy
-drift apart.
-
-Validation mirrors the database constraints (0001_init.sql, 0008_spell_steps.sql, 0007_setups.sql): rotation names
-1-60 chars, 1-200 steps, every step an object with kind + id, kind one of the allowed ones, styles from the app's list.
-A violation stops the run with the offending account / rotation named – nothing is written half-way.
+Validation mirrors the database constraints (0018_setups.sql, rotation_steps_valid after 0008): boss ≤ 60, name 1-60,
+style ≤ 40, 1-200 steps, every step an object with kind + id of an allowed kind. A violation stops the run with the
+offending setup / rotation named – nothing is written half-way.
 """
 
 from __future__ import annotations
@@ -59,37 +54,13 @@ ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_IN = ROOT / "tools" / "guide-seed.json"
 MIGRATIONS = ROOT / "supabase" / "migrations"
 
-# DEFAULT_SETTINGS_JSON_BEGIN – keep in sync with DEFAULT_SETTINGS in src/app/core/models.ts (guide-seed.spec.ts checks)
-DEFAULT_SETTINGS_JSON = """
-{
-  "pingMs": 60,
-  "jitterMs": 20,
-  "abilityQueueing": true,
-  "autoAttacks": true,
-  "loop": false,
-  "fullAdrenaline": false,
-  "rechargeAdrenaline": false,
-  "hideObscureEquipment": true,
-  "hideObscureAbilities": true,
-  "hitDelayTicks": 2,
-  "boneShield": "greater",
-  "combatMode": "manual",
-  "revolution": { "slots": 9, "basics": true, "enhanced": true, "thresholds": false, "ultimates": false },
-  "hitChance": "scaled",
-  "uiMode": "simple",
-  "coach": { "callouts": false, "lead": false, "metronome": false, "volume": 80, "leadMs": 250, "voice": "" }
-}
-"""
-# DEFAULT_SETTINGS_JSON_END
+ACCOUNT = "PVME"
 
 # public.rotation_steps_valid() after 0008_spell_steps.sql
 STEP_KINDS = {"ability", "prayer", "special", "weapon", "spec", "action", "spell", "note"}
-# STYLES in src/app/core/models.ts
-STYLES = {"Melee", "Ranged", "Magic", "Necromancy", "Defence", "Constitution"}
 # optional RotationStep fields the app keeps (migrations.ts cleanStep); everything else is dropped
-STEP_EXTRAS = ("note", "phase", "sameTick", "offsetTicks", "hint", "cancelAfterTicks", "afterHits")
+STEP_EXTRAS = ("note", "phase", "sameTick", "offsetTicks", "hint", "cancelAfterTicks", "afterHits", "stall", "release", "requiresAction", "actionTicks")
 
-DISPLAY_NAME_RE = re.compile(r"^[A-Za-z0-9 _-]{3,20}$")
 UUID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.I)
 
 
@@ -115,14 +86,6 @@ def sql_json(value) -> str:
     return f"{tag}{text}{tag}::jsonb"
 
 
-def sql_text_array(values: list[str]) -> str:
-    return "array[" + ", ".join(sql_text(v) for v in values) + "]::text[]" if values else "'{}'::text[]"
-
-
-def sql_timestamp(ms) -> str:
-    return f"to_timestamp({int(ms)} / 1000.0)"
-
-
 # ---------------------------------------------------------------- validation
 
 def clean_step(step, where: str) -> dict:
@@ -144,8 +107,8 @@ def clean_step(step, where: str) -> dict:
     return out
 
 
-def clean_rotation(r, account: str) -> dict:
-    where = f'account "{account}", rotation {r.get("id") if isinstance(r, dict) else r!r}'
+def clean_rotation(r, where_setup: str, position: int) -> dict:
+    where = f'{where_setup}, rotation {r.get("id") if isinstance(r, dict) else r!r}'
     if not isinstance(r, dict):
         raise SeedError(f"{where}: not an object")
     rid = r.get("id")
@@ -157,94 +120,91 @@ def clean_rotation(r, account: str) -> dict:
     steps = r.get("steps")
     if not isinstance(steps, list) or not 1 <= len(steps) <= 200:
         raise SeedError(f"{where}: needs 1-200 steps, has {len(steps) if isinstance(steps, list) else 'none'}")
-    styles = r.get("styles") or []
-    unknown = [s for s in styles if s not in STYLES]
-    if unknown:
-        raise SeedError(f"{where}: unknown styles {unknown} (allowed: {sorted(STYLES)})")
-    updated = r.get("updatedAt")
-    if not isinstance(updated, (int, float)) or updated <= 0:
-        raise SeedError(f"{where}: updatedAt must be a positive epoch-ms number")
-    return {
-        "id": rid.lower(),
-        "name": name,
-        "steps": [clean_step(s, f"{where}, step {i + 1}") for i, s in enumerate(steps)],
-        "styles": list(dict.fromkeys(styles)),
-        "updatedAt": int(updated),
-    }
+    pos = r.get("position", position)
+    if not isinstance(pos, int) or not 0 <= pos <= 999:
+        raise SeedError(f"{where}: position must be 0-999")
+    return {"id": rid.lower(), "name": name, "steps": [clean_step(s, f"{where}, step {i + 1}") for i, s in enumerate(steps)], "position": pos}
 
 
-def clean_account(a) -> dict:
-    if not isinstance(a, dict):
-        raise SeedError(f"account entry is not an object: {a!r}")
-    name = a.get("name")
-    if not isinstance(name, str) or not DISPLAY_NAME_RE.match(name):
-        raise SeedError(f"account name {name!r} is not a valid display name (3-20 chars, letters, digits, space, _ -)")
-    loadouts = a.get("loadouts") or []
-    if not isinstance(loadouts, list):
-        raise SeedError(f'account "{name}": loadouts must be a list')
-    for i, l in enumerate(loadouts):
-        if not isinstance(l, dict) or not isinstance(l.get("id"), str) or not l["id"] or not isinstance(l.get("name"), str):
-            raise SeedError(f'account "{name}": loadout {i + 1} needs a string id and name')
-    ids = [l["id"] for l in loadouts]
-    if len(set(ids)) != len(ids):
-        raise SeedError(f'account "{name}": duplicate loadout ids')
-    rotations = [clean_rotation(r, name) for r in (a.get("rotations") or [])]
+def clean_setup(s) -> dict:
+    if not isinstance(s, dict):
+        raise SeedError(f"setup entry is not an object: {s!r}")
+    sid = s.get("id")
+    if not isinstance(sid, str) or not UUID_RE.match(sid):
+        raise SeedError(f"setup {sid!r}: id must be a uuid")
+    where = f"setup {sid}"
+    boss = s.get("boss") or ""
+    if not isinstance(boss, str) or len(boss) > 60:
+        raise SeedError(f"{where}: boss must be a string of at most 60 chars")
+    name = s.get("name")
+    if not isinstance(name, str) or not 1 <= len(name) <= 60:
+        raise SeedError(f"{where}: name must be 1-60 chars: {name!r}")
+    style = s.get("style") or ""
+    if not isinstance(style, str) or len(style) > 40:
+        raise SeedError(f"{where}: style must be a string of at most 40 chars")
+    preset = s.get("presetId")
+    if preset is not None and (not isinstance(preset, str) or not 1 <= len(preset) <= 80):
+        raise SeedError(f"{where}: presetId must be 1-80 chars")
+    loadout = s.get("loadout")
+    if not isinstance(loadout, dict) or not isinstance(loadout.get("id"), str) or not loadout["id"] or not isinstance(loadout.get("name"), str):
+        raise SeedError(f"{where}: loadout needs a string id and name")
+    rotations = [clean_rotation(r, where, i) for i, r in enumerate(s.get("rotations") or [])]
     rids = [r["id"] for r in rotations]
     if len(set(rids)) != len(rids):
-        raise SeedError(f'account "{name}": duplicate rotation ids')
-    return {"name": name, "loadouts": loadouts, "rotations": rotations}
+        raise SeedError(f"{where}: duplicate rotation ids")
+    return {"id": sid.lower(), "boss": boss, "name": name, "style": style, "presetId": preset, "loadout": loadout, "rotations": rotations}
 
 
 def clean_seed(seed) -> list[dict]:
     if not isinstance(seed, list):
-        raise SeedError("the seed must be a list of accounts")
-    accounts = [clean_account(a) for a in seed]
-    names = [a["name"].lower() for a in accounts]
-    if len(set(names)) != len(names):
-        raise SeedError("duplicate account names (display names are case-insensitive)")
-    all_rids = [r["id"] for a in accounts for r in a["rotations"]]
+        raise SeedError("the seed must be a list of setups")
+    setups = [clean_setup(s) for s in seed]
+    ids = [s["id"] for s in setups]
+    if len(set(ids)) != len(ids):
+        raise SeedError("duplicate setup ids")
+    lids = [s["loadout"]["id"] for s in setups]
+    if len(set(lids)) != len(lids):
+        raise SeedError("duplicate loadout ids")
+    all_rids = [r["id"] for s in setups for r in s["rotations"]]
     if len(set(all_rids)) != len(all_rids):
-        raise SeedError("a rotation id appears under two accounts")
-    return accounts
+        raise SeedError("a rotation id appears under two setups")
+    return setups
 
 
 # ---------------------------------------------------------------- generation
 
-def render(accounts: list[dict], source: str) -> str:
-    settings = json.loads(DEFAULT_SETTINGS_JSON)
+def render(setups: list[dict], source: str) -> str:
+    guide = f"public.guide_id({sql_text(ACCOUNT)})"
     out = [
-        "-- Guide content: PvME rotations and loadouts of the guide accounts (0012_guide_accounts.sql).",
+        f"-- Guide content: every PvME setup (loadout + rotations) under the guide account {ACCOUNT} (0012 ensure_guide_account, 0018 setups).",
         f"-- Generated by tools/guide-seed-to-sql.py from {source} – do not edit, regenerate.",
         "-- Every statement is an upsert on a deterministic id, so applying this again is harmless.",
         "",
+        f"select public.ensure_guide_account({sql_text(ACCOUNT)});",
+        "",
     ]
-    for a in accounts:
-        name, guide = a["name"], f"public.guide_id({sql_text(a['name'])})"
-        out.append(f"-- ---------------------------------------------------------------- {name}")
-        out.append(f"select public.ensure_guide_account({sql_text(name)});")
-        out.append("")
-        for r in a["rotations"]:
+    for s in setups:
+        out.append(f"-- ---------------------------------------------------------------- {s['boss']} – {s['name']}")
+        out.append(
+            "insert into public.setups (id, owner_id, boss, name, style, loadout, is_public, preset_id) values\n"
+            f"  ({sql_text(s['id'])}, {guide}, {sql_text(s['boss'])}, {sql_text(s['name'])}, {sql_text(s['style'])}, "
+            f"{sql_json(s['loadout'])}, true, {sql_text(s['presetId']) if s['presetId'] else 'null'})\n"
+            "  on conflict (id) do update set boss = excluded.boss, name = excluded.name, style = excluded.style, "
+            "loadout = excluded.loadout, is_public = true, preset_id = excluded.preset_id;"
+        )
+        for r in s["rotations"]:
             out.append(
-                "insert into public.rotations (id, owner_id, name, steps, styles, is_public, created_at, updated_at) values\n"
-                f"  ({sql_text(r['id'])}, {guide}, {sql_text(r['name'])}, {sql_json(r['steps'])}, "
-                f"{sql_text_array(r['styles'])}, true, {sql_timestamp(r['updatedAt'])}, {sql_timestamp(r['updatedAt'])})\n"
-                "  on conflict (id) do update set name = excluded.name, steps = excluded.steps, styles = excluded.styles, "
-                "is_public = true, updated_at = excluded.updated_at;"
+                "insert into public.rotations (id, owner_id, setup_id, name, steps, position) values\n"
+                f"  ({sql_text(r['id'])}, {guide}, {sql_text(s['id'])}, {sql_text(r['name'])}, {sql_json(r['steps'])}, {r['position']})\n"
+                "  on conflict (id) do update set setup_id = excluded.setup_id, name = excluded.name, steps = excluded.steps, position = excluded.position;"
             )
-        # rotations that left the dump (a re-import split or renamed them) go, so a guide account never shows stale content
-        ids = ", ".join(sql_text(r["id"]) for r in a["rotations"])
-        out.append(f"delete from public.rotations where owner_id = {guide}" + (f" and id not in ({ids});" if ids else ";"))
         out.append("")
-        if a["loadouts"]:
-            loadouts = {"loadouts": a["loadouts"], "active": a["loadouts"][0]["id"]}
-            out.append(
-                "insert into public.setups (user_id, settings, loadouts, enemy, is_public) values\n"
-                f"  ({guide}, {sql_json(settings)}, {sql_json(loadouts)}, null, true)\n"
-                "  on conflict (user_id) do update set loadouts = excluded.loadouts, settings = excluded.settings, is_public = true;"
-            )
-        else:
-            out.append(f"delete from public.setups where user_id = {guide};")
-        out.append("")
+    # what left the dump goes, so the guide account never shows stale content
+    sids = ", ".join(sql_text(s["id"]) for s in setups)
+    rids = ", ".join(sql_text(r["id"]) for s in setups for r in s["rotations"])
+    out.append(f"delete from public.rotations where owner_id = {guide}" + (f" and id not in ({rids});" if rids else ";"))
+    out.append(f"delete from public.setups where owner_id = {guide}" + (f" and id not in ({sids});" if sids else ";"))
+    out.append("")
     return "\n".join(out)
 
 
@@ -253,62 +213,58 @@ def next_number() -> str:
     return f"{(max(numbers) + 1) if numbers else 1:04d}"
 
 
-def convert(src: Path, dest: Path) -> tuple[int, int, int]:
+def convert(src: Path, dest: Path) -> tuple[int, int]:
     seed = json.loads(src.read_text(encoding="utf-8"))
-    accounts = clean_seed(seed)
-    sql = render(accounts, src.name)
+    setups = clean_seed(seed)
+    sql = render(setups, src.name)
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text(sql, encoding="utf-8", newline="\n")
-    return len(accounts), sum(len(a["rotations"]) for a in accounts), sum(len(a["loadouts"]) for a in accounts)
+    return len(setups), sum(len(s["rotations"]) for s in setups)
 
 
 # ---------------------------------------------------------------- self-test
 
 def selftest() -> None:
-    settings = json.loads(DEFAULT_SETTINGS_JSON)
-    assert settings["combatMode"] == "manual" and settings["revolution"]["slots"] == 9
-
     seed = [
         {
-            "name": "Vorkath",
-            "loadouts": [{"id": "l1", "name": "Necro", "prayerBook": "Curses"}, {"id": "l2", "name": "Mage"}],
+            "id": "8D2A6C8E-1B2C-4D3E-9F40-0123456789AB",
+            "boss": "Vorkath",
+            "name": "it's a 'test'",
+            "style": "Necromancy",
+            "presetId": "vorkath-necro",
+            "loadout": {"id": "l1", "name": "Necro", "prayerBook": "Curses"},
             "rotations": [
                 {
-                    "id": "8D2A6C8E-1B2C-4D3E-9F40-0123456789AB",
-                    "name": "Vorkath – it's a 'test'",
+                    "id": "8D2A6C8E-1B2C-4D3E-9F40-0123456789AC",
+                    "name": "full kill",
                     "steps": [
                         {"kind": "ability", "id": "death-skulls", "sameTick": False, "hint": "/ alt"},
-                        {"kind": "note", "id": "", "note": "Phase 2 $json$ nested", "phase": True},
+                        {"kind": "note", "id": "", "note": "Phase 2 $json$ nested", "phase": True, "requiresAction": True, "actionTicks": 4},
                         {"kind": "spell", "id": "vengeance", "offsetTicks": 2, "junk": 1},
                     ],
-                    "styles": ["Necromancy", "Magic", "Necromancy"],
-                    "updatedAt": 1757203200000,
+                    "position": 3,
                 }
             ],
         },
-        {"name": "Angel of Death", "loadouts": [], "rotations": []},
+        {"id": "8d2a6c8e-1b2c-4d3e-9f40-0123456789ad", "boss": "", "name": "General", "style": "", "loadout": {"id": "l2", "name": "x"}, "rotations": []},
     ]
     sql = render(clean_seed(seed), "selftest")
 
-    assert "select public.ensure_guide_account('Vorkath');" in sql
-    assert "select public.ensure_guide_account('Angel of Death');" in sql
-    assert "'8d2a6c8e-1b2c-4d3e-9f40-0123456789ab', public.guide_id('Vorkath'), 'Vorkath – it''s a ''test'''" in sql
-    assert "array['Necromancy', 'Magic']::text[]" in sql, "styles are deduplicated in order"
-    assert "to_timestamp(1757203200000 / 1000.0)" in sql
-    assert "on conflict (id) do update set name = excluded.name, steps = excluded.steps" in sql
-    assert "on conflict (user_id) do update set loadouts = excluded.loadouts, settings = excluded.settings, is_public = true;" in sql
-    assert "delete from public.setups where user_id = public.guide_id('Angel of Death');" in sql
+    assert "select public.ensure_guide_account('PVME');" in sql
+    assert "('8d2a6c8e-1b2c-4d3e-9f40-0123456789ab', public.guide_id('PVME'), 'Vorkath', 'it''s a ''test''', 'Necromancy'," in sql
+    assert "true, 'vorkath-necro')" in sql and "true, null)" in sql
+    assert "('8d2a6c8e-1b2c-4d3e-9f40-0123456789ac', public.guide_id('PVME'), '8d2a6c8e-1b2c-4d3e-9f40-0123456789ab', 'full kill'," in sql
+    assert ", 3)\n  on conflict (id) do update set setup_id = excluded.setup_id" in sql
+    assert "delete from public.setups where owner_id = public.guide_id('PVME') and id not in ('8d2a6c8e-1b2c-4d3e-9f40-0123456789ab', '8d2a6c8e-1b2c-4d3e-9f40-0123456789ad');" in sql
     # the JSON containing "$json$" switched to another tag; sameTick=false, the "/"-hint and unknown keys are dropped
     steps_literal = re.search(r"\$json1\$(\[.*?\])\$json1\$::jsonb", sql)
     assert steps_literal, "steps need the alternative dollar tag"
     steps = json.loads(steps_literal.group(1))
     assert steps[0] == {"kind": "ability", "id": "death-skulls"}
-    assert steps[1] == {"kind": "note", "id": "", "note": "Phase 2 $json$ nested", "phase": True}
+    assert steps[1] == {"kind": "note", "id": "", "note": "Phase 2 $json$ nested", "phase": True, "requiresAction": True, "actionTicks": 4}
     assert steps[2] == {"kind": "spell", "id": "vengeance", "offsetTicks": 2}
-    loadouts_literal = re.search(r"\$json\$(\{\"loadouts\".*?\})\$json\$::jsonb", sql)
-    assert loadouts_literal and json.loads(loadouts_literal.group(1))["active"] == "l1"
-    settings_literal = re.search(r"\$json\$(\{\"pingMs\".*?\})\$json\$::jsonb", sql)
-    assert settings_literal and json.loads(settings_literal.group(1)) == settings
+    loadout_literal = re.search(r"\$json\$(\{\"id\":\"l1\".*?\})\$json\$::jsonb", sql)
+    assert loadout_literal and json.loads(loadout_literal.group(1))["prayerBook"] == "Curses"
 
     def rejects(bad, fragment: str) -> None:
         try:
@@ -318,52 +274,41 @@ def selftest() -> None:
         else:
             raise AssertionError(f"accepted invalid seed: {fragment}")
 
-    rot = seed[0]["rotations"][0]
-    rejects([{"name": "Vo"}], "valid display name")
-    rejects([{"name": "Vorkath!"}], "valid display name")
-    rejects([{"name": "Vorkath", "rotations": [{**rot, "id": "nope"}]}], "must be a uuid")
-    rejects([{"name": "Vorkath", "rotations": [{**rot, "name": "x" * 61}]}], "1-60 chars")
-    rejects([{"name": "Vorkath", "rotations": [{**rot, "steps": []}]}], "1-200 steps")
-    rejects([{"name": "Vorkath", "rotations": [{**rot, "steps": [{"kind": "potion", "id": "x"}]}]}], "unknown step kind")
-    rejects([{"name": "Vorkath", "rotations": [{**rot, "steps": [{"kind": "ability"}]}]}], "id must be a string")
-    rejects([{"name": "Vorkath", "rotations": [{**rot, "styles": ["Ranged", "Summoning"]}]}], "unknown styles")
-    rejects([{"name": "Vorkath", "rotations": [{**rot, "updatedAt": 0}]}], "updatedAt")
-    rejects([{"name": "Vorkath", "rotations": [rot, rot]}], "duplicate rotation ids")
-    rejects([{"name": "Vorkath", "loadouts": [{"id": "a", "name": "x"}, {"id": "a", "name": "y"}]}], "duplicate loadout ids")
-    rejects([{"name": "Vorkath"}, {"name": "vorkath"}], "duplicate account names")
-    rejects([{"name": "Vorkath", "rotations": [rot]}, {"name": "Rasial", "rotations": [rot]}], "two accounts")
+    s0 = seed[0]
+    rot = s0["rotations"][0]
+    rejects([{**s0, "id": "nope"}], "id must be a uuid")
+    rejects([{**s0, "name": "x" * 61}], "1-60 chars")
+    rejects([{**s0, "loadout": {"name": "x"}}], "loadout needs")
+    rejects([{**s0, "rotations": [{**rot, "id": "nope"}]}], "must be a uuid")
+    rejects([{**s0, "rotations": [{**rot, "steps": []}]}], "1-200 steps")
+    rejects([{**s0, "rotations": [{**rot, "steps": [{"kind": "potion", "id": "x"}]}]}], "unknown step kind")
+    rejects([{**s0, "rotations": [{**rot, "steps": [{"kind": "ability"}]}]}], "id must be a string")
+    rejects([{**s0, "rotations": [rot, rot]}], "duplicate rotation ids")
+    rejects([s0, s0], "duplicate setup ids")
+    rejects([s0, {**seed[1], "loadout": {"id": "l1", "name": "y"}}], "duplicate loadout ids")
     print("selftest ok")
 
 
 # ---------------------------------------------------------------- main
 
 def main(argv: list[str]) -> int:
-    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0], formatter_class=argparse.RawDescriptionHelpFormatter, epilog=__doc__)
-    ap.add_argument("--in", dest="src", default=str(DEFAULT_IN), help="seed JSON (default tools/guide-seed.json)")
-    ap.add_argument("--number", help="migration number, e.g. 0013 (default: next free one in supabase/migrations)")
-    ap.add_argument("--out", help="output file (default supabase/migrations/<number>_guide_content.sql)")
-    ap.add_argument("--selftest", action="store_true", help="run the built-in checks and exit")
+    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    ap.add_argument("--in", dest="src", default=str(DEFAULT_IN), help="dump file (default tools/guide-seed.json)")
+    ap.add_argument("--out", dest="dest", help="migration file (default supabase/migrations/<number>_guide_content.sql)")
+    ap.add_argument("--number", help="migration number, e.g. 0019 (default: the next free one)")
+    ap.add_argument("--selftest", action="store_true")
     args = ap.parse_args(argv)
-
     if args.selftest:
         selftest()
         return 0
-
     src = Path(args.src)
-    if not src.is_file():
-        print(f"seed not found: {src}", file=sys.stderr)
-        return 2
-    number = args.number or next_number()
-    if not re.fullmatch(r"\d{4}", number):
-        print(f"--number must be four digits, got {number!r}", file=sys.stderr)
-        return 2
-    dest = Path(args.out) if args.out else MIGRATIONS / f"{number}_guide_content.sql"
+    dest = Path(args.dest) if args.dest else MIGRATIONS / f"{args.number or next_number()}_guide_content.sql"
     try:
-        accounts, rotations, loadouts = convert(src, dest)
-    except (SeedError, json.JSONDecodeError) as e:
+        setups, rotations = convert(src, dest)
+    except SeedError as e:
         print(f"seed rejected: {e}", file=sys.stderr)
         return 1
-    print(f"{dest}: {accounts} guide accounts, {rotations} rotations, {loadouts} loadouts")
+    print(f"{dest}: {setups} setups, {rotations} rotations")
     return 0
 
 

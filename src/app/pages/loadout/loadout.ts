@@ -3,7 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { DataService, GearView } from '../../core/data.service';
 import { GearResult, GearState, addItem, equip, moveItem, removeItem, removeWorn, unequip, updateRef } from '../../core/equipment';
-import { EquipSlot, GearItem, Gizmo, ItemRef, KwuarmPotency, Loadout as LoadoutModel, OVERLOAD_CHOICES, OverloadChoice, Perk, RELICS, SLOT_NAMES, STYLES4, Style, WEAPON_POISON_NAMES, WeaponPoisonTier, WeaponSpec, newLoadout, COMBAT_SKILLS, CombatSkill, SKILL_MAX, SKILL_NAMES, isStyle4, loadoutLevels } from '../../core/models';
+import { EquipSlot, GearItem, Gizmo, ItemRef, KwuarmPotency, Loadout as LoadoutModel, OVERLOAD_CHOICES, OverloadChoice, Perk, RELICS, SLOT_NAMES, STYLES4, Style, WEAPON_POISON_NAMES, WeaponPoisonTier, WeaponSpec, COMBAT_SKILLS, CombatSkill, SKILL_MAX, SKILL_NAMES, isStyle4, loadoutLevels, setupTitle } from '../../core/models';
 import { OVERLOADS, boostedLevel, critMultiplier, damageSkillOf, levelPart, poisonPct } from '../../engine/damage';
 import { ResolvedLoadout } from '../../engine/loadout-resolved';
 import { isObscureGear, isObscurePerk, isObscureSpec, isObscureWeapon } from '../../core/obscure';
@@ -271,42 +271,22 @@ export class Loadout {
   // ---------------------------------------------------------------- loadout list
 
   /**
-   * The loadout picker: a boss preset adds one loadout per setup, so the chip row grew to over a hundred entries.
-   * The chips are grouped by boss and a search field narrows them (shared/picker-groups.ts); the loadout being edited
-   * always stays visible, so the page never shows a name the row does not hold.
+   * The gear belongs to a setup (boss + gear + rotations): the page edits the active setup's loadout, and this picker
+   * switches the active setup – grouped by boss with a search field (shared/picker-groups.ts), like on the Train page.
+   * Creating, copying and deleting setups is the Setups page's job.
    */
-  readonly loadoutSearch = signal('');
-  readonly filteredLoadouts = computed(() => filterEntries(this.storage.loadouts(), this.loadoutSearch(), this.l().id));
-  readonly loadoutGroups = computed(() => groupEntries(this.filteredLoadouts()));
-  readonly loadoutCount = computed(() => {
-    const all = this.storage.loadouts().length;
-    const shown = this.filteredLoadouts().length;
-    return shown === all ? all + (all === 1 ? ' loadout' : ' loadouts') : shown + ' of ' + all;
+  readonly setupSearch = signal('');
+  private readonly setupEntries = computed(() => this.storage.setups().map((s) => ({ id: s.id, name: setupTitle(s) })));
+  readonly filteredSetups = computed(() => filterEntries(this.setupEntries(), this.setupSearch(), this.storage.activeSetupId()));
+  readonly setupGroups = computed(() => groupEntries(this.filteredSetups()));
+  readonly setupCount = computed(() => {
+    const all = this.setupEntries().length;
+    const shown = this.filteredSetups().length;
+    return shown === all ? '' : shown + ' of ' + all;
   });
 
-
   select(id: string): void {
-    const setup = this.storage.setupOfLoadout(id);
-    if (setup) void this.storage.setActiveSetup(setup.id);
-  }
-
-  async create(): Promise<void> {
-    const s = await this.storage.createSetup({ name: 'Setup ' + (this.storage.setups().length + 1) });
-    await this.storage.setActiveSetup(s.id);
-  }
-
-  async duplicate(): Promise<void> {
-    const copy = await this.storage.duplicateSetup(this.storage.setup().id);
-    if (copy) await this.storage.setActiveSetup(copy.id);
-  }
-
-  async remove(): Promise<void> {
-    if (!(await this.dialogs.confirm('Delete the setup "' + this.l().name + '" with its gear and rotations?', { ok: 'Delete', danger: true }))) return;
-    void this.storage.deleteSetup(this.storage.setup().id);
-  }
-
-  rename(name: string): void {
-    this.patch({ name });
+    void this.storage.setActiveSetup(id);
   }
 
   private patch(p: Partial<LoadoutModel>): void {

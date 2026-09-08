@@ -13,7 +13,7 @@ import { ActionBarSetup, AttackPattern, Keybind, BAR_POSITIONS, BONE_SHIELD_ABIL
 import { alt1Announce, focusUrl, openFocusWindow } from '../../core/popout';
 import { CoachService, spokenLabel, spokenSequence } from '../../core/coach.service';
 import { PresetsService } from '../../core/presets.service';
-import { nextRotation, pickRotation as chooseRotation, worstStep } from '../../core/rotation-pick';
+import { nextRotation, pickRotation as chooseRotation, setupRotations, worstStep } from '../../core/rotation-pick';
 import { noteEntity, stepToEngineEntity } from '../../core/step-entity';
 import { StorageService } from '../../core/storage.service';
 import { prebuildFor, rotationAssumptions } from '../../core/rotation-requires';
@@ -196,18 +196,27 @@ export class Train implements OnDestroy {
   readonly selectedId = signal<string | null>(null);
   readonly rotation = computed(() => this.storage.rotations().find((r) => r.id === this.selectedId()) ?? null);
   /**
-   * The rotation picker: with every boss setup added the list holds hundreds of entries, so the select is grouped by
-   * boss and a search field narrows it (shared/picker-groups.ts). The selected rotation always stays in the list, and
-   * with a handful of hand-made rotations the grouping collapses to the plain list it used to be.
+   * The setup picker: a setup is the boss and the gear, its rotations fill the second select. With every PvME boss
+   * setup added the list holds over a hundred entries, so the select is grouped by boss and a search field narrows
+   * it (shared/picker-groups.ts); the active setup always stays in the list.
    */
-  readonly rotationSearch = signal('');
-  readonly filteredRotations = computed(() => filterEntries(this.storage.rotations(), this.rotationSearch(), this.selectedId()));
-  readonly rotationGroups = computed(() => groupEntries(this.filteredRotations()));
-  /** "12 of 905" next to the search field, only while it filters something out */
-  readonly rotationCount = computed(() => {
-    const all = this.storage.rotations().length;
-    const shown = this.filteredRotations().length;
+  readonly setupSearch = signal('');
+  private readonly setupEntries = computed(() => this.storage.setups().map((s) => ({ id: s.id, name: setupTitle(s) })));
+  readonly filteredSetups = computed(() => filterEntries(this.setupEntries(), this.setupSearch(), this.storage.activeSetupId()));
+  readonly setupGroups = computed(() => groupEntries(this.filteredSetups()));
+  /** "12 of 128" next to the search field, only while it filters something out */
+  readonly setupCount = computed(() => {
+    const all = this.setupEntries().length;
+    const shown = this.filteredSetups().length;
     return shown === all ? '' : shown + ' of ' + all;
+  });
+  /** the rotations of the active setup, in guide order */
+  readonly setupRotationList = computed(() => setupRotations(this.storage.rotations(), this.storage.activeSetupId()));
+  /** "Ranged · 5 rotations" under the setup select */
+  readonly setupCaption = computed(() => {
+    const s = this.storage.setup();
+    const n = this.setupRotationList().length;
+    return [s.style, n + (n === 1 ? ' rotation' : ' rotations')].filter(Boolean).join(' · ');
   });
   /** "42 steps · Necromancy" under the rotation select */
   readonly rotationCaption = computed(() => {
@@ -922,16 +931,22 @@ export class Train implements OnDestroy {
       const btn = card.querySelector('.finish-card button:not(:disabled)') as HTMLButtonElement | null;
       if (btn && !btn.contains(document.activeElement)) btn.focus();
     });
+    // which rotation is selected: the one the URL asks for (its setup becomes the active one), else one of the
+    // active setup's – the current one when it belongs to it, otherwise its first
     effect(() => {
-      const rotations = this.storage.rotations();
+      const all = this.storage.rotations();
+      const active = this.storage.activeSetupId();
       const wanted = query().get('rotation');
       const fresh = wanted && wanted !== this.appliedWanted ? wanted : null;
-      const pick = chooseRotation(rotations, fresh, untracked(this.selectedId));
-      if ((pick?.id ?? null) !== untracked(this.selectedId)) this.selectedId.set(pick?.id ?? null);
-      if (pick && fresh && pick.id === fresh) {
+      const freshRotation = fresh ? all.find((r) => r.id === fresh) : undefined;
+      if (freshRotation) {
         this.appliedWanted = fresh;
-        void this.linkPreset(pick);
+        if (freshRotation.id !== untracked(this.selectedId)) this.selectedId.set(freshRotation.id);
+        void this.linkPreset(freshRotation);
+        return;
       }
+      const pick = chooseRotation(setupRotations(all, active), null, untracked(this.selectedId));
+      if ((pick?.id ?? null) !== untracked(this.selectedId)) this.selectedId.set(pick?.id ?? null);
     });
   }
 
@@ -961,6 +976,11 @@ export class Train implements OnDestroy {
     if (r) void this.linkPreset(r);
   }
 
+  /** Setup dropdown: the setup's gear becomes active and its first rotation is selected (the effect above) */
+  pickSetup(id: string): void {
+    void this.storage.setActiveSetup(id);
+  }
+
   /** "Next: Phase 4" on the session end: switch to the sibling rotation and start it */
   playNext(id: string): void {
     this.finishDismissed.set(true);
@@ -980,10 +1000,6 @@ export class Train implements OnDestroy {
       this.toast.show('The next rotation starts from this state', 'info', 3000);
     }
     this.playNext(id);
-  }
-
-  pickSetup(id: string): void {
-    void this.storage.setActiveSetup(id);
   }
 
   /**

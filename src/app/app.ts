@@ -29,7 +29,7 @@ export class App {
   readonly supabase = inject(SupabaseService);
   readonly feedback = inject(FeedbackService);
   private readonly storage = inject(StorageService);
-  /** Settings.uiMode: the Loadout / Setups / Explore pages are only in the menu in the advanced view (routes stay reachable) */
+  /** Settings.uiMode: the Loadout page is only in the menu in the advanced view (the route stays reachable) */
   readonly advanced = computed(() => this.storage.settings().uiMode === 'advanced');
   private readonly router = inject(Router);
   /** route data `bare: true` (the /focus popout): no header, no footer, no page padding – only the routed view */

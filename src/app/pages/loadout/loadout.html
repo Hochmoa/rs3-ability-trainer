@@ -1,36 +1,28 @@
 <div class="panel head">
-  <h1>Loadouts</h1>
-  @if (storage.loadouts().length > 8) {
-    <div class="loadout-filter">
-      <input
-        type="search"
-        placeholder="Filter loadouts by boss or name…"
-        aria-label="Filter the loadouts"
-        [ngModel]="loadoutSearch()"
-        (ngModelChange)="loadoutSearch.set($event)"
-      />
-      <span class="muted small">{{ loadoutCount() }}</span>
-    </div>
-  }
-  <div class="chips">
-    @for (g of loadoutGroups(); track g.label) {
-      <div class="chip-group">
-        @if (g.label) { <span class="chip-group-label">{{ g.label }}</span> }
-        @for (e of g.items; track e.item.id) {
-          <button class="chip" [class.active]="e.item.id === l().id" (click)="select(e.item.id)" [title]="e.item.name">{{ e.label }}</button>
+  <div class="setup-pick">
+    <h1>Gear</h1>
+    <label class="field" title="The setup whose gear this is – switch here or on the Train page">
+      <span>of setup</span>
+      <div class="picker">
+        <select [ngModel]="storage.activeSetupId()" (ngModelChange)="select($event)">
+          @for (g of setupGroups(); track g.label) {
+            @if (g.label) {
+              <optgroup [label]="g.label">
+                @for (e of g.items; track e.item.id) { <option [value]="e.item.id">{{ e.label }}</option> }
+              </optgroup>
+            } @else {
+              @for (e of g.items; track e.item.id) { <option [value]="e.item.id">{{ e.label }}</option> }
+            }
+          }
+        </select>
+        @if (storage.setups().length > 8) {
+          <input type="search" placeholder="Filter by boss or name…" aria-label="Filter the setups" [ngModel]="setupSearch()" (ngModelChange)="setupSearch.set($event)" />
+          @if (setupCount()) { <span class="muted small">{{ setupCount() }}</span> }
         }
       </div>
-    } @empty {
-      <span class="muted small">No loadout matches the filter.</span>
-    }
-    <button class="btn btn-sm" (click)="create()">New</button>
-    <button class="btn btn-sm" (click)="duplicate()">Duplicate</button>
-    <button class="btn btn-sm danger" (click)="remove()" [disabled]="storage.loadouts().length <= 1">Delete</button>
+    </label>
+    <a class="btn btn-sm" routerLink="/setups" [queryParams]="{ view: 'mine' }">All my setups</a>
   </div>
-  <label class="name">
-    Name
-    <input type="text" [ngModel]="l().name" (ngModelChange)="rename($event)" maxlength="40" />
-  </label>
   <label class="check" title="Hides Daemonheim gear, tools, cosmetics, recolours, +1 … +4 smithing steps, sub-60 gear and non-combat perks. Catalog only.">
     <input type="checkbox" [checked]="hideObscure()" (change)="setHideObscure(!hideObscure())" />
     Hide obscure equipment

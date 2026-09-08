@@ -7,10 +7,11 @@ import { groupCatalog } from '../../core/catalog-groups';
 import { DataService, Entity } from '../../core/data.service';
 import { keybindLabel, slotKeybinds } from '../../core/keybind.util';
 import { parsePvme } from '../../core/pvme';
-import { NOTE_ACTION_MAX_TICKS, NOTE_ACTION_TICKS, Rotation, RotationStep, SPELLBOOKS, SPELLBOOK_NAMES, STYLES } from '../../core/models';
+import { NOTE_ACTION_MAX_TICKS, NOTE_ACTION_TICKS, Rotation, RotationStep, SPELLBOOKS, SPELLBOOK_NAMES, STYLES, setupTitle } from '../../core/models';
 import { isObscureEntity } from '../../core/obscure';
 import { PresetsService } from '../../core/presets.service';
 import { rotationAssumptions } from '../../core/rotation-requires';
+import { setupRotations } from '../../core/rotation-pick';
 import { StorageService } from '../../core/storage.service';
 import { SupabaseService } from '../../core/supabase.service';
 import { ToastService } from '../../shared/toast';
@@ -19,7 +20,7 @@ import { ruleFor } from '../../engine/rules';
 import { AbilityIcon } from '../../shared/ability-icon';
 import { EntityTip } from '../../shared/tooltip';
 import { DialogService } from '../../shared/dialog';
-import { filterEntries, groupLabels, groupOf } from '../../shared/picker-groups';
+import { filterEntries, groupEntries } from '../../shared/picker-groups';
 
 const TABS = [...STYLES, 'Prayers', 'Curses', 'Spells', 'Special', 'Weapons', 'Specs', 'Actions'] as const;
 type Tab = (typeof TABS)[number];
@@ -56,18 +57,21 @@ export class Rotations {
   readonly importReport = signal<string | null>(null);
 
   /**
-   * The saved-rotation list below the editor: one card per rotation, and the PvME library brings hundreds of them.
-   * A search field and a boss filter narrow the list (shared/picker-groups.ts); with a few own rotations both are
-   * empty and the list is the plain one it was.
+   * The list below the editor holds the rotations of the active setup (boss + gear), in guide order; a new or
+   * imported rotation lands in that setup. The setup picker is grouped by boss with a search field, like on the
+   * Train page (shared/picker-groups.ts); a search narrows the rotations.
    */
   readonly listSearch = signal('');
-  readonly listBoss = signal('');
-  readonly listBosses = computed(() => groupLabels(this.storage.rotations()));
-  readonly listed = computed(() => {
-    const boss = this.listBoss();
-    const rows = boss ? this.storage.rotations().filter((r) => groupOf(r) === boss) : this.storage.rotations();
-    return filterEntries(rows, this.listSearch());
-  });
+  readonly setupSearch = signal('');
+  private readonly setupEntries = computed(() => this.storage.setups().map((s) => ({ id: s.id, name: setupTitle(s) })));
+  readonly setupGroups = computed(() => groupEntries(filterEntries(this.setupEntries(), this.setupSearch(), this.storage.activeSetupId())));
+  readonly setupName = computed(() => setupTitle(this.storage.setup()));
+  readonly ofSetup = computed(() => setupRotations(this.storage.rotations(), this.storage.activeSetupId()));
+  readonly listed = computed(() => filterEntries(this.ofSetup(), this.listSearch()));
+
+  pickSetup(id: string): void {
+    void this.storage.setActiveSetup(id);
+  }
 
   /** same setting as on the action bars page: hide abilities / prayers / weapons nobody uses (core/obscure.ts) */
   readonly hideObscure = computed(() => this.storage.settings().hideObscureAbilities);

@@ -337,7 +337,7 @@ export interface Settings {
   hitChance?: HitChanceMode;
   /**
    * what the pages show: 'simple' = the core (pick a rotation, Start, press the keys, get feedback), 'advanced' = every
-   * panel and option (enemy, pre-build, HUD, gear, Revolution options, Loadout / Setups / Explore pages). The simulation
+   * panel and option (enemy, pre-build, HUD, gear, Revolution options, Loadout page). The simulation
    * is the same in both. Missing = 'simple'.
    */
   uiMode: UiMode;

@@ -1,12 +1,11 @@
 /**
- * Grouping and filtering for the pickers that grew with the PvME library: the Train page's rotation select (905
- * entries after every boss setup was added), its loadout select, the Loadout page's chips (128) and the Rotations
- * list. A flat list of that size is not navigable, so every picker groups by the boss and offers a search field.
+ * Grouping and filtering for the setup pickers (Train, Loadout and Rotations pages): with every PvME boss setup
+ * added a player holds over a hundred setups, and a flat list of that size is not navigable, so every picker groups
+ * by the boss and offers a search field.
  *
- * The boss comes from the name the preset import builds – `"<boss> – <rotation>"` for rotations
- * (core/presets.service.ts) and `"<boss> – <variant> <style>"` for loadouts and bar profiles (core/preset-setup.ts).
- * Entries without that shape (everything the player wrote themselves) keep an empty group label and are listed first,
- * so a handful of hand-made rotations still looks like the plain list it was.
+ * The boss comes from the setup's title, `"<boss> – <name>"` (setupTitle in core/models.ts). Entries without that
+ * shape (the general setups) keep an empty group label and are listed first, so a handful of own setups still looks
+ * like the plain list it was.
  */
 
 /** what the preset import puts between the boss and the rest of the name */

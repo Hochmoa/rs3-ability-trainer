@@ -486,3 +486,19 @@ code {
     max-width: 280px;
   }
 }
+
+/* the setup the listed rotations belong to (list head) */
+.list-head .setup-pick {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+
+  select {
+    max-width: 360px;
+  }
+
+  input {
+    max-width: 200px;
+  }
+}

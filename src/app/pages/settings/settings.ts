@@ -31,7 +31,7 @@ import { ToastService } from '../../shared/toast';
             <option value="simple">Simple view</option>
             <option value="advanced">Advanced view</option>
           </select>
-          <small>Simple hides the enemy, buff and gear panels and the Loadout, Explore and Shared setups pages.</small>
+          <small>Simple hides the enemy, buff and gear panels and the Loadout page.</small>
         </label>
       </div>
     </div>

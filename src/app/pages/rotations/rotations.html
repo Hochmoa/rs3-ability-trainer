@@ -107,6 +107,23 @@
 } @else {
   <div class="panel list-head">
     <h1>Rotations</h1>
+    <label class="setup-pick" title="The setup these rotations belong to – switch here or on the Train page">
+      <span class="muted small">of setup</span>
+      <select [ngModel]="storage.activeSetupId()" (ngModelChange)="pickSetup($event)">
+        @for (g of setupGroups(); track g.label) {
+          @if (g.label) {
+            <optgroup [label]="g.label">
+              @for (e of g.items; track e.item.id) { <option [value]="e.item.id">{{ e.label }}</option> }
+            </optgroup>
+          } @else {
+            @for (e of g.items; track e.item.id) { <option [value]="e.item.id">{{ e.label }}</option> }
+          }
+        }
+      </select>
+      @if (storage.setups().length > 8) {
+        <input type="search" placeholder="Filter setups…" aria-label="Filter the setups" [ngModel]="setupSearch()" (ngModelChange)="setupSearch.set($event)" />
+      }
+    </label>
     <button class="btn btn-primary" (click)="newRotation()">New rotation</button>
     <span class="muted small status">
       @if (supabase.user()) {
@@ -126,14 +143,18 @@
     </div>
     <ng-container *ngTemplateOutlet="notation" />
   </div>
-  @if (!storage.rotations().length) {
+  @if (!ofSetup().length) {
     <div class="panel empty">
-      <p>No rotations yet.</p>
-      <button class="btn btn-primary" (click)="presets.addDemo()">Try the demo</button>
-      <p class="muted small">or paste a PvME rotation above, or build one with "New rotation"</p>
+      <p>No rotations in "{{ setupName() }}" yet.</p>
+      @if (!storage.rotations().length) {
+        <button class="btn btn-primary" (click)="presets.addDemo()">Try the demo</button>
+        <p class="muted small">or paste a PvME rotation above, build one with "New rotation", or pick a boss setup on the <a routerLink="/setups">Setups</a> page</p>
+      } @else {
+        <p class="muted small">Paste a PvME rotation above, build one with "New rotation", or switch the setup.</p>
+      }
     </div>
   }
-  @if (storage.rotations().length > 8) {
+  @if (ofSetup().length > 8) {
     <div class="panel list-filter">
       <input
         type="search"
@@ -142,11 +163,7 @@
         [ngModel]="listSearch()"
         (ngModelChange)="listSearch.set($event)"
       />
-      <select [ngModel]="listBoss()" (ngModelChange)="listBoss.set($event)" aria-label="Filter by boss">
-        <option value="">All bosses</option>
-        @for (b of listBosses(); track b) { <option [value]="b">{{ b }}</option> }
-      </select>
-      <span class="muted small">{{ listed().length }} of {{ storage.rotations().length }}</span>
+      <span class="muted small">{{ listed().length }} of {{ ofSetup().length }}</span>
     </div>
   }
   @for (r of listed(); track r.id) {
@@ -173,7 +190,7 @@
       </div>
     </div>
   } @empty {
-    @if (storage.rotations().length) {
+    @if (ofSetup().length) {
       <div class="panel empty">
         <p class="muted">No rotation matches the search.</p>
       </div>
