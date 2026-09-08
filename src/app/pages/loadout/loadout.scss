@@ -120,8 +120,9 @@
 }
 
 .item-grid {
-  display: grid;
-  grid-template-columns: 1fr;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
   gap: 4px;
   max-height: 600px;
   overflow-y: auto;
@@ -140,13 +141,13 @@
   }
 
   > p {
-    grid-column: 1 / -1;
+    flex-basis: 100%;
   }
 }
 
 /* style / slot headers inside the grid */
 .section-head {
-  grid-column: 1 / -1;
+  flex-basis: 100%;
   display: flex;
   align-items: baseline;
   gap: 8px;
@@ -197,10 +198,11 @@
     border-color: rgba(76, 175, 80, 0.35);
   }
 
-  /* one row per entry: the text takes a fixed column, the icons follow right after it – never pushed to the far edge */
+  /* a card is exactly as wide as its text and its icons; the cards pack side by side like chips */
   .text {
-    flex: 0 0 220px;
+    flex: 0 1 auto;
     min-width: 0;
+    max-width: 240px;
     display: flex;
     flex-direction: column;
     gap: 1px;
@@ -258,7 +260,7 @@
 
 @media (max-width: 600px) {
   .entry .text {
-    flex-basis: 140px;
+    max-width: 150px;
   }
 }
 
