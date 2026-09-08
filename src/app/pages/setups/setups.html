@@ -1,0 +1,213 @@
+<div class="panel controls">
+  <div class="head-row">
+    <h1>Setups</h1>
+    <div class="tabs">
+      <button class="tab" [class.active]="view() === 'mine'" (click)="show('mine')">My setups <span class="count">{{ storage.setups().length }}</span></button>
+      <button class="tab" [class.active]="view() === 'all'" (click)="show('all')">All setups @if (rows().length) { <span class="count">{{ rows().length }}</span> }</button>
+      <button class="tab" [class.active]="view() === 'players'" (click)="show('players')">Players @if (users().length) { <span class="count">{{ users().length }}</span> }</button>
+    </div>
+  </div>
+  <p class="muted small">
+    A setup is a boss, the gear for it and the rotations played with it. Use one from the
+    <a href="https://github.com/pvme/pvme-guides" target="_blank" rel="noopener">PvME</a> guides (player "PVME") or from another player, or build your own – your action bars and keys are never part of a setup.
+  </p>
+  @if (view() !== 'players') {
+    <div class="filters">
+      @if (view() === 'all') {
+        <input class="search" type="search" placeholder="Search boss, setup or player…" [value]="query()" (input)="query.set($any($event.target).value)" aria-label="Search setups" />
+        @if (owner(); as o) {
+          <button class="chip active" (click)="clearOwner()" title="Show every player's setups again">by {{ ownerName() || '…' }} ×</button>
+        }
+        <div class="chips">
+          <button class="chip" [class.active]="styleFilter() === 'all'" (click)="styleFilter.set('all')">All styles</button>
+          @for (s of styles(); track s) {
+            <button class="chip" [class.active]="styleFilter() === s" (click)="styleFilter.set(s)">{{ s }}</button>
+          }
+        </div>
+      } @else {
+        <button class="btn btn-primary btn-sm" (click)="newSetup()">New setup</button>
+        <span class="muted small">Gear on the <a routerLink="/loadout">Loadout</a> page, rotations on the <a routerLink="/rotations">Rotations</a> page – both edit the setup that is active on the Train page.</span>
+      }
+    </div>
+  }
+</div>
+
+<!-- ---------------------------------------------------------------- my setups -->
+@if (view() === 'mine') {
+  @for (g of mineGroups(); track g.boss) {
+    <section class="panel boss open">
+      <div class="boss-head static">
+        <h2>{{ g.boss || GENERAL }}</h2>
+        <span class="muted small">{{ g.items.length }} {{ g.items.length === 1 ? 'setup' : 'setups' }}</span>
+        <span class="boss-styles">@for (s of g.styles; track s) { <span class="style">{{ s }}</span> }</span>
+      </div>
+      @for (s of g.items; track s.id) {
+        <div class="setup" [class.active]="s.id === storage.activeSetupId()">
+          <div class="setup-head">
+            <div class="who">
+              <h3>
+                <span class="variant">{{ s.name }}</span>
+                @if (s.style) { <span class="style">{{ s.style }}</span> }
+                @if (s.id === storage.activeSetupId()) { <span class="tag now" title="The setup the Train page uses">active</span> }
+                @if (s.isPublic) { <span class="tag public" title="Listed under All setups for everyone">public</span> }
+              </h3>
+              <div class="muted small">
+                @if (rotationsOf(s).length) {
+                  {{ rotationsOf(s).length }} {{ rotationsOf(s).length === 1 ? 'rotation' : 'rotations' }}:
+                  @for (r of rotationsOf(s); track r.id) { <span class="rot">{{ r.name }}</span> }
+                } @else {
+                  no rotations yet
+                }
+                @if (s.sourceOwner) { · from {{ s.sourceOwner }} }
+              </div>
+            </div>
+            <span class="actions">
+              <button class="btn btn-sm btn-primary" (click)="train(s)" [disabled]="!rotationsOf(s).length" title="Open the first rotation on the Train page">Train</button>
+              <button class="btn btn-sm" (click)="openGear(s)">Gear</button>
+              <button class="btn btn-sm" (click)="openRotations(s)">Rotations</button>
+              <button class="btn btn-sm" (click)="toggleMine(s.id)">{{ isOpenMine(s.id) ? 'Hide' : 'Show gear' }}</button>
+              <button class="btn btn-sm" [class.active]="editing() === s.id" (click)="edit(s)">Edit</button>
+            </span>
+          </div>
+          @if (editing() === s.id) {
+            <div class="edit-row">
+              <label>Boss <input type="text" [ngModel]="s.boss" (ngModelChange)="setField(s, 'boss', $event)" maxlength="60" placeholder="none – general practice" /></label>
+              <label>Name <input type="text" [ngModel]="s.name" (ngModelChange)="setField(s, 'name', $event)" maxlength="60" /></label>
+              <label>
+                Style
+                <select [ngModel]="s.style" (ngModelChange)="setField(s, 'style', $event)">
+                  <option value="">–</option>
+                  @for (st of STYLES; track st) { <option [value]="st">{{ st }}</option> }
+                </select>
+              </label>
+              <label class="check" [title]="supabase.user() ? 'Gear and rotations are listed under All setups' : 'Sign in to share'">
+                <input type="checkbox" [checked]="!!s.isPublic" (change)="togglePublic(s)" [disabled]="!supabase.user()" />
+                Public
+              </label>
+              <span class="spacer"></span>
+              <button class="btn btn-sm" (click)="duplicate(s)">Duplicate</button>
+              <button class="btn btn-sm danger" (click)="remove(s)">Delete</button>
+            </div>
+          }
+          @if (isOpenMine(s.id)) {
+            @if (loadoutOf(s); as l) {
+              <div class="gear-row">
+                <gear-panel [equipment]="l.equipment" [inventory]="l.inventory" [side]="true" />
+                <div class="gear-extras muted small">
+                  @if (relics(l).length) { <div><b>Relics</b> {{ relics(l).join(', ') }}</div> }
+                  @if (familiarName(l)) { <div><b>Familiar</b> {{ familiarName(l) }}</div> }
+                  @if (perks(l).length) { <div><b>Perks</b> {{ perks(l).join(', ') }}</div> }
+                  <div>{{ l.prayerBook === 'Prayers' ? 'Standard prayers' : 'Ancient curses' }} · {{ l.spellbook }} spellbook</div>
+                </div>
+              </div>
+            }
+          }
+        </div>
+      }
+    </section>
+  } @empty {
+    <div class="panel empty">
+      <p>No setups yet.</p>
+      <button class="btn btn-primary" (click)="loadDemo()">Try the demo</button>
+      <p class="muted small">or pick one under "All setups"</p>
+    </div>
+  }
+}
+
+<!-- ---------------------------------------------------------------- all public setups -->
+@if (view() === 'all') {
+  @if (error(); as e) {
+    <div class="panel warning">Could not load the setups: {{ e }} <button class="btn btn-sm" (click)="load(true)">Retry</button></div>
+  } @else if (loading() && !rows().length) {
+    <p class="muted">Loading…</p>
+  } @else if (!rows().length) {
+    <div class="panel empty"><p>Nobody shares a setup yet.</p></div>
+  } @else {
+    <p class="muted small count">{{ filtered().length }} {{ filtered().length === 1 ? 'setup' : 'setups' }} for {{ bossCount() }} {{ bossCount() === 1 ? 'boss' : 'bosses' }}</p>
+  }
+  @for (g of groups(); track g.boss) {
+    <section class="panel boss" [class.open]="isOpen(g.boss)">
+      <button class="boss-head" type="button" (click)="toggleBoss(g.boss)" [attr.aria-expanded]="isOpen(g.boss)">
+        <span class="caret" aria-hidden="true">{{ isOpen(g.boss) ? '▾' : '▸' }}</span>
+        <h2>{{ g.boss || GENERAL }}</h2>
+        <span class="muted small">{{ g.items.length }} {{ g.items.length === 1 ? 'setup' : 'setups' }}</span>
+        <span class="boss-styles">@for (s of g.styles; track s) { <span class="style">{{ s }}</span> }</span>
+      </button>
+      @if (isOpen(g.boss)) {
+        @for (row of g.items; track row.id) {
+          <div class="setup" [class.open]="open() === row.id">
+            <div class="setup-head">
+              <div class="who">
+                <h3>
+                  <span class="variant">{{ row.name }}</span>
+                  @if (row.style) { <span class="style">{{ row.style }}</span> }
+                  <span class="owner muted small">by {{ row.owner_name }}</span>
+                  @if (row.owner_kind === 'guide') { <span class="tag guide" title="Guide account: the PvME guide's setup, maintained by the trainer">Guide</span> }
+                </h3>
+                <div class="muted small">
+                  {{ row.rotation_count }} {{ row.rotation_count === 1 ? 'rotation' : 'rotations' }}@if (row.rotation_names.length) {: @for (n of row.rotation_names; track $index) { <span class="rot">{{ n }}</span> }}
+                  · {{ ago(row.updated_at) }}
+                </div>
+              </div>
+              <span class="actions">
+                @if (haveIt(row)) { <span class="muted small have">in my setups</span> }
+                <button class="btn btn-sm" (click)="toggle(row)">{{ open() === row.id ? 'Hide' : 'Details' }}</button>
+                <button class="btn btn-sm btn-primary" (click)="use(row)" [disabled]="busy() === row.id">{{ busy() === row.id ? 'Copying…' : 'Use this setup' }}</button>
+              </span>
+            </div>
+            @if (open() === row.id) {
+              @if (details()[row.id]; as f) {
+                <div class="gear-row">
+                  <gear-panel [equipment]="f.setup.loadout.equipment" [inventory]="f.setup.loadout.inventory" [side]="true" />
+                  <div class="gear-extras muted small">
+                    @if (relics(f.setup.loadout).length) { <div><b>Relics</b> {{ relics(f.setup.loadout).join(', ') }}</div> }
+                    @if (familiarName(f.setup.loadout)) { <div><b>Familiar</b> {{ familiarName(f.setup.loadout) }}</div> }
+                    @if (perks(f.setup.loadout).length) { <div><b>Perks</b> {{ perks(f.setup.loadout).join(', ') }}</div> }
+                    <div>{{ f.setup.loadout.prayerBook === 'Prayers' ? 'Standard prayers' : 'Ancient curses' }} · {{ f.setup.loadout.spellbook }} spellbook</div>
+                    <div>Hover an item for its stats. Empty worn slots show what goes there.</div>
+                  </div>
+                </div>
+                <div class="details">
+                  <h4>Rotations</h4>
+                  <ul>
+                    @for (r of f.rotations; track r.id) {
+                      <li><b>{{ r.name }}</b>&ngsp;<span class="muted small">{{ r.steps.length }} steps</span></li>
+                    } @empty {
+                      <li class="muted small">none</li>
+                    }
+                  </ul>
+                </div>
+              } @else if (details()[row.id] === null) {
+                <p class="muted small">This setup is not shared any more.</p>
+              } @else {
+                <p class="muted small">Loading…</p>
+              }
+            }
+          </div>
+        }
+      }
+    </section>
+  } @empty {
+    @if (!loading() && rows().length) { <p class="muted">No setup matches.</p> }
+  }
+}
+
+<!-- ---------------------------------------------------------------- players -->
+@if (view() === 'players') {
+  @if (error(); as e) {
+    <div class="panel warning">Could not load the players: {{ e }} <button class="btn btn-sm" (click)="load(true)">Retry</button></div>
+  } @else if (loading() && !users().length) {
+    <p class="muted">Loading…</p>
+  } @else if (!users().length) {
+    <div class="panel empty"><p>Nobody shares a setup yet.</p><p class="muted small">Sign in, mark one of your setups public, and you are listed here.</p></div>
+  }
+  @for (u of users(); track u.owner_id) {
+    <div class="panel player">
+      <h3>{{ u.display_name }}</h3>
+      @if (u.kind === 'guide') { <span class="tag guide" title="Guide account: the PvME guides' setups, maintained by the trainer">Guide</span> }
+      @if (u.owner_id === supabase.user()?.id) { <span class="muted small">you</span> }
+      <span class="muted small">{{ u.setups }} {{ u.setups === 1 ? 'setup' : 'setups' }} · {{ ago(u.updated_at) }}</span>
+      <span class="actions"><button class="btn btn-sm" (click)="pickUser(u)">Show setups</button></span>
+    </div>
+  }
+}

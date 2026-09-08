@@ -76,7 +76,8 @@ export class Admin {
       blocked: u.filter((x) => x.blocked_at).length,
       staff: u.filter((x) => x.role !== 'user').length,
       rotations: u.reduce((n, x) => n + Number(x.rotations), 0),
-      publicRotations: u.reduce((n, x) => n + Number(x.public_rotations), 0),
+      setups: u.reduce((n, x) => n + Number(x.setups), 0),
+      publicSetups: u.reduce((n, x) => n + Number(x.public_setups), 0),
       sessions: u.reduce((n, x) => n + Number(x.sessions), 0),
     };
   });
@@ -159,7 +160,7 @@ export class Admin {
 
   async remove(u: AdminUser): Promise<void> {
     const ok = await this.dialogs.confirm(
-      'Delete the account "' + u.display_name + '" with all its rotations, keybinds, action bars and sessions? This cannot be undone.',
+      'Delete the account "' + u.display_name + '" with all its setups, rotations, action bars and sessions? This cannot be undone.',
       { title: 'Delete account', ok: 'Delete account', danger: true },
     );
     if (!ok) return;
@@ -198,10 +199,6 @@ export class Admin {
     const name = await this.dialogs.prompt('New name:', { title: 'Rename rotation', value: r.name, ok: 'Rename' });
     if (name === null || !name.trim()) return;
     await this.rotationAction(() => this.admin.updateRotation(r.id, { name: name.trim().slice(0, 60) }), 'Rotation renamed');
-  }
-
-  async togglePublic(r: AdminRotation): Promise<void> {
-    await this.rotationAction(() => this.admin.updateRotation(r.id, { is_public: !r.is_public }), r.is_public ? 'Rotation hidden from the explorer' : 'Rotation is public');
   }
 
   async deleteRotation(r: AdminRotation): Promise<void> {

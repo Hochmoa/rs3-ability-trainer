@@ -16,8 +16,9 @@
   <div><b>{{ stats().users }}</b><span>users</span></div>
   <div><b>{{ stats().staff }}</b><span>staff</span></div>
   <div><b>{{ stats().blocked }}</b><span>blocked</span></div>
+  <div><b>{{ stats().setups }}</b><span>setups</span></div>
+  <div><b>{{ stats().publicSetups }}</b><span>public</span></div>
   <div><b>{{ stats().rotations }}</b><span>rotations</span></div>
-  <div><b>{{ stats().publicRotations }}</b><span>public</span></div>
   <div><b>{{ stats().sessions }}</b><span>sessions</span></div>
 </div>
 
@@ -75,8 +76,9 @@
                 <td class="muted">{{ u.created_at | date: 'yyyy-MM-dd' }}</td>
                 <td class="muted">{{ u.last_sign_in_at ? (u.last_sign_in_at | date: 'yyyy-MM-dd HH:mm') : '–' }}</td>
                 <td class="muted small">
-                  <button class="link" (click)="toggleRotations(u)" [disabled]="!isAdmin()">{{ u.rotations }} rotations ({{ u.public_rotations }} public)</button>
-                  · {{ u.sessions }} sessions · {{ u.keybinds }} keys{{ u.has_action_bars ? ' · bars' : '' }}
+                  {{ u.setups }} setups ({{ u.public_setups }} public) ·
+                  <button class="link" (click)="toggleRotations(u)" [disabled]="!isAdmin()">{{ u.rotations }} rotations</button>
+                  · {{ u.sessions }} sessions{{ u.has_action_bars ? ' · bars' : '' }}
                 </td>
                 <td>
                   @if (u.blocked_at) {
@@ -111,19 +113,17 @@
                     } @else {
                       <table class="inner">
                         <thead>
-                          <tr><th>Rotation</th><th>Steps</th><th>Public</th><th>Copies</th><th>Updated</th><th></th></tr>
+                          <tr><th>Rotation</th><th>Steps</th><th>Setup</th><th>Updated</th><th></th></tr>
                         </thead>
                         <tbody>
                           @for (r of rotations(); track r.id) {
                             <tr>
                               <td>{{ r.name }}</td>
                               <td>{{ r.steps.length }}</td>
-                              <td>{{ r.is_public ? 'yes' : 'no' }}</td>
-                              <td>{{ r.copies }}</td>
+                              <td class="muted tiny">{{ r.setup_id ? r.setup_id.slice(0, 8) : '–' }}</td>
                               <td class="muted">{{ r.updated_at | date: 'yyyy-MM-dd HH:mm' }}</td>
                               <td class="actions">
                                 <button class="btn btn-sm" (click)="renameRotation(r)">Rename</button>
-                                <button class="btn btn-sm" (click)="togglePublic(r)">{{ r.is_public ? 'Make private' : 'Make public' }}</button>
                                 <button class="btn btn-sm danger" (click)="deleteRotation(r)">Delete</button>
                               </td>
                             </tr>

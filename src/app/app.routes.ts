@@ -13,7 +13,7 @@ export const routes: Routes = [
   { path: 'drill', loadComponent: () => import('./pages/drill/drill').then((m) => m.DrillPage), title: 'Keybind drill – RS3 Ability Trainer' },
   { path: 'loadout', loadComponent: () => import('./pages/loadout/loadout').then((m) => m.Loadout), title: 'Loadout – RS3 Ability Trainer' },
   { path: 'settings', loadComponent: () => import('./pages/settings/settings').then((m) => m.Settings), title: 'Settings – RS3 Ability Trainer' },
-  { path: 'setups', loadComponent: () => import('./pages/presets/presets').then((m) => m.Presets), title: 'Setups – RS3 Ability Trainer' },
+  { path: 'setups', loadComponent: () => import('./pages/setups/setups').then((m) => m.Setups), title: 'Setups – RS3 Ability Trainer' },
   // the pages the Setups page replaced (Sept 2026): old links keep working
   { path: 'explore', redirectTo: 'setups' },
   { path: 'presets', redirectTo: 'setups' },

@@ -13,19 +13,19 @@ export interface AdminUser {
   email: string | null;
   email_confirmed_at: string | null;
   last_sign_in_at: string | null;
+  setups: number;
+  public_setups: number;
   rotations: number;
-  public_rotations: number;
   sessions: number;
-  keybinds: number;
   has_action_bars: boolean;
 }
 
 export interface AdminRotation {
   id: string;
   name: string;
-  is_public: boolean;
+  setup_id: string | null;
   steps: unknown[];
-  copies: number;
+  position: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -100,7 +100,7 @@ export class AdminService {
   async listRotations(ownerId: string): Promise<AdminRotation[]> {
     const { data, error } = await (await this.db())
       .from('rotations')
-      .select('id, name, is_public, steps, copies, created_at, updated_at')
+      .select('id, name, setup_id, steps, position, created_at, updated_at')
       .eq('owner_id', ownerId)
       .order('updated_at', { ascending: false });
     if (error) throw error;
@@ -108,7 +108,7 @@ export class AdminService {
   }
 
   /** RLS lets only admins write other users' rotations: a moderator gets 0 rows and no error, so the write is verified */
-  async updateRotation(id: string, patch: { name?: string; is_public?: boolean }): Promise<void> {
+  async updateRotation(id: string, patch: { name?: string }): Promise<void> {
     const { data, error } = await (await this.db()).from('rotations').update(patch).eq('id', id).select('id');
     if (error) throw error;
     if (!data?.length) throw new Error('Not changed – only admins may edit rotations of other users');

@@ -32,10 +32,10 @@
       "changefreq": "weekly"
     },
     {
-      "path": "explore",
-      "title": "Explore Public RS3 Rotations – RS3 Ability Trainer",
-      "h1": "Explore rotations",
-      "description": "Browse and copy public RuneScape 3 rotations shared by other players, filter by combat style and practise them with real tick timing.",
+      "path": "setups",
+      "title": "Boss Setups: Gear & Rotations – RS3 Ability Trainer",
+      "h1": "Setups",
+      "description": "RuneScape 3 boss setups from the PvME guides and from other players: gear, backpack and rotations for Rasial, Zamorak, Nakatra, Kerapac, Nex, Telos and more – copied into the trainer in one click.",
       "priority": 0.9,
       "changefreq": "daily"
     },
@@ -60,14 +60,6 @@
       "title": "Loadouts: Weapons, Perks & Relics – RS3 Ability Trainer",
       "h1": "Loadouts",
       "description": "Set up your RuneScape 3 loadout: weapons and switches, armour, perks, relics and prayer book. The trainer applies their effects to cooldowns and adrenaline.",
-      "priority": 0.7,
-      "changefreq": "monthly"
-    },
-    {
-      "path": "presets",
-      "title": "Boss setups – RS3 Ability Trainer",
-      "h1": "Boss setups",
-      "description": "PvME boss setups for RuneScape 3: gear, backpack, rotations and action bars for Rasial, Zamorak, Nakatra, Kerapac, Nex, Telos and more – added to the trainer in one click.",
       "priority": 0.7,
       "changefreq": "monthly"
     },

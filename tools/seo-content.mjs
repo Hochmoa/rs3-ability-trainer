@@ -11,7 +11,7 @@ const boot = `
 const nav = `
 <nav aria-label="Pages">
   <a href="/">Train</a> · <a href="/rotations">Rotations</a> · <a href="/bars">Action bars</a> · <a href="/keybinds">Keybinds</a> ·
-  <a href="/loadout">Loadout</a> · <a href="/presets">Boss presets</a> · <a href="/settings">Settings</a> · <a href="/explore">Explore</a> · <a href="/privacy">Privacy</a>
+  <a href="/loadout">Loadout</a> · <a href="/setups">Setups</a> · <a href="/settings">Settings</a> · <a href="/privacy">Privacy</a>
 </nav>`;
 
 const footer = `
@@ -41,18 +41,21 @@ buffs, the in-game “Allow ability queueing” option and your ping, so you lea
   <li>Press Start and follow the queue on the real tick and global cooldown timing.</li>
   <li>Review the summary, adjust ping or ability queueing, and go again.</li>
 </ol>
-<p>Everything is stored in your browser. An optional free account syncs rotations and keybinds between devices and lets you publish rotations.</p>`,
+<p>Everything is stored in your browser. An optional free account syncs your setups, bars and keys between devices and lets you share a setup – gear and rotations – with other players.</p>`,
 
   rotations: `
 <p>Build a RuneScape 3 rotation step by step: abilities, prayers and curses, weapon switches, special attacks and adrenaline potions,
 each with cooldown, adrenaline cost, damage and effect data from the RuneScape Wiki (state after the Combat Style Modernisation, March 2026).</p>
 <p>Or paste a rotation in <strong>PvME notation</strong> – arrows for the next global cooldown, <code>+</code> for the same tick,
 <code>(tc)</code> for target cycle, <code>spec</code> for the special attack of the wielded weapon – and it becomes a trainable queue.
-Rotations can be public so other players can find them on the Explore page.</p>`,
+Rotations belong to a setup – the boss and the gear they are played with – and are shared together with it on the Setups page.</p>`,
 
-  explore: `
-<p>Browse public RuneScape 3 rotations shared by other players. Filter by combat style (melee, ranged, magic, necromancy),
-sort by newest or most copied, and copy any rotation into your own list to practise it with real tick timing.</p>`,
+  setups: `
+<p>A setup is a RuneScape 3 boss, the gear for it and the rotations played with it. The Setups page lists every public setup:
+the <strong>PvME</strong> guides' setups for over 40 bosses – Rasial, Zamorak, Nakatra, Kerapac, Nex, Telos, Vorkath, Angel of Death and more,
+every style and variant (solo, duo, hard mode, enrage brackets) with the worn gear, the backpack and the guide's rotations in PvME notation –
+and the setups other players share. Search by boss, setup or player, filter by combat style, and copy any setup into your own list
+with one click. Your action bars and keys are never part of a setup.</p>` + nav + footer,
 
   bars: `
 <p>Recreate your RuneScape 3 action bars: create presets, put abilities, prayers and items on the slots, choose the slot layout
@@ -66,12 +69,6 @@ Bind single keys or combinations with Ctrl, Shift and Alt, plus keys for weapon 
 <p>Set up your loadout: main hand, off hand and two-handed weapons, carried switches, armour set, perks, relics and prayer book.
 The trainer applies their effects – for example to ability cooldowns and adrenaline – so the rotation behaves like it does in the game.</p>`,
 
-  presets: `
-<h1>Boss presets from PvME</h1>
-<p>Ready-made setups for every RuneScape 3 boss with a PvM Encyclopedia guide – over 40 bosses, every style and variant
-(solo, duo, hard mode, enrage brackets): the worn gear and backpack of the PvME preset, the guide's rotations in PvME
-notation, and action bars holding the abilities they use. One click adds them to your loadouts, rotations and bars so
-you can train a Rasial, Zamorak, Nakatra, Kerapac, Nex, Telos, Vorkath or Angel of Death rotation with the right gear.</p>` + nav + footer,
   settings: `
 <p>Adjust how the trainer simulates the game: ping and jitter, the in-game “Allow ability queueing” option
 (off: only a press in the last tick of the global cooldown queues; on: any press during the cooldown queues), looping and enemy behaviour.</p>`,
