@@ -178,7 +178,8 @@ export class Loadout {
     if (e.score) parts.push(e.score + (e.score === 1 ? ' PvME setup' : ' PvME setups'));
     const v = this.views(e);
     if (e.kind === 'single' && v[0]?.weapon?.spec) parts.push('spec');
-    if (e.kind === 'single' && (v[0]?.set || v[0]?.passive)) parts.push(v[0].set ? 'set' : 'passive');
+    if (e.kind === 'single' && v[0]?.passive) parts.push('passive');
+    if (e.kind === 'set' && e.refs.length > e.chosen.length) parts.push(e.chosen.length + ' slots, ' + e.refs.length + ' pieces');
     return parts.join(' · ');
   }
 
@@ -332,15 +333,54 @@ export class Loadout {
 
   private dropEquip(d: GearDrag, slot: EquipSlot): void {
     if (d.from.kind === 'equip') return; // same slot family – nothing to do
+    if (d.refs && d.refs.length > 1) return this.wearRefs(d.refs); // a group dropped on a slot is worn whole
     const from = d.from.kind === 'inv' ? d.from.index : null;
     if (this.apply(equip(this.state(), d.ref, this.slotOf, from, slot)) && d.from.kind === 'catalog') this.askSubOptions([d.ref]);
   }
 
   private dropInv(d: GearDrag, index: number): void {
     if (d.from.kind === 'catalog') {
+      if (d.refs && d.refs.length > 1) return this.addRefs(d.refs, index); // a group dropped on the backpack lands whole
       if (this.apply(addItem(this.state(), d.ref, index))) this.askSubOptions([d.ref]);
     } else if (d.from.kind === 'inv') this.apply(moveItem(this.state(), d.from.index, index));
     else this.apply(unequip(this.state(), d.from.slot, this.slotOf, index));
+  }
+
+  /** every item of a group into the backpack, the first one at `index` */
+  private addRefs(refs: ItemRef[], index?: number): void {
+    let s = this.state();
+    let n = 0;
+    for (const ref of refs) {
+      const r = addItem(s, ref, n === 0 ? index : undefined);
+      if (r.error) {
+        this.toast.show(r.error, 'warn');
+        break;
+      }
+      s = r.state;
+      n++;
+    }
+    if (!n) return;
+    this.patch({ equipment: s.equipment, inventory: s.inventory });
+    this.toast.show(n + (n === 1 ? ' item' : ' items') + ' added to the backpack');
+    this.askSubOptions(refs.slice(0, n));
+  }
+
+  /** every item of a group worn, in wear order; what was worn before goes into the backpack */
+  private wearRefs(refs: ItemRef[]): void {
+    let s = this.state();
+    let n = 0;
+    for (const ref of refs) {
+      const r = this.slotOf(ref) ? equip(s, ref, this.slotOf) : addItem(s, ref);
+      if (r.error) {
+        this.toast.show(r.error, 'warn');
+        break;
+      }
+      s = r.state;
+      n++;
+    }
+    if (!n) return;
+    this.patch({ equipment: s.equipment, inventory: s.inventory });
+    this.askSubOptions(refs.slice(0, n));
   }
 
   /** an item dropped back on the catalog leaves the loadout */
@@ -363,7 +403,7 @@ export class Loadout {
     if (this.apply(equip(this.state(), v.ref, this.slotOf), v.name + (v.weapon ? ' wielded' : ' worn'))) this.askSubOptions([v.ref]);
   }
 
-  /** click on an entry: a single item goes into the backpack, a pair or set is worn whole */
+  /** click on an entry: a single item goes into the backpack, a group is worn whole (its best variant per slot) */
   clickEntry(e: CatalogEntry): void {
     if (this.gearDrag.suppressClick) return;
     const v = this.views(e);
@@ -375,23 +415,27 @@ export class Loadout {
     if (e.kind === 'single') this.wearFromCatalog(this.views(e)[0]);
   }
 
-  /** wears every piece of a pair / set, in wear order; what was worn before goes into the backpack */
+  /** wears a group: its chosen pieces in wear order; what was worn before goes into the backpack */
   wearAll(e: CatalogEntry): void {
-    let s = this.state();
-    for (const ref of e.refs) {
-      const r = this.slotOf(ref) ? equip(s, ref, this.slotOf) : addItem(s, ref);
-      if (r.error) {
-        this.toast.show(r.error, 'warn');
-        break;
-      }
-      s = r.state;
-    }
-    this.patch({ equipment: s.equipment, inventory: s.inventory });
+    this.wearRefs(e.chosen);
     this.toast.show(e.name + (e.kind === 'pair' ? ' wielded' : ' worn'));
-    this.askSubOptions(e.refs);
   }
 
-  /** click on one icon of a pair / set: that piece alone into the backpack */
+  /** pointerdown on a group card (not on one of its icons): the whole group – its chosen pieces – is dragged */
+  startGroupDrag(ev: PointerEvent, e: CatalogEntry): void {
+    if (e.kind === 'single') return this.startDrag(ev, this.views(e)[0]);
+    const first = this.data.view(e.chosen[0]);
+    if (!first) return;
+    this.gearDrag.start(ev, { ref: e.chosen[0], refs: e.chosen, from: { kind: 'catalog' } }, { icon: first.icon, name: e.name });
+  }
+
+  /** pointerdown on one icon of a group: that piece alone is dragged */
+  startPieceDrag(ev: PointerEvent, v: GearView): void {
+    ev.stopPropagation();
+    this.startDrag(ev, v);
+  }
+
+  /** click on one icon of a group: that piece alone into the backpack */
   clickPiece(ev: Event, e: CatalogEntry, v: GearView): void {
     if (e.kind === 'single') return; // the entry handles it
     ev.stopPropagation();
@@ -402,6 +446,11 @@ export class Loadout {
     if (e.kind === 'single') return;
     ev.stopPropagation();
     this.wearFromCatalog(v);
+  }
+
+  /** a variant of the same slot as the icon before it (Deathdealer tier 70 next to tier 90) */
+  isVariant(vs: GearView[], i: number): boolean {
+    return i > 0 && vs[i].slot === vs[i - 1].slot;
   }
 
   private wear(ref: ItemRef, index: number): void {

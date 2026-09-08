@@ -13,8 +13,11 @@ export type GearSource = { kind: 'catalog' } | { kind: 'inv'; index: number } | 
 
 /** Payload of every drag in the gear panel / catalog: the item and where it came from. */
 export interface GearDrag {
+  /** the item under the pointer – for a group drag the first of `refs` (it decides which worn slot lights up) */
   ref: ItemRef;
   from: GearSource;
+  /** a whole catalog group being dragged (a weapon pair, an armour set): every item that lands with the drop */
+  refs?: ItemRef[];
 }
 
 /** What the user did in the panel; the page applies it with core/equipment.ts. */

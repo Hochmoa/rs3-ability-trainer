@@ -28,7 +28,7 @@
     Hide obscure equipment
   </label>
   <p class="muted small">
-    Sorted by how many PvME setups use an item. Click an item for the backpack, double-click to wear it; a weapon pair or an armour set is worn with one click. Drag anywhere. An Essence of Finality or an augmentable item asks for its special / gizmos as it lands.
+    Sorted by how many PvME setups use an item. Everything comes in groups – a weapon with its off-hand, an armour set, the variants of one item – and each item is listed once. Click or drag a card for the whole group, click or drag one icon for that piece alone; a single item: click for the backpack, double-click to wear. An Essence of Finality or an augmentable item asks for its special / gizmos as it lands.
   </p>
   @if (warnings().length) {
     <div class="warnings">
@@ -63,13 +63,14 @@
               [class]="'entry ' + e.kind"
               [class.has-spec]="e.kind === 'single' && vs[0]?.weapon?.spec"
               [class.has-effect]="e.kind === 'single' && (vs[0]?.set || vs[0]?.passive)"
-              [title]="e.kind === 'single' ? 'Click: backpack · double-click: wear' : 'Click: wear all · click one icon: that piece into the backpack'"
+              [title]="e.kind === 'single' ? 'Click: backpack · double-click: wear · drag anywhere' : 'Click or drag the card: the whole group · click or drag one icon: that piece alone'"
+              (pointerdown)="startGroupDrag($event, e)"
               (click)="clickEntry(e)"
               (dblclick)="dblEntry(e)"
             >
               <div class="icons">
-                @for (v of vs; track v.ref.id) {
-                  <span class="piece" [gearTip]="v" (pointerdown)="startDrag($event, v)" (click)="clickPiece($event, e, v)" (dblclick)="dblPiece($event, e, v)" (contextmenu)="menuPiece($event, v)">
+                @for (v of vs; track v.ref.id; let i = $index) {
+                  <span class="piece" [class.alt]="isVariant(vs, i)" [gearTip]="v" (pointerdown)="startPieceDrag($event, v)" (click)="clickPiece($event, e, v)" (dblclick)="dblPiece($event, e, v)" (contextmenu)="menuPiece($event, v)">
                     @if (v.icon) { <img [src]="v.icon" alt="" draggable="false" /> } @else { <span class="noicon"></span> }
                   </span>
                 }
@@ -145,7 +146,6 @@
         </label>
       }
     </div>
-    <small class="muted">Double Surge is an unlockable, not a relic – every loadout has it: Surge can be used twice in a row.</small>
     <h3>Necromancy talents</h3>
     <label>
       <span>Spirit Pact</span>
