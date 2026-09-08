@@ -699,7 +699,9 @@ export class Train implements OnDestroy {
           morph,
           keyLabel: keybindLabel(s.slotKeybinds[pos]?.[i]),
           usable: running && entity && shown ? usableOf.get(shown.key) ?? 'ok' : null,
-          cooldownS: cd?.cooldownS ?? 0,
+          // same rule as the queue: a cooldown that ends inside the running GCD is not what keeps the slot dark, so the
+          // GCD sweep shows from the start instead of the cooldown finishing and the GCD popping in for its last tick
+          cooldownS: running && isGcdAbility && gcdMs > (cd?.cooldownS ?? 0) * 1000 ? 0 : cd?.cooldownS ?? 0,
           cooldownPhase: cd?.cooldownPhase ?? 1,
           gcdPhase: running && isGcdAbility ? gcd : 1,
           gcdRemainingMs: running && isGcdAbility ? gcdMs : 0,
@@ -845,10 +847,15 @@ export class Train implements OnDestroy {
       const eofIcon = this.eofIcon(raw);
       const entity = eofIcon ? { ...raw, icon: eofIcon } : raw;
       const rs = this.rotation()?.steps[j];
-      // overlay: the ability's own cooldown wins, the current GCD ability otherwise shows the global cooldown
+      // overlay: the ability's own cooldown, or for the current GCD ability the global cooldown – whichever ends LATER,
+      // because that is when the ability can actually be pressed. Piercing Shot → EoF spec → Piercing Shot: the first
+      // Piercing's 5-tick cooldown ends one tick before the GCD of the EoF cast; showing the cooldown until it ran out
+      // and then the GCD for its last tick made the icon light up and darken again (Martin, 8 Sep 2026).
       const cd = running && kind !== 'prev' ? cooldowns[entity.key] : undefined;
       const onGcd = running && kind === 'current' && (entity.kind === 'ability' || entity.kind === 'spec');
-      const gcd = cd && cd.remainingMs > 0 ? { phase: cd.totalMs > 0 ? 1 - cd.remainingMs / cd.totalMs : 1, ms: cd.remainingMs } : onGcd ? { phase: gcdPhase, ms: gcdMs } : { phase: 1, ms: 0 };
+      const own = cd && cd.remainingMs > 0 ? { phase: cd.totalMs > 0 ? 1 - cd.remainingMs / cd.totalMs : 1, ms: cd.remainingMs } : null;
+      const global = onGcd && gcdMs > 0 ? { phase: gcdPhase, ms: gcdMs } : null;
+      const gcd = own && global ? (own.ms >= global.ms ? own : global) : own ?? global ?? { phase: 1, ms: 0 };
       return {
         entity,
         key: reach.get(entity.key) ?? '',
