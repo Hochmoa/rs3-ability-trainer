@@ -2,7 +2,7 @@ import { isReservedKeybind, keybindKey, parseKeybind } from './keybind.util';
 import { ActionBarData, ActionBarSetup, BAR_POSITIONS, BAR_SLOTS, Keybind, defaultActionBars } from './models';
 
 /**
- * A named keyboard layout: one key per slot of the five bar positions (14 each), keys for up to four weapon
+ * A named keyboard layout: one key per slot of the five bar positions (14 each)
  * switches and for the client actions. Codes are KeyboardEvent.code with optional "Ctrl+" / "Shift+" / "Alt+".
  */
 export interface KeybindLayout {
@@ -11,9 +11,7 @@ export interface KeybindLayout {
   description: string;
   /** [position][slot] – '' leaves the slot without a key */
   bars: string[][];
-  /** keys for the weapon switches of the loadout, in order (in hand first) */
-  weapons: string[];
-  actions: Record<string, string>;
+    actions: Record<string, string>;
 }
 
 const DIGIT_ROW = ['Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0', 'Minus', 'Equal', 'BracketLeft', 'BracketRight'];
@@ -23,7 +21,7 @@ export const KEYBIND_LAYOUTS: KeybindLayout[] = [
   {
     id: 'rows',
     name: 'Number row + QWERTY',
-    description: 'Main bar 1-0 - = [ ], the Q, A and Z rows for additional bars 1-3 (Shift+ fills their last slots), Shift+1-0 on bar 4, F1-F4 and F6-F10 for weapon switches, Tab for target cycle, ` for the combat dummy.',
+    description: 'Main bar 1-0 - = [ ], the Q, A and Z rows for additional bars 1-3 (Shift+ fills their last slots), Shift+1-0 on bar 4, Tab for target cycle, ` for the combat dummy.',
     bars: [
       DIGIT_ROW,
       ['KeyQ', 'KeyW', 'KeyE', 'KeyR', 'KeyT', 'KeyY', 'KeyU', 'KeyI', 'KeyO', 'KeyP', 'Backslash', ...shifted(['KeyQ', 'KeyW', 'KeyE'])],
@@ -31,13 +29,12 @@ export const KEYBIND_LAYOUTS: KeybindLayout[] = [
       ['KeyZ', 'KeyX', 'KeyC', 'KeyV', 'KeyB', 'KeyN', 'KeyM', 'Comma', 'Period', 'Slash', ...shifted(['KeyZ', 'KeyX', 'KeyC', 'KeyV'])],
       shifted(DIGIT_ROW),
     ],
-    weapons: ['F1', 'F2', 'F3', 'F4', 'F6', 'F7', 'F8', 'F9', 'F10'],
     actions: { 'target-cycle': 'Tab', 'combat-dummy': 'Backquote' },
   },
   {
     id: 'numpad',
     name: 'Numpad + QWER (WASD free)',
-    description: 'Main bar on the numpad, the number row and the keys around WASD for the additional bars - W A S D and the arrows stay free for the camera. F1-F4 and F6-F10 for weapon switches, Tab for target cycle, ` for the combat dummy.',
+    description: 'Main bar on the numpad, the number row and the keys around WASD for the additional bars - W A S D and the arrows stay free for the camera. Tab for target cycle, ` for the combat dummy.',
     bars: [
       ['Numpad1', 'Numpad2', 'Numpad3', 'Numpad4', 'Numpad5', 'Numpad6', 'Numpad7', 'Numpad8', 'Numpad9', 'Numpad0', 'NumpadDecimal', 'NumpadAdd', 'NumpadSubtract', 'NumpadMultiply'],
       [...DIGIT_ROW.slice(0, 12), 'KeyQ', 'KeyE'],
@@ -45,7 +42,6 @@ export const KEYBIND_LAYOUTS: KeybindLayout[] = [
       ['KeyZ', 'KeyX', 'KeyC', 'KeyV', 'KeyB', 'KeyN', 'KeyM', 'Comma', 'Period', 'Slash', 'Quote', 'BracketLeft', 'BracketRight', 'Backslash'],
       [...shifted(DIGIT_ROW.slice(0, 12)), 'Shift+KeyQ', 'Shift+KeyE'],
     ],
-    weapons: ['F1', 'F2', 'F3', 'F4', 'F6', 'F7', 'F8', 'F9', 'F10'],
     actions: { 'target-cycle': 'Tab', 'combat-dummy': 'Backquote' },
   },
   {
@@ -53,7 +49,6 @@ export const KEYBIND_LAYOUTS: KeybindLayout[] = [
     name: 'Custom (empty)',
     description: 'No keys at all - bind every slot yourself, e.g. with "Bind by pressing".',
     bars: Array.from({ length: BAR_POSITIONS }, () => Array(BAR_SLOTS).fill('')),
-    weapons: [],
     actions: {},
   },
 ];
@@ -70,21 +65,19 @@ function toKeybind(code: string): Keybind | null {
   return isReservedKeybind(kb) ? null : kb;
 }
 
-/** Every keybind a layout defines (slots, weapons, actions) – for duplicate checks and tests. */
+/** Every keybind a layout defines (slots and actions) – for duplicate checks and tests. */
 export function layoutKeybinds(l: KeybindLayout): Keybind[] {
-  return [...l.bars.flat(), ...l.weapons, ...Object.values(l.actions)].filter(Boolean).map(parseKeybind);
+  return [...l.bars.flat(), ...Object.values(l.actions)].filter(Boolean).map(parseKeybind);
 }
 
 export interface ApplyLayoutOptions {
   /** true = every slot gets the layout key (existing keys are dropped); false = only empty slots are filled, with keys nobody else uses */
   overwrite: boolean;
-  /** weapon item ids of the loadout (in hand first) that get the layout's weapon keys */
-  weaponIds?: string[];
 }
 
 export interface ApplyLayoutResult<T extends ActionBarData> {
   data: T;
-  /** number of slot / weapon / action keys written */
+  /** number of slot / action keys written */
   filled: number;
 }
 
@@ -93,18 +86,16 @@ export interface ApplyLayoutResult<T extends ActionBarData> {
  * slots get a key and keys already in use elsewhere are skipped, so a player's own binds survive.
  */
 export function applyLayout<T extends ActionBarData>(data: T, layout: KeybindLayout, opts: ApplyLayoutOptions): ApplyLayoutResult<T> {
-  const out: T = { ...data, slotKeybinds: data.slotKeybinds.map((row) => [...row]), weaponKeybinds: { ...data.weaponKeybinds }, actionKeybinds: { ...(data.actionKeybinds ?? {}) } };
+  const out: T = { ...data, slotKeybinds: data.slotKeybinds.map((row) => [...row]), actionKeybinds: { ...(data.actionKeybinds ?? {}) } };
   const actions = out.actionKeybinds!;
   while (out.slotKeybinds.length < BAR_POSITIONS) out.slotKeybinds.push(Array(BAR_SLOTS).fill(null));
   for (const row of out.slotKeybinds) while (row.length < BAR_SLOTS) row.push(null);
   const used = new Set<string>();
   if (opts.overwrite) {
     out.slotKeybinds = out.slotKeybinds.map((row) => row.map(() => null));
-    for (const id of Object.keys(out.weaponKeybinds)) out.weaponKeybinds[id] = null;
     for (const id of Object.keys(actions)) actions[id] = null;
   } else {
     for (const row of out.slotKeybinds) for (const kb of row) if (kb) used.add(keybindKey(kb));
-    for (const kb of Object.values(out.weaponKeybinds)) if (kb) used.add(keybindKey(kb));
     for (const kb of Object.values(actions)) if (kb) used.add(keybindKey(kb));
   }
   let filled = 0;
@@ -119,9 +110,6 @@ export function applyLayout<T extends ActionBarData>(data: T, layout: KeybindLay
     const row = out.slotKeybinds[pos];
     for (let slot = 0; slot < BAR_SLOTS; slot++) row[slot] = take(layout.bars[pos]?.[slot] ?? '', row[slot]);
   }
-  (opts.weaponIds ?? []).forEach((id, i) => {
-    if (i < layout.weapons.length) out.weaponKeybinds[id] = take(layout.weapons[i], out.weaponKeybinds[id]);
-  });
   for (const [action, code] of Object.entries(layout.actions)) actions[action] = take(code, actions[action]);
   return { data: out, filled };
 }

@@ -1,3 +1,4 @@
+import { markPlayerAction } from './note-actions';
 import { RotationStep } from './models';
 
 /**
@@ -228,6 +229,7 @@ export function parsePvme(text: string, resolve: AliasResolver): PvmeParseResult
     }
   }
   markStallRelease(steps);
+  for (let i = 0; i < steps.length; i++) steps[i] = markPlayerAction(steps[i]);
   return { steps, unknown };
 }
 

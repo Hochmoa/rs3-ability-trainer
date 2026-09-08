@@ -21,8 +21,6 @@ export interface GizmoCombo {
   /** "P6AS1" */
   short: string;
   perks: GizmoPerk[];
-  /** ancient gizmo (Precise 6, Aftershock 4, rank 4 armour perks, Relentless, Ruthless need one) */
-  ancient: boolean;
   tier: ComboTier;
   /** where PvME puts it: "main hand", "off-hand", "2h gizmo 1", "body", "legs", "shield" */
   where: string;
@@ -32,17 +30,16 @@ export interface GizmoCombo {
 
 const TIER_RANK: Record<ComboTier, number> = { bis: 0, common: 1, budget: 2, niche: 3 };
 
-const w = (id: string, short: string, perks: [string, number][], tier: ComboTier, where: string, note?: string, ancient = true): GizmoCombo => ({
+const w = (id: string, short: string, perks: [string, number][], tier: ComboTier, where: string, note?: string): GizmoCombo => ({
   id,
   type: 'weapon',
   short,
   perks: perks.map(([perk, rank]) => ({ perk, rank })),
-  ancient,
   tier,
   where,
   note,
 });
-const a = (id: string, short: string, perks: [string, number][], tier: ComboTier, where: string, note?: string, ancient = true): GizmoCombo => ({ ...w(id, short, perks, tier, where, note, ancient), type: 'armour' });
+const a = (id: string, short: string, perks: [string, number][], tier: ComboTier, where: string, note?: string): GizmoCombo => ({ ...w(id, short, perks, tier, where, note), type: 'armour' });
 
 export const GIZMO_COMBOS: GizmoCombo[] = [
   // ---------------------------------------------------------------- weapons
@@ -57,11 +54,11 @@ export const GIZMO_COMBOS: GizmoCombo[] = [
   w('c4as1', 'C4AS1', [['caroming', 4], ['aftershock', 1]], 'common', 'main hand', 'Greater Ricochet switch, Roar of Awakening'),
   w('f4e1', 'F4E1', [['flanking', 4], ['eruptive', 1]], 'common', 'off-hand', 'the flanking switch'),
   w('l4e2', 'L4E2', [['lunging', 4], ['eruptive', 2]], 'common', '2h gizmo 2 · off-hand', 'Masterwork Spear of Annihilation, Ode to Deceit'),
-  w('as1pf', 'AS1PF', [['aftershock', 1], ['planted-feet', 1]], 'common', 'switch', 'Planted Feet switch (Sunspear, Ancient lantern), a standard gizmo is enough', false),
+  w('as1pf', 'AS1PF', [['aftershock', 1], ['planted-feet', 1]], 'common', 'switch', 'Planted Feet switch (Sunspear, Ancient lantern)'),
   w('p6', 'P6', [['precise', 6]], 'budget', 'main hand · 2h gizmo 1', 'the starter main-hand gizmo'),
   w('e4', 'E4', [['eruptive', 4]], 'budget', 'off-hand · 2h gizmo 2', 'the starter off-hand gizmo; defenders'),
   w('f4', 'F4', [['flanking', 4]], 'budget', 'switch', 'starter flanking switch'),
-  w('pf', 'PF', [['planted-feet', 1]], 'budget', 'switch', 'starter Planted Feet switch, standard gizmo', false),
+  w('pf', 'PF', [['planted-feet', 1]], 'budget', 'switch', 'starter Planted Feet switch'),
   w('l4as1', 'L4AS1', [['lunging', 4], ['aftershock', 1]], 'niche', 'main hand'),
   w('c4pf', 'C4PF', [['caroming', 4], ['planted-feet', 1]], 'niche', 'switch', 'magic Planted Feet switch'),
   w('as4pf', 'AS4PF', [['aftershock', 4], ['planted-feet', 1]], 'niche', 'switch'),
@@ -74,7 +71,7 @@ export const GIZMO_COMBOS: GizmoCombo[] = [
   w('as1', 'AS1', [['aftershock', 1]], 'niche', 'switch', 'spec-weapon switches'),
   w('as1mobile', 'AS1 Mobile', [['aftershock', 1], ['mobile', 1]], 'niche', 'off-hand', 'spec-weapon off-hand'),
   w('f4p2', 'F4P2', [['flanking', 4], ['precise', 2]], 'niche', 'off-hand'),
-  w('pfmobile', 'PF Mobile', [['planted-feet', 1], ['mobile', 1]], 'niche', 'switch', 'Enhanced Excalibur', false),
+  w('pfmobile', 'PF Mobile', [['planted-feet', 1], ['mobile', 1]], 'niche', 'switch', 'Enhanced Excalibur'),
   // ---------------------------------------------------------------- armour
   a('b4mobile', 'B4 Mobile', [['biting', 4], ['mobile', 1]], 'bis', 'body', 'the standard body gizmo 1 (melee, ranged, magic)'),
   a('relent5crack4', 'R5C4', [['relentless', 5], ['crackling', 4]], 'bis', 'body', 'the standard body gizmo 2 (melee, ranged, magic)'),
@@ -106,13 +103,13 @@ export const GIZMO_COMBOS: GizmoCombo[] = [
   a('turt4mobile', 'T4 Mobile', [['turtling', 4], ['mobile', 1]], 'common', 'shield'),
   a('lucky4abs2', 'L4Abs2', [['lucky', 4], ['absorbative', 2]], 'common', 'shield', 'spirit shields'),
   a('crack4', 'C4', [['crackling', 4]], 'budget', 'legs', 'starter legs gizmo 1'),
-  a('b3', 'B3', [['biting', 3]], 'budget', 'body', 'starter body (standard gizmo)', false),
-  a('eq1', 'EQ1', [['equilibrium', 1]], 'budget', 'body', 'starter body (standard gizmo, guaranteed at level 76+)', false),
-  a('eq2', 'EQ2', [['equilibrium', 2]], 'budget', 'body', 'entry necromancy body', false),
+  a('b3', 'B3', [['biting', 3]], 'budget', 'body', 'starter body'),
+  a('eq1', 'EQ1', [['equilibrium', 1]], 'budget', 'body', 'starter body (guaranteed at level 76+)'),
+  a('eq2', 'EQ2', [['equilibrium', 2]], 'budget', 'body', 'entry necromancy body'),
   a('imp4', 'I4', [['impatient', 4]], 'budget', 'body · legs', 'starter (7 zamorak + 2 saradomin components)'),
-  a('ed3', 'ED3', [['enhanced-devoted', 3]], 'budget', 'legs', 'standard gizmo', false),
-  a('b2mobile', 'B2 Mobile', [['biting', 2], ['mobile', 1]], 'budget', 'body', 'standard gizmo', false),
-  a('b2geno', 'B2 Genocidal', [['biting', 2], ['genocidal', 1]], 'budget', 'body', 'standard gizmo', false),
+  a('ed3', 'ED3', [['enhanced-devoted', 3]], 'budget', 'legs', 'starter legs'),
+  a('b2mobile', 'B2 Mobile', [['biting', 2], ['mobile', 1]], 'budget', 'body', 'starter body'),
+  a('b2geno', 'B2 Genocidal', [['biting', 2], ['genocidal', 1]], 'budget', 'body', 'starter body'),
   a('b4', 'B4', [['biting', 4]], 'niche', 'body'),
   a('eq4', 'EQ4', [['equilibrium', 4]], 'niche', 'body'),
   a('invig4', 'In4', [['invigorating', 4]], 'niche', 'legs'),
@@ -121,8 +118,8 @@ export const GIZMO_COMBOS: GizmoCombo[] = [
   a('clearheaded4', 'CH4', [['clear-headed', 4]], 'niche', 'legs'),
   a('lucky6', 'L6', [['lucky', 6]], 'niche', 'body', 'Eldritch crossbow / Soul Split setups'),
   a('b4lucky1', 'B4L1', [['biting', 4], ['lucky', 1]], 'niche', 'body'),
-  a('demonundead', 'Demon + Undead Slayer', [['demon-slayer', 1], ['undead-slayer', 1]], 'niche', 'any', 'Slayer, standard gizmo', false),
-  a('genoundead', 'Genocidal + Undead Slayer', [['genocidal', 1], ['undead-slayer', 1]], 'niche', 'any', 'Slayer, standard gizmo', false),
+  a('demonundead', 'Demon + Undead Slayer', [['demon-slayer', 1], ['undead-slayer', 1]], 'niche', 'any', 'Slayer'),
+  a('genoundead', 'Genocidal + Undead Slayer', [['genocidal', 1], ['undead-slayer', 1]], 'niche', 'any', 'Slayer'),
 ];
 
 /** the combos of one gizmo type, best first */
@@ -134,7 +131,7 @@ function sameKey(perks: GizmoPerk[]): string {
   return [...perks].map((p) => p.perk + ':' + p.rank).sort().join('|');
 }
 
-/** The combo a stored gizmo is, if it is one (the ancient flag is not compared – the perks decide). */
+/** The combo a stored gizmo is, if it is one (the perks decide). */
 export function comboOf(g: Pick<Gizmo, 'perks'> | undefined): GizmoCombo | null {
   if (!g?.perks.length) return null;
   const key = sameKey(g.perks);
@@ -143,7 +140,7 @@ export function comboOf(g: Pick<Gizmo, 'perks'> | undefined): GizmoCombo | null 
 
 /** the gizmo a combo makes */
 export function gizmoOf(c: GizmoCombo): Gizmo {
-  return { ancient: c.ancient, perks: c.perks.map((p) => ({ ...p })) };
+  return { ancient: true, perks: c.perks.map((p) => ({ ...p })) };
 }
 
 /** "Precise 6 + Aftershock 1" from the perk names (perks.json), the id when a perk is unknown */

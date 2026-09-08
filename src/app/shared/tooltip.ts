@@ -593,11 +593,11 @@ export class EntityTooltip {
     return this.data.specById().get(id)?.name ?? id;
   }
 
-  /** all gizmos of an item on one line: "Precise 6, Equilibrium 4 | Aftershock 4 (ancient)" – null when it holds none */
+  /** all gizmos of an item on one line: "Precise 6, Equilibrium 4 | Aftershock 4" – null when it holds none */
   perkLine(g: GearView): string | null {
     const gizmos = (g.ref.gizmos ?? []).filter((gz) => gz.perks.length);
     if (!gizmos.length) return null;
-    return gizmos.map((gz) => this.perkList(gz) + (gz.ancient ? ' (ancient)' : '')).join(' | ');
+    return gizmos.map((gz) => this.perkList(gz)).join(' | ');
   }
 
   perkList(g: { perks: { perk: string; rank: number }[] }): string {

@@ -62,7 +62,7 @@ describe('cleanStep – only the known step fields survive a save', () => {
 describe('normaliseLoadout', () => {
   it('pre-inventory two-hander: the weapon and its gizmos become worn, switches carried, derived fields set', () => {
     const l = normaliseLoadout({ id: 'l', name: 'Old', twoHand: 'omni-guard', switches: ['soulbound-lantern', 'soulbound-lantern'], weaponGizmos: [{ ancient: true, perks: [{ perk: 'precise', rank: 6 }] }] } as Partial<Loadout>);
-    expect(l.equipment.twoHand).toEqual({ kind: 'weapon', id: 'omni-guard', gizmos: [{ ancient: true, perks: [{ perk: 'precise', rank: 6 }] }, { ancient: false, perks: [] }] });
+    expect(l.equipment.twoHand).toEqual({ kind: 'weapon', id: 'omni-guard', gizmos: [{ ancient: true, perks: [{ perk: 'precise', rank: 6 }] }, { ancient: true, perks: [] }] });
     expect(l.inventory).toHaveLength(INVENTORY_SIZE);
     expect(l.inventory[0]).toEqual({ kind: 'weapon', id: 'soulbound-lantern' });
     expect(l.twoHand).toBe('omni-guard');
@@ -76,7 +76,7 @@ describe('normaliseLoadout', () => {
 
   it('pre-inventory dual wield: one gizmo per hand', () => {
     const l = normaliseLoadout({ mainHand: 'a', offHand: 'b', weaponGizmos: [{ ancient: false, perks: [{ perk: 'precise', rank: 4 }] }, { ancient: false, perks: [] }] } as Partial<Loadout>);
-    expect(l.equipment.mainHand).toEqual({ kind: 'weapon', id: 'a', gizmos: [{ ancient: false, perks: [{ perk: 'precise', rank: 4 }] }] });
+    expect(l.equipment.mainHand).toEqual({ kind: 'weapon', id: 'a', gizmos: [{ ancient: true, perks: [{ perk: 'precise', rank: 4 }] }] });
     expect(l.equipment.offHand).toEqual({ kind: 'weapon', id: 'b' });
     expect(l.mainHand).toBe('a');
     expect(l.offHand).toBe('b');
@@ -95,7 +95,7 @@ describe('normaliseLoadout', () => {
     expect(l.equipment.ring).toBeUndefined();
     expect(l.equipment.neck).toEqual({ kind: 'gear', id: 'eof', spec: 'death-essence' });
     expect(l.inventory).toHaveLength(INVENTORY_SIZE);
-    expect(l.inventory[0]).toEqual({ kind: 'special', id: 'adrenaline-potion', gizmos: [{ ancient: false, perks: [{ perk: 'x', rank: 3 }] }] });
+    expect(l.inventory[0]).toEqual({ kind: 'special', id: 'adrenaline-potion', gizmos: [{ ancient: true, perks: [{ perk: 'x', rank: 3 }] }] });
     expect(l.inventory[2]).toBeNull();
     expect(l.twoHand).toBe('x');
     expect(l.prayerBook).toBe('Curses');

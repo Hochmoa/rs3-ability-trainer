@@ -54,3 +54,23 @@ core/tour.ts holds the script (TOUR_STEPS) and the pure geometry (spotlight, blo
 shared/tour.ts the TourService + the overlay component (mounted in app.html). Targets are `data-tour="…"` attributes
 on the pages, so no CSS class is load-bearing. It starts itself once per browser (localStorage rs3trainer.tour) after
 the consent banner is answered, and Settings → Tour replays it.
+
+## Feedback round, 8 Sep 2026 (evening)
+
+- Gone: the enemy-rhythm hint, the "same tick / 2 ticks later" legend, the backpack hint under the gear panel, the
+  head box and the Revolution box on the Action bars page. The preset row says "Main bar by default, Main bar with
+  Ranged" instead of "Main bar, Ranged -> Main bar".
+- Special items show no "+0% adrenaline" line in the bars catalog.
+- Command X is no longer a catalog entry on the Action bars page: the Conjure X slot turns into it (engine/morphs.ts),
+  and auto-place puts the Conjure on the bar for a Command step.
+- Weapon switches have no keys any more. A weapon is switched with a click on it (backpack, or the Switches chips in
+  the simple view). Keybinds page, key drill, layouts and auto-place lost their weapon parts; `weaponKeybinds` stays
+  in the stored setup, unread.
+- Every gizmo is ancient. The Gizmos dialog, the tooltip, the validation and the preset perk placer know no standard
+  gizmo; the stored `ancient` flag is forced to true on load.
+- Notes that ask for a click ("enter instance", "run md", "(click crystal)", "tag pillar") get their button on import
+  and on load (core/note-actions.ts, applied in cleanStep, migrateRotation and the PvME parser), so the guide
+  rotations already stored behave the same.
+- "Play on into the next rotations" on the Train page: the selected rotation and every one after it in the setup run
+  as one session, with a "Next: Phase 2" button between them (a click note with 0 ticks). Nothing resets in between.
+  First version; the popout / focus view plays single rotations only.

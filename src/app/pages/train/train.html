@@ -164,6 +164,12 @@
         </select>
         <small class="caption muted">{{ rotationCaption() }}</small>
       </label>
+      @if (chainList().length > 1) {
+        <label class="check chain-check" title="Plays the rotations after this one in the same session, with a button between them. Adrenaline, stacks, conjures and buffs carry over, nothing resets.">
+          <input type="checkbox" [checked]="chain()" (change)="setChain(!chain())" [disabled]="running()" />
+          <span>Play on into the next rotations</span>
+        </label>
+      }
       @if (advanced() || optionsOpen()) {
       }
       <div class="actions">
@@ -270,8 +276,6 @@
           {{ enemy().warningTicks }} tick warning
         </span>
         <button class="btn btn-sm" (click)="enemyOpen.set(!enemyOpen())">{{ enemyOpen() ? 'Hide settings' : 'Settings' }}</button>
-      } @else {
-        <span class="muted small">The enemy attacks in a fixed rhythm. Have the matching Protect / Deflect prayer on when the hit lands, Soul Split the rest of the time.</span>
       }
       <label class="field lp" title="Target life points; the session ends at 0. Leave 0 for a dummy.">
         <span>Life points</span>
@@ -593,7 +597,6 @@
         }
       }
     </div>
-    <p class="muted small layout-hint">same tick = together with the previous input · 2 ticks later = wait 2 ticks · channelling = let the channel run</p>
 
     <div class="feedback" [class]="'feedback ' + (feedback()?.cls ?? '')" [title]="feedback()?.text ?? ''">
       {{ feedback()?.text ?? idleText() }}@if (feedback()?.detail; as d) { <small class="detail muted">{{ d }}</small> }
@@ -704,11 +707,10 @@
             }
           </div>
           @if (carriedWeapons().length || actionChips().length) {
-            <div class="weapons" title="carried weapons and client actions; the lit weapon is wielded">
+            <div class="weapons" title="carried weapons and client actions; click a weapon to wield it, the lit one is in hand">
               @for (w of carriedWeapons(); track w.entity.id) {
-                <div class="weapon" [class.active]="wielded().includes(w.entity.id)" [title]="w.entity.name" [entityTip]="w.entity" (click)="clickWeapon(w.entity.id)">
+                <div class="weapon" [class.active]="wielded().includes(w.entity.id)" [title]="w.entity.name + ': click to wield'" [entityTip]="w.entity" (click)="clickWeapon(w.entity.id)">
                   <img [src]="w.entity.icon" [alt]="w.entity.name" />
-                  <span class="key">{{ w.key || '-' }}</span>
                 </div>
               }
               @for (a of actionChips(); track a.entity.id) {
@@ -756,12 +758,11 @@
 
     @if (!advanced() && (carriedWeapons().length || actionChips().length)) {
       <!-- simple view has no HUD: the weapon switches and client actions still need a place to tap and show their keys -->
-      <div class="weapons simple-weapons" title="carried weapons and client actions; press the key or tap, the lit weapon is wielded">
+      <div class="weapons simple-weapons" title="carried weapons and client actions; tap a weapon to wield it, the lit one is in hand">
         <span class="muted small">Switches</span>
         @for (w of carriedWeapons(); track w.entity.id) {
-          <div class="weapon" [class.active]="wielded().includes(w.entity.id)" [title]="w.entity.name" [entityTip]="w.entity" (click)="clickWeapon(w.entity.id)">
+          <div class="weapon" [class.active]="wielded().includes(w.entity.id)" [title]="w.entity.name + ': click to wield'" [entityTip]="w.entity" (click)="clickWeapon(w.entity.id)">
             <img [src]="w.entity.icon" [alt]="w.entity.name" />
-            <span class="key">{{ w.key || '-' }}</span>
           </div>
         }
         @for (a of actionChips(); track a.entity.id) {
@@ -845,8 +846,7 @@
    @if (advanced()) {
    <aside class="gear-side">
     <div class="gear-head"><b>Equipment &amp; backpack</b> <a routerLink="/loadout">edit</a></div>
-    <gear-panel [equipment]="gearState().equipment" [inventory]="gearState().inventory" [live]="true" [cdkDrops]="!running()" [dragOut]="!running()" [usable]="gearUsable()" [keyOf]="gearKey" [wanted]="wantedItem()" (action)="onGear($event)" (cdkDrop)="dropIntoInventory($event.index, $event.data)" />
-    <p class="muted small">{{ running() ? 'Click to wield, drink, wear or take off. Not saved to the loadout.' : 'While training you can switch, drink and swap armour here. Drag a potion or weapon onto a bar slot.' }}</p>
+    <gear-panel [equipment]="gearState().equipment" [inventory]="gearState().inventory" [live]="true" [cdkDrops]="!running()" [dragOut]="!running()" [usable]="gearUsable()" [wanted]="wantedItem()" (action)="onGear($event)" (cdkDrop)="dropIntoInventory($event.index, $event.data)" />
    </aside>
    }
   </div>

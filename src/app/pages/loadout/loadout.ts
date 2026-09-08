@@ -620,7 +620,7 @@ export class Loadout {
   pickCombo(c: GizmoCombo | null): void {
     const e = this.perkEdit();
     if (!e) return;
-    const gizmos = e.gizmos.map((g, i) => (i === e.slot ? (c ? gizmoOf(c) : { ancient: false, perks: [] }) : g));
+    const gizmos = e.gizmos.map((g, i) => (i === e.slot ? (c ? gizmoOf(c) : { ancient: true, perks: [] }) : g));
     const ref: ItemRef = { ...e.ref };
     if (gizmos.some((g) => g.perks.length)) ref.gizmos = gizmos;
     else delete ref.gizmos;

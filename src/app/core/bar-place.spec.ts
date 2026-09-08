@@ -50,16 +50,22 @@ describe('placeOnBars', () => {
     expect(r.setup.presets.find((p) => p.id === 1)!.slots[0]).toBeNull();
   });
 
-  it('maps specs to the one generic special-attack slot, weapons to weapon keys and actions to their layout key', () => {
+  it('a Command ability goes onto the bar as its Conjure: the slot turns into the command in game', () => {
+    const r = placeOnBars(defaultActionBars(), 'Necromancy', ['ability:command-vengeful-ghost', 'ability:conjure-vengeful-ghost'], rows);
+    const main = r.setup.presets.find((p) => p.id === r.setup.positions[0])!;
+    expect(main.slots[0]).toEqual({ kind: 'ability', id: 'conjure-vengeful-ghost' });
+    expect(main.slots[1]).toBeNull(); // the conjure found its own slot, nothing placed twice
+    expect(r.placed).toEqual(['ability:command-vengeful-ghost', 'ability:conjure-vengeful-ghost']);
+  });
+
+  it('maps specs to the one generic special-attack slot, counts weapons as placed (they are clicked) and binds actions to their layout key', () => {
     const r = placeOnBars(defaultActionBars(), 'Necromancy', ['spec:death-grasp', 'spec:death-essence', 'weapon:omni-guard', 'weapon:ek-zekkil', 'action:target-cycle'], rows);
     const main = r.setup.presets.find((p) => p.id === r.setup.positions[0])!;
     expect(main.slots[0]).toEqual({ kind: 'ability', id: 'weapon-special-attack' });
     expect(main.slots[1]).toBeNull();
-    expect(code(r.setup.weaponKeybinds['omni-guard'])).toBe('F1');
-    expect(code(r.setup.weaponKeybinds['ek-zekkil'])).toBe('F2');
     expect(code(r.setup.actionKeybinds!['target-cycle'])).toBe('Tab');
     expect(r.placed).toHaveLength(5);
-    expect(r.filled).toBe(3);
+    expect(r.filled).toBe(1); // the spec slot; the weapons take no key and the action gets its layout key
   });
 
   it('only adds a key to a slot that already holds the ability, and reports what does not fit', () => {
@@ -98,14 +104,13 @@ describe('unboundKeys – what of a rotation is not on a key yet', () => {
 
   it('lists every input once, in press order, and skips notes', () => {
     const s = defaultActionBars();
-    expect(unboundKeys(s, steps, slotKeybinds(s))).toEqual(['ability:sever', SPEC_KEY, 'weapon:ek-zekkil', 'action:target-cycle', 'prayer:turmoil']);
+    expect(unboundKeys(s, steps, slotKeybinds(s))).toEqual(['ability:sever', SPEC_KEY, 'action:target-cycle', 'prayer:turmoil']);
   });
 
-  it('a slot with the entity and a key, a bound weapon and a bound action are left out', () => {
+  it('a slot with the entity and a key, a weapon (clicked, never bound) and a bound action are left out', () => {
     const s = defaultActionBars();
     s.presets[0].slots[0] = { kind: 'ability', id: 'sever' }; // main bar slot 1, key "1"
     s.presets[0].slots[1] = { kind: 'spec', id: 'anything' };
-    s.weaponKeybinds['ek-zekkil'] = { code: 'F1', ctrl: false, shift: false, alt: false };
     s.actionKeybinds = { 'target-cycle': { code: 'Tab', ctrl: false, shift: false, alt: false } };
     expect(unboundKeys(s, steps, slotKeybinds(s))).toEqual(['prayer:turmoil']);
   });

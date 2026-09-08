@@ -56,8 +56,8 @@ const GIZMO_PERKS = 2; // a gizmo holds up to two perks
 
 /**
  * Puts the guide's Invention perks on the gear: weapon perks into the wielded weapon's gizmos (a two-hander takes
- * two, a pair one each), the rest into the four armour gizmos of body and legs. Ancient perks make their gizmo ancient. Perks that
- * find no free gizmo are dropped – the loadout page can still add them by hand.
+ * two, a pair one each), the rest into the four armour gizmos of body and legs. Every gizmo is ancient. Perks that find no
+ * free gizmo are dropped – the loadout page can still add them by hand.
  */
 export function applyPresetPerks(l: Loadout, perks: { id: string; rank: number }[], perkGizmos: (id: string) => string[] | undefined): void {
   const slots: { ref: ItemRef; kind: GizmoKind }[] = [];
@@ -82,19 +82,17 @@ export function applyPresetPerks(l: Loadout, perks: { id: string; rank: number }
   });
   for (const { id, rank } of perks) {
     const where = perkGizmos(id) ?? [];
-    const ancient = where.some((g) => g.startsWith('ancient-')) && !where.some((g) => g === 'weapon' || g === 'armour');
     const kind: GizmoKind | null = where.some((g) => g.endsWith('weapon')) ? 'weapon' : where.some((g) => g.endsWith('armour')) ? 'armour' : null;
     const target = kind ? free(kind) : undefined;
     if (!target) continue;
     const list = gizmos.get(target.ref)!;
     const own = slots.filter((x) => x.ref === target.ref).length;
-    let g = list.find((x) => x.perks.length < GIZMO_PERKS && x.ancient === ancient);
+    let g = list.find((x) => x.perks.length < GIZMO_PERKS);
     if (!g && list.length < own) {
-      g = { ancient, perks: [] };
+      g = { ancient: true, perks: [] };
       list.push(g);
     }
     if (!g) continue;
-    g.ancient = g.ancient || ancient;
     g.perks.push({ perk: id, rank });
   }
   for (const [ref, list] of gizmos) {

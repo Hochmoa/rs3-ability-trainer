@@ -309,7 +309,7 @@
       <div class="gizmo-slots">
         @for (g of e.gizmos; track $index; let i = $index) {
           <button class="gizmo-slot" type="button" [class.active]="e.slot === i" (click)="pickGizmoSlot(i)">
-            <span class="gizmo-name">{{ e.types[i] }} gizmo {{ i + 1 }}{{ g.ancient ? ' · ancient' : '' }}</span>
+            <span class="gizmo-name">{{ e.types[i] }} gizmo {{ i + 1 }}</span>
             <span class="gizmo-perks">{{ gizmoLabel(g) }}</span>
           </button>
         }
@@ -321,7 +321,7 @@
             <button class="tile combo" type="button" [class.active]="isCombo(c)" (click)="pickCombo(c)" [title]="c.note ?? ''">
               <span class="tile-short">{{ c.short }}</span>
               <span class="tile-name">{{ comboText(c) }}</span>
-              <span class="tile-meta">{{ c.where }}{{ c.ancient ? '' : ' · standard gizmo' }}</span>
+              <span class="tile-meta">{{ c.where }}</span>
             </button>
           }
         </div>

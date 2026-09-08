@@ -13,7 +13,7 @@ import { ActionBarSetup, AttackPattern, Keybind, BAR_POSITIONS, BONE_SHIELD_ABIL
 import { alt1Announce, focusUrl, openFocusWindow } from '../../core/popout';
 import { CoachService, spokenLabel, spokenSequence } from '../../core/coach.service';
 import { PresetsService } from '../../core/presets.service';
-import { nextRotation, pickRotation as chooseRotation, setupRotations, worstStep } from '../../core/rotation-pick';
+import { chainRotations, nextRotation, pickRotation as chooseRotation, setupRotations, worstStep } from '../../core/rotation-pick';
 import { noteEntity, stepToEngineEntity } from '../../core/step-entity';
 import { StorageService } from '../../core/storage.service';
 import { prebuildFor, rotationAssumptions } from '../../core/rotation-requires';
@@ -195,6 +195,16 @@ export class Train implements OnDestroy {
 
   readonly selectedId = signal<string | null>(null);
   readonly rotation = computed(() => this.storage.rotations().find((r) => r.id === this.selectedId()) ?? null);
+  /** "play on": the selected rotation and every one after it in the setup run as one session (core/rotation-pick chainRotations) */
+  readonly chain = signal(readChain());
+  /** the rotations a chained session plays: the selected one and the rest of the setup in order */
+  readonly chainList = computed<Rotation[]>(() => {
+    const list = this.setupRotationList();
+    const i = list.findIndex((r) => r.id === this.selectedId());
+    return i < 0 ? [] : list.slice(i);
+  });
+  /** what the session actually plays: the selected rotation, or the chain from it onwards */
+  readonly played = computed<Rotation | null>(() => (this.chain() && this.chainList().length > 1 ? chainRotations(this.chainList()) : this.rotation()));
   /**
    * The setup picker: a setup is the boss and the gear, its rotations fill the second select. With every PvME boss
    * setup added the list holds over a hundred entries, so the select is grouped by boss and a search field narrows
@@ -220,15 +230,16 @@ export class Train implements OnDestroy {
   });
   /** "42 steps · Necromancy" under the rotation select */
   readonly rotationCaption = computed(() => {
-    const r = this.rotation();
+    const r = this.played();
     if (!r) return '';
     const n = r.steps.filter((st) => st.kind !== 'note').length;
     // the combat styles only – Defence / Constitution abilities are not what a rotation is "about"
     const styles = [...this.rotationStyles()].filter((st) => isStyle4(st));
-    return n + (n === 1 ? ' step' : ' steps') + (styles.length ? ' · ' + styles.join(' / ') : '');
+    const chained = this.chain() && this.chainList().length > 1 ? this.chainList().length + ' rotations in a row · ' : '';
+    return chained + n + (n === 1 ? ' step' : ' steps') + (styles.length ? ' · ' + styles.join(' / ') : '');
   });
-  /** the rotation after this one in its PvME preset – "Next: Phase 4" on the session end */
-  readonly next = computed(() => nextRotation(this.storage.rotations(), this.rotation()));
+  /** the rotation after this one in its PvME preset – "Next: Phase 4" on the session end (a chained session has none, it played them) */
+  readonly next = computed(() => (this.chain() && this.chainList().length > 1 ? null : nextRotation(this.storage.rotations(), this.rotation())));
   /** the next rotation's name without the boss prefix it shares with the current one */
   readonly nextLabel = computed(() => {
     const n = this.next();
@@ -242,7 +253,7 @@ export class Train implements OnDestroy {
   readonly optionsOpen = signal(readOptionsOpen());
   /** rotation steps resolved to entities (null = unknown / removed from the game); notes become synthetic entities */
   readonly stepEntities = computed<(Entity | null)[]>(
-    () => this.rotation()?.steps.map((s, i) => (s.kind === 'note' ? noteEntity(s, i) : this.data.step(s) ?? null)) ?? [],
+    () => this.played()?.steps.map((s, i) => (s.kind === 'note' ? noteEntity(s, i) : this.data.step(s) ?? null)) ?? [],
   );
   readonly unknownSteps = computed(() => (this.data.loadoutReady() ? this.stepEntities().filter((e) => !e).length : 0));
 
@@ -439,9 +450,6 @@ export class Train implements OnDestroy {
         });
       }
     }
-    for (const [id, kb] of Object.entries(s.weaponKeybinds)) {
-      if (kb) m.set('weapon:' + id, keybindLabel(kb));
-    }
     // a switch to the weapon already in hand needs no key: the engine completes that step on its own
     const eq = this.storage.loadout().equipment;
     for (const ref of [eq.mainHand, eq.offHand, eq.twoHand]) if (ref?.kind === 'weapon' && !m.has('weapon:' + ref.id)) m.set('weapon:' + ref.id, 'wielded');
@@ -486,7 +494,7 @@ export class Train implements OnDestroy {
    * built before the pull – so this is not a mistake in the rotation, it is its pre-build, and one click writes it.
    */
   readonly assumptions = computed(() => {
-    const r = this.rotation();
+    const r = this.played();
     if (!r || !this.data.loaded()) return [];
     return rotationAssumptions(r.steps, this.effectivePrebuild()).map((a) => ({
       ...a,
@@ -553,7 +561,7 @@ export class Train implements OnDestroy {
   readonly coarsePointer = signal(mediaMatches('(pointer: coarse)'));
   private destroyRef = inject(DestroyRef);
 
-  readonly canStart = computed(() => !!this.rotation() && this.stepEntities().length > 0 && this.unreachable().length === 0 && this.unknownSteps() === 0);
+  readonly canStart = computed(() => !!this.played() && this.stepEntities().length > 0 && this.unreachable().length === 0 && this.unknownSteps() === 0);
   /** the feedback line before Start */
   readonly idleText = computed(() => (this.canStart() ? (this.coarsePointer() ? 'Press Start, then tap the glowing slot.' : 'Press Start, then press the keys of the glowing slots.') : ''));
   /** resources shown for this rotation (STYLE_STACKS of its styles); Storm Shards sit on the target, so they cannot be pre-built */
@@ -853,7 +861,7 @@ export class Train implements OnDestroy {
       const raw = steps[j];
       const eofIcon = this.eofIcon(raw);
       const entity = eofIcon ? { ...raw, icon: eofIcon } : raw;
-      const rs = this.rotation()?.steps[j];
+      const rs = this.played()?.steps[j];
       // overlay: the ability's own cooldown, or for the current GCD ability the global cooldown – whichever ends LATER,
       // because that is when the ability can actually be pressed. Piercing Shot → EoF spec → Piercing Shot: the first
       // Piercing's 5-tick cooldown ends one tick before the GCD of the EoF cast; showing the cooldown until it ran out
@@ -970,6 +978,15 @@ export class Train implements OnDestroy {
   }
 
   /** Rotation dropdown: a rotation brings its setup (gear) along. */
+  setChain(on: boolean): void {
+    this.chain.set(on);
+    try {
+      localStorage.setItem(CHAIN_KEY, on ? '1' : '0');
+    } catch {
+      /* storage blocked: the choice lasts for this visit */
+    }
+  }
+
   pickRotation(id: string): void {
     this.selectedId.set(id);
     const r = this.storage.rotations().find((x) => x.id === id);
@@ -1029,8 +1046,8 @@ export class Train implements OnDestroy {
     return this.data.name(key);
   }
 
-  /** carried weapons of the active loadout with their switch keys */
-  readonly carriedWeapons = computed(() => this.data.carriedWeapons(this.gearState()).map((e) => ({ entity: e, key: keybindLabel(this.storage.actionBars().weaponKeybinds[e.id]) })));
+  /** carried weapons of the active loadout: a click on one switches to it */
+  readonly carriedWeapons = computed(() => this.data.carriedWeapons(this.gearState()).map((e) => ({ entity: e })));
 
   /** client actions with a key (target cycle …) as tappable chips next to the weapon switches – a rotation step like "(tc)" has no bar slot to tap otherwise */
   readonly actionChips = computed(() =>
@@ -1059,7 +1076,7 @@ export class Train implements OnDestroy {
   }
 
   start(): void {
-    const rot = this.rotation();
+    const rot = this.played();
     if (!rot || !this.canStart()) return;
     const setup = this.storage.actionBars();
     const rotSteps = rot.steps;
@@ -1244,9 +1261,6 @@ export class Train implements OnDestroy {
   /** backpack potions grey out like bar slots when they cannot be drunk right now – reads `slotUsable` where it is called, so the panel input stays the same function */
   private readonly gearUsableFn = (ref: ItemRef): boolean => ref.kind !== 'special' || (this.slotUsable().get('special:' + ref.id) ?? 'ok') === 'ok';
   readonly gearUsable = computed<((ref: ItemRef) => boolean) | null>(() => (this.running() ? this.gearUsableFn : null));
-
-  /** switch key of a carried weapon, shown on its backpack cell */
-  readonly gearKey = (ref: ItemRef): string => (ref.kind === 'weapon' ? keybindLabel(this.storage.actionBars().weaponKeybinds[ref.id]) : '');
 
   /**
    * The item the current step needs, marked in the gear panel. A PvME setup carries several Essence of Finality
@@ -1777,7 +1791,7 @@ export class Train implements OnDestroy {
   }
 
   private saveSession(): void {
-    const rot = this.rotation();
+    const rot = this.played();
     const results = this.results();
     const stuck = this.stuck();
     // a session stuck on its first step has no results but is still worth keeping: the rotation cannot be played
@@ -1915,16 +1929,15 @@ export class Train implements OnDestroy {
   onMouseButtonRelease(e: MouseEvent): void {
     if (!this.running()) return;
     const kb = keybindFromMouse(e);
-    if (kb && resolvePress(this.storage.actionBars(), keybindKey(kb), this.carriedWeapons().map((w) => w.entity.id))) e.preventDefault();
+    if (kb && resolvePress(this.storage.actionBars(), keybindKey(kb))) e.preventDefault();
   }
 
   private pressBind(kb: Keybind, e: Event): void {
-    // the same resolution as the drill (core/keybind.util): carried weapons' switch keys, client actions, then the bars
-    const target = resolvePress(this.storage.actionBars(), keybindKey(kb), this.carriedWeapons().map((w) => w.entity.id));
+    // the same resolution as the drill (core/keybind.util): client actions, then the bars
+    const target = resolvePress(this.storage.actionBars(), keybindKey(kb));
     if (!target) return;
     e.preventDefault();
-    if (target.kind === 'weapon') this.press('weapon:' + target.id);
-    else if (target.kind === 'action') this.press('action:' + target.id);
+    if (target.kind === 'action') this.press('action:' + target.id);
     else {
       const entity = this.bars().find((b) => b.position === target.pos)?.slots[target.slot]?.entity;
       if (entity) this.press(entity.key);
@@ -1934,6 +1947,16 @@ export class Train implements OnDestroy {
 
 function mediaMatches(query: string): boolean {
   return typeof window !== 'undefined' && window.matchMedia(query).matches;
+}
+
+/** "play on into the next rotations", remembered per browser */
+const CHAIN_KEY = 'rs3trainer.chain';
+function readChain(): boolean {
+  try {
+    return localStorage.getItem(CHAIN_KEY) === '1';
+  } catch {
+    return false;
+  }
 }
 
 function readOptionsOpen(): boolean {

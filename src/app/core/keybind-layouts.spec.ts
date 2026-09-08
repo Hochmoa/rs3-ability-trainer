@@ -12,16 +12,15 @@ describe('keybind layouts', () => {
     expect(keybindLayout('nope').id).toBe(DEFAULT_LAYOUT_ID);
   });
 
-  it.each(filled.map((l) => [l.name, l] as const))('%s: 5 bars with 14 keys each, 9 weapon keys', (_, l) => {
+  it.each(filled.map((l) => [l.name, l] as const))('%s: 5 bars with 14 keys each', (_, l) => {
     expect(l.bars.length).toBe(BAR_POSITIONS);
     for (const bar of l.bars) {
       expect(bar.length).toBe(BAR_SLOTS);
       for (const code of bar) expect(code).not.toBe('');
     }
-    expect(l.weapons.length).toBe(9);
   });
 
-  it.each(filled.map((l) => [l.name, l] as const))('%s: no key twice (slots, weapons, actions)', (_, l) => {
+  it.each(filled.map((l) => [l.name, l] as const))('%s: no key twice (slots, actions)', (_, l) => {
     const keys = layoutKeybinds(l).map(keybindKey);
     expect(new Set(keys).size).toBe(keys.length);
   });
@@ -53,26 +52,23 @@ describe('reserved keybinds', () => {
 });
 
 describe('applyLayout', () => {
-  it('overwrite fills every slot of every bar, the weapons in order and the actions', () => {
-    const { data, filled } = applyLayout(defaultActionBars(), keybindLayout('rows'), { overwrite: true, weaponIds: ['a', 'b'] });
+  it('overwrite fills every slot of every bar and the actions', () => {
+    const { data, filled } = applyLayout(defaultActionBars(), keybindLayout('rows'), { overwrite: true });
     expect(data.slotKeybinds.length).toBe(BAR_POSITIONS);
     for (const row of data.slotKeybinds) expect(row.filter(Boolean).length).toBe(BAR_SLOTS);
     expect(data.slotKeybinds[0][0]).toEqual({ code: 'Digit1', ctrl: false, shift: false, alt: false });
     expect(data.slotKeybinds[1][0]).toEqual({ code: 'KeyQ', ctrl: false, shift: false, alt: false });
     expect(data.slotKeybinds[4][0]).toEqual({ code: 'Digit1', ctrl: false, shift: true, alt: false });
-    expect(data.weaponKeybinds['a']?.code).toBe('F1');
-    expect(data.weaponKeybinds['b']?.code).toBe('F2');
     expect(data.actionKeybinds?.['target-cycle']?.code).toBe('Tab');
     expect(data.actionKeybinds?.['combat-dummy']?.code).toBe('Backquote');
-    expect(filled).toBe(BAR_POSITIONS * BAR_SLOTS + 2 + 2); // 70 slots + 2 weapons + target cycle + combat dummy
+    expect(filled).toBe(BAR_POSITIONS * BAR_SLOTS + 2); // 70 slots + target cycle + combat dummy
   });
 
   it('overwrite drops keys the layout does not set (empty layout clears everything)', () => {
-    const base = applyLayout(defaultActionBars(), keybindLayout('rows'), { overwrite: true, weaponIds: ['a'] }).data;
+    const base = applyLayout(defaultActionBars(), keybindLayout('rows'), { overwrite: true }).data;
     const { data, filled } = applyLayout(base, keybindLayout('empty'), { overwrite: true });
     expect(filled).toBe(0);
     expect(hasNoSlotKeys(data)).toBe(true);
-    expect(data.weaponKeybinds['a']).toBeNull();
     expect(data.actionKeybinds?.['target-cycle']).toBeNull();
   });
 

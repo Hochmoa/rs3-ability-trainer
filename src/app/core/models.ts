@@ -520,6 +520,7 @@ export interface GizmoPerk {
 }
 
 export interface Gizmo {
+  /** always true: the trainer knows only ancient gizmos (Martin, Sept 2026). Kept so stored loadouts parse. */
   ancient: boolean;
   perks: GizmoPerk[];
 }
@@ -742,8 +743,8 @@ export function newLoadout(name = 'Default'): Loadout {
     armourSet: null,
     armourPieces: 0,
     items: [],
-    weaponGizmos: [{ ancient: false, perks: [] }, { ancient: false, perks: [] }],
-    armourGizmos: [{ ancient: false, perks: [] }, { ancient: false, perks: [] }],
+    weaponGizmos: [{ ancient: true, perks: [] }, { ancient: true, perks: [] }],
+    armourGizmos: [{ ancient: true, perks: [] }, { ancient: true, perks: [] }],
     relics: [],
     spiritPact: 0,
     overload: 'elder',

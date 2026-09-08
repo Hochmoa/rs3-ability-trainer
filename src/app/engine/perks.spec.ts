@@ -215,18 +215,17 @@ describe('gizmo validation (loadoutWarnings)', () => {
     ).toEqual([]);
   });
 
-  it('rank limits: standard gizmos stop at the standard max, ancient gizmos one higher', () => {
-    expect(warnings({ two: SCYTHE, weapon: [gizmo([['precise', 6]], false)] })).toEqual(['Noxious scythe: Precise rank 6 exceeds the maximum of 5 (standard gizmo).']);
-    expect(warnings({ two: SCYTHE, weapon: [gizmo([['precise', 5]], false)] })).toEqual([]);
+  it('rank limits: every gizmo is ancient, so the ancient maximum applies and the stored flag changes nothing', () => {
+    expect(warnings({ two: SCYTHE, weapon: [gizmo([['precise', 6]], false)] })).toEqual([]);
     expect(warnings({ two: SCYTHE, weapon: [gizmo([['precise', 7]])] })).toEqual(['Noxious scythe: Precise rank 7 exceeds the maximum of 6.']);
-    expect(warnings({ two: SCYTHE, body: gizmo([['biting', 4]], false) })[0]).toContain('Biting rank 4 exceeds the maximum of 3');
+    expect(warnings({ two: SCYTHE, body: gizmo([['biting', 4]], false) })).toEqual([]);
+    expect(warnings({ two: SCYTHE, body: gizmo([['biting', 5]]) })[0]).toContain('Biting rank 5 exceeds the maximum of 4');
     expect(warnings({ two: SCYTHE, weapon: [gizmo([['precise', 0]])] })).toEqual(['Noxious scythe: Precise rank must be at least 1.']);
   });
 
-  it('ancient-only perks need an ancient gizmo', () => {
-    expect(warnings({ two: SCYTHE, weapon: [gizmo([['ruthless', 3]], false)] })).toEqual(['Noxious scythe: Ruthless needs an ancient gizmo.', 'Noxious scythe: Ruthless rank 3 exceeds the maximum of 0 (standard gizmo).']);
-    expect(warnings({ two: SCYTHE, body: gizmo([['relentless', 5]], false) })).toContain('Teralith cuirass: Relentless needs an ancient gizmo.');
-    expect(warnings({ two: SCYTHE, body: gizmo([['relentless', 5]]) })).toEqual([]);
+  it('ancient-only perks go in any gizmo, because every gizmo is ancient', () => {
+    expect(warnings({ two: SCYTHE, weapon: [gizmo([['ruthless', 3]], false)] })).toEqual([]);
+    expect(warnings({ two: SCYTHE, body: gizmo([['relentless', 5]], false) })).toEqual([]);
   });
 
   it('weapon perks stay on weapon gizmos, armour perks on armour gizmos (a shield takes an armour gizmo)', () => {
@@ -301,7 +300,7 @@ describe('Precise / Equilibrium / Eruptive', () => {
     expect(attackHit(l, 0.99).amount).toBe(Math.floor(AD * (121.7 + 0.99 * 8.3) / 100)); // 129.917% → 2198
   });
 
-  it('Precise 5 (standard max) vs 6 (ancient)', () => {
+  it('Precise 5 vs 6', () => {
     expect(attackHit(resolve({ two: SCYTHE, weapon: [gizmo([['precise', 5]], false)] })).amount).toBe(Math.floor(AD * (119.75 + 0.5 * 10.25) / 100)); // 2116
   });
 

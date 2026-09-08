@@ -1,3 +1,4 @@
+import { morphSourceOf } from '../engine/morphs';
 import { KeybindLayout } from './keybind-layouts';
 import { isReservedKeybind, keybindKey, parseKeybind } from './keybind.util';
 import { ActionBarSetup, BAR_POSITIONS, BAR_SLOTS, Keybind, RotationStep, SPEC_KEY, Style4, entityKey, visiblePresets } from './models';
@@ -15,7 +16,7 @@ export interface PlaceResult {
 /**
  * "Auto-place on my bars": puts the entities of a rotation that are on no keybound slot onto the free slots of the
  * bars shown for `style` (main bar first), gives every slot it uses a key from `layout` when the slot has none
- * (keys nobody else uses), binds weapon switches to the layout's weapon keys and client actions to their layout key.
+ * (keys nobody else uses) and binds client actions to their layout key. Weapons are clicked, they need no key.
  * A position without a preset gets the first unused empty one. Pure – the setup passed in is not changed.
  */
 export function placeOnBars(setup: ActionBarSetup, style: Style4, keys: string[], layout: KeybindLayout): PlaceResult {
@@ -26,7 +27,6 @@ export function placeOnBars(setup: ActionBarSetup, style: Style4, keys: string[]
 
   const used = new Set<string>();
   for (const row of s.slotKeybinds) for (const kb of row) if (kb) used.add(keybindKey(kb));
-  for (const kb of Object.values(s.weaponKeybinds)) if (kb) used.add(keybindKey(kb));
   for (const kb of Object.values(s.actionKeybinds)) if (kb) used.add(keybindKey(kb));
   let filled = 0;
   const take = (code: string | undefined): Keybind | null => {
@@ -75,12 +75,7 @@ export function placeOnBars(setup: ActionBarSetup, style: Style4, keys: string[]
     const id = key.slice(i + 1);
     if (kind === 'note') continue;
     if (kind === 'weapon') {
-      if (!s.weaponKeybinds[id]) {
-        let kb: Keybind | null = null;
-        for (const code of layout.weapons) if ((kb = take(code))) break;
-        s.weaponKeybinds[id] = kb;
-      }
-      (s.weaponKeybinds[id] ? placed : left).push(key);
+      placed.push(key); // switched with a click on the weapon in the backpack, no key needed
       continue;
     }
     if (kind === 'action') {
@@ -89,7 +84,9 @@ export function placeOnBars(setup: ActionBarSetup, style: Style4, keys: string[]
       continue;
     }
     // every weapon special fires from the one generic "Weapon Special Attack" slot
-    const step: RotationStep = kind === 'spec' ? { kind: 'ability', id: SPEC_KEY.slice('ability:'.length) } : ({ kind, id } as RotationStep);
+    // Command X has no slot of its own: it is what the Conjure X slot shows while the spirit is out (engine/morphs.ts)
+    const slotId = kind === 'ability' ? morphSourceOf(id) ?? id : id;
+    const step: RotationStep = kind === 'spec' ? { kind: 'ability', id: SPEC_KEY.slice('ability:'.length) } : ({ kind, id: slotId } as RotationStep);
     let at = findSlot(step.kind, step.id);
     if (!at) {
       at = freeSlot();
@@ -115,7 +112,7 @@ export function unboundKeys(setup: ActionBarSetup, steps: RotationStep[], slotKe
   for (const st of steps) {
     if (st.kind === 'note') continue;
     const key = st.kind === 'spec' ? SPEC_KEY : entityKey(st.kind, st.id);
-    const bound = st.kind === 'weapon' ? !!setup.weaponKeybinds[st.id] : st.kind === 'action' ? !!setup.actionKeybinds?.[st.id] : slotKeys.has(key);
+    const bound = st.kind === 'weapon' ? true : st.kind === 'action' ? !!setup.actionKeybinds?.[st.id] : slotKeys.has(key);
     if (!bound && !out.includes(key)) out.push(key);
   }
   return out;

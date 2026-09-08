@@ -2,7 +2,7 @@ import { Component, HostListener, OnDestroy, computed, inject, signal } from '@a
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { DataService, Entity } from '../../core/data.service';
-import { Drill, DrillSource, DrillSummary, DrillTarget, WEAPON_POS, buildPool } from '../../core/drill';
+import { Drill, DrillSource, DrillSummary, DrillTarget, buildPool } from '../../core/drill';
 import { keybindFromEvent, keybindFromMouse, keybindKey, keybindLabel, resolvePress } from '../../core/keybind.util';
 import { BAR_POSITIONS, BarShape, Keybind, Style4, barLayout, entityKey, loadoutStyle, visiblePresets } from '../../core/models';
 import { PresetsService } from '../../core/presets.service';
@@ -18,7 +18,6 @@ import { EntityTip } from '../../shared/tooltip';
 interface DrillOptions {
   /** bar positions to drill (index = position) */
   bars: boolean[];
-  weapons: boolean;
   prayers: boolean;
   /** rotation id to restrict the pool to, null = every keybound slot */
   rotation: string | null;
@@ -37,13 +36,6 @@ interface BarView {
   shape: BarShape;
   /** part of the drill pool */
   on: boolean;
-}
-
-interface WeaponView {
-  entity: Entity;
-  keyLabel: string;
-  expected: boolean;
-  flash: 'fired' | 'wrong' | null;
 }
 
 interface Finish {
@@ -69,7 +61,7 @@ export const ROUNDS = [
 ];
 
 function defaultOptions(): DrillOptions {
-  return { bars: Array(BAR_POSITIONS).fill(true), weapons: true, prayers: true, rotation: null, paceMs: 0, rounds: 20, hint: true };
+  return { bars: Array(BAR_POSITIONS).fill(true), prayers: true, rotation: null, paceMs: 0, rounds: 20, hint: true };
 }
 
 function loadOptions(): DrillOptions {
@@ -80,7 +72,6 @@ function loadOptions(): DrillOptions {
     const o = JSON.parse(raw) as Partial<DrillOptions>;
     return {
       bars: Array.isArray(o.bars) && o.bars.length === BAR_POSITIONS ? o.bars.map((b) => !!b) : d.bars,
-      weapons: typeof o.weapons === 'boolean' ? o.weapons : d.weapons,
       prayers: typeof o.prayers === 'boolean' ? o.prayers : d.prayers,
       rotation: typeof o.rotation === 'string' ? o.rotation : null,
       paceMs: PACES.some((p) => p.ms === o.paceMs) ? (o.paceMs as number) : d.paceMs,
@@ -132,7 +123,7 @@ export class DrillPage implements OnDestroy {
   private drill: Drill | null = null;
   private timer = 0;
   private flashTimer = 0;
-  /** slot / weapon lit up after a press */
+  /** slot lit up after a press */
   readonly flash = signal<{ pos: number; slot: number; kind: 'fired' | 'wrong' } | null>(null);
   /** the big icon's frame after a press */
   readonly promptState = signal<IconState>('idle');
@@ -157,7 +148,7 @@ export class DrillPage implements OnDestroy {
     return keys;
   });
 
-  /** everything with a key on the visible bars plus the weapon switches, before the filter */
+  /** everything with a key on the visible bars, before the filter */
   readonly sources = computed<DrillSource[]>(() => {
     const s = this.storage.actionBars();
     const shown = visiblePresets(s, this.style());
@@ -172,13 +163,12 @@ export class DrillPage implements OnDestroy {
         out.push({ key: entity.key, aliases, kind: entity.kind, pos, slot, keybind: s.slotKeybinds[pos]?.[slot] ?? null });
       });
     }
-    this.carried().forEach((w, i) => out.push({ key: w.key, kind: 'weapon', pos: WEAPON_POS, slot: i, keybind: s.weaponKeybinds[w.id] ?? null }));
     return out;
   });
 
   readonly pool = computed<DrillTarget[]>(() => {
     const o = this.options();
-    return buildPool(this.sources(), { bars: o.bars, weapons: o.weapons, prayers: o.prayers, onlyKeys: this.rotationKeys() });
+    return buildPool(this.sources(), { bars: o.bars, prayers: o.prayers, onlyKeys: this.rotationKeys() });
   });
 
   /** distinct entities in the pool – what the summary counts as "abilities" */
@@ -187,8 +177,6 @@ export class DrillPage implements OnDestroy {
   /** keybound slots on the bars at all – without any, the page points at the Keybinds page */
   readonly anyKeys = computed(() => this.sources().some((s) => !!s.keybind));
 
-  /** weapons of the active loadout (the switches the drill can ask for) */
-  readonly carried = computed(() => this.data.carriedWeapons(this.storage.loadout()));
 
   readonly current = computed<DrillTarget | null>(() => {
     this.version();
@@ -219,18 +207,6 @@ export class DrillPage implements OnDestroy {
     return { hits: d?.hits ?? 0, misses: d?.misses ?? 0, streak: d?.streak ?? 0, best: d?.bestStreak ?? 0, avgMs: d?.avgMs() ?? null, round: d?.round ?? 0, rounds: d?.config.rounds ?? 0 };
   });
   readonly elapsedS = computed(() => (this.running() ? Math.floor((this.now() - this.startedAt()) / 1000) : 0));
-
-  readonly weapons = computed<WeaponView[]>(() => {
-    const s = this.storage.actionBars();
-    const cur = this.current();
-    const flash = this.flash();
-    return this.carried().map((entity, i) => ({
-      entity,
-      keyLabel: keybindLabel(s.weaponKeybinds[entity.id]),
-      expected: !!cur && cur.pos === WEAPON_POS && cur.slot === i,
-      flash: flash && flash.pos === WEAPON_POS && flash.slot === i ? flash.kind : null,
-    }));
-  });
 
   /** the five bars: only `expected`, `flash` and `keyLabel` matter, nothing cools down here */
   readonly bars = computed<BarView[]>(() => {
@@ -390,12 +366,6 @@ export class DrillPage implements OnDestroy {
     if (entity) this.press({ key: entity.key }, { pos, slot });
   }
 
-  weaponClick(i: number): void {
-    if (!this.running()) return;
-    const w = this.carried()[i];
-    if (w) this.press({ key: w.key }, { pos: WEAPON_POS, slot: i });
-  }
-
   /** while a dialog / the feedback form is open the drill hotkeys stay quiet (see onKeydown) */
   private dialogs = inject(DialogService);
   private feedbackDialog = inject(FeedbackService);
@@ -432,14 +402,9 @@ export class DrillPage implements OnDestroy {
 
   private pressBind(kb: Keybind, e: Event): void {
     const k = keybindKey(kb);
-    // same order as the trainer (core/keybind.util resolvePress): weapon keys, client actions, then the bars top to bottom
-    const carried = this.carried();
-    const target = resolvePress(this.storage.actionBars(), k, carried.map((w) => w.id));
-    if (target?.kind === 'weapon') {
-      e.preventDefault();
-      const i = carried.findIndex((w) => w.id === target.id);
-      this.press({ bind: k, key: carried[i].key }, { pos: WEAPON_POS, slot: i });
-    } else if (target?.kind === 'slot') {
+    // same order as the trainer (core/keybind.util resolvePress): client actions, then the bars top to bottom
+    const target = resolvePress(this.storage.actionBars(), k);
+    if (target?.kind === 'slot') {
       e.preventDefault();
       const entity = this.bars().find((b) => b.position === target.pos)?.slots[target.slot]?.entity;
       this.press({ bind: k, key: entity?.key }, { pos: target.pos, slot: target.slot });

@@ -1,4 +1,4 @@
-import { Rotation, StepResult } from './models';
+import { Rotation, RotationStep, StepResult } from './models';
 
 /**
  * Which rotation the Train page selects: the one the URL asks for (`?rotation=<id>`) when it exists, else the one
@@ -13,6 +13,21 @@ export function setupRotations(rotations: readonly Rotation[], setupId: string):
   return rotations
     .filter((r) => r.setupId === setupId)
     .sort((a, b) => (a.presetIndex !== undefined && b.presetIndex !== undefined ? a.presetIndex - b.presetIndex : a.name.localeCompare(b.name, undefined, { numeric: true })));
+}
+
+/**
+ * One rotation out of `list` played back to back: the steps of the first, then for every further one a note the
+ * player has to click ("Next: Phase 2") and its steps. Nothing resets in between, so the adrenaline, the stacks,
+ * the conjures and the buffs of one rotation carry into the next, the way a fight goes on into its next phase.
+ * The note takes no ticks: the next input is due right after the click.
+ */
+export function chainRotations(list: readonly Rotation[]): Rotation | null {
+  if (!list.length) return null;
+  const [first, ...rest] = list;
+  if (!rest.length) return first;
+  const steps: RotationStep[] = [...first.steps];
+  for (const r of rest) steps.push({ kind: 'note', id: '', note: 'Next: ' + r.name, requiresAction: true, actionTicks: 0 }, ...r.steps);
+  return { ...first, name: first.name + ' and ' + rest.length + ' more', steps };
 }
 
 /** "Next: Phase 4" – the rotation after `current` in its setup, null when it is the last one. */

@@ -91,20 +91,15 @@ export function parseKeybind(text: string): Keybind {
   return { code, ctrl: mods.includes('ctrl'), shift: mods.includes('shift'), alt: mods.includes('alt') };
 }
 
-/** what a key press means for the bars: a weapon switch, a client action, or a bar slot */
-export type PressTarget = { kind: 'weapon'; id: string } | { kind: 'action'; id: string } | { kind: 'slot'; pos: number; slot: number };
+/** what a key press means for the bars: a client action, or a bar slot (weapons are switched by a click, they have no key) */
+export type PressTarget = { kind: 'action'; id: string } | { kind: 'slot'; pos: number; slot: number };
 
 /**
  * Resolves a pressed key (`keybindKey` of the keydown) against the bar setup, in the order the Train page and the
- * drill agree on: the switch keys of the carried weapons (`carriedIds`; a bound weapon that is not carried does
- * nothing, like in the game), then the client actions (target cycle …), then the bar slots top to bottom,
- * left to right. Null = the key is bound to nothing.
+ * drill agree on: the client actions (target cycle …) first, then the bar slots top to bottom, left to right.
+ * Null = the key is bound to nothing.
  */
-export function resolvePress(setup: ActionBarSetup, key: string, carriedIds: Iterable<string>): PressTarget | null {
-  for (const id of carriedIds) {
-    const wk = setup.weaponKeybinds[id];
-    if (wk && keybindKey(wk) === key) return { kind: 'weapon', id };
-  }
+export function resolvePress(setup: ActionBarSetup, key: string): PressTarget | null {
   for (const [id, ak] of Object.entries(setup.actionKeybinds ?? {})) {
     if (ak && keybindKey(ak) === key) return { kind: 'action', id };
   }

@@ -7,6 +7,7 @@ import { keybindLabel } from '../../core/keybind.util';
 import { ActionBarSetup, BAR_POSITION_NAMES, RotationStep, SPELLBOOKS, SPELLBOOK_NAMES, STYLES, STYLES4, Style, Style4, WEAPON_TYPES, isStyle4 } from '../../core/models';
 import { RevolutionPlan, revolutionPlan } from '../../engine/revolution-plan';
 import { isObscureEntity } from '../../core/obscure';
+import { morphSourceOf } from '../../engine/morphs';
 import { StorageService } from '../../core/storage.service';
 import { AbilityIcon } from '../../shared/ability-icon';
 import { EntityTip, TooltipService } from '../../shared/tooltip';
@@ -98,7 +99,7 @@ export class Bars implements OnDestroy {
     const q = this.search().trim().toLowerCase();
     const hide = this.hideObscure();
     const byId = this.data.weaponById();
-    const all = this.data.entities().filter((e) => !hide || !isObscureEntity(e, byId));
+    const all = this.data.entities().filter((e) => !(e.ability && morphSourceOf(e.ability.id)) && (!hide || !isObscureEntity(e, byId)));
     const tab = this.tab();
     const list = q ? all.filter((e) => e.name.toLowerCase().includes(q)) : all.filter((e) => (tab === 'Spells' ? e.kind === 'spell' : e.group === tab));
     return [...list].sort((a, b) => {
@@ -122,11 +123,12 @@ export class Bars implements OnDestroy {
   }
 
   /** which positions / bindings show a preset – for the list */
+  /** "Main bar by default, Main bar with Ranged": where the preset is shown */
   usage(presetId: number): string {
     const s = this.setup();
     const out: string[] = [];
-    s.positions.forEach((p, i) => p === presetId && out.push(this.POSITIONS[i]));
-    for (const st of STYLES4) s.bindings[st].forEach((p, i) => p === presetId && out.push(st + ' → ' + this.POSITIONS[i]));
+    s.positions.forEach((p, i) => p === presetId && out.push(this.POSITIONS[i] + ' by default'));
+    for (const st of STYLES4) s.bindings[st].forEach((p, i) => p === presetId && out.push(this.POSITIONS[i] + ' with ' + st));
     return out.join(', ');
   }
 
@@ -342,7 +344,6 @@ export class Bars implements OnDestroy {
   subtitle(e: Entity): string {
     if (e.ability) return e.ability.basicAttack ? 'auto-attack' : e.ability.type + (e.ability.triggersGcd ? '' : ' · off the GCD');
     if (e.prayer) return 'level ' + e.prayer.level;
-    if (e.special) return '+' + (e.special.adrenaline || e.special.adrenalineOverTime) + '% adrenaline';
     if (e.weapon) return 'weapon switch';
     if (e.spell) return SPELLBOOK_NAMES[e.spell.book] + ' · level ' + e.spell.level + (e.spell.gcd ? '' : ' · off the GCD');
     return '';

@@ -2,6 +2,7 @@
  * Shape migrations for stored user data. Every returning user's IndexedDB (and every server copy) goes through these
  * on load; they are pure so `migrations.spec.ts` can feed them one fixture per build era.
  */
+import { markPlayerAction } from './note-actions';
 import { GearState, SlotOf, addItem, equip } from './equipment';
 import { ActionBarPreset, ActionBarSetup, DEFAULT_SETTINGS, Equipment, GearItem, INVENTORY_SIZE, ItemRef, LegacyBarProfile, Loadout, Rotation, RotationStep, Settings, defaultActionBars, newLoadout } from './models';
 
@@ -74,12 +75,12 @@ export function cleanStep(s: RotationStep): RotationStep {
     if (s.actionTicks !== undefined) out.actionTicks = s.actionTicks;
   }
   if (s.hint && !s.hint.startsWith('/')) out.hint = s.hint; // "/ fingerofdeath": an "either – or" alternative from older imports, not a hint
-  return out;
+  return markPlayerAction(out);
 }
 
-/** Older builds stored steps as plain ability ids. */
+/** Older builds stored steps as plain ability ids; notes that ask for a click get their button (core/note-actions.ts). */
 export function migrateRotation(r: Omit<Rotation, 'steps'> & { steps: (string | RotationStep)[] }): Rotation {
-  return { ...r, steps: r.steps.map((s) => (typeof s === 'string' ? { kind: 'ability', id: s } : s)) };
+  return { ...r, steps: r.steps.map((s) => (typeof s === 'string' ? { kind: 'ability', id: s } : markPlayerAction(s))) };
 }
 
 /** Fills fields added after a loadout was saved. */
@@ -92,10 +93,10 @@ export function normaliseLoadout(l: Partial<Loadout>): Loadout {
   out.switches = [...(l.switches ?? [])];
   out.prayerBook = l.prayerBook === 'Prayers' ? 'Prayers' : 'Curses';
   out.spellbook = l.spellbook === 'ancient' || l.spellbook === 'lunar' ? l.spellbook : 'standard';
-  out.weaponGizmos = (l.weaponGizmos ?? base.weaponGizmos).map((g) => ({ ancient: !!g.ancient, perks: [...(g.perks ?? [])] }));
-  out.armourGizmos = (l.armourGizmos ?? base.armourGizmos).map((g) => ({ ancient: !!g.ancient, perks: [...(g.perks ?? [])] }));
-  while (out.weaponGizmos.length < 2) out.weaponGizmos.push({ ancient: false, perks: [] });
-  while (out.armourGizmos.length < 2) out.armourGizmos.push({ ancient: false, perks: [] });
+  out.weaponGizmos = (l.weaponGizmos ?? base.weaponGizmos).map((g) => ({ ancient: true, perks: [...(g.perks ?? [])] }));
+  out.armourGizmos = (l.armourGizmos ?? base.armourGizmos).map((g) => ({ ancient: true, perks: [...(g.perks ?? [])] }));
+  while (out.weaponGizmos.length < 2) out.weaponGizmos.push({ ancient: true, perks: [] });
+  while (out.armourGizmos.length < 2) out.armourGizmos.push({ ancient: true, perks: [] });
   if (l.equipment) {
     out.equipment = cleanEquipment(l.equipment);
     out.inventory = Array.from({ length: INVENTORY_SIZE }, (_, i) => cleanRef(l.inventory?.[i]));
@@ -125,7 +126,7 @@ export function cleanRef(r: ItemRef | null | undefined): ItemRef | null {
   const out: ItemRef = { kind: r.kind, id: r.id };
   if (r.gizmos?.length) {
     out.gizmos = r.gizmos.map((g) => ({
-      ancient: !!g.ancient,
+      ancient: true, // every gizmo is ancient (models.ts Gizmo)
       perks: (g.perks ?? []).filter((p) => p && typeof p.perk === 'string').map((p) => ({ perk: p.perk, rank: Math.max(1, Math.round(Number(p.rank) || 1)) })),
     }));
   }

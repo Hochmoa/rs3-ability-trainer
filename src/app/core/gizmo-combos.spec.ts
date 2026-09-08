@@ -6,7 +6,7 @@ import { Perk } from './models';
 const perkById = new Map((PERKS as Perk[]).map((p) => [p.id, p]));
 
 describe('gizmo combos – what PvME players actually put in a gizmo', () => {
-  it('every combo names known perks within their rank limits and needs an ancient gizmo only when a perk does', () => {
+  it('every combo names known perks within the ancient rank limits', () => {
     for (const c of GIZMO_COMBOS) {
       expect(c.perks.length, c.id).toBeGreaterThan(0);
       expect(c.perks.length, c.id).toBeLessThanOrEqual(2);
@@ -14,10 +14,8 @@ describe('gizmo combos – what PvME players actually put in a gizmo', () => {
         const perk = perkById.get(p.perk);
         expect(perk, c.id + ': ' + p.perk).toBeDefined();
         expect(perk!.gizmos.some((g) => g === c.type || g === 'ancient-' + c.type), c.id + ': ' + p.perk + ' on a ' + c.type + ' gizmo').toBe(true);
-        expect(p.rank, c.id).toBeLessThanOrEqual(c.ancient ? perk!.maxRankAncient : perk!.maxRank);
+        expect(p.rank, c.id).toBeLessThanOrEqual(perk!.maxRankAncient);
       }
-      const needsAncient = c.perks.some((p) => p.rank > perkById.get(p.perk)!.maxRank || perkById.get(p.perk)!.gizmos.every((g) => g.startsWith('ancient-')));
-      if (needsAncient) expect(c.ancient, c.id + ' needs an ancient gizmo').toBe(true);
     }
     expect(new Set(GIZMO_COMBOS.map((c) => c.id)).size).toBe(GIZMO_COMBOS.length);
   });

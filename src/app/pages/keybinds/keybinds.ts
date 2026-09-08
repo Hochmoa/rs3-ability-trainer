@@ -9,7 +9,7 @@ import { DialogService } from '../../shared/dialog';
 import { ToastService } from '../../shared/toast';
 import { EntityTip } from '../../shared/tooltip';
 
-type Target = { pos: number; slot: number } | { weapon: string } | { action: string };
+type Target = { pos: number; slot: number } | { action: string };
 
 /** one stop of the "bind by pressing" wizard */
 interface WizardStop {
@@ -75,10 +75,6 @@ export class Keybinds {
         if (kb) m.set(keybindKey(kb), [...(m.get(keybindKey(kb)) ?? []), this.POSITIONS[pos] + ' slot ' + (slot + 1)]);
       }),
     );
-    for (const w of this.carried()) {
-      const kb = s.weaponKeybinds[w.id];
-      if (kb) m.set(keybindKey(kb), [...(m.get(keybindKey(kb)) ?? []), w.name]);
-    }
     for (const a of ACTIONS) {
       const kb = s.actionKeybinds?.[a.id];
       if (kb) m.set(keybindKey(kb), [...(m.get(keybindKey(kb)) ?? []), a.name]);
@@ -102,13 +98,6 @@ export class Keybinds {
     return keybindLabel(this.setup().slotKeybinds[pos]?.[slot]);
   }
 
-  /** weapons of the active loadout (in hand + switches) */
-  readonly carried = computed<Entity[]>(() => this.data.carriedWeapons(this.storage.loadout()));
-
-  weaponLabel(id: string): string {
-    return keybindLabel(this.setup().weaponKeybinds[id]);
-  }
-
   conflictOf(kb: Keybind | null, self: string): string[] {
     if (!kb) return [];
     return (this.conflicts().get(keybindKey(kb)) ?? []).filter((x) => x !== self);
@@ -116,10 +105,6 @@ export class Keybinds {
 
   slotConflicts(pos: number, slot: number): string[] {
     return this.conflictOf(this.setup().slotKeybinds[pos]?.[slot] ?? null, this.POSITIONS[pos] + ' slot ' + (slot + 1));
-  }
-
-  weaponConflicts(w: Entity): string[] {
-    return this.conflictOf(this.setup().weaponKeybinds[w.id] ?? null, w.name);
   }
 
   actionLabel(id: string): string {
@@ -160,19 +145,16 @@ export class Keybinds {
   }
 
   private put(s: ActionBarSetup, t: Target, kb: Keybind | null): void {
-    if ('weapon' in t) s.weaponKeybinds = { ...s.weaponKeybinds, [t.weapon]: kb };
-    else if ('action' in t) s.actionKeybinds = { ...(s.actionKeybinds ?? {}), [t.action]: kb };
+    if ('action' in t) s.actionKeybinds = { ...(s.actionKeybinds ?? {}), [t.action]: kb };
     else s.slotKeybinds[t.pos][t.slot] = kb;
   }
 
   private get(s: ActionBarSetup, t: Target): Keybind | null {
-    if ('weapon' in t) return s.weaponKeybinds[t.weapon] ?? null;
     if ('action' in t) return s.actionKeybinds?.[t.action] ?? null;
     return s.slotKeybinds[t.pos]?.[t.slot] ?? null;
   }
 
   private sameTarget(a: Target, b: Target): boolean {
-    if ('weapon' in a) return 'weapon' in b && a.weapon === b.weapon;
     if ('action' in a) return 'action' in b && a.action === b.action;
     return 'pos' in b && a.pos === b.pos && a.slot === b.slot;
   }
@@ -185,11 +167,6 @@ export class Keybinds {
         const t: Target = { pos, slot };
         if (kb && keybindKey(kb) === key && !this.sameTarget(t, self)) return t;
       }
-    }
-    for (const w of this.carried()) {
-      const kb = s.weaponKeybinds[w.id];
-      const t: Target = { weapon: w.id };
-      if (kb && keybindKey(kb) === key && !this.sameTarget(t, self)) return t;
     }
     for (const a of ACTIONS) {
       const kb = s.actionKeybinds?.[a.id];
@@ -224,7 +201,7 @@ export class Keybinds {
 
   /** Number of keys the bar setup has anywhere (slots, weapons, actions). */
   private keyCount(s: ActionBarSetup): number {
-    return s.slotKeybinds.flat().filter(Boolean).length + Object.values(s.weaponKeybinds).filter(Boolean).length + Object.values(s.actionKeybinds ?? {}).filter(Boolean).length;
+    return s.slotKeybinds.flat().filter(Boolean).length + Object.values(s.actionKeybinds ?? {}).filter(Boolean).length;
   }
 
   /** Writes the chosen layout into the active bar setup – all keys (after a confirm) or only the slots without one. */
@@ -238,7 +215,7 @@ export class Keybinds {
       );
       if (!ok) return;
     }
-    const { data, filled } = applyLayout(s, layout, { overwrite, weaponIds: this.carried().map((w) => w.id) });
+    const { data, filled } = applyLayout(s, layout, { overwrite });
     await this.storage.saveActionBars(data);
     this.toasts.show(overwrite ? 'Applied "' + layout.name + '": ' + filled + ' keys' : filled ? 'Filled ' + filled + ' empty slots from "' + layout.name + '"' : 'Nothing to fill: every slot already has a key, or its layout key is taken');
   }
@@ -255,7 +232,6 @@ export class Keybinds {
         if (entity) stops.push({ target: { pos, slot }, entity, where: this.POSITIONS[pos] + ' · slot ' + (slot + 1) });
       }
     }
-    for (const w of this.carried()) stops.push({ target: { weapon: w.id }, entity: w, where: 'Weapon switch' });
     if (!stops.length) {
       await this.dialogs.alert('The bars of this bar setup are empty. Fill them on the Action bars page or add a boss setup.', 'Nothing to bind');
       return;

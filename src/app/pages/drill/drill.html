@@ -27,10 +27,6 @@
       <div class="field">
         <span>Include</span>
         <div class="pills">
-          <label class="pill" title="The weapon switch keys of the active loadout">
-            <input type="checkbox" [checked]="options().weapons" (change)="set('weapons', !options().weapons)" [disabled]="running()" />
-            weapon switches
-          </label>
           <label class="pill" title="Prayers and curses sitting on the bars">
             <input type="checkbox" [checked]="options().prayers" (change)="set('prayers', !options().prayers)" [disabled]="running()" />
             prayers
@@ -91,11 +87,7 @@
         <div class="what">
           <div class="name">{{ e.name }}</div>
           <div class="where muted">
-            @if (current()!.pos < 0) {
-              weapon switch
-            } @else {
-              {{ current()!.pos === 0 ? 'main bar' : 'bar ' + current()!.pos }}, slot {{ current()!.slot + 1 }}
-            }
+            {{ current()!.pos === 0 ? 'main bar' : 'bar ' + current()!.pos }}, slot {{ current()!.slot + 1 }}
             @if (hintVisible()) {
               · <span class="keyhint">{{ current()!.keyLabel }}</span>
             }
@@ -122,24 +114,6 @@
       }
     </div>
 
-    @if (weapons().length) {
-      <div class="weapons" [class.off]="!options().weapons">
-        <span class="opt-label">Weapons</span>
-        @for (w of weapons(); track w.entity.key) {
-          <button
-            type="button"
-            [class]="'weapon' + (w.expected ? ' expected' : '') + (w.flash ? ' flash-' + w.flash : '')"
-            [entityTip]="w.entity"
-            (click)="weaponClick($index)"
-          >
-            <img [src]="w.entity.icon" [alt]="w.entity.name" draggable="false" />
-            @if (w.keyLabel) {
-              <span class="key">{{ w.keyLabel }}</span>
-            }
-          </button>
-        }
-      </div>
-    }
 
     <div class="action-bars">
       @for (b of bars(); track b.position) {

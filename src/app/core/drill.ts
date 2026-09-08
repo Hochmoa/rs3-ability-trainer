@@ -1,19 +1,17 @@
 import { keybindKey, keybindLabel } from './keybind.util';
 import { Keybind } from './models';
 
-/** bar position of a weapon switch target (weapon keys are not bar slots) */
-export const WEAPON_POS = -1;
 
-/** Something the drill can ask for: a keybound bar slot or a weapon switch. */
+/** Something the drill can ask for: a keybound bar slot. */
 export interface DrillTarget {
   /** entity key of what sits there ("ability:sever", "prayer:soul-split", "weapon:…") */
   key: string;
   /** entity keys this slot also fires (morph targets) – for the rotation filter */
   aliases: string[];
   kind: string;
-  /** bar position 0..4, or WEAPON_POS */
+  /** bar position 0..4 */
   pos: number;
-  /** slot index on the bar; the weapon id's index for weapon switches */
+  /** slot index on the bar */
   slot: number;
   /** keybindKey() of the bound key */
   bind: string;
@@ -33,8 +31,6 @@ export interface DrillSource {
 export interface PoolFilter {
   /** bar positions to include (index = position) */
   bars: boolean[];
-  /** weapon switches */
-  weapons: boolean;
   /** prayers / curses on the bars */
   prayers: boolean;
   /** only entities of one rotation (entity keys); null = everything */
@@ -46,7 +42,7 @@ export function buildPool(sources: DrillSource[], f: PoolFilter): DrillTarget[] 
   const out: DrillTarget[] = [];
   for (const s of sources) {
     if (!s.keybind) continue;
-    if (s.pos === WEAPON_POS ? !f.weapons : !f.bars[s.pos]) continue;
+    if (!f.bars[s.pos]) continue;
     if (s.kind === 'prayer' && !f.prayers) continue;
     const aliases = s.aliases?.length ? s.aliases : [s.key];
     if (f.onlyKeys && !aliases.some((k) => f.onlyKeys!.has(k))) continue;

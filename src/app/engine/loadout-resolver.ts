@@ -111,7 +111,7 @@ export function loadoutWarnings(l: Loadout, data: LoadoutData): string[] {
   return out;
 }
 
-/** One gizmo: perk type, ancient-only perks, rank limits, two perk slots (a two-slot perk fills the gizmo), no perk twice. */
+/** One gizmo: perk type, rank limits (every gizmo is ancient), two perk slots (a two-slot perk fills the gizmo), no perk twice. */
 function checkGizmo(g: Gizmo, type: 'weapon' | 'armour', data: LoadoutData, out: string[], label: string): void {
   let slots = 0;
   const seen = new Set<string>();
@@ -125,10 +125,9 @@ function checkGizmo(g: Gizmo, type: 'weapon' | 'armour', data: LoadoutData, out:
     seen.add(perk.id);
     const allowed = perk.gizmos.includes(type) || perk.gizmos.includes('ancient-' + type);
     if (!allowed) out.push(label + ': ' + perk.name + ' cannot go on a ' + type + ' gizmo.');
-    if (!g.ancient && perk.gizmos.every((x) => x.startsWith('ancient-'))) out.push(label + ': ' + perk.name + ' needs an ancient gizmo.');
-    const max = g.ancient ? perk.maxRankAncient : perk.maxRank;
+    const max = perk.maxRankAncient; // the trainer knows only ancient gizmos (Martin, Sept 2026)
     if (p.rank < 1) out.push(label + ': ' + perk.name + ' rank must be at least 1.');
-    if (p.rank > max) out.push(label + ': ' + perk.name + ' rank ' + p.rank + ' exceeds the maximum of ' + max + (g.ancient ? '' : ' (standard gizmo)') + '.');
+    if (p.rank > max) out.push(label + ': ' + perk.name + ' rank ' + p.rank + ' exceeds the maximum of ' + max + '.');
     slots += perk.twoSlot ? 2 : 1;
   }
   if (slots > 2) out.push(label + ': more than two perk slots used' + (g.perks.some((p) => data.perkById.get(p.perk)?.twoSlot) ? ' (a two-slot perk cannot be paired with another perk)' : '') + '.');

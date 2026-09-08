@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Drill, DrillSource, DrillTarget, WEAPON_POS, buildPool } from './drill';
+import { Drill, DrillSource, DrillTarget, buildPool } from './drill';
 import { Keybind } from './models';
 
 const kb = (code: string): Keybind => ({ code, ctrl: false, shift: false, alt: false });
@@ -10,10 +10,9 @@ const SOURCES: DrillSource[] = [
   { key: 'ability:unbound', kind: 'ability', pos: 0, slot: 2, keybind: null },
   { key: 'prayer:soul-split', kind: 'prayer', pos: 1, slot: 0, keybind: kb('KeyQ') },
   { key: 'ability:tuska', kind: 'ability', pos: 2, slot: 3, keybind: kb('KeyW') },
-  { key: 'weapon:omni-guard', kind: 'weapon', pos: WEAPON_POS, slot: 0, keybind: kb('F1') },
 ];
 
-const ALL = { bars: [true, true, true, true, true], weapons: true, prayers: true, onlyKeys: null };
+const ALL = { bars: [true, true, true, true, true], prayers: true, onlyKeys: null };
 
 function target(key: string, code: string, i = 0): DrillTarget {
   return { key, aliases: [key], kind: 'ability', pos: 0, slot: i, bind: ':' + code, keyLabel: code };
@@ -32,17 +31,16 @@ function seq(...values: number[]): () => number {
 describe('buildPool', () => {
   it('takes only keybound slots and keeps their key and label', () => {
     const pool = buildPool(SOURCES, ALL);
-    expect(pool.map((t) => t.key)).toEqual(['ability:sever', 'ability:greater-death-swiftness', 'prayer:soul-split', 'ability:tuska', 'weapon:omni-guard']);
+    expect(pool.map((t) => t.key)).toEqual(['ability:sever', 'ability:greater-death-swiftness', 'prayer:soul-split', 'ability:tuska']);
     expect(pool[0]).toMatchObject({ pos: 0, slot: 0, bind: ':Digit1', keyLabel: '1' });
   });
 
   it('respects the bar filter', () => {
     const pool = buildPool(SOURCES, { ...ALL, bars: [true, false, false, false, false] });
-    expect(pool.map((t) => t.key)).toEqual(['ability:sever', 'ability:greater-death-swiftness', 'weapon:omni-guard']);
+    expect(pool.map((t) => t.key)).toEqual(['ability:sever', 'ability:greater-death-swiftness']);
   });
 
-  it('drops weapon switches and prayers when switched off', () => {
-    expect(buildPool(SOURCES, { ...ALL, weapons: false }).some((t) => t.pos === WEAPON_POS)).toBe(false);
+  it('drops prayers when switched off', () => {
     expect(buildPool(SOURCES, { ...ALL, prayers: false }).some((t) => t.kind === 'prayer')).toBe(false);
   });
 

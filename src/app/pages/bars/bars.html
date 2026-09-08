@@ -4,9 +4,6 @@
 } @else if (!data.loaded()) {
   <p class="muted">Loading…</p>
 } @else {
-  <div class="panel head">
-    <p class="muted small">Five bars like in game, 18 presets to fill them. They belong to you alone: no setup you use and nothing you import writes into them.</p>
-  </div>
   <div class="layout">
     <div class="panel presets" data-tour="bar-presets">
       <h2>Presets</h2>
@@ -29,7 +26,7 @@
             Preset {{ preset().id }}
             <input type="text" [ngModel]="preset().name" (ngModelChange)="rename($event)" maxlength="30" />
           </label>
-          <span class="muted small">{{ usage(preset().id) || 'not shown anywhere yet' }}</span>
+          <span class="muted small" title="Where this preset is shown: the bars below choose a preset per position, and per weapon style">{{ usage(preset().id) || 'not on any bar yet' }}</span>
           <label class="copy">
             <span class="muted small">Copy from</span>
             <select [value]="copyPick()" (change)="pickCopy($any($event.target).value)">
@@ -98,38 +95,6 @@
         </div>
       </div>
 
-      <details class="advanced">
-        <summary>Revolution check: what fires on its own</summary>
-        <div class="panel">
-          <p class="muted small">
-            Revolution scans the first {{ storage.settings().revolution.slots }} slots of this bar from the left and fires the
-            first ability that can go off{{ revolutionStyle() ? ', with a ' + revolutionStyle() + ' weapon in hand' : '' }}.
-            The size and the ability types are set on the <a routerLink="/settings">Settings</a> page.
-          </p>
-          @for (w of revolution().warnings; track $index) {
-            <p class="warn small">{{ w }}</p>
-          }
-          <ol class="revo-plan">
-            @for (s of revolution().scanned; track s.slot) {
-              <li [class.fires]="s.fires" [class.silent]="!s.fires">
-                <span class="revo-slot">{{ s.slot }}</span>
-                <span class="revo-name">{{ s.name }}</span>
-                @if (s.fires) {
-                  <span class="revo-why">{{ s.lastResort ? 'fires only when nothing else can, the basic attack is the last resort' : 'Revolution fires this' }}</span>
-                } @else {
-                  <span class="revo-why">{{ s.why }}</span>
-                }
-              </li>
-            }
-          </ol>
-          @if (revolution().ignored.length) {
-            <p class="muted small">
-              Past slot {{ storage.settings().revolution.slots }}, never scanned:
-              {{ revolutionIgnoredNames() }}
-            </p>
-          }
-        </div>
-      </details>
 
       <details class="advanced">
         <summary>Match my in-game bars (advanced)</summary>
