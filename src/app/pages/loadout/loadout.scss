@@ -121,8 +121,8 @@
 
 .item-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 6px;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 5px;
   max-height: 600px;
   overflow-y: auto;
   padding: 4px;
@@ -171,13 +171,13 @@
   }
 }
 
-/* one catalog entry: a single item, a main-hand + off-hand pair, or an armour set */
+/* one catalog entry, a row barely taller than its icons: the name and the numbers on the left, every icon on the right */
 .entry {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 3px;
-  padding: 8px 4px;
+  gap: 10px;
+  padding: 3px 8px 3px 10px;
+  min-height: 40px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid transparent;
   border-radius: 6px;
@@ -197,25 +197,45 @@
     border-color: rgba(76, 175, 80, 0.35);
   }
 
-  &.pair {
+  /* a set of five pieces needs the room of two columns */
+  &.set,
+  &.variants {
     grid-column: span 2;
   }
 
-  /* a group card is wider, but laid out like every card: icons on top, the name and the numbers underneath */
-  &.set {
-    grid-column: span 3;
+  .text {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .iname {
+    font-size: 12px;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .imeta {
+    font-size: 11px;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .icons {
     display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 4px;
+    flex: 0 0 auto;
+    gap: 2px;
   }
 
   .piece {
     display: inline-flex;
-    padding: 2px;
+    padding: 1px;
     border-radius: 4px;
     cursor: grab;
     touch-action: none;
@@ -224,16 +244,12 @@
       background: rgba(201, 162, 39, 0.2);
     }
 
-    /* a variant of the icon before it (another tier of the same piece): tucked against it */
+    /* a variant of the icon before it: tucked against it */
     &.alt {
       margin-left: -6px;
       opacity: 0.75;
       transform: scale(0.85);
     }
-  }
-
-  &.variants {
-    grid-column: span 2;
   }
 
   img,
@@ -243,16 +259,12 @@
     object-fit: contain;
     display: block;
   }
+}
 
-  .iname {
-    font-size: 12px;
-    text-align: center;
-    line-height: 1.2;
-  }
-
-  .imeta {
-    font-size: 11px;
-    color: var(--muted);
+@media (max-width: 600px) {
+  .entry.set,
+  .entry.variants {
+    grid-column: 1 / -1;
   }
 }
 

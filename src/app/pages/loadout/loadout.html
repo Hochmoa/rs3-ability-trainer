@@ -68,6 +68,10 @@
               (click)="clickEntry(e)"
               (dblclick)="dblEntry(e)"
             >
+              <div class="text">
+                <span class="iname">{{ e.name }}</span>
+                <span class="imeta">{{ meta(e) }}</span>
+              </div>
               <div class="icons">
                 @for (v of vs; track v.ref.id; let i = $index) {
                   <span class="piece" [class.alt]="isVariant(vs, i)" [gearTip]="v" (pointerdown)="startPieceDrag($event, v)" (click)="clickPiece($event, e, v)" (dblclick)="dblPiece($event, e, v)" (contextmenu)="menuPiece($event, v)">
@@ -75,8 +79,6 @@
                   </span>
                 }
               </div>
-              <span class="iname">{{ e.name }}</span>
-              <span class="imeta">{{ meta(e) }}</span>
             </div>
           }
         }
