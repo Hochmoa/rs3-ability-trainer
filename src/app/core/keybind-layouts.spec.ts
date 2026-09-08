@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_LAYOUT_ID, KEYBIND_LAYOUTS, applyLayout, defaultActionBarsWithKeys, hasNoSlotKeys, keybindLayout, layoutKeybinds } from './keybind-layouts';
 import { isReservedKeybind, keybindKey, parseKeybind } from './keybind.util';
-import { BAR_POSITIONS, BAR_SLOTS, defaultActionBars, profileData } from './models';
+import { BAR_POSITIONS, BAR_SLOTS, defaultActionBars } from './models';
 
 describe('keybind layouts', () => {
   const filled = KEYBIND_LAYOUTS.filter((l) => l.id !== 'empty');
@@ -54,7 +54,7 @@ describe('reserved keybinds', () => {
 
 describe('applyLayout', () => {
   it('overwrite fills every slot of every bar, the weapons in order and the actions', () => {
-    const { data, filled } = applyLayout(profileData(defaultActionBars()), keybindLayout('rows'), { overwrite: true, weaponIds: ['a', 'b'] });
+    const { data, filled } = applyLayout(defaultActionBars(), keybindLayout('rows'), { overwrite: true, weaponIds: ['a', 'b'] });
     expect(data.slotKeybinds.length).toBe(BAR_POSITIONS);
     for (const row of data.slotKeybinds) expect(row.filter(Boolean).length).toBe(BAR_SLOTS);
     expect(data.slotKeybinds[0][0]).toEqual({ code: 'Digit1', ctrl: false, shift: false, alt: false });
@@ -68,7 +68,7 @@ describe('applyLayout', () => {
   });
 
   it('overwrite drops keys the layout does not set (empty layout clears everything)', () => {
-    const base = applyLayout(profileData(defaultActionBars()), keybindLayout('rows'), { overwrite: true, weaponIds: ['a'] }).data;
+    const base = applyLayout(defaultActionBars(), keybindLayout('rows'), { overwrite: true, weaponIds: ['a'] }).data;
     const { data, filled } = applyLayout(base, keybindLayout('empty'), { overwrite: true });
     expect(filled).toBe(0);
     expect(hasNoSlotKeys(data)).toBe(true);
@@ -77,7 +77,7 @@ describe('applyLayout', () => {
   });
 
   it('without overwrite the player\'s keys stay and their layout keys are not handed out twice', () => {
-    const base = profileData(defaultActionBars());
+    const base = defaultActionBars();
     // the player put Q on main bar slot 1 and left the rest empty
     base.slotKeybinds = base.slotKeybinds.map((row) => row.map(() => null));
     base.slotKeybinds[0][0] = { code: 'KeyQ', ctrl: false, shift: false, alt: false };
@@ -89,10 +89,10 @@ describe('applyLayout', () => {
     expect(base.slotKeybinds[1][1]).toBeNull(); // input untouched
   });
 
-  it('a fresh setup with keys mirrors them into the Default profile', () => {
+  it('a fresh setup carries the default layout', () => {
     const s = defaultActionBarsWithKeys();
     expect(hasNoSlotKeys(s)).toBe(false);
-    expect(s.profiles![0].slotKeybinds[1][0]?.code).toBe('KeyQ');
-    expect(s.profiles![0].slotKeybinds[3][13]).toEqual({ code: 'KeyV', ctrl: false, shift: true, alt: false });
+    expect(s.slotKeybinds[1][0]?.code).toBe('KeyQ');
+    expect(s.slotKeybinds[3][13]).toEqual({ code: 'KeyV', ctrl: false, shift: true, alt: false });
   });
 });

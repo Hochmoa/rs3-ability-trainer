@@ -3,28 +3,50 @@
  * on load; they are pure so `migrations.spec.ts` can feed them one fixture per build era.
  */
 import { GearState, SlotOf, addItem, equip } from './equipment';
-import { ActionBarSetup, DEFAULT_SETTINGS, Equipment, GearItem, INVENTORY_SIZE, ItemRef, Loadout, Rotation, RotationStep, Settings, defaultActionBars, newLoadout, snapshotActiveProfile } from './models';
+import { ActionBarPreset, ActionBarSetup, DEFAULT_SETTINGS, Equipment, GearItem, INVENTORY_SIZE, ItemRef, LegacyBarProfile, Loadout, Rotation, RotationStep, Settings, defaultActionBars, newLoadout } from './models';
 
-/** Fills anything a stored setup lacks (older builds, new fields) with defaults. */
+/** Fills anything a stored setup lacks (older builds, new fields) with defaults; legacy bar profiles are folded in. */
 export function mergeActionBars(stored: Partial<ActionBarSetup>): ActionBarSetup {
   const d = defaultActionBars();
   const presets = d.presets.map((p) => {
     const s = stored.presets?.find((x) => x.id === p.id);
     return s ? { ...p, ...s, slots: Array.from({ length: p.slots.length }, (_, i) => s.slots?.[i] ?? null) } : p;
   });
-  return snapshotActiveProfile({
-    presets,
+  return {
+    presets: foldLegacyProfiles(presets, stored.profiles, stored.activeProfileId),
     positions: d.positions.map((p, i) => stored.positions?.[i] ?? p),
     bindings: { ...d.bindings, ...(stored.bindings ?? {}) },
     slotKeybinds: d.slotKeybinds.map((row, p) => row.map((kb, i) => (stored.slotKeybinds?.[p] ? stored.slotKeybinds[p][i] ?? null : kb))),
     weaponKeybinds: { ...(stored.weaponKeybinds ?? {}) },
     actionKeybinds: { ...(d.actionKeybinds ?? {}), ...(stored.actionKeybinds ?? {}) },
     layout: stored.layout,
-    profiles: stored.profiles?.map((p) => ({ ...p })),
-    activeProfileId: stored.activeProfileId,
     updatedAt: stored.updatedAt,
     syncedAt: stored.syncedAt,
-  });
+  };
+}
+
+const filledPreset = (p: Pick<ActionBarPreset, 'slots'>) => (p.slots ?? []).some((s) => !!s);
+
+/**
+ * Builds up to Sept 2026 had named bar setups ("profiles"), each with its own 18 presets; the top-level presets were
+ * the active one. Now there are only the 18 in-game presets: the active profile's bars stay as they are, and the
+ * filled bars of the other profiles move into the presets that are still empty, in order, until none is left.
+ * Positions, bindings and keys are the active profile's. Pure – `presets` is not changed.
+ */
+export function foldLegacyProfiles(presets: ActionBarPreset[], profiles: LegacyBarProfile[] | undefined, activeProfileId: string | undefined): ActionBarPreset[] {
+  const others = (profiles ?? []).filter((p) => p.id !== activeProfileId);
+  if (!others.length) return presets;
+  const out = presets.map((p) => ({ ...p, slots: [...p.slots] }));
+  const free = out.filter((p) => !filledPreset(p));
+  for (const profile of others) {
+    for (const bar of (profile.presets ?? []).filter(filledPreset)) {
+      const target = free.shift();
+      if (!target) return out;
+      target.name = bar.name;
+      target.slots = Array.from({ length: target.slots.length }, (_, i) => bar.slots?.[i] ?? null);
+    }
+  }
+  return out;
 }
 
 /** Older builds stored `queueWindowTicks` (1..3) instead of the in-game on/off setting. */

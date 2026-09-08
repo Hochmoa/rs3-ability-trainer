@@ -61,7 +61,6 @@ export class Keybinds {
     const w = this.wizard();
     return w ? (w.stops[w.index] ?? null) : null;
   });
-  readonly profileName = computed(() => this.storage.barProfiles().find((p) => p.id === this.storage.activeBarProfileId())?.name ?? 'Default');
   private toasts = inject(ToastService);
   private dialogs = inject(DialogService);
   private flashTimer = 0;
@@ -223,7 +222,7 @@ export class Keybinds {
 
   // ---------------------------------------------------------------- layouts
 
-  /** Number of keys the active profile has anywhere (slots, weapons, actions). */
+  /** Number of keys the bar setup has anywhere (slots, weapons, actions). */
   private keyCount(s: ActionBarSetup): number {
     return s.slotKeybinds.flat().filter(Boolean).length + Object.values(s.weaponKeybinds).filter(Boolean).length + Object.values(s.actionKeybinds ?? {}).filter(Boolean).length;
   }
@@ -234,7 +233,7 @@ export class Keybinds {
     const s = this.setup();
     if (overwrite && this.keyCount(s) > 0) {
       const ok = await this.dialogs.confirm(
-        'Replace every key of the bar setup "' + this.profileName() + '" with the layout "' + layout.name + '"?\n\nAll slot keys, weapon switches and client actions are overwritten.',
+        'Replace every key of your bars with the layout "' + layout.name + '"?\n\nAll slot keys, weapon switches and client actions are overwritten.',
         { title: 'Apply layout', ok: 'Replace keys', danger: true },
       );
       if (!ok) return;

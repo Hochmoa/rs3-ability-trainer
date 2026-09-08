@@ -1,5 +1,4 @@
-import { KeybindLayout, applyLayout } from './keybind-layouts';
-import { ActionBarSetup, BAR_POSITIONS, BAR_SLOTS, BarProfileData, EquipSlot, Equipment, INVENTORY_SIZE, ItemRef, Loadout, RotationStep, SPEC_KEY, Style4, defaultActionBars, entityKey, isStyle4, loadoutWeapons, newLoadout, profileData } from './models';
+import { EquipSlot, Equipment, INVENTORY_SIZE, ItemRef, Loadout, RotationStep, newLoadout } from './models';
 
 /** One PvME boss setup (public/data/presets.json, built by tools/fetch-presets.py). */
 export interface BossPreset {
@@ -163,56 +162,4 @@ export function assignEofSpecs(amulets: ItemRef[], stored: string[]): string[] {
     else missing.push(id);
   }
   return missing;
-}
-
-/** Entity keys of everything the rotations press on a bar, in order of first use (weapon switches and client actions are not bar slots). */
-export function presetSlotKeys(rotations: { steps: RotationStep[] }[]): string[] {
-  const keys: string[] = [];
-  for (const r of rotations) {
-    for (const s of r.steps) {
-      if (s.kind === 'note' || s.kind === 'weapon' || s.kind === 'action') continue;
-      const key = s.kind === 'spec' ? SPEC_KEY : entityKey(s.kind, s.id);
-      if (!keys.includes(key)) keys.push(key);
-    }
-  }
-  return keys;
-}
-
-export interface PresetBars {
-  setup: BarProfileData;
-  barsNeeded: number;
-  /** abilities that did not fit on the 5 bars */
-  left: number;
-  /** keys the layout added on top of the player's own */
-  filled: number;
-}
-
-/**
- * The bar setup of a preset: empty bars with the abilities of the rotations on bars 1..n bound to the style, the
- * player's current keys kept and every slot still without a key filled from the layout (weapon switches of the
- * loadout included), so the preset can be played right away.
- */
-export function presetBars(p: BossPreset, keys: string[], cur: ActionBarSetup, layout: KeybindLayout, loadout: Loadout): PresetBars {
-  const fresh = defaultActionBars();
-  const base: BarProfileData = { ...profileData(fresh), slotKeybinds: structuredClone(cur.slotKeybinds), weaponKeybinds: structuredClone(cur.weaponKeybinds), actionKeybinds: structuredClone(cur.actionKeybinds), layout: cur.layout };
-  const style: Style4 = isStyle4(p.style) ? p.style : 'Melee';
-  const barsNeeded = Math.min(BAR_POSITIONS, Math.ceil(keys.length / BAR_SLOTS));
-  let placed = 0;
-  for (let b = 0; b < barsNeeded; b++) {
-    const preset = base.presets[b];
-    preset.name = (p.boss.split(',')[0] + ' ' + p.style + ' ' + (b + 1)).slice(0, 30);
-    for (let i = 0; i < BAR_SLOTS && placed < keys.length; i++, placed++) {
-      const [kind, id] = splitKey(keys[placed]);
-      preset.slots[i] = { kind, id } as RotationStep;
-    }
-    base.positions[b] = preset.id;
-    base.bindings[style][b] = preset.id;
-  }
-  const { data, filled } = applyLayout(base, layout, { overwrite: false, weaponIds: loadoutWeapons(loadout) });
-  return { setup: data, barsNeeded, left: keys.length - placed, filled };
-}
-
-function splitKey(key: string): [RotationStep['kind'], string] {
-  const i = key.indexOf(':');
-  return [key.slice(0, i) as RotationStep['kind'], key.slice(i + 1)];
 }

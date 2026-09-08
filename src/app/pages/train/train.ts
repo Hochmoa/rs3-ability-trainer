@@ -956,7 +956,7 @@ export class Train implements OnDestroy {
     }
   }
 
-  /** Rotation dropdown: a rotation from a PvME preset brings its loadout and bar setup along. */
+  /** Rotation dropdown: a rotation from a PvME preset brings its loadout along. */
   pickRotation(id: string): void {
     this.selectedId.set(id);
     const r = this.storage.rotations().find((x) => x.id === id);
@@ -988,10 +988,6 @@ export class Train implements OnDestroy {
     void this.storage.setActiveLoadout(id);
   }
 
-  pickBars(id: string): void {
-    void this.storage.switchBarProfile(id);
-  }
-
   /**
    * "Popout": the focus view for the selected rotation in a small window next to the game – a Document
    * Picture-in-Picture window (Chromium, stays on top) or a plain popup (core/popout.ts).
@@ -1007,17 +1003,10 @@ export class Train implements OnDestroy {
   private async linkPreset(r: Rotation): Promise<void> {
     if (!r.presetId) return;
     const loadout = this.storage.loadouts().find((l) => l.presetId === r.presetId);
-    const bars = this.storage.barProfiles().find((p) => p.presetId === r.presetId);
-    const switched: string[] = [];
     if (loadout && loadout.id !== this.storage.activeLoadoutId()) {
       await this.storage.setActiveLoadout(loadout.id);
-      switched.push('loadout "' + loadout.name + '"');
+      this.toast.show('Switched to loadout "' + loadout.name + '" for this preset.');
     }
-    if (bars && bars.id !== this.storage.activeBarProfileId()) {
-      await this.storage.switchBarProfile(bars.id);
-      switched.push('bars "' + bars.name + '"');
-    }
-    if (switched.length) this.toast.show('Switched to ' + switched.join(' and ') + ' for this preset.');
   }
 
   ngOnDestroy(): void {

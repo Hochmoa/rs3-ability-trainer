@@ -171,16 +171,6 @@
             </select>
           </label>
         }
-        @if (storage.barProfiles().length > 1) {
-          <label class="field" title="Bar setup: presets, positions, style bindings and keys (Action bars page)">
-            <span>Bar setup</span>
-            <select [ngModel]="storage.activeBarProfileId()" (ngModelChange)="pickBars($event)" [disabled]="running()">
-              @for (p of storage.barProfiles(); track p.id) {
-                <option [value]="p.id">{{ p.name }}</option>
-              }
-            </select>
-          </label>
-        }
       }
       <div class="actions">
         @if (!running()) {

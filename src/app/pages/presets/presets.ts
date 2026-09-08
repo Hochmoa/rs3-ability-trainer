@@ -153,7 +153,7 @@ export class Presets {
 
   async load(p: BossPreset): Promise<void> {
     const ok = await this.dialogs.confirm(
-      'Use "' + p.title + '"?\n\nAdds a loadout, ' + p.rotations.length + ' rotations and a bar setup. Your keys stay; empty slots get default keys. Nothing of yours is replaced.',
+      'Use "' + p.title + '"?\n\nAdds a loadout and ' + p.rotations.length + ' rotations. Your bars and keys are not touched.',
       { ok: 'Use it', title: p.title },
     );
     if (!ok) return;

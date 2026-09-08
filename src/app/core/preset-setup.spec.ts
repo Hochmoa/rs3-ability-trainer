@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { keybindLayout } from './keybind-layouts';
-import { BAR_SLOTS, EquipSlot, ItemRef, RotationStep, SPEC_KEY, defaultActionBars } from './models';
-import { BossPreset, assignEofSpecs, demoRotationIndex, presetBars, presetLoadout, presetSlotKeys } from './preset-setup';
+import { EquipSlot, ItemRef, RotationStep } from './models';
+import { BossPreset, assignEofSpecs, demoRotationIndex, presetLoadout } from './preset-setup';
 
 const preset: BossPreset = {
   id: 'demo-boss-necromancy',
@@ -93,60 +92,6 @@ describe('Essence of Finality amulets', () => {
     const amulets = [eof()];
     expect(assignEofSpecs(amulets, ['reap', 'reap'])).toEqual([]);
     expect(amulets.map((a) => a.spec)).toEqual(['reap']);
-  });
-});
-
-describe('preset slot keys', () => {
-  it('lists every bar input once, in order; notes, weapon switches and actions are not slots; specs share one slot', () => {
-    const keys = presetSlotKeys([
-      { steps: [step('ability', 'touch-of-death'), step('note', ''), step('weapon', 'ek-zekkil'), step('spec', 'ezk'), step('ability', 'touch-of-death'), step('action', 'target-cycle'), step('prayer', 'sorrow')] },
-      { steps: [step('ability', 'finger-of-death'), step('spec', 'other')] },
-    ]);
-    expect(keys).toEqual(['ability:touch-of-death', SPEC_KEY, 'prayer:sorrow', 'ability:finger-of-death']);
-  });
-});
-
-describe('preset bars', () => {
-  const keys = Array.from({ length: 20 }, (_, i) => 'ability:a' + i);
-
-  it('puts the abilities on bars 1..n bound to the style and fills the keys from the layout', () => {
-    const cur = defaultActionBars();
-    cur.slotKeybinds = cur.slotKeybinds.map((row) => row.map(() => null)); // a player without any keys
-    const loadout = presetLoadout(preset, slotOf);
-    const { setup, barsNeeded, left, filled } = presetBars(preset, keys, cur, keybindLayout('rows'), loadout);
-    expect(barsNeeded).toBe(2);
-    expect(left).toBe(0);
-    expect(setup.presets[0].slots[0]).toEqual({ kind: 'ability', id: 'a0' });
-    expect(setup.presets[1].slots[5]).toEqual({ kind: 'ability', id: 'a19' });
-    expect(setup.presets[0].name).toBe('Demo boss Necromancy 1');
-    expect(setup.bindings.Necromancy.slice(0, 2)).toEqual([setup.presets[0].id, setup.presets[1].id]);
-    // every slot of every bar has a key now, the three weapons of the loadout got F1-F3
-    for (const row of setup.slotKeybinds) expect(row.filter(Boolean).length).toBe(BAR_SLOTS);
-    expect(setup.weaponKeybinds['omni-guard']?.code).toBe('F1');
-    expect(setup.weaponKeybinds['soulbound-lantern']?.code).toBe('F2');
-    expect(setup.weaponKeybinds['ek-zekkil']?.code).toBe('F3');
-    expect(filled).toBe(5 * BAR_SLOTS + 3 + 2); // + target cycle + combat dummy
-  });
-
-  it('keeps the player\'s own keys and only fills the rest', () => {
-    const cur = defaultActionBars(); // main bar bound 1-0 - =, bars 2-5 empty
-    cur.slotKeybinds[0][0] = { code: 'KeyQ', ctrl: false, shift: false, alt: false };
-    const { setup, filled } = presetBars(preset, keys, cur, keybindLayout('rows'), presetLoadout(preset, slotOf));
-    expect(setup.slotKeybinds[0][0]?.code).toBe('KeyQ');
-    expect(setup.slotKeybinds[0][1]?.code).toBe('Digit2');
-    expect(setup.slotKeybinds[1][0]).toBeNull(); // Q is the player's
-    expect(setup.slotKeybinds[1][1]?.code).toBe('KeyW');
-    expect(filled).toBeGreaterThan(0);
-    // the source setup is not touched
-    expect(cur.slotKeybinds[1][1]).toBeNull();
-    expect(cur.presets[0].slots[0]).toBeNull();
-  });
-
-  it('reports abilities that do not fit on 5 bars', () => {
-    const many = Array.from({ length: 80 }, (_, i) => 'ability:a' + i);
-    const { barsNeeded, left } = presetBars(preset, many, defaultActionBars(), keybindLayout('rows'), presetLoadout(preset, slotOf));
-    expect(barsNeeded).toBe(5);
-    expect(left).toBe(10);
   });
 });
 

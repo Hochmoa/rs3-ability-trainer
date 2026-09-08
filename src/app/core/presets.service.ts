@@ -3,9 +3,8 @@ import { Router } from '@angular/router';
 import { ToastService } from '../shared/toast';
 import { DataService } from './data.service';
 import { addItem, stockSpecials } from './equipment';
-import { DEFAULT_LAYOUT_ID, keybindLayout } from './keybind-layouts';
 import { ItemRef, Prebuild, Rotation, RotationStep } from './models';
-import { BossPreset, assignEofSpecs, demoRotationIndex, presetBars, presetLoadout, presetSlotKeys } from './preset-setup';
+import { BossPreset, assignEofSpecs, demoRotationIndex, presetLoadout } from './preset-setup';
 import { SwitchCatalog, insertSwitches } from './preset-switches';
 import { parsePvme } from './pvme';
 import { StorageService } from './storage.service';
@@ -43,17 +42,12 @@ export interface AddedPreset {
   rotations: Rotation[];
   /** index into `rotations` of the one "Load a demo" opens */
   demoIndex: number;
-  barsNeeded: number;
-  /** abilities that did not fit on 5 bars */
-  left: number;
-  /** keys added from the default layout */
-  filled: number;
-  layoutName: string;
 }
 
 /**
- * Ready-made boss setups from PvME (public/data/presets.json): "add" turns one into a loadout, its rotations and a
- * bar profile with the abilities on bars bound to the style – keys filled from the default layout, so it plays at once.
+ * Ready-made boss setups from PvME (public/data/presets.json): "add" turns one into a loadout and its rotations.
+ * The player's bars and keys are never touched – the Train page's "Auto-place on my bars" puts what is missing onto
+ * free slots when the player asks for it.
  */
 @Injectable({ providedIn: 'root' })
 export class PresetsService {
@@ -84,7 +78,7 @@ export class PresetsService {
     });
   }
 
-  /** Creates loadout, rotations and bar profile for the preset and makes them active. Nothing of the player's is replaced. */
+  /** Creates the loadout and the rotations of the preset and makes them active. Nothing of the player's is replaced. */
   async add(p: BossPreset): Promise<AddedPreset> {
     // adding a preset is an explicit save: it stands in for the consent banner's OK
     if (await this.storage.acceptConsentOnSave()) this.toast.show('Saved in this browser', 'info', 2000);
@@ -154,20 +148,12 @@ export class PresetsService {
       }
     }
 
-    const layout = keybindLayout(DEFAULT_LAYOUT_ID);
-    const bars = presetBars(p, presetSlotKeys(parsed), this.storage.actionBars(), layout, loadout);
-    const profileId = await this.storage.addBarProfile(p.title.slice(0, 40), bars.setup, p.id);
-    await this.storage.switchBarProfile(profileId);
-    return { loadoutName: loadout.name, rotations, demoIndex: demoRotationIndex(p, parsed), barsNeeded: bars.barsNeeded, left: bars.left, filled: bars.filled, layoutName: layout.name };
+    return { loadoutName: loadout.name, rotations, demoIndex: demoRotationIndex(p, parsed) };
   }
 
   /** One sentence for the toast after an add. */
   describe(a: AddedPreset): string {
-    return (
-      'Added "' + a.loadoutName + '": loadout, ' + a.rotations.length + ' rotations and ' + a.barsNeeded + (a.barsNeeded === 1 ? ' bar' : ' bars') +
-      (a.filled > 0 ? ' with keys from the "' + a.layoutName + '" layout' : '') +
-      (a.left > 0 ? ' – ' + a.left + ' abilities did not fit' : '') + '.'
-    );
+    return 'Added "' + a.loadoutName + '": loadout and ' + a.rotations.length + (a.rotations.length === 1 ? ' rotation' : ' rotations') + '. Your bars and keys are untouched – the Train page shows what is not on them yet.';
   }
 
   /**

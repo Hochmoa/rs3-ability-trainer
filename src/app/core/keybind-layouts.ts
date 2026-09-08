@@ -1,5 +1,5 @@
 import { isReservedKeybind, keybindKey, parseKeybind } from './keybind.util';
-import { ActionBarSetup, BAR_POSITIONS, BAR_SLOTS, BarProfileData, Keybind, defaultActionBars, snapshotActiveProfile } from './models';
+import { ActionBarData, ActionBarSetup, BAR_POSITIONS, BAR_SLOTS, Keybind, defaultActionBars } from './models';
 
 /**
  * A named keyboard layout: one key per slot of the five bar positions (14 each), keys for up to four weapon
@@ -82,17 +82,17 @@ export interface ApplyLayoutOptions {
   weaponIds?: string[];
 }
 
-export interface ApplyLayoutResult<T extends BarProfileData> {
+export interface ApplyLayoutResult<T extends ActionBarData> {
   data: T;
   /** number of slot / weapon / action keys written */
   filled: number;
 }
 
 /**
- * Writes a layout into the keybinds of a profile. With `overwrite` everything is replaced, otherwise only empty
+ * Writes a layout into the keybinds of a bar setup. With `overwrite` everything is replaced, otherwise only empty
  * slots get a key and keys already in use elsewhere are skipped, so a player's own binds survive.
  */
-export function applyLayout<T extends BarProfileData>(data: T, layout: KeybindLayout, opts: ApplyLayoutOptions): ApplyLayoutResult<T> {
+export function applyLayout<T extends ActionBarData>(data: T, layout: KeybindLayout, opts: ApplyLayoutOptions): ApplyLayoutResult<T> {
   const out: T = { ...data, slotKeybinds: data.slotKeybinds.map((row) => [...row]), weaponKeybinds: { ...data.weaponKeybinds }, actionKeybinds: { ...(data.actionKeybinds ?? {}) } };
   const actions = out.actionKeybinds!;
   while (out.slotKeybinds.length < BAR_POSITIONS) out.slotKeybinds.push(Array(BAR_SLOTS).fill(null));
@@ -126,12 +126,12 @@ export function applyLayout<T extends BarProfileData>(data: T, layout: KeybindLa
   return { data: out, filled };
 }
 
-/** True when no bar slot of the profile has a key. */
-export function hasNoSlotKeys(data: Pick<BarProfileData, 'slotKeybinds'>): boolean {
+/** True when no bar slot of the setup has a key. */
+export function hasNoSlotKeys(data: Pick<ActionBarData, 'slotKeybinds'>): boolean {
   return data.slotKeybinds.every((row) => row.every((kb) => !kb));
 }
 
 /** The pristine action bar setup of a first visit: empty bars with the default layout already bound. */
 export function defaultActionBarsWithKeys(): ActionBarSetup {
-  return snapshotActiveProfile(applyLayout(defaultActionBars(), keybindLayout(DEFAULT_LAYOUT_ID), { overwrite: true }).data);
+  return applyLayout(defaultActionBars(), keybindLayout(DEFAULT_LAYOUT_ID), { overwrite: true }).data;
 }

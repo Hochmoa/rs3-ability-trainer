@@ -171,8 +171,31 @@ describe('mergeActionBars – a partial stored setup is completed with defaults'
     expect(merged.slotKeybinds[0][0]).toEqual({ code: 'KeyQ', ctrl: false, shift: false, alt: false });
     expect(merged.slotKeybinds[0][1]).toBeNull();
     expect(merged.slotKeybinds).toHaveLength(5);
-    expect(merged.profiles?.length).toBeGreaterThan(0);
-    expect(merged.activeProfileId).toBeDefined();
+    expect(merged.profiles).toBeUndefined();
+  });
+
+  it('legacy bar profiles: the active one stays, the filled bars of the others move into empty presets', () => {
+    const bar = (name: string, id: string) => ({ id: 1, name, slots: [{ kind: 'ability' as const, id }] });
+    const merged = mergeActionBars({
+      presets: [{ id: 1, name: 'Mine', slots: [{ kind: 'ability', id: 'sever' }] }],
+      profiles: [
+        { id: 'a', name: 'Active', presets: [{ id: 1, name: 'Mine', slots: [{ kind: 'ability', id: 'sever' }] }] },
+        { id: 'b', name: 'Rasial', presets: [bar('Rasial 1', 'touch-of-death'), { id: 2, name: 'empty', slots: [] }, { ...bar('Rasial 2', 'finger-of-death'), id: 3 }] },
+      ],
+      activeProfileId: 'a',
+    });
+    expect(merged.presets[0].slots[0]).toEqual({ kind: 'ability', id: 'sever' });
+    expect(merged.presets[1].name).toBe('Rasial 1');
+    expect(merged.presets[1].slots[0]).toEqual({ kind: 'ability', id: 'touch-of-death' });
+    expect(merged.presets[2].name).toBe('Rasial 2');
+    expect(merged.presets[3].slots.every((s) => s === null)).toBe(true);
+    expect(merged.profiles).toBeUndefined();
+  });
+
+  it('legacy bar profiles beyond the 18 presets are dropped', () => {
+    const many = Array.from({ length: 20 }, (_, i) => ({ id: i + 1, name: 'B' + i, slots: [{ kind: 'ability' as const, id: 'a' + i }] }));
+    const merged = mergeActionBars({ profiles: [{ id: 'x', name: 'Other', presets: many }], activeProfileId: 'a' });
+    expect(merged.presets.filter((p) => p.slots[0]).length).toBe(18);
   });
 
   it('an empty object is the default setup', () => {

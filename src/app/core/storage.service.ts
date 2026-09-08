@@ -2,10 +2,10 @@ import { Injectable, computed, effect, inject, signal, untracked } from '@angula
 import { IDBPDatabase, deleteDB, openDB } from 'idb';
 import { Subject } from 'rxjs';
 import { ToastService } from '../shared/toast';
-import { DEFAULT_LAYOUT_ID, applyLayout, defaultActionBarsWithKeys, hasNoSlotKeys, keybindLayout } from './keybind-layouts';
+import { defaultActionBarsWithKeys } from './keybind-layouts';
 import { DataService } from './data.service';
 import { cleanStep, mergeActionBars, migrateLegacyGear, migrateRotation, migrateSettings, normaliseLoadout } from './migrations';
-import { ActionBarSetup, BarProfile, BarProfileData, DEFAULT_BAR_PROFILE_ID, DEFAULT_ENEMY, enemyWithStats, activateProfile, profileData, snapshotActiveProfile, DEFAULT_SETTINGS, EnemyConfig, Keybind, LegacyLoadout, Loadout, Prebuild, Rotation, Session, SetupBundle, SetupMeta, Settings, defaultActionBars, migrateLegacyLoadout, newLoadout } from './models';
+import { ActionBarSetup, DEFAULT_ENEMY, enemyWithStats, DEFAULT_SETTINGS, EnemyConfig, Keybind, LegacyLoadout, Loadout, Prebuild, Rotation, Session, SetupBundle, SetupMeta, Settings, migrateLegacyLoadout, newLoadout } from './models';
 
 const DB_NAME = 'rs3trainer';
 const CONSENT_KEY = 'rs3trainer.consent';
@@ -92,11 +92,8 @@ export class StorageService {
   readonly enemy = signal<EnemyConfig>({ ...DEFAULT_ENEMY });
   /** rotation id → pre-built state the session starts with */
   readonly prebuilds = signal<Record<string, Prebuild>>({});
-  /** action bar presets, positions, style bindings, slot + weapon keybinds (the active bar profile) */
+  /** the 18 action bar presets, positions, style bindings, slot + weapon keybinds – the player's own, see saveActionBars */
   readonly actionBars = signal<ActionBarSetup>(defaultActionBarsWithKeys());
-  /** named bar setups, switchable on the Train page */
-  readonly barProfiles = computed<BarProfile[]>(() => this.actionBars().profiles ?? []);
-  readonly activeBarProfileId = computed(() => this.actionBars().activeProfileId ?? DEFAULT_BAR_PROFILE_ID);
   /** sync bookkeeping for settings + loadouts + enemy */
   readonly setupMeta = signal<SetupMeta>({});
   /** entity key ("ability:sever", "prayer:turmoil", ...) → keybind */
@@ -357,43 +354,16 @@ export class StorageService {
     await this.write((db) => db.put('settings', { loadouts: this.loadouts(), active: this.activeLoadoutId() }, 'loadouts'));
   }
 
-  async saveActionBars(setup: ActionBarSetup): Promise<void> {
-    await this.putActionBars(snapshotActiveProfile({ ...setup, updatedAt: Date.now() }));
-    this.actionBarsChanged.next(this.actionBars());
-  }
-
-  // ---------------------------------------------------------------- bar profiles
-
-  async switchBarProfile(id: string): Promise<void> {
-    if (id === this.activeBarProfileId() || !this.barProfiles().some((p) => p.id === id)) return;
-    await this.saveActionBars(activateProfile(this.actionBars(), id));
-  }
-
   /**
-   * Adds a profile (default: empty bars with the current keys – or, when the current profile has no slot keys at
-   * all, the default keyboard layout) and returns its id.
+   * The bars are the player's own: this is the only writer, and it is only ever called from the Action bars and
+   * Keybinds pages and from "Auto-place on my bars" (free slots only). Imports, presets and shared setups never call it.
    */
-  async addBarProfile(name: string, data?: BarProfileData, presetId?: string): Promise<string> {
-    const cur = snapshotActiveProfile(this.actionBars());
-    let base = data ?? { ...profileData(cur), ...profileData(defaultActionBars()), slotKeybinds: structuredClone(cur.slotKeybinds), weaponKeybinds: structuredClone(cur.weaponKeybinds), actionKeybinds: structuredClone(cur.actionKeybinds), layout: cur.layout };
-    if (!data && hasNoSlotKeys(base)) base = applyLayout(base, keybindLayout(DEFAULT_LAYOUT_ID), { overwrite: false }).data;
-    const profile: BarProfile = { ...profileData(base), id: crypto.randomUUID(), name: name.slice(0, 40) || 'Bar setup', presetId };
-    await this.saveActionBars({ ...cur, profiles: [...cur.profiles!, profile] });
-    return profile.id;
-  }
-
-  async renameBarProfile(id: string, name: string): Promise<void> {
-    const cur = snapshotActiveProfile(this.actionBars());
-    await this.saveActionBars({ ...cur, profiles: cur.profiles!.map((p) => (p.id === id ? { ...p, name: name.slice(0, 40) } : p)) });
-  }
-
-  /** Removes a profile; deleting the active one switches to the first remaining. The last profile cannot be deleted. */
-  async deleteBarProfile(id: string): Promise<void> {
-    const cur = snapshotActiveProfile(this.actionBars());
-    const rest = cur.profiles!.filter((p) => p.id !== id);
-    if (!rest.length) return;
-    const next = { ...cur, profiles: rest };
-    await this.saveActionBars(cur.activeProfileId === id ? activateProfile(next, rest[0].id) : next);
+  async saveActionBars(setup: ActionBarSetup): Promise<void> {
+    const { profiles, activeProfileId, ...rest } = setup; // legacy profiles are folded by mergeActionBars and never written again
+    void profiles;
+    void activeProfileId;
+    await this.putActionBars({ ...rest, updatedAt: Date.now() });
+    this.actionBarsChanged.next(this.actionBars());
   }
 
   /** Stores the setup as-is (keeps updatedAt / syncedAt) without firing the sync hook. */
