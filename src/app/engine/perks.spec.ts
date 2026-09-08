@@ -673,13 +673,15 @@ describe('Planted Feet / Mobile / Turtling / Reflexes / Clear Headed / Preparati
     expect(hits(plain, 'sunshine').length).toBe(17); // 10–20% every 3 ticks
   });
 
-  it('Mobile: Surge 34 → 17 ticks', () => {
-    const e = engine(['surge'], resolve({ two: SCYTHE, weapon: [gizmo([['mobile', 1]])] }));
+  it('Mobile: Surge 34 → 17 ticks (both charges spent – Double Surge is always on)', () => {
+    const e = engine(['surge', 'surge'], resolve({ two: SCYTHE, weapon: [gizmo([['mobile', 1]])] }));
     cast(e, 'surge', 0);
-    expect(e.cooldownLeft('ability:surge', 0)).toBe(17);
-    const plain = engine(['surge'], resolve({ two: SCYTHE }));
+    cast(e, 'surge', 1);
+    expect(e.cooldownLeft('ability:surge', 1)).toBe(16);
+    const plain = engine(['surge', 'surge'], resolve({ two: SCYTHE }));
     cast(plain, 'surge', 0);
-    expect(plain.cooldownLeft('ability:surge', 0)).toBe(34);
+    cast(plain, 'surge', 1);
+    expect(plain.cooldownLeft('ability:surge', 1)).toBe(33);
   });
 
   it('Turtling 4: Barricade 17 → 23 ticks, cooldown 100 → 140 (T90 shield)', () => {

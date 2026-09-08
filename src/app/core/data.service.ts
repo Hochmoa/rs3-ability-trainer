@@ -3,14 +3,14 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { firstValueFrom, forkJoin } from 'rxjs';
 import { ruleFor } from '../engine/rules';
 import { EngineBuff, EngineEntity } from '../engine/trainer-engine';
-import { ACTIONS, Ability, Action, BossPreset, Buff, EntityKind, EquipSlot, Familiar, GearItem, ItemRef, Loadout, Perk, Prayer, RotationStep, SPEC_KEY, SPELLBOOK_NAMES, SetEffect, Special, Spell, Style, Weapon, WeaponSpec, entityKey, loadoutWeapons, scrollSpecial, weaponSlot } from './models';
+import { ACTIONS, Ability, Action, BossPreset, Buff, EntityKind, EquipSlot, Familiar, GearItem, ItemRef, Loadout, Perk, Prayer, RotationStep, SPEC_KEY, SPELLBOOK_NAMES, SetEffect, Special, Spell, Style, Weapon, WeaponSpec, entityKey, loadoutWeapons, scrollSpecial, weaponSlot, UsageStats } from './models';
 
 /**
  * The heavy data files, loaded on demand with `DataService.ensure()`: the full gear and weapon catalogs (~1 MB each),
  * Invention perks, the PvME boss presets and the PvME alias table. Everything else (abilities, prayers, specials,
  * spells, specs, buffs, set effects, familiars) is small and loaded at start-up.
  */
-export type Catalog = 'gear' | 'weapons' | 'perks' | 'presets' | 'aliases';
+export type Catalog = 'gear' | 'weapons' | 'perks' | 'presets' | 'aliases' | 'usage';
 
 const CATALOG_FILES: Record<Catalog, string> = {
   gear: 'data/gear.json',
@@ -18,6 +18,7 @@ const CATALOG_FILES: Record<Catalog, string> = {
   perks: 'data/perks.json',
   presets: 'data/presets.json',
   aliases: 'data/pvme-aliases.json',
+  usage: 'data/usage.json',
 };
 
 /**
@@ -98,10 +99,12 @@ export class DataService {
   readonly pvmeAliases = signal<Record<string, string>>({});
   /** PvME boss setups (presets.json) – empty until `ensure('presets')` */
   readonly presets = signal<BossPreset[]>([]);
+  /** how often the PvME setups use each item / pair / EoF special (usage.json) – null until loaded */
+  readonly usage = signal<UsageStats | null>(null);
   /** the core data files (everything but the catalogs) have arrived */
   readonly loaded = signal(false);
   /** which on-demand catalogs have arrived (see `ensure`) */
-  readonly catalogs = signal<Record<Catalog, boolean>>({ gear: false, weapons: false, perks: false, presets: false, aliases: false });
+  readonly catalogs = signal<Record<Catalog, boolean>>({ gear: false, weapons: false, perks: false, presets: false, aliases: false, usage: false });
   /** everything a loadout resolves against is in: core files + gear, weapons and perks */
   readonly loadoutReady = computed(() => this.loaded() && this.has('gear', 'weapons', 'perks'));
   private readonly inflight = new Map<Catalog, Promise<void>>();
@@ -225,6 +228,9 @@ export class DataService {
         break;
       case 'aliases':
         this.pvmeAliases.set(d as Record<string, string>);
+        break;
+      case 'usage':
+        this.usage.set(d as UsageStats);
         break;
     }
   }

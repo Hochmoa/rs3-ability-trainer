@@ -1,4 +1,4 @@
-/** Double Surge relic: Surge has a second charge with its own cooldown (runescape.wiki/w/Double_Surge). */
+/** Double Surge: Surge has a second charge with its own cooldown (runescape.wiki/w/Double_Surge) – an unlockable every loadout has, so the resolver always grants it. */
 import { describe, expect, it } from 'vitest';
 import { defaultResolvedLoadout } from './loadout-resolved';
 import { EngineConfig, EngineEntity, TICK_MS, TrainerEngine } from './trainer-engine';
@@ -20,7 +20,7 @@ function press(e: TrainerEngine, key: string, tick: number): void {
 }
 
 describe('Double Surge', () => {
-  it('with the relic Surge fires twice in a row and the third press waits for the first charge', () => {
+  it('with the second charge Surge fires twice in a row and the third press waits for the first charge', () => {
     const e = make({ surge: 1 });
     press(e, SURGE.key, 1);
     press(e, SURGE.key, 2);
@@ -29,7 +29,7 @@ describe('Double Surge', () => {
     expect(e.cooldownLeft(SURGE.key, 3)).toBe(1 + 34 - 3);
   });
 
-  it('without the relic the second Surge is on cooldown', () => {
+  it('without it the second Surge is on cooldown', () => {
     const e = make({});
     press(e, SURGE.key, 1);
     press(e, SURGE.key, 2);

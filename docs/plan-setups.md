@@ -44,3 +44,7 @@ Approved by Martin on 2026-09-08. One page "Setups" replaces Boss setups (/prese
 - the block of text under the gear becomes an "i" icon → modal with everything about the current gear
 - bottom: the relics section text/format (checkbox – name – text spacing), Double Surge is an unlockable, not a relic:
   remove it, always unlocked
+
+Done 2026-09-08 (branch feature/loadout): usage scores (tools/usage-stats.py → public/data/usage.json, core/gear-catalog.ts),
+USAGE_THRESHOLD in core/obscure.ts, sub-options on landing, EoF tiles, gizmo combos (core/gizmo-combos.ts from the PvME
+perks guide), weapon pairs / armour sets / style sections, the "i" modal, relics grid, Double Surge always on.

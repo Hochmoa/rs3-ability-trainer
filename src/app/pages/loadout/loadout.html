@@ -23,12 +23,12 @@
     </label>
     <a class="btn btn-sm" routerLink="/setups" [queryParams]="{ view: 'mine' }">All my setups</a>
   </div>
-  <label class="check" title="Hides Daemonheim gear, tools, cosmetics, recolours, +1 … +4 smithing steps, sub-60 gear and non-combat perks. Catalog only.">
+  <label class="check" title="Shows only what at least one PvME boss setup wears or carries. Off: everything the game has (search finds hidden items either way).">
     <input type="checkbox" [checked]="hideObscure()" (change)="setHideObscure(!hideObscure())" />
     Hide obscure equipment
   </label>
   <p class="muted small">
-    Drag from the catalog into a slot or the backpack. Click: catalog → backpack, backpack → wear, worn → take off. Right-click for perks and the EoF special.
+    Sorted by how many PvME setups use an item. Click an item for the backpack, double-click to wear it; a weapon pair or an armour set is worn with one click. Drag anywhere. An Essence of Finality or an augmentable item asks for its special / gizmos as it lands.
   </p>
   @if (warnings().length) {
     <div class="warnings">
@@ -47,100 +47,65 @@
       }
     </div>
     <div class="picker-controls">
-      @if (tab() !== 'potions') {
-        <select [ngModel]="style()" (ngModelChange)="style.set($event)">
-          <option value="all">All styles</option>
-          @for (st of STYLE_ORDER; track st) { <option [value]="st">{{ st }}</option> }
-        </select>
-      }
       @if (tiered()) {
         <label class="tier">Tier ≥ <input type="number" min="1" max="100" [ngModel]="minTier()" (ngModelChange)="minTier.set(+$event || 1)" /></label>
       }
+      <span class="muted small">{{ entryCount() }} {{ entryCount() === 1 ? 'entry' : 'entries' }}</span>
       <input type="search" placeholder="Search…" [ngModel]="search()" (ngModelChange)="search.set($event)" />
     </div>
     <div class="item-grid" id="catalog" [class.can-receive]="catalogReceives()" [class.receiving]="gearDrag.hover() === 'catalog'" [attr.data-gear-drop]="catalogReceives() ? 'catalog' : null" (gear-drop)="dropOnCatalog($event)">
-      @for (v of catalog(); track v.ref.kind + v.ref.id) {
-        <div class="item" [class.has-spec]="v.weapon?.spec" [class.has-effect]="v.set || v.passive" [gearTip]="v" (pointerdown)="startDrag($event, v)" (click)="addFromCatalog(v)" (dblclick)="wearFromCatalog(v)" (contextmenu)="menuCatalog($event, v)">
-          @if (v.icon) { <img [src]="v.icon" alt="" draggable="false" /> } @else { <span class="noicon"></span> }
-          <span class="iname">{{ v.name }}</span>
-          <span class="imeta">{{ meta(v) }}</span>
-        </div>
+      @for (sec of sections(); track sec.key) {
+        <div class="section-head"><span>{{ sec.label }}</span><span class="count">{{ sec.entries.length }}</span></div>
+        @for (e of sec.entries; track e.key) {
+          @if (views(e); as vs) {
+            <div
+              class="entry"
+              [class]="'entry ' + e.kind"
+              [class.has-spec]="e.kind === 'single' && vs[0]?.weapon?.spec"
+              [class.has-effect]="e.kind === 'single' && (vs[0]?.set || vs[0]?.passive)"
+              [title]="e.kind === 'single' ? 'Click: backpack · double-click: wear' : 'Click: wear all · click one icon: that piece into the backpack'"
+              (click)="clickEntry(e)"
+              (dblclick)="dblEntry(e)"
+            >
+              <div class="icons">
+                @for (v of vs; track v.ref.id) {
+                  <span class="piece" [gearTip]="v" (pointerdown)="startDrag($event, v)" (click)="clickPiece($event, e, v)" (dblclick)="dblPiece($event, e, v)" (contextmenu)="menuPiece($event, v)">
+                    @if (v.icon) { <img [src]="v.icon" alt="" draggable="false" /> } @else { <span class="noicon"></span> }
+                  </span>
+                }
+              </div>
+              <span class="iname">{{ e.name }}</span>
+              <span class="imeta">{{ meta(e) }}</span>
+            </div>
+          }
+        }
       } @empty {
         <p class="muted">{{ data.loadoutReady() ? 'Nothing matches.' : 'Loading…' }}</p>
       }
     </div>
-    <p class="muted small">First 200 results. Specs, set pieces and passives ignore the tier filter.{{ hideObscure() ? ' Obscure gear is hidden.' : '' }} Drop an item here to remove it.</p>
+    <p class="muted small">{{ hideObscure() ? 'Items no PvME setup uses are hidden – untick above or search for them. ' : '' }}Drop an item here to remove it from the loadout.</p>
   </div>
 
   <div class="worn">
     <gear-panel [equipment]="l().equipment" [inventory]="l().inventory" [editable]="true" (action)="onGear($event)" />
-    <p class="muted small">{{ freeSlots() }} free backpack slots</p>
-    <div class="effects">
-      <div class="effect">
-        <span class="slot-label">Weapon special attack</span>
-        @if (weaponSpec(); as s) {
-          <span><b>{{ s.name }}</b> <small class="muted">{{ s.adrenaline }}% adrenaline{{ s.cooldownTicks ? ' · ' + (s.cooldownTicks * 0.6) + ' s cooldown' : '' }}{{ s.ignoresGcd ? ' · off the GCD' : '' }}</small></span>
-        } @else { <span class="muted">the wielded weapon has no special attack</span> }
-      </div>
-      <div class="effect">
-        <span class="slot-label">Essence of Finality</span>
-        @if (!eofAmulets().length) {
-          <span class="muted">no Essence of Finality amulet worn or carried</span>
-        } @else {
-          <ul class="eof-list">
-            @for (a of eofAmulets(); track a.where + a.index) {
-              <li>
-                <span class="eof-where">{{ a.where === 'worn' ? 'worn (Neck)' : 'backpack ' + (a.index + 1) }}</span>
-                @if (a.spec; as s) {
-                  <span><b>{{ s.name }}</b> <small class="muted">{{ s.adrenaline }}% adrenaline{{ s.cooldownTicks ? ' · ' + s.cooldownTicks * 0.6 + ' s cooldown' : '' }}</small></span>
-                  @if (s.eof.notes) { <small class="muted">{{ s.eof.notes }}</small> }
-                } @else {
-                  <span class="muted">empty – right-click the amulet to store a special</span>
-                }
-              </li>
-            }
-          </ul>
-          @if (eofAmulets().length > 1) {
-            <small class="muted">The rotation picks the amulet that holds the special it asks for; a carried one is marked "S" in the backpack.</small>
-          }
-        }
-      </div>
-      @for (s of sets(); track s.set.id) {
-        <div class="effect">
-          <span class="slot-label">{{ s.set.name }} · {{ s.pieces }} / {{ s.set.maxPieces }} pieces</span>
-          <ul class="thresholds">
-            @for (t of s.set.thresholds ?? []; track t.pieces) {
-              <li [class.active]="s.pieces >= t.pieces" [class.damage-only]="t.class === 'damage' || t.class === 'defensive'">
-                <b>{{ t.pieces }}:</b> {{ t.text }}
-                @if (ignoredReason(s.set.id, t.effect?.kind); as why) {
-                  <small class="muted">(not simulated: {{ why }})</small>
-                } @else if (t.class === 'damage') { <small class="muted">(damage only)</small> }
-                @else if (t.class === 'defensive') { <small class="muted">(defensive, no effect on the simulation)</small> }
-              </li>
-            }
-          </ul>
-        </div>
-      }
-      @for (p of passives(); track p.id) {
-        <div class="effect" [class.damage-only]="p.class === 'damage' || p.class === 'defensive'">
-          <span class="slot-label">{{ p.name }}</span>
-          <small class="muted">{{ p.text }}</small>
-          @if (ignoredReason(p.id, p.effect?.kind); as why) { <small class="muted">(not simulated: {{ why }})</small> }
-        </div>
-      }
+    <div class="worn-foot">
+      <span class="muted small">{{ freeSlots() }} free backpack slots</span>
+      <button class="info-btn" type="button" (click)="infoOpen.set(true)" title="Special attack, Essence of Finality, set effects and passives of what is worn">
+        <span class="i">i</span>
+        @if (infoSummary()) { <span class="muted small">{{ infoSummary() }}</span> }
+      </button>
     </div>
   </div>
 </div>
 
 <div class="panel">
   <div class="form">
-    <p class="muted small">Starting adrenaline is set on the <a routerLink="/train">Train</a> page ("100% adrenaline at start").</p>
     <h3>Prayer book</h3>
     <label>
       <span>Prayers used in this loadout</span>
       <select [ngModel]="l().prayerBook" (ngModelChange)="setPrayerBook($event)">
-        <option value="Curses">Ancient Curses (Soul Split, Deflect …)</option>
-        <option value="Prayers">Standard prayers (Protect from …)</option>
+        <option value="Curses">Ancient Curses</option>
+        <option value="Prayers">Standard prayers</option>
       </select>
       <small class="muted">Prayers of the other book are ignored while training.</small>
     </label>
@@ -148,9 +113,9 @@
     <label>
       <span>Spells used in this loadout</span>
       <select [ngModel]="l().spellbook" (ngModelChange)="setSpellbook($event)">
-        <option value="standard">Standard spellbook (Vulnerability, Entangle, Surges)</option>
-        <option value="ancient">Ancient Magicks (Smoke Cloud, Animate Dead, Exsanguinate …)</option>
-        <option value="lunar">Lunar spells (Vengeance, Disruption Shield …)</option>
+        <option value="standard">Standard spellbook</option>
+        <option value="ancient">Ancient Magicks</option>
+        <option value="lunar">Lunar spells</option>
       </select>
       <small class="muted">Spells of the other books cannot be cast while training.</small>
     </label>
@@ -160,23 +125,27 @@
       <select [ngModel]="l().familiar ?? ''" (ngModelChange)="setFamiliar($event)">
         <option value="">none</option>
         @for (f of data.familiars(); track f.id) {
-          <option [value]="f.id">{{ f.name }} (level {{ f.level }}) – {{ f.attack.style }}, hits up to {{ f.attack.damageMax }} every {{ seconds(f.attack.everyTicks) }} s</option>
+          <option [value]="f.id">{{ f.name }} (level {{ f.level }})</option>
         }
       </select>
       @if (familiar(); as f) {
-        <small class="muted">{{ f.passive }}</small>
+        <small class="muted">{{ f.attack.style }}, hits up to {{ f.attack.damageMax }} every {{ seconds(f.attack.everyTicks) }} s. {{ f.passive }}</small>
         <small class="muted"><b>{{ f.scroll.name }}</b> ({{ f.scroll.specialPoints }} points{{ f.scroll.cooldownTicks ? ', ' + seconds(f.scroll.cooldownTicks) + ' s cooldown' : '' }}): {{ f.scroll.description }} Put it on a bar to use it. 60 points, +15 every 30 s.</small>
       } @else {
         <small class="muted">The familiar attacks on its own (like conjured spirits) and makes its scroll usable from the action bars.</small>
       }
     </label>
     <h3>Archaeology relics</h3>
-    @for (r of RELICS; track r.id) {
-      <label class="check">
-        <input type="checkbox" [checked]="hasRelic(r.id)" (change)="toggleRelic(r.id)" />
-        <span><b>{{ r.name }}</b> <small class="muted">{{ r.text }}</small></span>
-      </label>
-    }
+    <div class="relics">
+      @for (r of RELICS; track r.id) {
+        <label class="relic">
+          <input type="checkbox" [checked]="hasRelic(r.id)" (change)="toggleRelic(r.id)" />
+          <b>{{ r.name }}</b>
+          <small class="muted">{{ r.text }}</small>
+        </label>
+      }
+    </div>
+    <small class="muted">Double Surge is an unlockable, not a relic – every loadout has it: Surge can be used twice in a row.</small>
     <h3>Necromancy talents</h3>
     <label>
       <span>Spirit Pact</span>
@@ -263,63 +232,132 @@
   </div>
 }
 
-@if (perkEdit(); as e) {
-  <div class="backdrop" (click)="perkEdit.set(null)">
-    <div class="modal" (click)="$event.stopPropagation()">
-      <h3>Invention perks – {{ e.view.name }}</h3>
-      <p class="muted small">{{ e.type === 'weapon' ? 'Weapon gizmo' : 'Armour gizmo' }}{{ e.gizmos.length > 1 ? 's' : '' }}; 2 perks per gizmo, an ancient gizmo raises the maximum rank by one. Perks that affect adrenaline, cooldowns or durations (●) are simulated; damage perks are stored for later.</p>
-      <div class="gizmos">
-        @for (g of e.gizmos; track $index; let i = $index) {
-          <div class="gizmo">
-            <div class="gizmo-head">
-              <b>Gizmo {{ i + 1 }}</b>
-              <label class="check"><input type="checkbox" [checked]="g.ancient" (change)="setGizmoAncient(i, !g.ancient)" /> ancient</label>
-            </div>
-            @for (slot of [0, 1]; track slot) {
-              <div class="perk-row">
-                <select [ngModel]="g.perks[slot]?.perk ?? ''" (ngModelChange)="setPerk(i, slot, $event)">
-                  <option value="">– empty –</option>
-                  @for (p of perkOptions(); track p.id) { <option [value]="p.id">{{ p.name }}{{ p.class === 'adrenaline' || p.class === 'cooldown' ? ' ●' : '' }}</option> }
-                </select>
-                @if (g.perks[slot]; as gp) {
-                  <select [ngModel]="gp.rank" (ngModelChange)="setRank(i, slot, $event)">
-                    @for (r of ranks(maxRank(g, gp.perk)); track r) { <option [ngValue]="r">rank {{ r }}</option> }
-                  </select>
-                }
-              </div>
+<!-- the "i": what the worn gear does -->
+@if (infoOpen()) {
+  <div class="backdrop" (click)="infoOpen.set(false)">
+    <div class="modal wide" (click)="$event.stopPropagation()">
+      <h3>What the worn gear does</h3>
+      <div class="effects">
+        <div class="effect">
+          <span class="slot-label">Weapon special attack</span>
+          @if (weaponSpec(); as s) {
+            <span><b>{{ s.name }}</b> <small class="muted">{{ s.adrenaline }}% adrenaline{{ s.cooldownTicks ? ' · ' + (s.cooldownTicks * 0.6) + ' s cooldown' : '' }}{{ s.ignoresGcd ? ' · off the GCD' : '' }}</small></span>
+          } @else { <span class="muted">the wielded weapon has no special attack</span> }
+        </div>
+        <div class="effect">
+          <span class="slot-label">Essence of Finality</span>
+          @if (!eofAmulets().length) {
+            <span class="muted">no Essence of Finality amulet worn or carried</span>
+          } @else {
+            <ul class="eof-list">
+              @for (a of eofAmulets(); track a.where + a.index) {
+                <li>
+                  <span class="eof-where">{{ a.where === 'worn' ? 'worn (Neck)' : 'backpack ' + (a.index + 1) }}</span>
+                  @if (a.spec; as s) {
+                    <span><b>{{ s.name }}</b> <small class="muted">{{ s.adrenaline }}% adrenaline{{ s.cooldownTicks ? ' · ' + s.cooldownTicks * 0.6 + ' s cooldown' : '' }}</small></span>
+                    @if (s.eof.notes) { <small class="muted">{{ s.eof.notes }}</small> }
+                  } @else {
+                    <span class="muted">empty – right-click the amulet to store a special</span>
+                  }
+                </li>
+              }
+            </ul>
+            @if (eofAmulets().length > 1) {
+              <small class="muted">The rotation picks the amulet that holds the special it asks for; a carried one is marked "S" in the backpack.</small>
             }
+          }
+        </div>
+        @for (s of sets(); track s.set.id) {
+          <div class="effect">
+            <span class="slot-label">{{ s.set.name }} · {{ s.pieces }} / {{ s.set.maxPieces }} pieces</span>
+            <ul class="thresholds">
+              @for (t of s.set.thresholds ?? []; track t.pieces) {
+                <li [class.active]="s.pieces >= t.pieces" [class.damage-only]="t.class === 'damage' || t.class === 'defensive'">
+                  <b>{{ t.pieces }}:</b> {{ t.text }}
+                  @if (ignoredReason(s.set.id, t.effect?.kind); as why) {
+                    <small class="muted">(not simulated: {{ why }})</small>
+                  } @else if (t.class === 'damage') { <small class="muted">(damage only)</small> }
+                  @else if (t.class === 'defensive') { <small class="muted">(defensive, no effect on the simulation)</small> }
+                </li>
+              }
+            </ul>
+          </div>
+        }
+        @for (p of passives(); track p.id) {
+          <div class="effect" [class.damage-only]="p.class === 'damage' || p.class === 'defensive'">
+            <span class="slot-label">{{ p.name }}</span>
+            <small class="muted">{{ p.text }}</small>
+            @if (ignoredReason(p.id, p.effect?.kind); as why) { <small class="muted">(not simulated: {{ why }})</small> }
           </div>
         }
       </div>
       <div class="actions">
-        <button class="btn" (click)="perkEdit.set(null)">Cancel</button>
-        <button class="btn btn-primary" (click)="savePerks()">Save</button>
+        <button class="btn btn-primary" (click)="infoOpen.set(false)">Close</button>
       </div>
     </div>
   </div>
 }
 
-@if (eofEdit(); as e) {
-  <div class="backdrop" (click)="eofEdit.set(null)">
-    <div class="modal" (click)="$event.stopPropagation()">
-      <h3>Essence of Finality – stored special attack</h3>
-      <select [ngModel]="e.spec" (ngModelChange)="setEofSpec($event)">
-        <option [ngValue]="null">– no special stored –</option>
-        @for (st of STYLE_ORDER; track st) {
-          <optgroup [label]="st">
-            @for (s of specsByStyle().get(st) ?? []; track s.id) {
-              <option [ngValue]="s.id">{{ s.name }} ({{ s.weapons[0] }}) – {{ s.adrenaline }}%</option>
-            }
-          </optgroup>
+<!-- gizmos: pick a combo per gizmo -->
+@if (perkEdit(); as e) {
+  <div class="backdrop" (click)="closePerks()">
+    <div class="modal wide" (click)="$event.stopPropagation()">
+      <h3>Gizmos – {{ e.view.name }}</h3>
+      <p class="muted small">The combinations PvM players put in a {{ e.type }} gizmo, best first (PvME perks guide). Pick a gizmo, then a combo; it is saved at once. Perks that touch adrenaline, cooldowns or durations are simulated, damage perks are stored.</p>
+      <div class="gizmo-slots">
+        @for (g of e.gizmos; track $index; let i = $index) {
+          <button class="gizmo-slot" type="button" [class.active]="e.slot === i" (click)="pickGizmoSlot(i)">
+            <span class="gizmo-name">Gizmo {{ i + 1 }}{{ g.ancient ? ' · ancient' : '' }}</span>
+            <span class="gizmo-perks">{{ gizmoLabel(g) }}</span>
+          </button>
         }
-      </select>
-      @if (eofNotes(e.spec); as s) {
-        @if (s.eof.notes) { <p class="muted small">{{ s.eof.notes }}</p> }
-        @if (s.eof.storable === 'unknown') { <p class="warn small">The wiki does not say whether this spec can be stored.</p> }
+      </div>
+      @for (group of comboGroups(); track group.tier) {
+        <div class="tile-head">{{ COMBO_TIER_LABEL[group.tier] }}</div>
+        <div class="tiles">
+          @for (c of group.combos; track c.id) {
+            <button class="tile combo" type="button" [class.active]="isCombo(c)" (click)="pickCombo(c)" [title]="c.note ?? ''">
+              <span class="tile-short">{{ c.short }}</span>
+              <span class="tile-name">{{ comboText(c) }}</span>
+              <span class="tile-meta">{{ c.where }}{{ c.ancient ? '' : ' · standard gizmo' }}</span>
+            </button>
+          }
+        </div>
       }
       <div class="actions">
-        <button class="btn" (click)="eofEdit.set(null)">Cancel</button>
-        <button class="btn btn-primary" (click)="saveEof()">Save</button>
+        <button class="btn" (click)="pickCombo(null)">Empty this gizmo</button>
+        <button class="btn btn-primary" (click)="closePerks()">Done</button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- Essence of Finality: tiles by style, most used first -->
+@if (eofEdit(); as e) {
+  <div class="backdrop" (click)="closeEof()">
+    <div class="modal wide" (click)="$event.stopPropagation()">
+      <h3>Essence of Finality – stored special attack</h3>
+      <p class="muted small">
+        The specials PvME setups store, most used first.
+        <label class="check inline"><input type="checkbox" [checked]="eofShowAll()" (change)="eofShowAll.set(!eofShowAll())" /> show every storable special</label>
+      </p>
+      @for (g of eofGroups(); track g.style) {
+        <div class="tile-head">{{ g.style }}</div>
+        <div class="tiles">
+          @for (t of g.tiles; track t.spec.id) {
+            <button class="tile eof" type="button" [class.active]="e.ref.spec === t.spec.id" (click)="pickEof(t.spec.id)" [title]="t.spec.weapons[0] + ' · ' + t.spec.adrenaline + '% adrenaline' + (t.spec.eof.notes ? ' · ' + t.spec.eof.notes : '')">
+              <img [src]="t.icon" alt="" />
+              <span class="tile-name">{{ t.spec.name }}</span>
+              <span class="tile-meta">{{ t.usage ? t.usage + (t.usage === 1 ? ' setup' : ' setups') : t.spec.adrenaline + '%' }}</span>
+            </button>
+          }
+        </div>
+      } @empty {
+        <p class="muted small">No special matches.</p>
+      }
+      <div class="actions">
+        <button class="btn" (click)="pickEof(null)">No special stored</button>
+        <button class="btn btn-primary" (click)="closeEof()">Close</button>
       </div>
     </div>
   </div>

@@ -238,7 +238,8 @@ export function resolveLoadout(l: Loadout, data: LoadoutData): ResolvedLoadout {
   if (relics.includes('fury-of-the-small')) r.basicGainAdd += 1;
   if (relics.includes('conservation-of-energy')) r.ultimateRefund += 10;
   if (relics.includes('heightened-senses')) r.maxAdrenaline += 10;
-  if (relics.includes('double-surge')) r.chargesAdd['surge'] = 1;
+  // Double Surge is an unlockable every account has (Martin, 2026-09-08): Surge always carries its second charge
+  r.chargesAdd['surge'] = 1;
   // Spirit Pact
   r.conjureDurationAdd += [0, 10, 20, 30][l.spiritPact] ?? 0;
   // familiar: attacks on its own (engine), Kal'gerion demon +1% critical strike chance

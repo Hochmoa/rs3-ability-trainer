@@ -8,6 +8,18 @@ import { Entity } from './data.service';
  * Heuristics, not truth – the checkbox can always be turned off.
  */
 
+// ---------------------------------------------------------------- equipment by usage
+
+/**
+ * The Loadout page's "Hide obscure equipment": an item is obscure when fewer PvME setups than this use it
+ * (public/data/usage.json). 1 = only what at least one PvME setup wears or carries is shown. Tuned by hand.
+ */
+export const USAGE_THRESHOLD = 1;
+
+export function isObscureByUsage(score: number): boolean {
+  return score < USAGE_THRESHOLD;
+}
+
 // ---------------------------------------------------------------- weapons
 
 /** Daemonheim (Dungeoneering) gear sits at tier 98–100; nothing usable on the surface is above 95. */

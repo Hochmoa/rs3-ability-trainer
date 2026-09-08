@@ -597,6 +597,22 @@ export interface ItemRef {
 
 export type Equipment = Partial<Record<EquipSlot, ItemRef | null>>;
 
+/**
+ * How often the PvME setups use things (public/data/usage.json, tools/usage-stats.py): the Loadout page sorts its
+ * catalog by it and hides what scores below core/obscure.ts USAGE_THRESHOLD.
+ */
+export interface UsageStats {
+  presets: number;
+  /** "<kind>:<id>" → number of presets wearing or carrying the item */
+  items: Record<string, number>;
+  /** "<main>|<off>" → number of presets wielding the pair */
+  pairs: Record<string, number>;
+  /** spec id → number of setups storing it in an Essence of Finality */
+  eofSpecs: Record<string, number>;
+  /** spec id → number of "spec" steps over all PvME rotations */
+  specSteps: Record<string, number>;
+}
+
 /** One PvME boss setup (public/data/presets.json, built by tools/fetch-presets.py; loaded with DataService.ensure('presets')). */
 export interface BossPreset {
   id: string;
@@ -706,8 +722,8 @@ export const RELICS: { id: string; name: string; text: string }[] = [
   { id: 'persistent-rage', name: 'Persistent Rage', text: 'Out of combat adrenaline builds up instead of draining (no effect in the trainer).' },
   { id: 'berserker-s-fury', name: "Berserker's Fury", text: 'Up to +5.5% damage the lower your life points are (not bleeds). Life points are not simulated – listed only.' },
   { id: 'shadow-s-grace', name: "Shadow's Grace", text: 'Surge, Escape, Dive, Bladed Dive and Barge cooldowns −50% (does not stack with the Mobile perk).' },
-  { id: 'double-surge', name: 'Double Surge', text: 'Surge gains a second charge with its own cooldown – it can be used twice in a row.' },
 ];
+// Double Surge is an unlockable (Surge's second charge), not a relic: every loadout has it (engine/loadout-resolver.ts).
 
 export function newLoadout(name = 'Default'): Loadout {
   return {
