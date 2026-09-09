@@ -1,4 +1,5 @@
 import { Rotation, RotationStep, StepResult } from './models';
+import { markStallRelease } from './stall';
 
 /**
  * Which rotation the Train page selects: the one the URL asks for (`?rotation=<id>`) when it exists, else the one
@@ -27,6 +28,8 @@ export function chainRotations(list: readonly Rotation[]): Rotation | null {
   if (!rest.length) return first;
   const steps: RotationStep[] = [...first.steps];
   for (const r of rest) steps.push({ kind: 'note', id: '', note: 'Next: ' + r.name, requiresAction: true, actionTicks: 0 }, ...r.steps);
+  // a stall at the end of one rotation meets its release at the start of the next only here
+  markStallRelease(steps);
   return { ...first, name: first.name + ' and ' + rest.length + ' more', steps };
 }
 

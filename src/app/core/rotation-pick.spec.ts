@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Rotation, StepResult } from './models';
-import { nextRotation, pickRotation, setupRotations, worstStep } from './rotation-pick';
+import { chainRotations, nextRotation, pickRotation, setupRotations, worstStep } from './rotation-pick';
 
 const rot = (id: string, extra: Partial<Rotation> = {}): Rotation => ({ id, name: id, steps: [], updatedAt: 0, setupId: 'own', ...extra });
 
@@ -63,5 +63,29 @@ describe('worstStep', () => {
   it('is null when nothing was late or early', () => {
     expect(worstStep([res('a', 'perfect'), res('b', 'done')])).toBeNull();
     expect(worstStep([])).toBeNull();
+  });
+});
+
+describe('chainRotations', () => {
+  const rot = (id: string, name: string, steps: Rotation['steps'], presetIndex: number): Rotation => ({ id, name, steps, updatedAt: 0, setupId: 's', presetIndex });
+
+  it('one rotation plays as it is, several become one with a click note between them', () => {
+    const a = rot('a', 'Wars', [{ kind: 'ability', id: 'sever' }], 0);
+    const b = rot('b', 'Phase 1', [{ kind: 'ability', id: 'cleave' }], 1);
+    expect(chainRotations([a])).toBe(a);
+    const c = chainRotations([a, b])!;
+    expect(c.id).toBe('a');
+    expect(c.name).toBe('Wars and 1 more');
+    expect(c.steps).toEqual([{ kind: 'ability', id: 'sever' }, { kind: 'note', id: '', note: 'Next: Phase 1', requiresAction: true, actionTicks: 0 }, { kind: 'ability', id: 'cleave' }]);
+  });
+
+  it('a stall at the end of the pre-build meets its release at the start of the fight', () => {
+    const a = rot('a', 'Wars', [{ kind: 'ability', id: 'meteor-strike', hint: 'stall' }], 0);
+    const b = rot('b', 'Prior to Start', [{ kind: 'ability', id: 'meteor-strike', hint: 'release' }, { kind: 'ability', id: 'cleave' }], 1);
+    const c = chainRotations([a, b])!;
+    expect(c.steps[0]).toMatchObject({ id: 'meteor-strike', stall: true });
+    expect(c.steps[2]).toMatchObject({ id: 'meteor-strike', release: true });
+    // played alone, the stall has no release in reach and stays a plain cast
+    expect(chainRotations([a])!.steps[0].stall).toBeUndefined();
   });
 });

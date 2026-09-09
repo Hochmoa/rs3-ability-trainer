@@ -1,4 +1,5 @@
 import { markPlayerAction } from './note-actions';
+import { markStallRelease } from './stall';
 import { RotationStep } from './models';
 
 /**
@@ -238,17 +239,6 @@ export function parsePvme(text: string, resolve: AliasResolver): PvmeParseResult
  * lands), the release lets it land. Both stay steps – the engine knows the pair through `stall` / `release`; a stall
  * whose release never comes stays an ordinary cast.
  */
-function markStallRelease(steps: RotationStep[]): void {
-  const has = (s: RotationStep, mark: string) => !!s.hint && s.hint.split(', ').includes(mark);
-  for (let i = 0; i < steps.length; i++) {
-    const s = steps[i];
-    if (s.kind === 'note' || !has(s, 'stall')) continue;
-    const j = steps.findIndex((t, k) => k > i && t.kind === s.kind && t.id === s.id && has(t, 'release'));
-    if (j < 0) continue;
-    steps[i] = { ...s, stall: true }; // the "stall" / "release" hints stay: the queue shows them on the step
-    steps[j] = { ...steps[j], release: true };
-  }
-}
 
 function joinHint(hint: string | undefined, text: string): string {
   return hint ? hint + ', ' + text : text;
