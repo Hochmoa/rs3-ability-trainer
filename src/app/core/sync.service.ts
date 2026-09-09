@@ -212,7 +212,10 @@ export class SyncService {
 
     for (const [id, row] of server) {
       const mine = local.get(id);
-      if (mine && decideMerge(mine, Date.parse(row.updated_at)) === 'upload') await this.upsertRotation(mine);
+      // a row from before the setups (no setup_id) whose local copy already found its home: the home goes back up,
+      // otherwise the merge keeps the local setupId and the server row stays homeless for good (audit of 9 Sep 2026)
+      const homeless = !row.setup_id && !!mine?.setupId;
+      if (mine && (homeless || decideMerge(mine, Date.parse(row.updated_at)) === 'upload')) await this.upsertRotation(mine);
       else await this.storage.putRotation(rotationFromRow(row, mine));
     }
     for (const [id, mine] of local) {

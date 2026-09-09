@@ -26,7 +26,7 @@
     seen.add(p.id);
     const loadout = JSON.parse(JSON.stringify(st.loadoutOf(s)));
     loadout.id = await uuidOf('loadout:' + p.id);
-    loadout.name = (p.title || p.boss + ' – ' + p.style).slice(0, 40);
+    loadout.name = (p.title || p.boss + ' · ' + p.style).slice(0, 40);
     const rotations = [];
     for (const r of st.rotations().filter(r => r.setupId === s.id).sort((a, b) => (a.presetIndex ?? 0) - (b.presetIndex ?? 0))) {
       let name = r.name;

@@ -44,9 +44,9 @@ BOSS_NAMES = {
     "corporeal-beast": "Corporeal Beast",
     "croesus": "Croesus",
     "dagannoth-kings": "Dagannoth Kings",
-    "ed1-temple-of-aminishi": "ED1 – Temple of Aminishi",
-    "ed2-dragonkin-laboratory": "ED2 – Dragonkin Laboratory",
-    "ed3-shadow-reef": "ED3 – The Shadow Reef",
+    "ed1-temple-of-aminishi": "ED1: Temple of Aminishi",
+    "ed2-dragonkin-laboratory": "ED2: Dragonkin Laboratory",
+    "ed3-shadow-reef": "ED3: The Shadow Reef",
     "fight-kiln": "Fight Kiln",
     "flesh-hatcher-mhekarnahz": "Flesh-hatcher Mhekarnahz",
     "gate-of-elidinis": "Gate of Elidinis",
@@ -257,7 +257,7 @@ def split_alternatives(lines: list[str]) -> list[tuple[str, list[str]]]:
         heading = line.rstrip().endswith(":")
         # a remark without a sequence ("If Umbra, surge after mds") stays a note of the part it follows
         if len(lines) > 1 and (heading or (ALT_LINE.match(line) and ARROW.search(line))):
-            label = re.sub(r"\s*[:(].*$", "", head).strip()[:32].rstrip(" -–,") or head[:32]
+            label = re.sub(r"\s*[:(].*$", "", head).strip()[:32].rstrip(" -–·,") or head[:32]
         if label or not parts:
             parts.append((label, [line]))
         else:
@@ -271,7 +271,7 @@ def rotations_of(secs: list[dict], section_filter: str | None) -> list[dict]:
     # "### Note:" under "## T90 Necro Rotation" is that rotation
     own = [s["parent"] if s["name"].rstrip(":").lower() in ("note", "notes") and s["parent"] else s["name"].rstrip(":") for s in secs]
     count = Counter(own)
-    names = [s["parent"] + " – " + name if count[name] > 1 and s["parent"] else name for s, name in zip(secs, own)]
+    names = [s["parent"] + " · " + name if count[name] > 1 and s["parent"] else name for s, name in zip(secs, own)]
     seen: Counter[str] = Counter()
     rots = []
     for s, name in zip(secs, names):
@@ -283,7 +283,7 @@ def rotations_of(secs: list[dict], section_filter: str | None) -> list[dict]:
             rots.append({"name": name, "text": "\n".join(s["lines"])})
             continue
         for label, lines in parts:
-            rots.append({"name": f"{name} – {label}" if label else name, "text": "\n".join(lines)})
+            rots.append({"name": f"{name} · {label}" if label else name, "text": "\n".join(lines)})
     return rots
 
 
@@ -293,8 +293,8 @@ def rotations_of(secs: list[dict], section_filter: str | None) -> list[dict]:
 def variant_of(stem: str, boss_key: str) -> str:
     """the descriptive part of a file name: "sanctum-hm-solo-necromancy" -> "HM solo", "zamorak-1000-ranged-melee-group" -> "1000% group\""""
     s = stem.lower()
-    s = re.sub(r"(\d+)-to-(\d+)", r"\1–\2 man", s)
-    s = re.sub(r"\b(\d{3,4})-(\d{3,4})\b", r"\1–\2%", s)
+    s = re.sub(r"(\d+)-to-(\d+)", r"\1 to \2 man", s)
+    s = re.sub(r"\b(\d{3,4})-(\d{3,4})\b", r"\1 to \2%", s)
     s = re.sub(r"\b(\d{3,4})\b(?!%)", r"\1%", s)
     s = re.sub(r"\bhard-mode\b", "hm", s).replace("normal-mode", "nm")
     skip = set(words_of(boss_key)) | set(STYLE_WORDS) | NOISE_WORDS
@@ -305,9 +305,9 @@ def variant_of(stem: str, boss_key: str) -> str:
 
 
 def heading_variant(title: str) -> str:
-    """what a style heading says besides the style: "T95-T100 Necro Rotation" -> "T95–T100", "Melee Instance Camp (140 KPH)" -> "Instance Camp (140 KPH)\""""
+    """what a style heading says besides the style: "T95-T100 Necro Rotation" -> "T95 to T100", "Melee Instance Camp (140 KPH)" -> "Instance Camp (140 KPH)\""""
     words = [w.strip("()") for w in title.replace("-", "–").split()]
-    return " ".join(w for w in words if w.lower() not in STYLE_WORDS and w.lower() not in NOISE_WORDS).strip(" –")
+    return " ".join(w for w in words if w.lower() not in STYLE_WORDS and w.lower() not in NOISE_WORDS).strip(" –").replace("–", " to ")
 
 
 def slug(s: str) -> str:
@@ -316,7 +316,7 @@ def slug(s: str) -> str:
 
 def title_of(boss: str, variant: str, styles: list[str]) -> str:
     label = "/".join(s.lower() for s in styles) + (" hybrid" if len(styles) > 1 else "")
-    return boss + " – " + (variant + " " if variant else "") + label
+    return boss + " · " + (variant + " " if variant else "") + label
 
 
 def parser_tokens() -> tuple[set[str], list[str], list[str]]:
