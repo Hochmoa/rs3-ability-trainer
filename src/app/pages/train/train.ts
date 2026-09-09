@@ -9,10 +9,11 @@ import { DataService, EOF_ICON, Entity, SPEC_KEY } from '../../core/data.service
 import { applyWield, equip, hasSpecial, unequip } from '../../core/equipment';
 import { DEFAULT_LAYOUT_ID, keybindLayout } from '../../core/keybind-layouts';
 import { keybindFromEvent, keybindFromMouse, keybindKey, keybindLabel, resolvePress } from '../../core/keybind.util';
-import { ActionBarSetup, AttackPattern, Keybind, BAR_POSITIONS, BONE_SHIELD_ABILITY, INVENTORY_SIZE, NOTE_ACTION_TICKS, BAR_SLOTS, BarShape, barLayout, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, TARGET_TYPES, EquipSlot, ItemRef, Loadout, PrayerStats, Prebuild, REVOLUTION_MAX_SLOTS, REVOLUTION_MIN_SLOTS, RevolutionSettings, Rotation, STYLES4, Settings, StepResult, Style, Style4, WeaponSpec, emptyPrebuild, entityKey, isStyle4, loadoutStyle, loadoutWield, parseEntityKey, prebuildIsEmpty, visiblePresets, RotationStep, CoachSettings, SessionStuck, setupTitle } from '../../core/models';
+import { ActionBarSetup, AttackPattern, Keybind, BAR_POSITIONS, BONE_SHIELD_ABILITY, INVENTORY_SIZE, NOTE_ACTION_TICKS, BAR_SLOTS, BarShape, barLayout, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, TARGET_TYPES, EquipSlot, ItemRef, Loadout, PrayerStats, Prebuild, REVOLUTION_MAX_SLOTS, REVOLUTION_MIN_SLOTS, RevolutionSettings, Rotation, STYLES4, Settings, StepResult, Style, Style4, WeaponSpec, emptyPrebuild, entityKey, isStyle4, loadoutStyle, loadoutWield, parseEntityKey, prebuildIsEmpty, visiblePresets, RotationStep, CoachSettings, SessionStuck, setupTitle, Weapon } from '../../core/models';
 import { alt1Announce, focusUrl, openFocusWindow } from '../../core/popout';
 import { CoachService, spokenLabel, spokenSequence } from '../../core/coach.service';
 import { PresetsService } from '../../core/presets.service';
+import { weaponsCanMeet } from '../../core/weapon-reach';
 import { chainRotations, nextRotation, pickRotation as chooseRotation, setupRotations, worstStep } from '../../core/rotation-pick';
 import { noteEntity, stepToEngineEntity } from '../../core/step-entity';
 import { StorageService } from '../../core/storage.service';
@@ -396,7 +397,7 @@ export class Train implements OnDestroy {
   /** what the gear panel shows: the live state while training, the saved loadout otherwise */
   readonly gearState = computed(() => this.live() ?? this.storage.loadout());
   private slotOf = (r: ItemRef): EquipSlot | null => this.data.slotOf(r);
-  /** steps the active loadout cannot perform (no 2h, no shield, no spec weapon ...) */
+  /** steps no weapon of the active loadout, worn or carried, can perform (no 2h anywhere, no shield, no spec weapon ...) */
   readonly equipmentWarnings = computed<string[]>(() => {
     if (!this.data.loadoutReady()) return [];
     // the probe starts with the chosen Bone Shield up, like a real session does
@@ -410,6 +411,8 @@ export class Train implements OnDestroy {
     probe.start(0);
     const out = new Set<string>();
     const inv = this.storage.loadout().inventory;
+    // a switch in the backpack makes a step playable: only what no carried weapon can meet is worth a warning
+    const carried = this.data.carriedWeapons(this.storage.loadout()).map((w) => w.weapon).filter((w): w is Weapon => !!w);
     for (const e of this.stepEntities()) {
       if (e?.special?.kind === 'scroll' && this.storage.loadout().familiar !== e.special.familiar) out.add(e.name + ': needs the ' + (this.data.familiarById().get(e.special.familiar ?? '')?.name ?? e.special.familiar) + ' familiar (Loadout page)');
       else if (e?.special && !hasSpecial(inv, e.id)) out.add(e.name + ': not in your backpack');
@@ -418,7 +421,7 @@ export class Train implements OnDestroy {
       for (const r of rule?.requires ?? []) {
         if (r.equipment) {
           const fail = probe.requirementFailure(this.data.toEngineEntity(e), 0);
-          if (fail && fail === r.text) out.add(e.name + ': ' + r.text);
+          if (fail && fail === r.text && !weaponsCanMeet(r.equipment, carried)) out.add(e.name + ': ' + r.text);
         }
       }
     }
