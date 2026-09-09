@@ -4,6 +4,7 @@ import { HIT_CHANCE_MODES, Settings as SettingsModel, CoachSettings } from '../.
 import { ALT1_ADD_URL } from '../../core/popout';
 import { CoachService } from '../../core/coach.service';
 import { StorageService } from '../../core/storage.service';
+import { SessionTrace, traceSummary } from '../../core/trace';
 import { DialogService } from '../../shared/dialog';
 import { ToastService } from '../../shared/toast';
 import { TourService } from '../../shared/tour';
@@ -136,6 +137,23 @@ import { TourService } from '../../shared/tour';
     </div>
 
     <div class="panel">
+      <h2>Last session</h2>
+      <p class="muted small">
+        The record of what the last training session did: every press, what the trainer made of it, cooldowns, buffs and the
+        backpack at each step. Signed in, it is uploaded with your account so a bug can be read off it. Here you can copy or save it.
+      </p>
+      @if (lastTrace(); as t) {
+        <p class="small">{{ traceSummary(t) }}</p>
+        <p>
+          <button class="btn" (click)="copyTrace(t)">Copy as JSON</button>
+          <a class="btn" [href]="traceUrl()" [download]="'rs3trainer-trace-' + t.id.slice(0, 8) + '.json'">Save file</a>
+        </p>
+      } @else {
+        <p class="muted small">No session recorded in this browser yet.</p>
+      }
+    </div>
+
+    <div class="panel">
       <h2>Data</h2>
       <p class="muted small">
         Storage consent: <b>{{ storage.consent() ? 'accepted' : 'not given, nothing is saved' }}</b>
@@ -188,6 +206,25 @@ export class Settings {
   readonly s = this.storage.settings;
   readonly HIT_CHANCE_MODES = HIT_CHANCE_MODES;
   readonly ALT1_ADD_URL = ALT1_ADD_URL;
+  readonly traceSummary = traceSummary;
+  /** the newest session trace of this browser (core/trace.ts) and a blob URL to save it */
+  readonly lastTrace = signal<SessionTrace | null>(null);
+  readonly traceUrl = signal('');
+
+  constructor() {
+    void this.storage.listTraces().then((list) => {
+      const t = list[0] ?? null;
+      this.lastTrace.set(t);
+      if (t) this.traceUrl.set(URL.createObjectURL(new Blob([JSON.stringify(t)], { type: 'application/json' })));
+    });
+  }
+
+  copyTrace(t: SessionTrace): void {
+    navigator.clipboard.writeText(JSON.stringify(t)).then(
+      () => this.toast.show('Copied. Paste it wherever the bug report goes.'),
+      () => this.toast.show('The browser refused the clipboard. Use "Save file" instead.', 'warn'),
+    );
+  }
 
   set<K extends keyof SettingsModel>(key: K, value: SettingsModel[K]): void {
     const next = { ...this.s(), [key]: value };

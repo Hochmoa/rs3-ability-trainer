@@ -17,6 +17,8 @@ import { weaponsCanMeet } from '../../core/weapon-reach';
 import { chainRotations, nextRotation, pickRotation as chooseRotation, setupRotations, worstStep } from '../../core/rotation-pick';
 import { noteEntity, stepToEngineEntity } from '../../core/step-entity';
 import { StorageService } from '../../core/storage.service';
+import { TraceRecorder } from '../../core/trace';
+import { BUILD } from '../../version';
 import { prebuildFor, rotationAssumptions } from '../../core/rotation-requires';
 import { resolveLoadout } from '../../engine/loadout-resolver';
 import { BUFF_BY_ID, ruleFor, stackMax, stackName } from '../../engine/rules';
@@ -913,6 +915,8 @@ export class Train implements OnDestroy {
   private readonly loop = new FrameLoop((now) => this.tick(now), browserFrameLoopDeps(this.doc));
   private flashUntil = 0;
   private startedAt = 0;
+  /** the record of this session (core/trace.ts), from Start to the end */
+  private trace: TraceRecorder | null = null;
 
   /** the URL's `?rotation=<id>` was applied to the selection (once per id – later list changes keep what the player picked) */
   private appliedWanted: string | null = null;
@@ -1062,7 +1066,7 @@ export class Train implements OnDestroy {
   /** tap on an action chip while training = press it (touch / mouse) */
   /** "Enter the instance": the button of an action note – the rotation goes on when it is pressed */
   pressNote(stepIndex: number): void {
-    if (this.running()) this.press('note:' + stepIndex);
+    if (this.running()) this.press('note:' + stepIndex, 'note button');
   }
 
   clickAction(id: string): void {
@@ -1187,6 +1191,22 @@ export class Train implements OnDestroy {
     this.pressedUntil.clear();
     this.pressedKeys.set(new Set());
     this.engine.start(performance.now());
+    const setupNow = this.storage.setup();
+    this.trace = new TraceRecorder(
+      {
+        build: BUILD,
+        startedAt: Date.now(),
+        setup: { boss: setupNow.boss, name: setupNow.name, style: setupNow.style },
+        rotation: { id: rot.id, name: rot.name, chained: this.chain() && this.chainList().length > 1 },
+        steps: rot.steps,
+        settings: { ...this.storage.settings() },
+        loadout: l,
+        bars: setup,
+        prebuild: this.effectivePrebuild(),
+        enemy: this.enemyOn() ? { ...this.enemy() } : null,
+      },
+      performance.now(),
+    );
     this.syncWield(this.engine);
     this.adrenaline.set(this.engine.adrenaline);
     this.expectedKey.set(this.engine.currentStep?.key ?? null);
@@ -1226,8 +1246,28 @@ export class Train implements OnDestroy {
     if (!this.finishReason()) this.finishReason.set('stopped');
     this.gcdPhase.set(1);
     this.gcdRemaining.set(0);
+    this.endTrace();
     this.live.set(null);
     this.saveSession();
+  }
+
+  /** closes the session trace with the live backpack and keeps it (this browser, and the account when signed in) */
+  private endTrace(): void {
+    const t = this.trace;
+    if (!t) return;
+    this.trace = null;
+    const live = this.live();
+    const done = t.end(this.finishReason() ?? 'stopped', performance.now(), live ? { equipment: live.equipment, inventory: live.inventory } : null);
+    void this.storage.addTrace(done);
+  }
+
+  /** a gear change while training goes into the trace with the backpack after it */
+  private traceGear(action: string, item: string, inventory: Loadout['inventory']): void {
+    const e = this.engine;
+    if (!e || !this.trace) return;
+    const now = performance.now();
+    const tick = e.currentTick(now);
+    this.trace.gear(action, item, now, tick, inventory, e.debugState(tick));
   }
 
   /**
@@ -1249,6 +1289,7 @@ export class Train implements OnDestroy {
       if (r.error) return this.toast.show(r.error, 'warn');
       this.live.set({ ...l, ...r.state });
       e.refreshLoadout();
+      this.traceGear('wear', name, r.state.inventory);
       this.feedback.set({ text: name + ' worn', cls: 'info' });
     } else if (a.from.kind === 'equip') {
       const r = unequip(l, a.from.slot, this.slotOf);
@@ -1257,6 +1298,7 @@ export class Train implements OnDestroy {
       this.live.set(next);
       if (a.ref.kind === 'weapon') e.setWield(loadoutWield(next));
       else e.refreshLoadout();
+      this.traceGear('take off', name, next.inventory);
       this.feedback.set({ text: name + ' taken off', cls: 'info' });
     }
     // the gear changed outside the engine's tick: the usability of the bars is recomputed on the next frame
@@ -1344,12 +1386,15 @@ export class Train implements OnDestroy {
       this.onTick(e, tick, now);
     }
     this.onFrame(e, tick, now);
+    const fb = this.feedback();
+    if (fb && this.trace) this.trace.feedback(fb.text, fb.cls, now, tick);
     if (e.state !== 'running') {
       this.stopLoops();
       this.coach.disable();
       this.running.set(false);
       this.finished.set(true);
       if (!this.finishReason()) this.finishReason.set('finished');
+      this.endTrace();
       this.live.set(null);
       this.saveSession();
       return false;
@@ -1622,6 +1667,10 @@ export class Train implements OnDestroy {
   }
 
   private applyEvent(e: TrainerEngine, ev: EngineEvent, now: number): void {
+    if (this.trace) {
+      const tick = e.currentTick(now);
+      this.trace.event(ev as EngineEvent & Record<string, unknown>, now, tick, () => e.debugState(tick));
+    }
     const queueing = this.storage.settings().abilityQueueing;
     switch (ev.kind) {
       case 'unqueued':
@@ -1915,8 +1964,9 @@ export class Train implements OnDestroy {
   }
 
   /** send a press to the (simulated) server and light the slot up right away, like the game does on click */
-  private press(key: string): void {
+  private press(key: string, source = 'click'): void {
     const now = performance.now();
+    if (this.engine && this.trace) this.trace.input(key, source, now, this.engine.debugState(this.engine.currentTick(now)));
     this.engine?.press(key, now);
     this.pressedUntil.set(key, now + PRESS_FLASH_MS);
     this.pressedKeys.set(new Set([...this.pressedKeys(), key]));
@@ -1969,12 +2019,16 @@ export class Train implements OnDestroy {
   private pressBind(kb: Keybind, e: Event): void {
     // the same resolution as the drill (core/keybind.util): client actions, then the bars
     const target = resolvePress(this.storage.actionBars(), keybindKey(kb));
-    if (!target) return;
+    if (!target) {
+      if (this.engine && this.trace) this.trace.unbound(keybindLabel(kb), performance.now(), this.engine.currentTick(performance.now()));
+      return;
+    }
     e.preventDefault();
-    if (target.kind === 'action') this.press('action:' + target.id);
+    const source = 'key ' + keybindLabel(kb);
+    if (target.kind === 'action') this.press('action:' + target.id, source);
     else {
       const entity = this.bars().find((b) => b.position === target.pos)?.slots[target.slot]?.entity;
-      if (entity) this.press(entity.key);
+      if (entity) this.press(entity.key, source);
     }
   }
 }

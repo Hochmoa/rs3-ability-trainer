@@ -6,17 +6,20 @@ import { defaultActionBarsWithKeys } from './keybind-layouts';
 import { DataService } from './data.service';
 import { cleanStep, mergeActionBars, migrateLegacyGear, migrateRotation, migrateSettings, normaliseLoadout } from './migrations';
 import { ActionBarSetup, DEFAULT_ENEMY, enemyWithStats, DEFAULT_SETTINGS, EnemyConfig, LegacyLoadout, Loadout, Prebuild, Rotation, Session, Setup, SetupMeta, Settings, migrateLegacyLoadout, newLoadout, newSetup } from './models';
+import { SessionTrace } from './trace';
 import { reconcileSetups } from './setup-migration';
 
 const DB_NAME = 'rs3trainer';
 /** 2 (Sept 2026): the `setups` store; the legacy per-entity `keybinds` store is dropped (keys live in the action bars) */
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const CONSENT_KEY = 'rs3trainer.consent';
 /** one "could not save" toast per this many ms – a burst of failing puts (quota) is one problem, not twenty */
 const WRITE_TOAST_MS = 30_000;
 const WRITE_FAILED_TEXT = "Could not save to this browser's storage. Your change is kept for this visit only.";
 /** local session history: only the newest ones are kept (every session carries a copy of the settings and the loadout) */
 export const SESSIONS_KEPT = 50;
+/** session traces kept in this browser (core/trace.ts); the server keeps 20 per account */
+export const TRACES_KEPT = 5;
 const LOAD_FAILED_TEXT = "Could not read this browser's storage. It is running on defaults and saves nothing until you reload.";
 
 /**
@@ -99,6 +102,8 @@ export class StorageService {
   readonly setupSaved = new Subject<Setup>();
   readonly setupDeleted = new Subject<string>();
   readonly sessionAdded = new Subject<Session>();
+  /** a session trace was recorded (core/trace.ts); the sync uploads it */
+  readonly traceAdded = new Subject<SessionTrace>();
   readonly actionBarsChanged = new Subject<ActionBarSetup>();
   /** settings or the enemy config were edited locally */
   readonly settingsChanged = new Subject<void>();
@@ -135,6 +140,7 @@ export class StorageService {
           db.createObjectStore('setups', { keyPath: 'id' });
           if (db.objectStoreNames.contains('keybinds')) db.deleteObjectStore('keybinds');
         }
+        if (oldVersion < 3) db.createObjectStore('traces', { keyPath: 'id' });
       },
     });
     return this.db;
@@ -478,6 +484,26 @@ export class StorageService {
       for (const key of keys.sort((a, b) => a - b).slice(0, Math.max(0, keys.length - SESSIONS_KEPT))) await db.delete('sessions', key);
     });
     this.sessionAdded.next(s);
+  }
+
+  /** Keeps the session trace and drops the oldest beyond `TRACES_KEPT`; signed in, the sync uploads it. */
+  async addTrace(t: SessionTrace): Promise<void> {
+    await this.write(async (db) => {
+      await db.put('traces', t);
+      const all = (await db.getAll('traces')) as SessionTrace[];
+      for (const old of all.sort((a, b) => b.startedAt - a.startedAt).slice(TRACES_KEPT)) await db.delete('traces', old.id);
+    });
+    this.traceAdded.next(t);
+  }
+
+  /** the traces of this browser, newest first */
+  async listTraces(): Promise<SessionTrace[]> {
+    if (!this.consent()) return [];
+    const list = await safeWrite(
+      async () => (await (await this.open()).getAll('traces')) as SessionTrace[],
+      (err) => console.error('IndexedDB read failed: traces', err),
+    );
+    return (list ?? []).sort((a, b) => b.startedAt - a.startedAt);
   }
 
   async listSessions(): Promise<Session[]> {

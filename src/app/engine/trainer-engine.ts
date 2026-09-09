@@ -4,6 +4,7 @@ import { ResolvedLoadout, defaultResolvedLoadout } from './loadout-resolved';
 import { PROTECTION, PrayerBook, SOUL_SPLIT, bookOf, togglePrayer } from './prayer-rules';
 import { BASE_CRIT_CHANCE, BUFF_DAMAGE_MULT, BUFF_FLAT_ADD, BUFF_TYPE_DAMAGE_MULT, FORTITUDE, POISON_EVERY_TICKS, POISON_ROLL, RAGE_MAX, RAGE_PER_STACK, SPIRIT_ATTACKS, TARGET_DAMAGE_ADD, TARGET_DAMAGE_MULT, critMultiplier, damageSkillOf, fortitudeLifePoints, prayerDamagePct } from './damage';
 import { BUFF_HIT_CHANCE_ADD, HIT_CHANCE_BYPASS_DOTS, MIN_HIT_CHANCE, accuracyRating, accuracySkillOf, affinityStyleOf, armourRating, hitChance, prayerAccuracyLevels } from './hit-chance';
+import { EngineDebugState } from '../core/trace';
 import { MORPH_TARGETS } from './morphs';
 import { BUFF_BY_ID, MODELLED_WIKI_BUFFS, GLOBALS, actionRuleFor, ruleFor, scrollRuleFor, specRuleFor, specialRuleFor, spellBookOf, spellRuleFor } from './rules';
 import { boneShieldTier } from './rules-necromancy';
@@ -2647,6 +2648,39 @@ export class TrainerEngine {
    * their remaining lifetime, the self buffs an ability put up, and the prayers left on. A boss guide is a chain of
    * phases and every phase starts where the previous one stopped – "Phase 2" is never played from an empty bar.
    */
+  /** compact state for the session trace (core/trace.ts): what a press met, what a decision was made on */
+  debugState(tick: number): EngineDebugState {
+    const cooldowns: [string, number][] = [];
+    for (const [k, r] of this.readyTick) if (r > tick) cooldowns.push([k, r]);
+    const charges: [string, number[]][] = [];
+    for (const [k, list] of this.chargeReady) {
+      const left = list.filter((r) => r > tick);
+      if (left.length) charges.push([k, left]);
+    }
+    return {
+      tick,
+      step: this.index,
+      expected: this.steps[this.index]?.key ?? null,
+      adrenaline: Math.round(this.adrenaline * 10) / 10,
+      gcdEnd: this.gcdEndTick,
+      castTick: this.castTick,
+      busyUntil: this.busyUntil,
+      settleUntil: this.settleUntil,
+      wield: { ...this.wield },
+      queued: this.queuedKey,
+      inflight: this.inflightKeys,
+      held: this.held ? { key: this.held.key, tick: this.held.tick } : null,
+      channel: this.channel ? { key: this.channel.key, endTick: this.channel.endTick, hits: this.channel.hits, hitsDone: this.channel.hitsDone } : null,
+      buffs: this.buffs.map((b) => [b.id, b.stacks, b.endTick]),
+      spirits: [...this.spirits.values()].map((s) => [s.spirit, s.endTick]),
+      cooldowns,
+      charges,
+      prayers: [...this.activePrayers],
+      targetHp: Math.round(this.targetHp),
+      damageDealt: Math.round(this.damageDealt),
+    };
+  }
+
   snapshotPrebuild(): Prebuild {
     const tick = this.lastTick;
     const left = (endTick: number | null) => (endTick === null ? undefined : Math.max(1, endTick - tick));

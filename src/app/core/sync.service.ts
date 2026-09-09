@@ -2,6 +2,7 @@ import { Injectable, effect, inject, signal } from '@angular/core';
 import { Loadout, ProfileKind, Rotation, SETUP_SEPARATOR, Session, Setup, newSetup } from './models';
 import { necroPrebuild } from './presets.service';
 import { StorageService } from './storage.service';
+import { SessionTrace } from './trace';
 import { SupabaseService, errorText } from './supabase.service';
 
 /** Row shape of public.setups (the loadout travels inside the row). */
@@ -145,6 +146,7 @@ export class SyncService {
     this.storage.rotationSaved.subscribe((r) => this.guard(() => this.upsertRotation(r)));
     this.storage.rotationDeleted.subscribe((id) => this.guard(() => this.deleteRotation(id)));
     this.storage.sessionAdded.subscribe((s) => this.guard(() => this.uploadSession(s)));
+    this.storage.traceAdded.subscribe((t) => this.guard(() => this.uploadTrace(t)));
   }
 
   private guard(fn: () => Promise<void>): void {
@@ -278,6 +280,25 @@ export class SyncService {
 
   async deleteRotation(id: string): Promise<void> {
     const { error } = await (await this.supabase.db()).from('rotations').delete().eq('id', id);
+    if (error) throw error;
+  }
+
+  /** the session trace (core/trace.ts) as it is; the server keeps the last 20 per account (0022) */
+  async uploadTrace(t: SessionTrace): Promise<void> {
+    const uid = this.uid;
+    if (!uid) return;
+    const row = {
+      id: t.id,
+      user_id: uid,
+      started_at: new Date(t.startedAt).toISOString(),
+      ended_at: t.endedAt ? new Date(t.endedAt).toISOString() : null,
+      rotation_name: t.rotation.name.slice(0, 120),
+      build: t.build.slice(0, 60),
+      reason: t.reason,
+      events: t.events.length,
+      trace: t,
+    };
+    const { error } = await (await this.supabase.db()).from('session_traces').insert(row);
     if (error) throw error;
   }
 

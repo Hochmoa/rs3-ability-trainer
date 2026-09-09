@@ -83,3 +83,14 @@ the consent banner is answered, and Settings → Tour replays it.
   off, drag between backpack and body, drag out of the panel to drop (GearDragService.droppedOutside, GearAction
   'drop-out'; the Gear page drops the same way).
 - An icon dragged off the action bars leaves the bar (ActionBar onDragEnded).
+
+## Session trace, 9 Sep 2026
+
+Every training session is recorded (src/app/core/trace.ts): the setup, the steps, the loadout and bars at the start,
+then every press with the engine's state, every engine event (decisive ones with state), every gear change and
+feedback line, and the end. The last 5 stay in the browser (IndexedDB 'traces', Settings page: copy / save); signed
+in, each one is uploaded to session_traces (0022, last 20 per account). Reading one:
+
+    python tools/trace-report.py --latest --user Y0loFrodo     # newest trace of that account, as a timeline
+    python tools/trace-report.py --list                        # what is on the server
+    python tools/trace-report.py trace.json                    # a file saved from the Settings page
