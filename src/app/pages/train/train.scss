@@ -1547,3 +1547,9 @@
     cursor: pointer;
   }
 }
+
+/* the boss under the setup select: the select shows only the setup's name, the boss is the option group */
+.caption-boss {
+  color: var(--text);
+  font-weight: 600;
+}

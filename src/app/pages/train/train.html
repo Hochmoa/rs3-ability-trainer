@@ -155,7 +155,10 @@
             />
           }
         </div>
-        <small class="caption muted">{{ setupCaption() }}{{ setupCount() ? ' · ' + setupCount() : '' }}</small>
+        <small class="caption">
+          @if (storage.setup().boss) { <b class="caption-boss">{{ storage.setup().boss }}</b><span class="muted"> · </span> }
+          <span class="muted">{{ setupCaption() }}{{ setupCount() ? ' · ' + setupCount() : '' }}</span>
+        </small>
       </label>
       <label class="field grow" data-tour="rotation" title="Rotation of the setup to practise (Rotations page)">
         <span>Rotation</span>
