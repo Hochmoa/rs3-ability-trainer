@@ -1,5 +1,6 @@
 import { CdkDragDrop, CdkDropList } from '@angular/cdk/drag-drop';
 import { Component, OnDestroy, computed, inject, input, output } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DataService, GearView } from '../core/data.service';
 import { EquipSlot, Equipment, GEAR_SLOTS, GearSlot, INVENTORY_SIZE, ItemRef, SLOT_NAMES } from '../core/models';
 import { GearDragService } from './gear-drag';
@@ -25,7 +26,9 @@ export type GearAction =
   | { kind: 'drop-equip'; drag: GearDrag; slot: EquipSlot }
   | { kind: 'drop-inv'; drag: GearDrag; index: number }
   | { kind: 'click'; ref: ItemRef; from: GearSource }
-  | { kind: 'menu'; ref: ItemRef; from: GearSource; x: number; y: number };
+  | { kind: 'menu'; ref: ItemRef; from: GearSource; x: number; y: number }
+  /** a worn or carried item was dragged out of the panel and released over nothing: drop it (editable panels only) */
+  | { kind: 'drop-out'; drag: GearDrag };
 
 interface Cell {
   slot: EquipSlot;
@@ -405,6 +408,10 @@ export class GearPanel implements OnDestroy {
   constructor() {
     // the cells resolve item refs against the catalogs; they fill in as the files arrive
     void this.data.ensure('gear', 'weapons', 'perks');
+    // dragging an item out of the panel and letting go over nothing drops it, like dropping it on the ground in game
+    this.gearDrag.droppedOutside.pipe(takeUntilDestroyed()).subscribe((d) => {
+      if (this.editable() && d.from.kind !== 'catalog') this.action.emit({ kind: 'drop-out', drag: d });
+    });
   }
 
   ngOnDestroy(): void {

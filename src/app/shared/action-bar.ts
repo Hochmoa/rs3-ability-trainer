@@ -1,4 +1,4 @@
-import { CdkDrag, CdkDragDrop, CdkDropList } from '@angular/cdk/drag-drop';
+import { CdkDrag, CdkDragDrop, CdkDragEnd, CdkDropList } from '@angular/cdk/drag-drop';
 import { Component, inject, input, output } from '@angular/core';
 import { DataService, Entity } from '../core/data.service';
 import { ItemRef, entityKey } from '../core/models';
@@ -67,7 +67,7 @@ export interface SlotView {
             @if (s.entity) {
               <!-- the icon can be dragged to another slot / bar while the bars are editable (not during a session);
                    on touch only after a short hold, so a swipe over the bars still scrolls the page -->
-              <div class="drag" cdkDrag [cdkDragData]="{ pos: position(), slot: $index, entity: s.entity }" [cdkDragDisabled]="!droppable()" [cdkDragStartDelay]="{ touch: 250, mouse: 0 }">
+              <div class="drag" cdkDrag [cdkDragData]="{ pos: position(), slot: $index, entity: s.entity }" [cdkDragDisabled]="!droppable()" [cdkDragStartDelay]="{ touch: 250, mouse: 0 }" (cdkDragEnded)="onDragEnded($event, $index)">
                 <img [src]="(s.morph?.entity ?? s.entity).icon" [alt]="(s.morph?.entity ?? s.entity).name" draggable="false" />
               </div>
               @if (s.morph && s.morph.stage > 1 && s.morph.entity.key === s.entity.key) {
@@ -518,6 +518,12 @@ export class ActionBar {
   overlay(phase: number): string {
     const deg = Math.round(phase * 360);
     return 'conic-gradient(transparent 0deg ' + deg + 'deg, rgba(0, 0, 0, 0.72) ' + deg + 'deg 360deg)';
+  }
+
+  /** the icon was let go outside every slot: it leaves the bar, like dragging an ability off the bar in game */
+  onDragEnded(event: CdkDragEnd, slot: number): void {
+    const under = document.elementFromPoint(event.event instanceof MouseEvent ? event.event.clientX : (event.event as TouchEvent).changedTouches?.[0]?.clientX ?? -1, event.event instanceof MouseEvent ? event.event.clientY : (event.event as TouchEvent).changedTouches?.[0]?.clientY ?? -1);
+    if (!under?.closest('.slot')) this.slotClear.emit(slot);
   }
 
   onDrop(event: CdkDragDrop<unknown>, slot: number): void {

@@ -74,3 +74,12 @@ the consent banner is answered, and Settings → Tour replays it.
 - "Play on into the next rotations" on the Train page: the selected rotation and every one after it in the setup run
   as one session, with a "Next: Phase 2" button between them (a click note with 0 ticks). Nothing resets in between.
   First version; the popout / focus view plays single rotations only.
+
+## Train page, 9 Sep 2026
+
+- The boss stands under the setup select (the select shows only the setup's name).
+- The equipment warning checks every weapon the loadout carries (core/weapon-reach.ts), not only the worn ones.
+- Idle, the backpack and the worn gear are managed on the Train page like on the Gear page: click to wear or take
+  off, drag between backpack and body, drag out of the panel to drop (GearDragService.droppedOutside, GearAction
+  'drop-out'; the Gear page drops the same way).
+- An icon dragged off the action bars leaves the bar (ActionBar onDragEnded).

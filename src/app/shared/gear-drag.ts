@@ -1,4 +1,5 @@
 import { Injectable, inject, signal } from '@angular/core';
+import { Subject } from 'rxjs';
 import type { GearDrag } from './gear-panel';
 import { DragArm } from './hold-drag';
 import { TooltipService } from './tooltip';
@@ -23,6 +24,8 @@ export class GearDragService {
   readonly hover = signal<string | null>(null);
   /** true right after a drop: the click the browser fires on the common ancestor is not a click */
   suppressClick = false;
+  /** a drag released over no drop target at all: the panel it came from treats that as "drop it" */
+  readonly droppedOutside = new Subject<GearDrag>();
 
   private current: { drag: GearDrag; icon: string | null; name: string; ghost: HTMLElement | null; moved: boolean } | null = null;
   /** mouse: drag after 6 px; touch: only after a 300 ms hold without movement (a swipe scrolls) – hold-drag.ts */
@@ -120,7 +123,8 @@ export class GearDragService {
     window.setTimeout(() => (this.suppressClick = false), 0);
     if (ev.type === 'pointercancel') return;
     const target = this.targetUnder(ev);
-    target?.dispatchEvent(new CustomEvent<GearDrag>(GEAR_DROP_EVENT, { detail: c.drag }));
+    if (target) target.dispatchEvent(new CustomEvent<GearDrag>(GEAR_DROP_EVENT, { detail: c.drag }));
+    else this.droppedOutside.next(c.drag);
   };
 
   private targetUnder(ev: PointerEvent): HTMLElement | null {

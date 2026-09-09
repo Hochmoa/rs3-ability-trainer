@@ -6,10 +6,10 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { placeOnBars } from '../../core/bar-place';
 import { DataService, EOF_ICON, Entity, SPEC_KEY } from '../../core/data.service';
-import { applyWield, equip, hasSpecial, unequip } from '../../core/equipment';
+import { applyWield, equip, hasSpecial, moveItem, removeItem, removeWorn, unequip } from '../../core/equipment';
 import { DEFAULT_LAYOUT_ID, keybindLayout } from '../../core/keybind-layouts';
 import { keybindFromEvent, keybindFromMouse, keybindKey, keybindLabel, resolvePress } from '../../core/keybind.util';
-import { ActionBarSetup, AttackPattern, Keybind, BAR_POSITIONS, BONE_SHIELD_ABILITY, INVENTORY_SIZE, NOTE_ACTION_TICKS, BAR_SLOTS, BarShape, barLayout, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, TARGET_TYPES, EquipSlot, ItemRef, Loadout, PrayerStats, Prebuild, REVOLUTION_MAX_SLOTS, REVOLUTION_MIN_SLOTS, RevolutionSettings, Rotation, STYLES4, Settings, StepResult, Style, Style4, WeaponSpec, emptyPrebuild, entityKey, isStyle4, loadoutStyle, loadoutWield, parseEntityKey, prebuildIsEmpty, visiblePresets, RotationStep, CoachSettings, SessionStuck, setupTitle, Weapon } from '../../core/models';
+import { ActionBarSetup, AttackPattern, Keybind, BAR_POSITIONS, BONE_SHIELD_ABILITY, INVENTORY_SIZE, NOTE_ACTION_TICKS, BAR_SLOTS, BarShape, barLayout, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, TARGET_TYPES, EquipSlot, ItemRef, Loadout, PrayerStats, Prebuild, REVOLUTION_MAX_SLOTS, REVOLUTION_MIN_SLOTS, RevolutionSettings, Rotation, STYLES4, Settings, StepResult, Style, Style4, WeaponSpec, emptyPrebuild, entityKey, isStyle4, loadoutStyle, loadoutWield, parseEntityKey, prebuildIsEmpty, visiblePresets, RotationStep, CoachSettings, SessionStuck, setupTitle, Weapon, Equipment } from '../../core/models';
 import { alt1Announce, focusUrl, openFocusWindow } from '../../core/popout';
 import { CoachService, spokenLabel, spokenSequence } from '../../core/coach.service';
 import { PresetsService } from '../../core/presets.service';
@@ -1230,15 +1230,17 @@ export class Train implements OnDestroy {
     this.saveSession();
   }
 
-  /** click in the gear panel while training: wield / drink / wear / take off */
+  /**
+   * The gear panel. Idle: the backpack and the worn gear are managed here like on the Gear page (drag between
+   * backpack and body, click to wear or take off, drag out to drop) and saved to the loadout. Training: a click
+   * wields / drinks / wears / takes off for this session only.
+   */
   onGear(a: GearAction): void {
+    if (!this.running()) return this.editGear(a);
     if (a.kind !== 'click') return;
     const e = this.engine;
     const l = this.live();
-    if (!this.running() || !e || !l) {
-      this.toast.show('Start a session to use the backpack; the loadout is edited on the Loadout page.');
-      return;
-    }
+    if (!e || !l) return;
     const name = this.data.view(a.ref)?.name ?? a.ref.id;
     if (a.from.kind === 'inv') {
       if (a.ref.kind === 'weapon') return this.press('weapon:' + a.ref.id);
@@ -1259,6 +1261,35 @@ export class Train implements OnDestroy {
     }
     // the gear changed outside the engine's tick: the usability of the bars is recomputed on the next frame
     this.lastTick = -1;
+  }
+
+  /** idle: the panel's drags and clicks change the saved loadout (core/equipment.ts, same rules as the Gear page) */
+  private editGear(a: GearAction): void {
+    const l = this.storage.loadout();
+    const state = { equipment: l.equipment, inventory: l.inventory };
+    let r: { state: { equipment: Equipment; inventory: (ItemRef | null)[] }; error?: string } | null = null;
+    switch (a.kind) {
+      case 'drop-equip':
+        if (a.drag.from.kind === 'inv') r = equip(state, a.drag.ref, this.slotOf, a.drag.from.index, a.slot);
+        break;
+      case 'drop-inv':
+        if (a.drag.from.kind === 'inv') r = moveItem(state, a.drag.from.index, a.index);
+        else if (a.drag.from.kind === 'equip') r = unequip(state, a.drag.from.slot, this.slotOf, a.index);
+        break;
+      case 'drop-out':
+        if (a.drag.from.kind === 'inv') r = removeItem(state, a.drag.from.index);
+        else if (a.drag.from.kind === 'equip') r = removeWorn(state, a.drag.from.slot);
+        break;
+      case 'click':
+        if (a.from.kind === 'inv' && this.slotOf(a.ref)) r = equip(state, a.ref, this.slotOf, a.from.index);
+        else if (a.from.kind === 'equip') r = unequip(state, a.from.slot, this.slotOf);
+        break;
+      default:
+        return;
+    }
+    if (!r) return;
+    if (r.error) return this.toast.show(r.error, 'warn');
+    void this.storage.saveLoadout({ ...l, equipment: r.state.equipment, inventory: r.state.inventory });
   }
 
   /** backpack potions grey out like bar slots when they cannot be drunk right now – reads `slotUsable` where it is called, so the panel input stays the same function */

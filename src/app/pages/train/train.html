@@ -849,7 +849,7 @@
    @if (advanced()) {
    <aside class="gear-side">
     <div class="gear-head"><b>Equipment &amp; backpack</b> <a routerLink="/loadout">edit</a></div>
-    <gear-panel [equipment]="gearState().equipment" [inventory]="gearState().inventory" [live]="true" [cdkDrops]="!running()" [dragOut]="!running()" [usable]="gearUsable()" [wanted]="wantedItem()" (action)="onGear($event)" (cdkDrop)="dropIntoInventory($event.index, $event.data)" />
+    <gear-panel [equipment]="gearState().equipment" [inventory]="gearState().inventory" [live]="true" [editable]="!running()" [cdkDrops]="!running()" [dragOut]="!running()" [usable]="gearUsable()" [wanted]="wantedItem()" (action)="onGear($event)" (cdkDrop)="dropIntoInventory($event.index, $event.data)" />
    </aside>
    }
   </div>

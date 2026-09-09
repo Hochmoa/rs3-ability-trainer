@@ -346,6 +346,10 @@ export class Loadout {
       case 'menu':
         this.openMenu(a.ref, a.from, a.x, a.y);
         break;
+      case 'drop-out':
+        if (a.drag.from.kind === 'inv') this.apply(removeItem(this.state(), a.drag.from.index));
+        else if (a.drag.from.kind === 'equip') this.apply(removeWorn(this.state(), a.drag.from.slot));
+        break;
     }
   }
 
