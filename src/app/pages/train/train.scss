@@ -1553,3 +1553,16 @@
   color: var(--text);
   font-weight: 600;
 }
+
+/* the adrenaline crystal button next to the adrenaline bar (War's Retreat rotations only) */
+.bar-row .btn.crystal {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 8px;
+  white-space: nowrap;
+  img {
+    height: 22px;
+    width: auto;
+  }
+}

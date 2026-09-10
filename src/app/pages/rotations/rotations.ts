@@ -7,7 +7,7 @@ import { groupCatalog } from '../../core/catalog-groups';
 import { DataService, Entity } from '../../core/data.service';
 import { keybindLabel, slotKeybinds } from '../../core/keybind.util';
 import { parsePvme } from '../../core/pvme';
-import { NOTE_ACTION_MAX_TICKS, NOTE_ACTION_TICKS, Rotation, RotationStep, SPELLBOOKS, SPELLBOOK_NAMES, STYLES, setupTitle } from '../../core/models';
+import { NOTE_ACTION_MAX_TICKS, NOTE_ACTION_TICKS, Rotation, RotationStep, SPELLBOOKS, SPELLBOOK_NAMES, STYLES, setupTitle, inWarsRetreat } from '../../core/models';
 import { isObscureEntity } from '../../core/obscure';
 import { PresetsService } from '../../core/presets.service';
 import { rotationAssumptions } from '../../core/rotation-requires';
@@ -296,6 +296,13 @@ export class Rotations {
 
   setName(name: string): void {
     this.editing.update((r) => (r ? { ...r, name } : r));
+  }
+
+  /** "In War's Retreat": the player's answer, else the name decides (core/models.ts inWarsRetreat) */
+  readonly inWars = inWarsRetreat;
+
+  setWars(on: boolean): void {
+    this.editing.update((r) => (r ? { ...r, warsRetreat: on } : r));
   }
 
   async save(): Promise<void> {

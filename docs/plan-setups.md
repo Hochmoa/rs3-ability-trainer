@@ -94,3 +94,13 @@ in, each one is uploaded to session_traces (0022, last 20 per account). Reading 
     python tools/trace-report.py --latest --user Y0loFrodo     # newest trace of that account, as a timeline
     python tools/trace-report.py --list                        # what is on the server
     python tools/trace-report.py trace.json                    # a file saved from the Settings page
+
+## Adrenaline crystal, 10 Sep 2026
+
+- Rotations carry "In War's Retreat" (Rotation.warsRetreat, rotations.wars_retreat in 0023): the player's toggle on
+  the Rotations page; unset, the name decides (`inWarsRetreat`: Wars, War's Retreat, Pre-build). A chained session
+  keeps segments, so the crystal is offered only while the current step is in a War's Retreat rotation.
+- The Train page shows an "Adren crystal" button next to the adrenaline bar for such rotations. A press is one 1.8 s
+  channel (engine useCrystal): 25% adrenaline, or with the setting "Adrenaline crystal fully upgraded" (default on,
+  War's Blessing 4 + the 2,000-kill upgrade) 100% and the adrenaline potions off cooldown. Never a wrong press, never
+  a step; the next ability is due after the channel. Source: runescape.wiki/w/Adrenaline_crystal_(War's_Retreat).

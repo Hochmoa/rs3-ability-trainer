@@ -79,6 +79,14 @@ export interface Wield {
 /** adrenaline gained per tick with the "recharge adrenaline" trainer option */
 export const RECHARGE_PER_TICK = 10;
 
+/** core/models.ts ACTIONS id of the adrenaline crystal in War's Retreat */
+export const CRYSTAL_ACTION = 'adrenaline-crystal';
+/** one 1.8 s channel of the crystal, and with War's Blessing 4 (runescape.wiki/w/Adrenaline_crystal_(War's_Retreat)) */
+export const CRYSTAL_ADRENALINE_PER_CHANNEL = 25;
+export const CRYSTAL_ADRENALINE_FULL = 100;
+/** the potions the upgraded crystal takes off cooldown (public/data/specials.json ids) */
+const ADRENALINE_POTION_KEYS = ['special:adrenaline-potion', 'special:super-adrenaline-potion', 'special:adrenaline-renewal-potion'];
+
 export interface EngineConfig {
   pingMs: number;
   jitterMs: number;
@@ -89,6 +97,8 @@ export interface EngineConfig {
   fullAdrenaline?: boolean;
   /** +10% adrenaline at every server tick (like hitting a training dummy while resting) */
   rechargeAdrenaline?: boolean;
+  /** War's Blessing 4: the adrenaline crystal fills to 100% in one use and resets the adrenaline potions (else 25%) */
+  crystalUpgraded?: boolean;
   /**
    * ticks between a cast and its damage for ordinary hits (all offsets 0): the game lands the hitsplat a moment after the
    * ability. Rules with their own offsets (Snipe 3, Backhand 1, Death Skulls bounces …), channels, DoTs and conjured
@@ -293,6 +303,8 @@ export type EngineEvent =
   /** an ability with a running buff was pressed again and released it (Reprisal) */
   | { kind: 'recast'; key: string; tick: number }
   | { kind: 'missed'; keys: string[] }
+  /** the adrenaline crystal was used: `amount` gained, `potionsReset` = the adrenaline potions came off cooldown */
+  | { kind: 'crystal'; amount: number; tick: number; potionsReset: boolean }
   /** a hit landed on the target (key = source ability / "spirit:<name>"); `miss` = it missed (amount 0, no on-hit effects) */
   | { kind: 'hit'; key: string; amount: number; crit: boolean; dot: boolean; tick: number; miss?: boolean }
   /** the target's life points reached 0 */
@@ -1147,6 +1159,11 @@ export class TrainerEngine {
       if (this.activePrayers.has(id) && this.openOffGcdStep(this.index, entity.key) < 0 && this.steps.some((s, i) => i >= this.index && !this.done.has(i) && s.key === entity.key)) {
         return;
       }
+    }
+    // the adrenaline crystal is no ability and no step: a free action, like a prayer
+    if (entity.kind === 'action' && entity.id === CRYSTAL_ACTION) {
+      this.useCrystal(tick);
+      return;
     }
     const blocked = this.blocker(entity, tick);
     if (blocked) {
@@ -2648,6 +2665,22 @@ export class TrainerEngine {
    * their remaining lifetime, the self buffs an ability put up, and the prayers left on. A boss guide is a chain of
    * phases and every phase starts where the previous one stopped – "Phase 2" is never played from an empty bar.
    */
+  /**
+   * The adrenaline crystal in War's Retreat (runescape.wiki/w/Adrenaline_crystal_(War's_Retreat)): "the player will gain
+   * 25% adrenaline every 1.8 seconds" while channelling it, "to 100% if the player has obtained War's Blessing 4"; the
+   * 2,000-kill upgrade can "reset the cooldown of adrenaline potions". One press is one channel of 1.8 s (a GCD): the
+   * next step is due after it. Never a wrong press, never a step.
+   */
+  private useCrystal(tick: number): void {
+    const full = !!this.config.crystalUpgraded;
+    const amount = full ? CRYSTAL_ADRENALINE_FULL : CRYSTAL_ADRENALINE_PER_CHANNEL;
+    this.addAdrenaline(amount);
+    this.busyUntil = Math.max(this.busyUntil ?? 0, tick + GCD_TICKS);
+    this.lastInputTick = Math.max(tick, this.lastInputTick ?? 0);
+    if (full) for (const key of ADRENALINE_POTION_KEYS) this.readyTick.delete(key);
+    this.events.push({ kind: 'crystal', amount, tick, potionsReset: full });
+  }
+
   /** compact state for the session trace (core/trace.ts): what a press met, what a decision was made on */
   debugState(tick: number): EngineDebugState {
     const cooldowns: [string, number][] = [];

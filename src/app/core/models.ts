@@ -172,6 +172,12 @@ export interface Action {
 export const ACTIONS: Action[] = [
   { id: 'target-cycle', name: 'Target cycle', description: 'Switches to the next target (client keybind). Instant, no cooldown, no tick.', icon: 'assets/actions/target-cycle.png' },
   { id: 'combat-dummy', name: 'Combat dummy MKII', description: 'Deploys a combat dummy for 60 seconds (100 ticks): hitting it builds adrenaline, modelled as +10% per tick like the "recharge adrenaline" option. Instant, no GCD.', icon: 'assets/actions/combat-dummy.png' },
+  {
+    id: 'adrenaline-crystal',
+    name: 'Adrenaline crystal',
+    description: "The crystal at the bottom of the stairs in War's Retreat: channelling it gives 25% adrenaline every 1.8 s, 100% with War's Blessing 4 (Settings). Only in War's Retreat, so the Train page shows it for rotations played there.",
+    icon: 'assets/actions/adrenaline-crystal.png',
+  },
   { id: 'eat-food', name: 'Eat food', description: 'Eating solid food costs 3% adrenaline (10% before the Combat Style Modernisation). Brews, blubber and drinks cost none, which is why rotations reach for those. Off the global cooldown; life points are not simulated.', icon: 'assets/actions/eat-food.png' },
 ];
 /** pressing the "Weapon Special Attack" slot counts for whichever spec the rotation expects with the wielded weapon */
@@ -254,6 +260,21 @@ export interface Rotation {
   syncedAt?: number;
   /** builds before the setups: the PvME preset the rotation came from – read once by the migration */
   presetId?: string;
+  /**
+   * played in War's Retreat (the adrenaline crystal is there, at a boss it is not): the player's answer on the
+   * Rotations page; missing = decided by the name (`inWarsRetreat`)
+   */
+  warsRetreat?: boolean;
+  /** a chained session (rotation-pick.ts chainRotations): where each rotation starts in `steps`; never stored */
+  segments?: { from: number; name: string; warsRetreat: boolean }[];
+}
+
+/** rotation names PvME uses for what is done in War's Retreat: "Wars", "War's Retreat", "Pre-build", "melee wars reset" */
+export const WARS_RETREAT_NAME = /\bwar'?s\b|\bpre-?build\b/i;
+
+/** whether a rotation is played in War's Retreat: the player's toggle, else the name decides */
+export function inWarsRetreat(r: Pick<Rotation, 'name' | 'warsRetreat'>): boolean {
+  return r.warsRetreat ?? WARS_RETREAT_NAME.test(r.name);
 }
 
 /**
@@ -314,6 +335,11 @@ export interface Settings {
   fullAdrenaline: boolean;
   /** +10% adrenaline every tick, so thresholds/ultimates can be practised without building up */
   rechargeAdrenaline: boolean;
+  /**
+   * War's Blessing 4 and the 2,000-kill upgrade of the adrenaline crystal: one use fills the adrenaline to 100% and
+   * takes the adrenaline potions off cooldown; without it a use gives 25% (runescape.wiki/w/Adrenaline_crystal_(War's_Retreat))
+   */
+  crystalUpgraded: boolean;
   /** loadout pickers: hide weapons / sets / perks that are never used in current PvM (core/obscure.ts) */
   hideObscureEquipment: boolean;
   /** catalogs: hide abilities and prayers that are never used in current PvM (core/obscure.ts) */
@@ -409,6 +435,7 @@ export const DEFAULT_SETTINGS: Settings = {
   loop: false,
   fullAdrenaline: false,
   rechargeAdrenaline: false,
+  crystalUpgraded: true,
   hideObscureEquipment: true,
   hideObscureAbilities: true,
   hitDelayTicks: 2,

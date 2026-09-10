@@ -655,6 +655,18 @@
           }
           <span class="value">{{ adrenaline() | number: '1.0-0' }}%</span>
         </div>
+        @if (crystalHere()) {
+          <button
+            class="btn btn-sm crystal"
+            type="button"
+            (click)="useCrystal()"
+            [disabled]="!running()"
+            title="The adrenaline crystal in War's Retreat: one use is a 1.8 s channel that gives 25% adrenaline, or 100% and the adrenaline potions off cooldown with War's Blessing 4 (Settings). The next ability is due after it."
+          >
+            <img src="assets/actions/adrenaline-crystal.png" alt="" />
+            Adren crystal
+          </button>
+        }
       </div>
       @if (advanced() && enemy().lifePoints > 0) {
         <div class="bar-row">

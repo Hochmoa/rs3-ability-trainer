@@ -28,6 +28,7 @@ export interface RotationRow {
   steps: Rotation['steps'];
   position: number | null;
   updated_at: string;
+  wars_retreat?: boolean | null;
 }
 
 /** Row of the public_setups view: what the Setups page lists (no loadout – that is fetched on demand). */
@@ -66,6 +67,7 @@ export function rotationFromRow(row: RotationRow, local: Pick<Rotation, 'setupId
   const ms = Date.parse(row.updated_at);
   const r: Rotation = { id: row.id, name: row.name, steps: row.steps, updatedAt: ms, syncedAt: ms, setupId: row.setup_id ?? local?.setupId ?? '' };
   if (row.position !== null && row.position !== undefined) r.presetIndex = row.position;
+  if (row.wars_retreat !== null && row.wars_retreat !== undefined) r.warsRetreat = row.wars_retreat;
   return r;
 }
 
@@ -270,6 +272,7 @@ export class SyncService {
       name: r.name,
       steps: r.steps,
       position: r.presetIndex ?? null,
+      wars_retreat: r.warsRetreat ?? null,
     };
     const { data, error } = await (await this.supabase.db()).from('rotations').upsert(row).select('updated_at').single();
     if (error) throw error;
@@ -378,7 +381,7 @@ export class SyncService {
     const now = Date.now();
     const rotations = [...f.rotations].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
     for (const [i, row] of rotations.entries()) {
-      const r: Rotation = { id: crypto.randomUUID(), name: row.name, steps: row.steps, updatedAt: now - i, setupId: setup.id, presetIndex: row.position ?? i };
+      const r: Rotation = { id: crypto.randomUUID(), name: row.name, steps: row.steps, updatedAt: now - i, setupId: setup.id, presetIndex: row.position ?? i, warsRetreat: row.wars_retreat ?? undefined };
       await this.storage.saveRotation(r);
       if (/necromancy/i.test(src.style) && !PREBUILD_ROTATION.test(r.name)) await this.storage.savePrebuild(r.id, necroPrebuild(r.steps));
     }

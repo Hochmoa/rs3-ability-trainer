@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Rotation, StepResult } from './models';
+import { Rotation, StepResult, inWarsRetreat } from './models';
 import { chainRotations, nextRotation, pickRotation, setupRotations, worstStep } from './rotation-pick';
 
 const rot = (id: string, extra: Partial<Rotation> = {}): Rotation => ({ id, name: id, steps: [], updatedAt: 0, setupId: 'own', ...extra });
@@ -87,5 +87,27 @@ describe('chainRotations', () => {
     expect(c.steps[2]).toMatchObject({ id: 'meteor-strike', release: true });
     // played alone, the stall has no release in reach and stays a plain cast
     expect(chainRotations([a])!.steps[0].stall).toBeUndefined();
+  });
+});
+
+describe("in War's Retreat", () => {
+  const rot = (name: string, warsRetreat?: boolean): Rotation => ({ id: 'x', name, steps: [], updatedAt: 0, setupId: 's', warsRetreat });
+
+  it("the name decides when the player said nothing: Wars, War's Retreat, Pre-build, but not a boss phase or a warrior", () => {
+    for (const n of ['Wars', "War's Retreat", "wars's retreat", 'melee wars reset (120 kph)', "Method 1 · War's Retreat", 'Prebuild', 'Kezalam · Pre-build']) expect(inWarsRetreat(rot(n)), n).toBe(true);
+    for (const n of ['Phase 1', 'Prior to Start', '3 warriors 2 scouts', 'if no divert adren, end timewarp', 'Rasial']) expect(inWarsRetreat(rot(n)), n).toBe(false);
+  });
+
+  it("the player's answer wins over the name", () => {
+    expect(inWarsRetreat(rot('Wars', false))).toBe(false);
+    expect(inWarsRetreat(rot('Phase 1', true))).toBe(true);
+  });
+
+  it("a chained session remembers where each rotation starts and whether it is in War's Retreat", () => {
+    const a: Rotation = { id: 'a', name: 'Wars', steps: [{ kind: 'ability', id: 'sever' }, { kind: 'ability', id: 'cleave' }], updatedAt: 0, setupId: 's', presetIndex: 0 };
+    const b: Rotation = { id: 'b', name: 'Phase 1', steps: [{ kind: 'ability', id: 'assault' }], updatedAt: 0, setupId: 's', presetIndex: 1 };
+    const c = chainRotations([a, b])!;
+    expect(c.segments).toEqual([{ from: 0, name: 'Wars', warsRetreat: true }, { from: 3, name: 'Phase 1', warsRetreat: false }]);
+    expect(chainRotations([a])!.segments).toBeUndefined();
   });
 });

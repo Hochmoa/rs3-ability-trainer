@@ -4,6 +4,10 @@
       Name
       <input type="text" [ngModel]="r.name" (ngModelChange)="setName($event)" maxlength="60" />
     </label>
+    <label class="check wars" title="Played in War's Retreat: the adrenaline crystal is there, so the Train page shows its button. Off at a boss. Unset, the name decides (Wars, War's Retreat, Pre-build).">
+      <input type="checkbox" [checked]="inWars(r)" (change)="setWars(!inWars(r))" />
+      <span>In War's Retreat</span>
+    </label>
     <div class="actions">
       <button class="btn btn-primary" (click)="save()" [disabled]="!r.steps.length">Save</button>
       <button class="btn" (click)="cancel()">Cancel</button>
@@ -170,7 +174,7 @@
     <div class="panel rotation">
       <div class="rotation-head">
         <h3>{{ r.name }}</h3>
-        <span class="muted">{{ r.steps.length }} steps</span>
+        <span class="muted">{{ r.steps.length }} steps{{ inWars(r) ? " · War's Retreat" : '' }}</span>
         <span class="actions">
           <button class="btn btn-primary btn-sm" (click)="train(r)" [disabled]="!r.steps.length">Train</button>
           <button class="btn btn-sm" (click)="edit(r)">Edit</button>

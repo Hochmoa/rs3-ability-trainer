@@ -9,12 +9,13 @@ import { DataService, EOF_ICON, Entity, SPEC_KEY } from '../../core/data.service
 import { applyWield, equip, hasSpecial, moveItem, removeItem, removeWorn, unequip } from '../../core/equipment';
 import { DEFAULT_LAYOUT_ID, keybindLayout } from '../../core/keybind-layouts';
 import { keybindFromEvent, keybindFromMouse, keybindKey, keybindLabel, resolvePress } from '../../core/keybind.util';
-import { ActionBarSetup, AttackPattern, Keybind, BAR_POSITIONS, BONE_SHIELD_ABILITY, INVENTORY_SIZE, NOTE_ACTION_TICKS, BAR_SLOTS, BarShape, barLayout, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, TARGET_TYPES, EquipSlot, ItemRef, Loadout, PrayerStats, Prebuild, REVOLUTION_MAX_SLOTS, REVOLUTION_MIN_SLOTS, RevolutionSettings, Rotation, STYLES4, Settings, StepResult, Style, Style4, WeaponSpec, emptyPrebuild, entityKey, isStyle4, loadoutStyle, loadoutWield, parseEntityKey, prebuildIsEmpty, visiblePresets, RotationStep, CoachSettings, SessionStuck, setupTitle, Weapon, Equipment } from '../../core/models';
+import { ActionBarSetup, AttackPattern, Keybind, BAR_POSITIONS, BONE_SHIELD_ABILITY, INVENTORY_SIZE, NOTE_ACTION_TICKS, BAR_SLOTS, BarShape, barLayout, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, TARGET_TYPES, EquipSlot, ItemRef, Loadout, PrayerStats, Prebuild, REVOLUTION_MAX_SLOTS, REVOLUTION_MIN_SLOTS, RevolutionSettings, Rotation, STYLES4, Settings, StepResult, Style, Style4, WeaponSpec, emptyPrebuild, entityKey, isStyle4, loadoutStyle, loadoutWield, parseEntityKey, prebuildIsEmpty, visiblePresets, RotationStep, CoachSettings, SessionStuck, setupTitle, Weapon, Equipment, inWarsRetreat } from '../../core/models';
 import { alt1Announce, focusUrl, openFocusWindow } from '../../core/popout';
 import { CoachService, spokenLabel, spokenSequence } from '../../core/coach.service';
 import { PresetsService } from '../../core/presets.service';
 import { weaponsCanMeet } from '../../core/weapon-reach';
 import { chainRotations, nextRotation, pickRotation as chooseRotation, setupRotations, worstStep } from '../../core/rotation-pick';
+import { CRYSTAL_ACTION } from '../../engine/trainer-engine';
 import { noteEntity, stepToEngineEntity } from '../../core/step-entity';
 import { StorageService } from '../../core/storage.service';
 import { TraceRecorder } from '../../core/trace';
@@ -1063,6 +1064,25 @@ export class Train implements OnDestroy {
       .filter((c): c is { entity: Entity; key: string } => !!c.entity),
   );
 
+  /**
+   * The adrenaline crystal stands in War's Retreat only: the button shows for a rotation played there (the player's
+   * toggle on the Rotations page, else the name), in a chained session for the segment the current step is in.
+   */
+  readonly crystalHere = computed(() => {
+    const r = this.played();
+    if (!r) return false;
+    if (!r.segments) return inWarsRetreat(r);
+    const i = this.running() ? this.index() : 0;
+    let here = r.segments[0].warsRetreat;
+    for (const seg of r.segments) if (seg.from <= i) here = seg.warsRetreat;
+    return here;
+  });
+
+  /** the adrenaline crystal button: one channel of 1.8 s (engine useCrystal) */
+  useCrystal(): void {
+    if (this.running()) this.press('action:' + CRYSTAL_ACTION, 'crystal button');
+  }
+
   /** tap on an action chip while training = press it (touch / mouse) */
   /** "Enter the instance": the button of an action note – the rotation goes on when it is pressed */
   pressNote(stepIndex: number): void {
@@ -1102,6 +1122,7 @@ export class Train implements OnDestroy {
       }
     }
     for (const id of Object.keys(setup.actionKeybinds ?? {})) add('action:' + id);
+    add('action:' + CRYSTAL_ACTION); // the crystal button, whatever the keys
     for (const w of this.data.carriedWeapons(this.storage.loadout())) add(w.key);
     for (const r of this.storage.loadout().inventory) if (r?.kind === 'special') add('special:' + r.id);
     const familiarId = this.storage.loadout().familiar;
@@ -1842,6 +1863,11 @@ export class Train implements OnDestroy {
         this.feedback.set({ text: 'Stuck at step ' + (ev.step + 1) + ': ' + info.text + '. This rotation cannot be played as written from here', cls: 'bad' });
         this.flash('wrong', ev.key, now, 600);
         this.log(ev.key, 'wrong', this.feedback()?.text ?? '', ev.step);
+        break;
+      }
+      case 'crystal': {
+        this.feedback.set({ text: 'Adrenaline crystal: +' + ev.amount + '% adrenaline' + (ev.potionsReset ? ', adrenaline potions off cooldown' : '') + '. The next ability is due after the 1.8 s channel', cls: 'info' });
+        this.log('action:' + CRYSTAL_ACTION, 'other', 'Adrenaline crystal +' + ev.amount + '%');
         break;
       }
       case 'finished': {

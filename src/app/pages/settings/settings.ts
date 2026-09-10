@@ -27,6 +27,11 @@ import { TourService } from '../../shared/tour';
           <input type="checkbox" [ngModel]="s().loop" (ngModelChange)="set('loop', $event)" />
           <span>Loop the rotation until stopped (Esc)</span>
         </label>
+        <label class="check">
+          <input type="checkbox" [ngModel]="s().crystalUpgraded" (ngModelChange)="set('crystalUpgraded', $event)" />
+          <span>Adrenaline crystal fully upgraded (War's Blessing 4): one use fills the adrenaline to 100% and takes the adrenaline potions off cooldown</span>
+        </label>
+        <small class="indent">Off: a use gives 25%, like the crystal before the upgrades. The button shows on the Train page for rotations played in War's Retreat.</small>
         <label>
           <span>View</span>
           <select [ngModel]="s().uiMode" (ngModelChange)="set('uiMode', $event)">
