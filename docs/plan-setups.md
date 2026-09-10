@@ -174,3 +174,14 @@ Driven from War's Retreat to the last Hurricane (111 steps: 71 perfect, 39 done,
   mode the cast is on time when made as soon as the cooldown ends (the due tick includes the step's own cooldown).
 - A same-tick companion after a click note that takes time ("click clone + target cycle") was late by the note's
   ticks: its reference is the tick the note's action is done.
+
+## Time Warp as an extra action button, 10 Sep 2026
+
+Martin could not find where to press Time Warp ("Clock stopped: press click (Time Warp)"): the chip sat in the weapon
+row. He wants no clickable queue icon but a button like the game's extra action button, cooldown included. The Train
+page shows a "Time Warp" button next to the adrenaline bar whenever the rotation presses it (timeWarpHere, next to the
+crystal button), with "reset in N s" while the reset is pending and the remaining cooldown after; the engine gives the
+button its 30 s cooldown (TIME_WARP_COOLDOWN_TICKS, kept through its own reset, engine/time-warp.spec.ts). The stopped
+clock's text now says "press the Time Warp button" / "click X in the backpack". On the way: remaining times shown per
+frame (buffs, queue cooldowns, the button) are measured against the engine's clock (TrainerEngine.virtualNow), which
+stands still in step mode; against the wall clock they ran to zero once the clock had stood for a while.

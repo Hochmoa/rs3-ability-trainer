@@ -675,6 +675,23 @@
             Adren crystal
           </button>
         }
+        @if (timeWarpHere()) {
+          <button
+            class="btn btn-sm crystal time-warp"
+            type="button"
+            (click)="useTimeWarp()"
+            [disabled]="!running() || timeWarpView().cooldownS > 0"
+            title="Kerapac's extra action button: ten seconds after pressing it, adrenaline and every ability cooldown go back to what they were when it was pressed. 30 s cooldown, like the button in the game."
+          >
+            <img src="assets/actions/time-warp.png" alt="" />
+            Time Warp
+            @if (timeWarpView().resetS !== null) {
+              <small>reset in {{ timeWarpView().resetS }} s</small>
+            } @else if (timeWarpView().cooldownS > 0) {
+              <small>{{ timeWarpView().cooldownS }} s</small>
+            }
+          </button>
+        }
       </div>
       @if (advanced() && enemy().lifePoints > 0) {
         <div class="bar-row">

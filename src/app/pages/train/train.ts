@@ -1075,7 +1075,7 @@ export class Train implements OnDestroy {
     const keys = this.storage.actionBars().actionKeybinds ?? {};
     const ids = new Set<string>(Object.entries(keys).filter(([, kb]) => !!kb).map(([id]) => id));
     // the actions the rotation asks for are there to click even without a key (Time Warp, target cycle on a phone)
-    for (const e of this.stepEntities()) if (e?.kind === 'action' && e.id !== CRYSTAL_ACTION) ids.add(e.id);
+    for (const e of this.stepEntities()) if (e?.kind === 'action' && e.id !== CRYSTAL_ACTION && e.id !== TIME_WARP_ACTION) ids.add(e.id); // those two have buttons
     return [...ids]
       .map((id) => ({ entity: this.data.get('action:' + id), key: keybindLabel(keys[id] ?? null) }))
       .filter((c): c is { entity: Entity; key: string } => !!c.entity);
@@ -1098,6 +1098,14 @@ export class Train implements OnDestroy {
   /** the adrenaline crystal button: one channel of 1.8 s (engine useCrystal) */
   useCrystal(): void {
     if (this.running()) this.press('action:' + CRYSTAL_ACTION, 'crystal button');
+  }
+
+  /** the rotation presses Kerapac's extra action button: the Train page shows it like the game does, with its cooldown */
+  readonly timeWarpHere = computed(() => this.stepEntities().some((e) => e?.kind === 'action' && e.id === TIME_WARP_ACTION));
+  /** the button's state, refreshed every frame: seconds of cooldown left, seconds until the pending reset */
+  readonly timeWarpView = signal<{ cooldownS: number; resetS: number | null }>({ cooldownS: 0, resetS: null });
+  useTimeWarp(): void {
+    if (this.running()) this.press('action:' + TIME_WARP_ACTION, 'time warp button');
   }
 
   /** tap on an action chip while training = press it (touch / mouse) */
@@ -1193,6 +1201,7 @@ export class Train implements OnDestroy {
     this.incoming.set(null);
     this.attackLog.set([]);
     this.cooldowns.set({});
+    this.timeWarpView.set({ cooldownS: 0, resetS: null });
     this.channelling.set(null);
     this.channel.set(null);
     this.morphs.set(new Map());
@@ -1429,7 +1438,11 @@ export class Train implements OnDestroy {
       this.frozenShown = e.frozen;
       if (e.frozen) {
         const cur = this.slots().find((s) => s.kind === 'current');
-        this.feedback.set({ text: 'Clock stopped: ' + (cur?.key ? 'press ' + cur.key + ' (' + cur.entity.name + ')' : 'press the next step') + ' to go on', cls: 'info' });
+        const what = !cur?.key ? 'press the next step'
+          : cur.key !== 'click' ? 'press ' + cur.key + ' (' + cur.entity.name + ')'
+          : cur.entity.kind === 'weapon' ? 'click ' + cur.entity.name + ' in the backpack'
+          : 'press the ' + cur.entity.name + ' button';
+        this.feedback.set({ text: 'Clock stopped: ' + what + ' to go on', cls: 'info' });
       }
     }
     const fb = this.feedback();
@@ -1504,9 +1517,20 @@ export class Train implements OnDestroy {
   /** what moves continuously between ticks – arithmetic on the last tick's state, no catalog work */
   private onFrame(e: TrainerEngine, tick: number, now: number): void {
     this.tickPhase.set(e.tickPhase(now));
+    // tick times live on the engine's clock, which stands still in step mode: remaining times are measured against it
+    const vnow = e.virtualNow(now);
+    if (this.timeWarpHere()) {
+      const key = 'action:' + TIME_WARP_ACTION;
+      const left = e.cooldownLeft(key, tick);
+      const cooldownS = left > 0 ? Math.max(0, Math.ceil((e.tickTime(tick + left) - vnow) / 1000)) : 0;
+      const reset = e.timeWarpResetTick;
+      const resetS = reset === null ? null : Math.max(0, Math.ceil((e.tickTime(reset) - vnow) / 1000));
+      const cur = this.timeWarpView();
+      if (cur.cooldownS !== cooldownS || cur.resetS !== resetS) this.timeWarpView.set({ cooldownS, resetS });
+    }
     this.gcdPhase.set(e.gcdPhase(now));
     this.gcdRemaining.set(e.gcdRemainingMs(now));
-    const elapsedS = (now - e.t0) / 1000;
+    const elapsedS = (vnow - e.t0) / 1000;
     if (elapsedS >= 1) this.dps.set(e.damageDealt / elapsedS);
     const pressed = new Set(e.inflightKeys);
     for (const [key, until] of this.pressedUntil) {
@@ -1516,12 +1540,12 @@ export class Train implements OnDestroy {
     const wasPressed = this.pressedKeys();
     if (pressed.size !== wasPressed.size || [...pressed].some((k) => !wasPressed.has(k))) this.pressedKeys.set(pressed);
     if (this.liveBuffs.some((b) => b.endTick !== null)) {
-      this.buffs.set(this.liveBuffs.map((b) => (b.endTick === null ? b.view : { ...b.view, remainingS: Math.max(0, (e.tickTime(b.endTick) - now) / 1000) })));
+      this.buffs.set(this.liveBuffs.map((b) => (b.endTick === null ? b.view : { ...b.view, remainingS: Math.max(0, (e.tickTime(b.endTick) - vnow) / 1000) })));
     }
     if (this.queueCooling.length || this.cooldownsShown) {
       const cds: Record<string, { remainingMs: number; totalMs: number }> = {};
       for (const q of this.queueCooling) {
-        const remainingMs = e.tickTime(q.endTick) - now;
+        const remainingMs = e.tickTime(q.endTick) - vnow;
         if (remainingMs > 0) cds[q.key] = { remainingMs, totalMs: Math.max(q.totalMs, remainingMs) };
       }
       this.cooldowns.set(cds);

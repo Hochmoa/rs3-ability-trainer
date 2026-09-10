@@ -1565,4 +1565,11 @@
     height: 22px;
     width: auto;
   }
+  small {
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  &:disabled {
+    opacity: 0.55;
+  }
 }

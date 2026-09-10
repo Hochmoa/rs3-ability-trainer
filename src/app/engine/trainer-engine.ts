@@ -83,6 +83,8 @@ export const CRYSTAL_ACTION = 'adrenaline-crystal';
 /** core/models.ts ACTIONS id of Kerapac's Time Warp button; the reset comes 10 s (17 ticks) after the press */
 export const TIME_WARP_ACTION = 'time-warp';
 export const TIME_WARP_TICKS = 17;
+/** the extra action button's own cooldown: 30 s (runescape.wiki/w/Time_Warp) */
+export const TIME_WARP_COOLDOWN_TICKS = 50;
 /** one 1.8 s channel of the crystal, and with War's Blessing 4 (runescape.wiki/w/Adrenaline_crystal_(War's_Retreat)) */
 export const CRYSTAL_ADRENALINE_PER_CHANNEL = 25;
 export const CRYSTAL_ADRENALINE_FULL = 100;
@@ -720,6 +722,11 @@ export class TrainerEngine {
 
   tickTime(tick: number): number {
     return this.t0 + tick * TICK_MS;
+  }
+
+  /** the engine's clock for a wall-clock `now`: what tickTime() values compare against (it stands still in step mode) */
+  virtualNow(now: number): number {
+    return this.v(now);
   }
 
   /** the engine's clock: real time minus what step mode spent stopped; constant while stopped */
@@ -2694,15 +2701,24 @@ export class TrainerEngine {
     const charges: [string, number[]][] = [];
     for (const [k, list] of this.chargeReady) charges.push([k, list.filter((r) => r > tick).map((r) => r - tick)]);
     this.timeWarp = { resetTick: tick + TIME_WARP_TICKS, adrenaline: this.adrenaline, cooldowns, charges };
+    // the button's own cooldown is set after the snapshot: the reset gives back ability cooldowns, not its own
+    this.readyTick.set('action:' + TIME_WARP_ACTION, tick + TIME_WARP_COOLDOWN_TICKS);
     this.events.push({ kind: 'time-warp', phase: 'start', tick, adrenaline: this.adrenaline });
+  }
+
+  /** the tick the pending Time Warp resets on, null when none is pending */
+  get timeWarpResetTick(): number | null {
+    return this.timeWarp?.resetTick ?? null;
   }
 
   private resetTimeWarp(tick: number): void {
     const w = this.timeWarp!;
     this.timeWarp = null;
     const before = this.adrenaline;
+    const own = this.readyTick.get('action:' + TIME_WARP_ACTION);
     this.readyTick.clear();
     for (const [k, left] of w.cooldowns) this.readyTick.set(k, tick + left);
+    if (own !== undefined) this.readyTick.set('action:' + TIME_WARP_ACTION, own);
     this.chargeReady.clear();
     for (const [k, list] of w.charges) if (list.length) this.chargeReady.set(k, list.map((left) => tick + left));
     this.addAdrenaline(w.adrenaline - before, 'time-warp');
