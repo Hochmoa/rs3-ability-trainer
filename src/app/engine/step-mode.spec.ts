@@ -74,9 +74,9 @@ describe('wait for my cast (step mode)', () => {
     e.press('buff', 1);
     e.update(4 * T); // cast on tick 1, buff until tick 11; the clock stops at the GCD end (tick 4)
     expect(e.frozen).toBe(true);
-    const left = e.buff('my-buff')!.endTick - e.currentTick(4 * T);
+    const left = (e.buff('my-buff')!.endTick ?? 0) - e.currentTick(4 * T);
     e.update(60 * T);
-    expect(e.buff('my-buff')!.endTick - e.currentTick(60 * T)).toBe(left);
+    expect((e.buff('my-buff')!.endTick ?? 0) - e.currentTick(60 * T)).toBe(left);
   });
 
   it('a same-tick group is waited for key by key: the companion is due on the cast tick, the clock stops for it too', () => {
