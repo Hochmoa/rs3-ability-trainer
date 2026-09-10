@@ -423,12 +423,4 @@ describe('trainer adrenaline options', () => {
     expect(e.adrenaline).toBe(110);
   });
 
-  it('rechargeAdrenaline adds 10% per tick, capped at the maximum', () => {
-    const e = make([A, B], { rechargeAdrenaline: true });
-    e.start(0);
-    e.update(TICK_MS * 3 + 1);
-    expect(e.adrenaline).toBe(30);
-    e.update(TICK_MS * 30);
-    expect(e.adrenaline).toBe(100);
-  });
 });

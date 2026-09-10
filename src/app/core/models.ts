@@ -171,7 +171,7 @@ export interface Action {
 
 export const ACTIONS: Action[] = [
   { id: 'target-cycle', name: 'Target cycle', description: 'Switches to the next target (client keybind). Instant, no cooldown, no tick.', icon: 'assets/actions/target-cycle.png' },
-  { id: 'combat-dummy', name: 'Combat dummy MKII', description: 'Deploys a combat dummy for 60 seconds (100 ticks): hitting it builds adrenaline, modelled as +10% per tick like the "recharge adrenaline" option. Instant, no GCD.', icon: 'assets/actions/combat-dummy.png' },
+  { id: 'combat-dummy', name: 'Combat dummy MKII', description: 'Deploys a combat dummy for 60 seconds (100 ticks): something to cast at before the fight. The adrenaline comes from the abilities cast on it (a basic 9%), the dummy adds none. Instant, no GCD.', icon: 'assets/actions/combat-dummy.png' },
   {
     id: 'adrenaline-crystal',
     name: 'Adrenaline crystal',
@@ -333,8 +333,6 @@ export interface Settings {
   loop: boolean;
   /** start every session with full adrenaline (training-dummy style) */
   fullAdrenaline: boolean;
-  /** +10% adrenaline every tick, so thresholds/ultimates can be practised without building up */
-  rechargeAdrenaline: boolean;
   /**
    * War's Blessing 4 and the 2,000-kill upgrade of the adrenaline crystal: one use fills the adrenaline to 100% and
    * takes the adrenaline potions off cooldown; without it a use gives 25% (runescape.wiki/w/Adrenaline_crystal_(War's_Retreat))
@@ -434,7 +432,6 @@ export const DEFAULT_SETTINGS: Settings = {
   autoAttacks: true,
   loop: false,
   fullAdrenaline: false,
-  rechargeAdrenaline: false,
   crystalUpgraded: true,
   hideObscureEquipment: true,
   hideObscureAbilities: true,

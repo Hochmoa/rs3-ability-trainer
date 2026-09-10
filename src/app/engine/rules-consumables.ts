@@ -17,8 +17,6 @@ export const POWERBURST_TICKS = 10;
 export const ACCELERATION_COOLDOWN_TICKS = 2;
 /** the combat dummy stands for 60 seconds */
 const COMBAT_DUMMY_TICKS = 100;
-/** adrenaline per tick while hitting the dummy – the engine's "recharge adrenaline" rate (trainer-engine.ts RECHARGE_PER_TICK) */
-const COMBAT_DUMMY_ADRENALINE_PER_TICK = 10;
 /** solid food since the Combat Style Modernisation (2 March 2026); it was 10% before */
 const SOLID_FOOD_ADRENALINE = 3;
 
@@ -27,8 +25,8 @@ export const CONSUMABLE_BUFFS: BuffDef[] = [
     text: 'Current and maximum life points doubled for 10 ticks (max 32,000); when it ends the maximum returns and the current life points are capped by it, so do not eat meanwhile. The trainer has no life point pool, so the factor is only exposed.', source: W + 'Powerburst_of_vitality' },
   { id: 'powerburst-of-acceleration', name: 'Powerburst of acceleration', kind: 'Buff', on: 'self', durationTicks: POWERBURST_TICKS, icon: 'assets/specials/powerburst-of-acceleration.png',
     text: 'For 10 ticks Surge, Dive and Bladed Dive have a 2-tick cooldown; Bladed Dive deals no damage. Escape is not affected (it no longer shares a cooldown with Surge outside PvP).', source: W + 'Powerburst_of_acceleration' },
-  { id: 'combat-dummy', name: 'Combat dummy MKII', kind: 'Buff', on: 'self', durationTicks: COMBAT_DUMMY_TICKS, adrenalinePerTick: COMBAT_DUMMY_ADRENALINE_PER_TICK, icon: 'assets/actions/combat-dummy.png',
-    text: 'A combat dummy stands for 100 ticks: hitting it builds adrenaline, modelled as +10% per tick (the game gives adrenaline per ability used on it, not per tick). No experience, no Reaper stacks.', source: W + 'Combat_dummy_MKII' },
+  { id: 'combat-dummy', name: 'Combat dummy MKII', kind: 'Buff', on: 'self', durationTicks: COMBAT_DUMMY_TICKS, icon: 'assets/actions/combat-dummy.png',
+    text: 'A combat dummy stands for 100 ticks: something to cast at before the fight. The adrenaline comes from what is cast on it, each basic its 9% (Adaptive Strike 12%) plus the perks and relics; the dummy itself gives none. No experience, no Reaper stacks.', source: W + 'Combat_dummy_MKII' },
 ];
 
 /** rules keyed by specials.json id */
@@ -84,7 +82,7 @@ export const ACTION_RULES: AbilityRule[] = [
   {
     ability: 'combat-dummy',
     notes: [
-      'Deploys a combat dummy for 60 seconds (100 ticks) to build or stall adrenaline before a fight; the trainer models it as +10% adrenaline per tick like the "recharge adrenaline" option (' + W + 'Combat_dummy_MKII )',
+      'Deploys a combat dummy for 60 seconds (100 ticks) to build or stall adrenaline before a fight. The adrenaline comes from the abilities cast on it: "Basic abilities, including basic attacks: +9%" per use, with the Impatient, Invigorating, Fury of the Small and Conservation of Energy modifiers (' + W + 'Adrenaline ); the dummy adds nothing on its own (' + W + 'Combat_dummy_MKII )',
       'Instant, no global cooldown, no cooldown; no experience and no Reaper stacks (' + W + 'Combat_dummy_MKII )',
     ],
     onCast: [{ kind: 'buff', id: 'combat-dummy' }],

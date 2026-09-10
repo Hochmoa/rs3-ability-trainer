@@ -77,7 +77,6 @@ export interface Wield {
 }
 
 /** adrenaline gained per tick with the "recharge adrenaline" trainer option */
-export const RECHARGE_PER_TICK = 10;
 
 /** core/models.ts ACTIONS id of the adrenaline crystal in War's Retreat */
 export const CRYSTAL_ACTION = 'adrenaline-crystal';
@@ -95,8 +94,6 @@ export interface EngineConfig {
   loop: boolean;
   /** start with full adrenaline instead of the loadout's start value */
   fullAdrenaline?: boolean;
-  /** +10% adrenaline at every server tick (like hitting a training dummy while resting) */
-  rechargeAdrenaline?: boolean;
   /** War's Blessing 4: the adrenaline crystal fills to 100% in one use and resets the adrenaline potions (else 25%) */
   crystalUpgraded?: boolean;
   /**
@@ -2546,7 +2543,6 @@ export class TrainerEngine {
     const due = this.deferred.filter((d) => d.tick <= tick);
     this.deferred = this.deferred.filter((d) => d.tick > tick);
     for (const d of due) d.apply();
-    if (this.config.rechargeAdrenaline) this.addAdrenaline(RECHARGE_PER_TICK);
     for (const o of this.overTime) {
       if (tick <= o.untilTick) this.addAdrenaline(o.perTick);
     }

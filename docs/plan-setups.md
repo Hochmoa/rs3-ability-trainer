@@ -104,3 +104,13 @@ in, each one is uploaded to session_traces (0022, last 20 per account). Reading 
   channel (engine useCrystal): 25% adrenaline, or with the setting "Adrenaline crystal fully upgraded" (default on,
   War's Blessing 4 + the 2,000-kill upgrade) 100% and the adrenaline potions off cooldown. Never a wrong press, never
   a step; the next ability is due after the channel. Source: runescape.wiki/w/Adrenaline_crystal_(War's_Retreat).
+
+## Adrenaline only from casts, 10 Sep 2026
+
+Nothing in the trainer gives adrenaline by the clock any more. The "Recharge +10%/tick" option is gone and the combat
+dummy adds nothing on its own: the adrenaline comes from what is cast, as the wiki has it (runescape.wiki/w/Adrenaline,
+read 10 Sep 2026): "Basic abilities, including basic attacks: +9%" per use (Adaptive Strike 12%), thresholds -15%,
+ultimates -100% or -60%, with the modifiers the engine already applied: Impatient (9% per rank chance of +3%),
+Invigorating (+5% per rank on basic attacks), Fury of the Small (+1% on basics), Conservation of Energy (+10% after
+an ultimate), Ring of Vigour (10% saved), Relentless (1% per rank chance to pay nothing). Not modelled: the drain
+out of combat (5% every 2 ticks after 10 s) and Divert's damage-based extra.

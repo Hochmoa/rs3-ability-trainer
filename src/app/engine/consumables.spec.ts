@@ -136,17 +136,17 @@ describe('powerbursts', () => {
 });
 
 describe('combat dummy', () => {
-  it('the dummy action is a client action with a rule: +10% adrenaline per tick for 100 ticks, no GCD', () => {
+  it('the dummy stands for 100 ticks off the GCD and gives no adrenaline of its own: what is cast on it does', () => {
     const e = make([action('combat-dummy'), ability('attack')], {}, { fullAdrenaline: false });
     cast(e, 'action:combat-dummy', 1);
     expect(e.results.map((r) => [r.key, r.outcome])).toEqual([['action:combat-dummy', 'done']]);
     expect(e.buff('combat-dummy')?.endTick).toBe(101);
     expect(e.gcdEndTick).toBeNull();
     e.update(6 * T + 1);
-    expect(e.adrenaline).toBe(60); // the tick of the press counts, then every tick: 1–6
+    expect(e.adrenaline).toBe(0); // "the dummy adds nothing on its own": adrenaline comes per ability cast (+9% a basic)
     e.update(200 * T);
     expect(e.hasBuff('combat-dummy')).toBe(false);
-    expect(e.adrenaline).toBe(100);
+    expect(e.adrenaline).toBe(0);
   });
 
   it('target cycle stays a no-op action', () => {
