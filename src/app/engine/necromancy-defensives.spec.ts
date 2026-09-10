@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import ABILITIES from '../../../public/data/abilities.json';
 import GEAR from '../../../public/data/gear.json';
 import SPELLS from '../../../public/data/spells.json';
-import { Ability, DEFAULT_ENEMY, EnemyConfig, GearItem, Spell, newLoadout } from '../core/models';
+import { Ability, DEFAULT_ENEMY, EnemyConfig, GearItem, Spell, newLoadout, divertAdrenaline } from '../core/models';
 import { ResolvedLoadout, defaultResolvedLoadout } from './loadout-resolved';
 import { resolveLoadout } from './loadout-resolver';
 import { EngineConfig, EngineEntity, TICK_MS, TrainerEngine } from './trainer-engine';
@@ -113,6 +113,22 @@ describe('necromancy: bone shields', () => {
 });
 
 describe('attacks absorbed by defensives', () => {
+  it('Divert turns the blocked hit into adrenaline: 0.8% per 100 damage up to 3,000, less beyond, 50% at most (wiki)', () => {
+    expect(divertAdrenaline(1000)).toBe(8);
+    expect(divertAdrenaline(3000)).toBe(24);
+    expect(divertAdrenaline(6000)).toBe(42);
+    expect(divertAdrenaline(9000)).toBe(50); // 24 + 18 + 12 = 54, capped
+    expect(divertAdrenaline(0)).toBe(0);
+    const e = make(['greater-bone-shield', 'divert'], {}, { enemy: { ...ENEMY, firstAttackTicks: 6, hitDamage: 6000 }, fullAdrenaline: false });
+    press(e, 'ability:greater-bone-shield', 1);
+    press(e, 'ability:divert', 4);
+    const before = e.adrenaline;
+    e.update(7 * T + 1); // the attack at 6 is blocked
+    expect(attacks(e).map((a) => a.absorbed)).toEqual(['divert']);
+    expect(e.adrenaline - before).toBe(42);
+    expect(e.events.some((x) => x.kind === 'adrenaline' && x.source === 'divert:blocked' && x.delta === 42)).toBe(true);
+  });
+
   it('Barricade keeps blocking for its whole duration – no hit, no prayer needed, the buff stays', () => {
     const e = make(['greater-bone-shield', 'barricade'], {}, { enemy: { ...ENEMY, firstAttackTicks: 6 } });
     press(e, 'ability:greater-bone-shield', 1);

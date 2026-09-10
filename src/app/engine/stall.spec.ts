@@ -95,4 +95,37 @@ describe('ability stalling', () => {
     expect(e.adrenaline).toBe(75);
     expect(e.cooldownLeft('a', 2)).toBeGreaterThan(0);
   });
+
+  it('the release is the click on the target, off the global cooldown: the next ability goes on the same tick', () => {
+    // "If the global cooldown has passed since stalling the ability, then it is possible to use another ability on the
+    // same tick as the click that releases the stalled ability" (runescape.wiki/w/Ability_stalling)
+    const stall = ability('a', { stall: true });
+    const release = ability('a', { release: true });
+    const b = ability('b');
+    const e = make([stall, release, b]);
+    press(e, 'a', 1);
+    e.update(6 * T);
+    e.press('a', 3 * T + 1); // the release, on the tick the GCD ends ...
+    e.press('b', 3 * T + 2); // ... and the next ability on the same tick
+    e.update(9 * T);
+    expect(e.results.map((r) => [r.key, r.outcome])).toEqual([['a', 'perfect'], ['a', 'done'], ['b', 'perfect']]);
+    expect(hits(e, 'a')).toHaveLength(1);
+    expect(hits(e, 'b')).toHaveLength(1);
+    expect(e.index).toBe(3);
+  });
+
+  it('attacking releases the held cast on its own: no press of the stalled ability needed', () => {
+    const stall = ability('a', { stall: true });
+    const release = ability('a', { release: true });
+    const b = ability('b');
+    const e = make([stall, release, b]);
+    press(e, 'a', 1);
+    e.update(6 * T);
+    press(e, 'b', 8); // the attack that releases it
+    e.update(12 * T);
+    expect(e.results.map((r) => r.key)).toEqual(['a', 'a', 'b']);
+    expect(hits(e, 'a')).toHaveLength(1);
+    expect(e.events.some((x) => x.kind === 'wrong-fired' || x.kind === 'wrong')).toBe(false);
+    expect(e.index).toBe(3);
+  });
 });

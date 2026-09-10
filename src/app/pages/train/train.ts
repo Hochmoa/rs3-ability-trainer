@@ -9,13 +9,13 @@ import { DataService, EOF_ICON, Entity, SPEC_KEY } from '../../core/data.service
 import { applyWield, equip, hasSpecial, moveItem, removeItem, removeWorn, unequip } from '../../core/equipment';
 import { DEFAULT_LAYOUT_ID, keybindLayout } from '../../core/keybind-layouts';
 import { keybindFromEvent, keybindFromMouse, keybindKey, keybindLabel, resolvePress } from '../../core/keybind.util';
-import { ActionBarSetup, AttackPattern, Keybind, BAR_POSITIONS, BONE_SHIELD_ABILITY, INVENTORY_SIZE, NOTE_ACTION_TICKS, BAR_SLOTS, BarShape, barLayout, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, TARGET_TYPES, EquipSlot, ItemRef, Loadout, PrayerStats, Prebuild, REVOLUTION_MAX_SLOTS, REVOLUTION_MIN_SLOTS, RevolutionSettings, Rotation, STYLES4, Settings, StepResult, Style, Style4, WeaponSpec, emptyPrebuild, entityKey, isStyle4, loadoutStyle, loadoutWield, parseEntityKey, prebuildIsEmpty, visiblePresets, RotationStep, CoachSettings, SessionStuck, setupTitle, Weapon, Equipment, inWarsRetreat } from '../../core/models';
+import { ActionBarSetup, AttackPattern, Keybind, BAR_POSITIONS, BONE_SHIELD_ABILITY, INVENTORY_SIZE, NOTE_ACTION_TICKS, BAR_SLOTS, BarShape, barLayout, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, TARGET_TYPES, EquipSlot, ItemRef, Loadout, PrayerStats, Prebuild, REVOLUTION_MAX_SLOTS, REVOLUTION_MIN_SLOTS, RevolutionSettings, Rotation, STYLES4, Settings, StepResult, Style, Style4, WeaponSpec, emptyPrebuild, entityKey, isStyle4, loadoutStyle, loadoutWield, parseEntityKey, prebuildIsEmpty, visiblePresets, RotationStep, CoachSettings, SessionStuck, setupTitle, Weapon, Equipment, inWarsRetreat, ACTIONS } from '../../core/models';
 import { alt1Announce, focusUrl, openFocusWindow } from '../../core/popout';
 import { CoachService, spokenLabel, spokenSequence } from '../../core/coach.service';
 import { PresetsService } from '../../core/presets.service';
 import { weaponsCanMeet } from '../../core/weapon-reach';
 import { chainRotations, nextRotation, pickRotation as chooseRotation, setupRotations, worstStep } from '../../core/rotation-pick';
-import { CRYSTAL_ACTION } from '../../engine/trainer-engine';
+import { CRYSTAL_ACTION, TIME_WARP_ACTION } from '../../engine/trainer-engine';
 import { noteEntity, stepToEngineEntity } from '../../core/step-entity';
 import { StorageService } from '../../core/storage.service';
 import { TraceRecorder } from '../../core/trace';
@@ -462,6 +462,8 @@ export class Train implements OnDestroy {
     for (const [id, kb] of Object.entries(s.actionKeybinds ?? {})) {
       if (kb) m.set('action:' + id, keybindLabel(kb));
     }
+    // every client action has a chip to click below the bars, key or not (Time Warp is Kerapac's button, nobody binds it)
+    for (const a of ACTIONS) if (!m.has('action:' + a.id)) m.set('action:' + a.id, 'click');
     // potions and weapons in the backpack can be clicked there
     for (const r of this.storage.loadout().inventory) {
       if (r?.kind === 'special' && !m.has('special:' + r.id)) m.set('special:' + r.id, 'click');
@@ -1058,11 +1060,15 @@ export class Train implements OnDestroy {
   readonly carriedWeapons = computed(() => this.data.carriedWeapons(this.gearState()).map((e) => ({ entity: e })));
 
   /** client actions with a key (target cycle …) as tappable chips next to the weapon switches – a rotation step like "(tc)" has no bar slot to tap otherwise */
-  readonly actionChips = computed(() =>
-    Object.entries(this.storage.actionBars().actionKeybinds ?? {})
-      .map(([id, kb]) => ({ entity: this.data.get('action:' + id), key: keybindLabel(kb) }))
-      .filter((c): c is { entity: Entity; key: string } => !!c.entity),
-  );
+  readonly actionChips = computed(() => {
+    const keys = this.storage.actionBars().actionKeybinds ?? {};
+    const ids = new Set<string>(Object.entries(keys).filter(([, kb]) => !!kb).map(([id]) => id));
+    // the actions the rotation asks for are there to click even without a key (Time Warp, target cycle on a phone)
+    for (const e of this.stepEntities()) if (e?.kind === 'action' && e.id !== CRYSTAL_ACTION) ids.add(e.id);
+    return [...ids]
+      .map((id) => ({ entity: this.data.get('action:' + id), key: keybindLabel(keys[id] ?? null) }))
+      .filter((c): c is { entity: Entity; key: string } => !!c.entity);
+  });
 
   /**
    * The adrenaline crystal stands in War's Retreat only: the button shows for a rotation played there (the player's
@@ -1867,6 +1873,11 @@ export class Train implements OnDestroy {
       }
       case 'adrenaline':
         break; // bookkeeping for the trace: the bar shows the total
+      case 'time-warp': {
+        this.feedback.set({ text: ev.phase === 'start' ? 'Time Warp: in 10 s adrenaline and cooldowns go back to now (' + Math.round(ev.adrenaline) + '%)' : 'Time Warp reset: adrenaline back to ' + Math.round(ev.adrenaline) + '%, cooldowns back to where they were', cls: 'info' });
+        this.log('action:' + TIME_WARP_ACTION, 'other', ev.phase === 'start' ? 'Time Warp' : 'Time Warp reset');
+        break;
+      }
       case 'crystal': {
         this.feedback.set({ text: 'Adrenaline crystal: +' + ev.amount + '% adrenaline' + (ev.potionsReset ? ', adrenaline potions off cooldown' : '') + '. The next ability is due after the 1.8 s channel', cls: 'info' });
         this.log('action:' + CRYSTAL_ACTION, 'other', 'Adrenaline crystal +' + ev.amount + '%');

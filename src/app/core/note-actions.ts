@@ -19,8 +19,18 @@ export function isPlayerAction(note: string): boolean {
   return VERB.test(n) || /\bclick\b/.test(n);
 }
 
-/** The step with `requiresAction` set when its note asks for a click; phase headings and inputs come back as they are. */
+/** notes that are a client action the trainer knows, written before its alias existed: "Time warp" is Kerapac's button */
+const NOTE_ACTIONS: [RegExp, string][] = [[/^time\s*-?\s*warp$/i, 'time-warp']];
+
+/**
+ * The step with `requiresAction` set when its note asks for a click; a note that names a client action becomes that
+ * action; phase headings and inputs come back as they are.
+ */
 export function markPlayerAction<T extends RotationStep>(step: T): T {
-  if (step.kind !== 'note' || step.phase || step.requiresAction || !isPlayerAction(step.note ?? '')) return step;
+  if (step.kind !== 'note') return step;
+  const note = (step.note ?? '').trim();
+  // the parser writes boss mechanics as headings; one of them is a button the trainer can press
+  for (const [re, id] of NOTE_ACTIONS) if (re.test(note)) return { ...step, kind: 'action', id, note: undefined, phase: undefined, requiresAction: undefined } as T;
+  if (step.phase || step.requiresAction || !isPlayerAction(note)) return step;
   return { ...step, requiresAction: true };
 }

@@ -104,7 +104,7 @@ describe('unboundKeys – what of a rotation is not on a key yet', () => {
 
   it('lists every input once, in press order, and skips notes', () => {
     const s = defaultActionBars();
-    expect(unboundKeys(s, steps, slotKeybinds(s))).toEqual(['ability:sever', SPEC_KEY, 'action:target-cycle', 'prayer:turmoil']);
+    expect(unboundKeys(s, steps, slotKeybinds(s))).toEqual(['ability:sever', SPEC_KEY, 'prayer:turmoil']); // actions are clicked on their chip
   });
 
   it('a slot with the entity and a key, a weapon (clicked, never bound) and a bound action are left out', () => {

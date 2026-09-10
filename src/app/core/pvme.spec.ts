@@ -244,8 +244,9 @@ describe('parsePvme – boss mechanics', () => {
   it('inline mechanics become phase notes, not unknown tokens', () => {
     const r = parsePvme('grico + realmmovement → timewarp → warsretreatteleport dba → rapid + ballista at 2.4 seconds left', resolve);
     expect(ids(r.steps)).toEqual([
-      'greater-ricochet', 'note:Realm movement', 'note:Time warp', "note:War's Retreat teleport", 'dragon-battleaxe+', 'rampage+', 'rapid-fire', 'note:Ballista at 2.4 seconds left',
+      'greater-ricochet', 'note:Realm movement', 'time-warp', "note:War's Retreat teleport", 'dragon-battleaxe+', 'rampage+', 'rapid-fire', 'note:Ballista at 2.4 seconds left',
     ]);
+    // Time Warp is Kerapac's button, a client action the trainer presses (core/note-actions.ts); the other mechanics stay headings
     expect(r.steps.filter((s) => s.kind === 'note').every((s) => s.phase)).toBe(true);
     expect(r.unknown).toEqual([]);
   });

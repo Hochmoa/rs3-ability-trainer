@@ -318,6 +318,10 @@
           <span>Ticks between attacks</span>
           <input type="number" inputmode="decimal" min="1" max="20" [ngModel]="enemy().intervalTicks" (ngModelChange)="setEnemy('intervalTicks', numberOf($event, 1, 20))" [disabled]="running()" />
         </label>
+        <label class="field" title="What one of its attacks would deal. Divert turns a blocked hit into adrenaline: 0.8% per 100 damage up to 3,000, less beyond, at most 50%.">
+          <span>Damage per hit</span>
+          <input type="number" inputmode="decimal" min="0" max="30000" step="500" [ngModel]="enemy().hitDamage ?? 3000" (ngModelChange)="setEnemy('hitDamage', numberOf($event, 0, 30000))" [disabled]="running()" />
+        </label>
         <label class="field">
           <span>Warning (ticks)</span>
           <input type="number" inputmode="decimal" min="0" max="20" [ngModel]="enemy().warningTicks" (ngModelChange)="setEnemy('warningTicks', numberOf($event, 0, 20))" [disabled]="running()" />

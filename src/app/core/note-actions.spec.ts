@@ -22,4 +22,10 @@ describe('notes that ask for a click', () => {
     const marked = { kind: 'note' as const, id: '', note: 'run md', requiresAction: true, actionTicks: 8 };
     expect(markPlayerAction(marked)).toBe(marked);
   });
+
+  it("a Time warp note is Kerapac's button: it becomes the client action, heading or not", () => {
+    expect(markPlayerAction({ kind: 'note', id: '', note: 'Time warp', phase: true })).toEqual({ kind: 'action', id: 'time-warp' });
+    expect(markPlayerAction({ kind: 'note', id: '', note: 'timewarp' })).toEqual({ kind: 'action', id: 'time-warp' });
+    expect(markPlayerAction({ kind: 'note', id: '', note: 'Time warp lands soon' })).toEqual({ kind: 'note', id: '', note: 'Time warp lands soon' });
+  });
 });

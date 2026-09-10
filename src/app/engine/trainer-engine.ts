@@ -1,5 +1,5 @@
 import { COMMAND_READY_AFTER, CONJURE_BASE_TICKS } from './rules-necromancy';
-import { AbilityType, CombatMode, EnemyConfig, EntityKind, FAMILIAR_SPECIAL_MAX, FAMILIAR_SPECIAL_REGEN, Familiar, PrayerStats, Prebuild, RevolutionSettings, SPEC_KEY, StepResult, Style, Style4, isStyle4 } from '../core/models';
+import { AbilityType, CombatMode, EnemyConfig, EntityKind, FAMILIAR_SPECIAL_MAX, FAMILIAR_SPECIAL_REGEN, Familiar, PrayerStats, Prebuild, RevolutionSettings, SPEC_KEY, StepResult, Style, Style4, isStyle4, divertAdrenaline } from '../core/models';
 import { ResolvedLoadout, defaultResolvedLoadout } from './loadout-resolved';
 import { PROTECTION, PrayerBook, SOUL_SPLIT, bookOf, togglePrayer } from './prayer-rules';
 import { BASE_CRIT_CHANCE, BUFF_DAMAGE_MULT, BUFF_FLAT_ADD, BUFF_TYPE_DAMAGE_MULT, FORTITUDE, POISON_EVERY_TICKS, POISON_ROLL, RAGE_MAX, RAGE_PER_STACK, SPIRIT_ATTACKS, TARGET_DAMAGE_ADD, TARGET_DAMAGE_MULT, critMultiplier, damageSkillOf, fortitudeLifePoints, prayerDamagePct } from './damage';
@@ -80,6 +80,9 @@ export interface Wield {
 
 /** core/models.ts ACTIONS id of the adrenaline crystal in War's Retreat */
 export const CRYSTAL_ACTION = 'adrenaline-crystal';
+/** core/models.ts ACTIONS id of Kerapac's Time Warp button; the reset comes 10 s (17 ticks) after the press */
+export const TIME_WARP_ACTION = 'time-warp';
+export const TIME_WARP_TICKS = 17;
 /** one 1.8 s channel of the crystal, and with War's Blessing 4 (runescape.wiki/w/Adrenaline_crystal_(War's_Retreat)) */
 export const CRYSTAL_ADRENALINE_PER_CHANNEL = 25;
 export const CRYSTAL_ADRENALINE_FULL = 100;
@@ -302,6 +305,8 @@ export type EngineEvent =
   | { kind: 'missed'; keys: string[] }
   /** adrenaline changed: `delta` from `source` (an entity key, "over-time:<key>", "buff:<id>", "hit:<key>", "crystal") */
   | { kind: 'adrenaline'; delta: number; source: string; tick: number }
+  /** Time Warp: `phase` 'start' on the press, 'reset' when adrenaline and cooldowns went back to the press's values */
+  | { kind: 'time-warp'; phase: 'start' | 'reset'; tick: number; adrenaline: number }
   /** the adrenaline crystal was used: `amount` gained, `potionsReset` = the adrenaline potions came off cooldown */
   | { kind: 'crystal'; amount: number; tick: number; potionsReset: boolean }
   /** a hit landed on the target (key = source ability / "spirit:<name>"); `miss` = it missed (amount 0, no on-hit effects) */
@@ -465,6 +470,8 @@ export class TrainerEngine {
   private frostSurgeReady = 0;
   /** the cast started by a stall step and held until its release step (PvME "sassault → … → rassault") */
   private held: { key: string; tick: number; deferredCooldown: number } | null = null;
+  /** Time Warp pressed: what comes back at `resetTick` (runescape.wiki/w/Time_Warp) */
+  private timeWarp: { resetTick: number; adrenaline: number; cooldowns: [string, number][]; charges: [string, number[]][] } | null = null;
   private readyTick = new Map<string, number>();
   private chargeReady = new Map<string, number[]>();
   private sequences = new Map<string, SequenceState>();
@@ -541,6 +548,7 @@ export class TrainerEngine {
     this.wrongWeaponStrikes = 0;
     this.wrongFired = null;
     this.held = null;
+    this.timeWarp = null;
     this.frostSurgeReady = 0;
     this.castTick = null;
     this.wield = { mainHand: null, offHand: null, twoHand: null, ...(this.config.startWield ?? {}) };
@@ -959,6 +967,12 @@ export class TrainerEngine {
       this.weaponStrike(entity, wf);
       return;
     }
+    // a held (stalled) cast is released by the click on the target, off the global cooldown: "it is possible to use
+    // another ability on the same tick as the click that releases the stalled ability" (runescape.wiki/w/Ability_stalling)
+    if (this.releaseDue() === entity.key) {
+      this.releaseHeld(tickP);
+      return;
+    }
     const gcdEnd = this.gcdEndTick;
     const gcdRunning = gcdEnd !== null && tickP < gcdEnd && tickP > (this.castTick ?? -1);
     const rule = this.ruleOf(entity);
@@ -1224,6 +1238,28 @@ export class TrainerEngine {
     this.advanceIndex();
   }
 
+  /** the key of the held cast when the current step is its release, else null */
+  private releaseDue(): string | null {
+    const s = this.steps[this.index];
+    return this.held && s?.release && s.key === this.held.key && !this.done.has(this.index) ? s.key : null;
+  }
+
+  /**
+   * Lands the held cast and completes its release step without a global cooldown: the stall paid and started the
+   * cooldown, the release is only the click that lets it go (runescape.wiki/w/Ability_stalling).
+   */
+  private releaseHeld(tick: number): void {
+    const i = this.index;
+    const step = this.steps[i];
+    this.activate(step, tick, { offGcd: true, noGain: false, release: true });
+    this.done.add(i);
+    this.lastInputTick = Math.max(tick, this.lastInputTick ?? 0);
+    const result: StepResult = { step: i, key: step.key, name: step.name, kind: step.kind, outcome: 'done', lateTicks: 0, offsetMs: 0, tooEarly: 0, wrong: 0, firedAtTick: tick, adrenaline: this.adrenaline };
+    this.results.push(result);
+    this.events.push({ kind: 'fired', result });
+    this.advanceIndex();
+  }
+
   /** First open off-GCD step with `key` in the group starting at `from` (stops at the next GCD ability). */
   private openOffGcdStep(from: number, key: string): number {
     for (let i = from; i < this.steps.length; i++) {
@@ -1301,6 +1337,9 @@ export class TrainerEngine {
       return;
     }
     this.pending = after();
+    // attacking releases a held cast first, on the same tick ("rmeteorstrike + naturalinstinct" in PvME notation)
+    const due = this.releaseDue();
+    if (due && due !== entity.key) this.releaseHeld(p.tick);
     const expected = this.expectedAbility;
     const gcdEnd = this.gcdEndTick;
     // a channel the previous cast started: the rotation means "after the channel", so the next ability is on time
@@ -1420,6 +1459,10 @@ export class TrainerEngine {
       return;
     }
     const rule = this.ruleOf(entity);
+    if (entity.kind === 'action' && entity.id === TIME_WARP_ACTION) {
+      this.startTimeWarp(tick);
+      return;
+    }
     if (entity.kind === 'action' && !rule) return; // target cycle etc.: nothing to simulate (the combat dummy has a rule)
     // Volley of Souls: one hit per stack held before the cast effects consume them
     const stacksBefore = rule?.hitsPerStack ? this.stack(rule.hitsPerStack) : 0;
@@ -2534,11 +2577,41 @@ export class TrainerEngine {
 
   private addAdrenaline(delta: number, source = 'other'): void {
     if (delta !== 0) this.events.push({ kind: 'adrenaline', delta: Math.round(delta * 100) / 100, source, tick: this.lastTick });
-    this.adrenaline = Math.max(0, Math.min(this.maxAdrenaline, this.adrenaline + delta));
+    // whole thousandths: 4.5 a tick for 50 ticks must add up to exactly what the bar shows, or "need 60, have 60" refuses a cast
+    this.adrenaline = Math.round(Math.max(0, Math.min(this.maxAdrenaline, this.adrenaline + delta)) * 1000) / 1000;
+  }
+
+  /**
+   * Kerapac's Time Warp: "After ten seconds, the values of life points, prayer points, adrenaline, and the cooldowns
+   * of abilities will be reset to what they were upon initiation" (runescape.wiki/w/Time_Warp). Remaining cooldowns
+   * are kept as remaining ticks, so what had 20 ticks left at the press has 20 ticks left again after the reset.
+   * Pressing it again before the reset only teleports in game: here it changes nothing.
+   */
+  private startTimeWarp(tick: number): void {
+    if (this.timeWarp) return;
+    const cooldowns: [string, number][] = [];
+    for (const [k, r] of this.readyTick) if (r > tick) cooldowns.push([k, r - tick]);
+    const charges: [string, number[]][] = [];
+    for (const [k, list] of this.chargeReady) charges.push([k, list.filter((r) => r > tick).map((r) => r - tick)]);
+    this.timeWarp = { resetTick: tick + TIME_WARP_TICKS, adrenaline: this.adrenaline, cooldowns, charges };
+    this.events.push({ kind: 'time-warp', phase: 'start', tick, adrenaline: this.adrenaline });
+  }
+
+  private resetTimeWarp(tick: number): void {
+    const w = this.timeWarp!;
+    this.timeWarp = null;
+    const before = this.adrenaline;
+    this.readyTick.clear();
+    for (const [k, left] of w.cooldowns) this.readyTick.set(k, tick + left);
+    this.chargeReady.clear();
+    for (const [k, list] of w.charges) if (list.length) this.chargeReady.set(k, list.map((left) => tick + left));
+    this.addAdrenaline(w.adrenaline - before, 'time-warp');
+    this.events.push({ kind: 'time-warp', phase: 'reset', tick, adrenaline: this.adrenaline });
   }
 
   private advanceTick(tick: number): void {
     this.lastTick = tick;
+    if (this.timeWarp && tick >= this.timeWarp.resetTick) this.resetTimeWarp(tick);
     if (this.settleUntil !== null && (tick >= this.settleUntil || !this.damageInTheAir())) {
       this.finish();
       return;
@@ -2620,6 +2693,8 @@ export class TrainerEngine {
       let reflected = false;
       if (absorbed) {
         this.prayerStats.absorbed = (this.prayerStats.absorbed ?? 0) + 1;
+        // Divert turns the blocked damage into adrenaline (runescape.wiki/w/Divert); the enemy config says how hard it hits
+        if (absorbed === 'divert') this.addAdrenaline(divertAdrenaline(this.config.enemy!.hitDamage ?? 3000), 'divert:blocked');
       } else {
         if (prayed) this.prayerStats.prayed++;
         else this.prayerStats.hits++;

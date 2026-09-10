@@ -178,6 +178,12 @@ export const ACTIONS: Action[] = [
     description: "The crystal at the bottom of the stairs in War's Retreat: channelling it gives 25% adrenaline every 1.8 s, 100% with War's Blessing 4 (Settings). Only in War's Retreat, so the Train page shows it for rotations played there.",
     icon: 'assets/actions/adrenaline-crystal.png',
   },
+  {
+    id: 'time-warp',
+    name: 'Time Warp',
+    description: "Kerapac's extra action button (phase 2 on): ten seconds after pressing it, life points, prayer points, adrenaline and every ability cooldown go back to what they were when it was pressed. 30 s cooldown. The guides write 'timewarp + gsunshine' and spend what the reset gives back.",
+    icon: 'assets/actions/time-warp.png',
+  },
   { id: 'eat-food', name: 'Eat food', description: 'Eating solid food costs 3% adrenaline (10% before the Combat Style Modernisation). Brews, blubber and drinks cost none, which is why rotations reach for those. Off the global cooldown; life points are not simulated.', icon: 'assets/actions/eat-food.png' },
 ];
 /** pressing the "Weapon Special Attack" slot counts for whichever spec the rotation expects with the wielded weapon */
@@ -971,6 +977,25 @@ export interface EnemyConfig {
   defenceLevel: number;
   /** armour value of the target (wiki infobox "Armour") */
   armour: number;
+  /**
+   * damage one of its attacks would deal, for Divert: "Generate 0.8% adrenaline for every 100 damage blocked ... with
+   * diminishing returns at 3,000, 6,000 and 9,000 damage blocked", at most 50% (runescape.wiki/w/Divert). Missing = 3,000.
+   */
+  hitDamage?: number;
+}
+
+/** what Divert gives for a blocked hit of `damage`: 0.8% per 100 up to 3,000, then 0.6%, 0.4% and 0.1% per 100, capped at 50% */
+export function divertAdrenaline(damage: number): number {
+  const tiers: [number, number][] = [[3000, 0.8], [3000, 0.6], [3000, 0.4], [3000, 0.1]];
+  let left = Math.max(0, damage);
+  let out = 0;
+  for (const [span, pct] of tiers) {
+    const part = Math.min(left, span);
+    out += (part / 100) * pct;
+    left -= part;
+    if (left <= 0) break;
+  }
+  return Math.min(50, Math.round(out * 10) / 10);
 }
 
 /** an enemy config from storage: fills the hit chance stats older configs lack (from the preset, or "always hit" for custom ones) */
@@ -1001,6 +1026,7 @@ export const DEFAULT_ENEMY: EnemyConfig = {
   affinity: { Melee: 100, Ranged: 100, Magic: 100, Necromancy: 100 },
   defenceLevel: 1,
   armour: 0,
+  hitDamage: 3000,
 };
 
 /**

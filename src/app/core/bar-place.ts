@@ -112,7 +112,7 @@ export function unboundKeys(setup: ActionBarSetup, steps: RotationStep[], slotKe
   for (const st of steps) {
     if (st.kind === 'note') continue;
     const key = st.kind === 'spec' ? SPEC_KEY : entityKey(st.kind, st.id);
-    const bound = st.kind === 'weapon' ? true : st.kind === 'action' ? !!setup.actionKeybinds?.[st.id] : slotKeys.has(key);
+    const bound = st.kind === 'weapon' || st.kind === 'action' ? true : slotKeys.has(key); // weapons and client actions are clicked (chips), no key needed
     if (!bound && !out.includes(key)) out.push(key);
   }
   return out;

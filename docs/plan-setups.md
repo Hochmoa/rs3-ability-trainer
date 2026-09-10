@@ -123,3 +123,24 @@ seconds", 0.5% a tick for 30 ticks after the stalled Meteor Strike. Every adrena
 ('adrenaline', delta, source) that the trace records and tools/trace-report.py prints. Dropped on the way: a rule that
 let abilities generate no adrenaline under Rampage; neither the Rampage nor the Dragon battleaxe page knows such a
 thing (both read 10 Sep 2026).
+
+## Kerapac HM playthrough, 10 Sep 2026
+
+Martin: play the whole Kerapac HM magic/melee chain through in under 2:30 and fix what breaks. A perfect-player
+runner drove the engine (chain from War's Retreat, crystal in Wars, same-tick presses, companions on the cast tick).
+Found and fixed on the way:
+- A stall's release is the click on the target, off the global cooldown: "it is possible to use another ability
+  on the same tick as the click that releases the stalled ability" (Ability stalling). The engine had played the
+  release as a GCD cast, a whole GCD lost per stall; now the release press is off-GCD, and the next attack releases
+  the held cast on its own ("rmeteorstrike + naturalinstinct").
+- Divert turns a blocked hit into adrenaline (0.8% per 100 up to 3,000, less beyond, 50% cap); the enemy config
+  carries "Damage per hit" for it (default 3,000).
+- Time Warp, Kerapac's extra action button, is a client action: 10 s after the press adrenaline and cooldowns go back
+  to the press's values (TrainerEngine.startTimeWarp / resetTimeWarp). "Time warp" notes in stored rotations become
+  the action on load; client actions have chips to click even without a key, so a rotation that needs one can start.
+- Adrenaline is kept in whole thousandths.
+Result: Wars, Prior to Start and Phase 1 play through as written (33 s of fight). Phase 2's magic part does not:
+Greater Sunshine wants 80% where the model has ~40%, Tsunami 100%; the guide leans on adrenaline the trainer does
+not produce there (the reset of Time Warp returns what one had, not more). Damage pace of the trainer at Kerapac:
+about 3.5k a tick in Phase 1; a sub-2-minute kill of ~1.7M life points needs ~8.5k a tick, so the trainer is roughly
+half the damage of a strong player (sparse perk data in the presets, no aura, no boss debuffs are the likely gap).
