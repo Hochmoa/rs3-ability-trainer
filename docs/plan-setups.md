@@ -144,3 +144,13 @@ Greater Sunshine wants 80% where the model has ~40%, Tsunami 100%; the guide lea
 not produce there (the reset of Time Warp returns what one had, not more). Damage pace of the trainer at Kerapac:
 about 3.5k a tick in Phase 1; a sub-2-minute kill of ~1.7M life points needs ~8.5k a tick, so the trainer is roughly
 half the damage of a strong player (sparse perk data in the presets, no aura, no boss debuffs are the likely gap).
+
+## Two workarounds, 10 Sep 2026
+
+Until the adrenaline economy of the harder guides is modelled, two pills on the Train page (Settings.ignoreAdrenaline,
+Settings.stepMode):
+- "Ignore adrenaline needs": no ability is refused for want of adrenaline; the cost is still taken, the bar floors at 0.
+- "Wait for my cast": the engine's clock (TrainerEngine.v / freeze / thaw) stops on the tick the next step is due until
+  the right key comes. Buffs, cooldowns, adrenaline, channels and the enemy wait with it; every other key is refused
+  as wrong; a queued press casts on its own. A same-tick group is waited for key by key: the companion is due on the
+  cast tick, so the clock stops there again. engine/step-mode.spec.ts.

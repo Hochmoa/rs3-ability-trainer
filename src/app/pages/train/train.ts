@@ -918,6 +918,8 @@ export class Train implements OnDestroy {
   private readonly loop = new FrameLoop((now) => this.tick(now), browserFrameLoopDeps(this.doc));
   private flashUntil = 0;
   private startedAt = 0;
+  /** step mode: the "clock stopped" line was shown for the current stop */
+  private frozenShown = false;
   /** the record of this session (core/trace.ts), from Start to the end */
   private trace: TraceRecorder | null = null;
 
@@ -1413,6 +1415,14 @@ export class Train implements OnDestroy {
       this.onTick(e, tick, now);
     }
     this.onFrame(e, tick, now);
+    // step mode: say that the clock stands and what it waits for
+    if (e.frozen !== this.frozenShown) {
+      this.frozenShown = e.frozen;
+      if (e.frozen) {
+        const cur = this.slots().find((s) => s.kind === 'current');
+        this.feedback.set({ text: 'Clock stopped: ' + (cur?.key ? 'press ' + cur.key + ' (' + cur.entity.name + ')' : 'press the next step') + ' to go on', cls: 'info' });
+      }
+    }
     const fb = this.feedback();
     if (fb && this.trace) this.trace.feedback(fb.text, fb.cls, now, tick);
     if (e.state !== 'running') {
@@ -1778,7 +1788,7 @@ export class Train implements OnDestroy {
         break;
       case 'wrong':
         this.counts.update((c) => ({ ...c, wrong: c.wrong + 1 }));
-        this.feedback.set({ text: 'Wrong ability: ' + this.name(ev.key) + ', ignored, on cooldown', cls: 'bad' });
+        this.feedback.set({ text: this.storage.settings().stepMode ? 'Wrong ability: ' + this.name(ev.key) + ', refused. The clock waits for ' + this.name(ev.expected) : 'Wrong ability: ' + this.name(ev.key) + ', ignored, on cooldown', cls: 'bad' });
         this.flash('wrong', ev.key, now, 250);
         break;
       case 'wrong-weapon':

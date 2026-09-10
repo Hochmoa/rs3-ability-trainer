@@ -344,6 +344,13 @@ export interface Settings {
    * takes the adrenaline potions off cooldown; without it a use gives 25% (runescape.wiki/w/Adrenaline_crystal_(War's_Retreat))
    */
   crystalUpgraded: boolean;
+  /** workaround: an ability casts whatever the bar shows; the cost is still taken (floors at 0) */
+  ignoreAdrenaline: boolean;
+  /**
+   * workaround: the clock stops whenever the next step is due and not pressed; buffs, cooldowns, adrenaline and the
+   * enemy wait with it. Only the right ability (or a same-tick companion) is taken, every other press is refused.
+   */
+  stepMode: boolean;
   /** loadout pickers: hide weapons / sets / perks that are never used in current PvM (core/obscure.ts) */
   hideObscureEquipment: boolean;
   /** catalogs: hide abilities and prayers that are never used in current PvM (core/obscure.ts) */
@@ -439,6 +446,8 @@ export const DEFAULT_SETTINGS: Settings = {
   loop: false,
   fullAdrenaline: false,
   crystalUpgraded: true,
+  ignoreAdrenaline: false,
+  stepMode: false,
   hideObscureEquipment: true,
   hideObscureAbilities: true,
   hitDelayTicks: 2,

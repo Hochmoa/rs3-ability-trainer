@@ -201,6 +201,14 @@
           <input type="checkbox" [checked]="storage.settings().fullAdrenaline" (change)="setSetting('fullAdrenaline', !storage.settings().fullAdrenaline)" [disabled]="running()" />
           100% at start
         </label>
+        <label class="pill" title="Workaround: no ability is refused for want of adrenaline. The cost is still taken, the bar stops at 0.">
+          <input type="checkbox" [checked]="storage.settings().ignoreAdrenaline" (change)="setSetting('ignoreAdrenaline', !storage.settings().ignoreAdrenaline)" [disabled]="running()" />
+          Ignore adrenaline needs
+        </label>
+        <label class="pill" title="Workaround: the clock stops whenever the next step is due until you press the right ability. Buffs, cooldowns, adrenaline and the enemy wait with it; any other press is refused. Queued presses still cast on their own.">
+          <input type="checkbox" [checked]="storage.settings().stepMode" (change)="setSetting('stepMode', !storage.settings().stepMode)" [disabled]="running()" />
+          Wait for my cast
+        </label>
       </span>
       <span class="opt-group" title="Says the keys out loud. Volume, lead and voice: Settings → Sound.">
         <span class="opt-label">Coach</span>

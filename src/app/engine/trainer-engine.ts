@@ -99,6 +99,14 @@ export interface EngineConfig {
   fullAdrenaline?: boolean;
   /** War's Blessing 4: the adrenaline crystal fills to 100% in one use and resets the adrenaline potions (else 25%) */
   crystalUpgraded?: boolean;
+  /** workaround: no ability is refused for want of adrenaline; the cost is still taken, the bar floors at 0 */
+  ignoreAdrenaline?: boolean;
+  /**
+   * workaround: the clock stops on the tick the next step is due until the right key is pressed; buffs, cooldowns,
+   * adrenaline and the enemy wait with it. Only the expected step (or an open same-tick companion) is taken, every
+   * other press is refused as wrong. A queued press casts on its own, so queueing keeps working.
+   */
+  stepMode?: boolean;
   /**
    * ticks between a cast and its damage for ordinary hits (all offsets 0): the game lands the hitsplat a moment after the
    * ability. Rules with their own offsets (Snipe 3, Backhand 1, Death Skulls bounces …), channels, DoTs and conjured
@@ -470,6 +478,9 @@ export class TrainerEngine {
   private frostSurgeReady = 0;
   /** the cast started by a stall step and held until its release step (PvME "sassault → … → rassault") */
   private held: { key: string; tick: number; deferredCooldown: number } | null = null;
+  /** step mode: real ms spent with the clock stopped, and the stop in progress (real time it began, virtual time it holds) */
+  private paused = 0;
+  private frozenAt: { real: number; virtual: number } | null = null;
   /** Time Warp pressed: what comes back at `resetTick` (runescape.wiki/w/Time_Warp) */
   private timeWarp: { resetTick: number; adrenaline: number; cooldowns: [string, number][]; charges: [string, number[]][] } | null = null;
   private readyTick = new Map<string, number>();
@@ -549,6 +560,8 @@ export class TrainerEngine {
     this.wrongFired = null;
     this.held = null;
     this.timeWarp = null;
+    this.paused = 0;
+    this.frozenAt = null;
     this.frostSurgeReady = 0;
     this.castTick = null;
     this.wield = { mainHand: null, offHand: null, twoHand: null, ...(this.config.startWield ?? {}) };
@@ -654,6 +667,7 @@ export class TrainerEngine {
   channelProgress(now: number): { key: string; phase: number; hitsDone: number; hits: number; remainingMs: number } | null {
     const ch = this.channel;
     if (!ch || ch.cancelled) return null;
+    now = this.v(now);
     const start = this.tickTime(ch.castTick);
     const end = this.tickTime(ch.endTick);
     if (now >= end && ch.hitsDone >= ch.hits) return null;
@@ -708,28 +722,81 @@ export class TrainerEngine {
     return this.t0 + tick * TICK_MS;
   }
 
+  /** the engine's clock: real time minus what step mode spent stopped; constant while stopped */
+  private v(now: number): number {
+    return this.frozenAt ? this.frozenAt.virtual : now - this.paused;
+  }
+
+  /** step mode: the clock is stopped, waiting for the player */
+  get frozen(): boolean {
+    return this.frozenAt !== null;
+  }
+
+  private freeze(real: number, virtual: number): void {
+    if (!this.frozenAt) this.frozenAt = { real, virtual };
+  }
+
+  private thaw(real: number): void {
+    if (!this.frozenAt) return;
+    this.paused = real - this.frozenAt.virtual;
+    this.frozenAt = null;
+  }
+
+  /**
+   * Step mode: is the current step due at `tick` and still unpressed? Then the clock stops there. A step is due once
+   * the global cooldown, the channel, the busy time of a note and its own "+"/"2t" offset are over; a cast on its way
+   * (queued) is a press already, and inert notes are skipped by the rotation itself.
+   */
+  private dueUnpressed(tick: number): boolean {
+    const s = this.steps[this.index];
+    if (!s || this.done.has(this.index) || this.pending || this.settleUntil !== null) return false;
+    if (s.isNote && !s.awaitAction) return false;
+    if (this.isGcdStep(s) && this.gcdEndTick !== null && tick < this.gcdEndTick) return false;
+    if (this.lastChannelEnd !== null && tick < this.lastChannelEnd) return false;
+    if (this.channel && !this.channel.cancelled && tick < this.channel.endTick && this.lastChannelEnd === null) return false;
+    if (this.busyUntil !== null && tick < this.busyUntil) return false;
+    if (s.offsetTicks !== undefined && this.lastInputTick !== null && tick < this.lastInputTick + s.offsetTicks) return false;
+    return true;
+  }
+
+  /** step mode: what a press may be: the expected step, an open same-tick companion, the release of a held cast, a prayer, the crystal */
+  private allowedInStepMode(entity: EngineEntity): boolean {
+    const expected = this.steps[this.index];
+    if (expected && this.satisfies(entity, expected)) return true;
+    if (this.openOffGcdStep(this.index, entity.key) >= 0) return true;
+    if (this.releaseDue() === entity.key) return true;
+    if (entity.kind === 'prayer') return true;
+    if (entity.kind === 'action' && entity.id === CRYSTAL_ACTION) return true;
+    // "bloat + vulnbomb": a companion of the cast that is queued
+    if (this.pending) {
+      const j = this.steps.findIndex((x, i) => i >= this.index && this.isGcdStep(x) && x.key === this.pending!.key);
+      if (j >= 0 && this.openOffGcdStep(j + 1, entity.key) >= 0) return true;
+    }
+    return false;
+  }
+
   tickOf(time: number): number {
     return Math.ceil((time - this.t0) / TICK_MS);
   }
 
   currentTick(now: number): number {
-    return Math.floor((now - this.t0) / TICK_MS);
+    return Math.floor((this.v(now) - this.t0) / TICK_MS);
   }
 
   tickPhase(now: number): number {
-    const p = ((now - this.t0) % TICK_MS) / TICK_MS;
+    const p = ((this.v(now) - this.t0) % TICK_MS) / TICK_MS;
     return p < 0 ? 0 : p;
   }
 
   gcdPhase(now: number): number {
     if (this.castTick === null) return 1;
-    const p = (now - this.tickTime(this.castTick)) / (GCD_TICKS * TICK_MS);
+    const p = (this.v(now) - this.tickTime(this.castTick)) / (GCD_TICKS * TICK_MS);
     return Math.max(0, Math.min(1, p));
   }
 
   gcdRemainingMs(now: number): number {
     const end = this.gcdEndTick;
-    return end === null ? 0 : Math.max(0, this.tickTime(end) - now);
+    return end === null ? 0 : Math.max(0, this.tickTime(end) - this.v(now));
   }
 
   /**
@@ -890,13 +957,17 @@ export class TrainerEngine {
 
   press(key: string, now: number): void {
     if (this.state !== 'running') return;
+    // step mode: any press starts the clock again; a wrong one is refused in handle() and the clock stops right back
+    if (this.frozenAt) this.thaw(now);
+    now = this.v(now);
     const jitter = this.config.jitterMs > 0 ? (this.random() * 2 - 1) * this.config.jitterMs : 0;
     const arrival = now + Math.max(0, this.config.pingMs + jitter);
     this.inflight.push({ key, pressedAt: now, arrival });
   }
 
-  update(now: number): void {
+  update(realNow: number): void {
     if (this.state !== 'running') return;
+    const now = this.v(realNow);
     this.inflight.sort((a, b) => a.arrival - b.arrival);
     for (;;) {
       const next = this.inflight[0];
@@ -910,12 +981,20 @@ export class TrainerEngine {
         this.handle(next!);
         if (this.state !== 'running') return;
       } else if (tickAt <= now && tickAt <= castAt) {
+        // step mode: the current tick is where the next step is due and nothing was pressed – the clock stops here
+        if (this.config.stepMode && this.dueUnpressed(this.lastTick)) {
+          this.freeze(realNow, this.tickTime(this.lastTick));
+          return;
+        }
         // advance server ticks (over-time adrenaline, buff expiry) before anything scheduled later
         this.advanceTick(this.lastTick + 1);
       } else if (castAt <= now) {
         this.castPending();
         if (this.state !== 'running') return;
       } else {
+        // step mode: everything up to now is done and the current tick is where the next step is due – stop here,
+        // on the tick itself, so the press that comes lands on it
+        if (this.config.stepMode && this.dueUnpressed(this.lastTick) && now >= this.tickTime(this.lastTick)) this.freeze(realNow, this.tickTime(this.lastTick));
         break;
       }
     }
@@ -959,6 +1038,11 @@ export class TrainerEngine {
         input = { ...input, key: morph.key };
         entity = target;
       }
+    }
+    if (this.config.stepMode && !this.allowedInStepMode(entity)) {
+      this.wrong++;
+      this.events.push({ kind: 'wrong', key: entity.key, expected: this.expectedAbility?.key ?? '' });
+      return;
     }
     const wf = this.weaponFailure(entity);
     if (wf) {
@@ -1155,7 +1239,7 @@ export class TrainerEngine {
     const req = this.requirementFailure(entity, tick);
     if (req) return { kind: 'requirement', key: entity.key, text: req, transient: req.startsWith('cannot be re-conjured') || undefined };
     const { need } = this.costOf(entity);
-    if (need > 0 && this.adrenaline < need) return { kind: 'no-adrenaline', key: entity.key, need, have: this.adrenaline };
+    if (need > 0 && this.adrenaline < need && !this.config.ignoreAdrenaline) return { kind: 'no-adrenaline', key: entity.key, need, have: this.adrenaline };
     return null;
   }
 
