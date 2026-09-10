@@ -9,7 +9,7 @@ import { DataService, EOF_ICON, Entity, SPEC_KEY } from '../../core/data.service
 import { applyWield, equip, hasSpecial, moveItem, removeItem, removeWorn, unequip } from '../../core/equipment';
 import { DEFAULT_LAYOUT_ID, keybindLayout } from '../../core/keybind-layouts';
 import { keybindFromEvent, keybindFromMouse, keybindKey, keybindLabel, resolvePress } from '../../core/keybind.util';
-import { ActionBarSetup, AttackPattern, Keybind, BAR_POSITIONS, BONE_SHIELD_ABILITY, INVENTORY_SIZE, NOTE_ACTION_TICKS, BAR_SLOTS, BarShape, barLayout, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, TARGET_TYPES, EquipSlot, ItemRef, Loadout, PrayerStats, Prebuild, REVOLUTION_MAX_SLOTS, REVOLUTION_MIN_SLOTS, RevolutionSettings, Rotation, STYLES4, Settings, StepResult, Style, Style4, WeaponSpec, emptyPrebuild, entityKey, isStyle4, loadoutStyle, loadoutWield, parseEntityKey, prebuildIsEmpty, visiblePresets, RotationStep, CoachSettings, SessionStuck, setupTitle, Weapon, Equipment, inWarsRetreat, ACTIONS } from '../../core/models';
+import { ActionBarSetup, AttackPattern, Keybind, BAR_POSITIONS, BONE_SHIELD_ABILITY, INVENTORY_SIZE, NOTE_ACTION_TICKS, BAR_SLOTS, BarShape, barLayout, DEFAULT_ENEMY, ENEMY_PRESETS, EnemyConfig, TARGET_TYPES, EquipSlot, ItemRef, Loadout, PrayerStats, Prebuild, REVOLUTION_MAX_SLOTS, REVOLUTION_MIN_SLOTS, RevolutionSettings, Rotation, STYLES4, Settings, StepResult, Style, Style4, WeaponSpec, emptyPrebuild, entityKey, isStyle4, loadoutStyle, loadoutWield, parseEntityKey, prebuildIsEmpty, visiblePresets, RotationStep, CoachSettings, SessionStuck, setupTitle, Weapon, Equipment, inWarsRetreat, ACTIONS, loadoutWeapons } from '../../core/models';
 import { alt1Announce, focusUrl, openFocusWindow } from '../../core/popout';
 import { CoachService, spokenLabel, spokenSequence } from '../../core/coach.service';
 import { PresetsService } from '../../core/presets.service';
@@ -456,9 +456,12 @@ export class Train implements OnDestroy {
         });
       }
     }
-    // a switch to the weapon already in hand needs no key: the engine completes that step on its own
+    // a switch to the weapon already in hand needs no key: the engine completes that step on its own. Every other
+    // weapon of the loadout is clicked in the backpack. While a session runs "in hand" is what the engine wields now,
+    // not the starting equipment: after the switch to the dual wield, the two-hander's step is a click again
     const eq = this.storage.loadout().equipment;
-    for (const ref of [eq.mainHand, eq.offHand, eq.twoHand]) if (ref?.kind === 'weapon' && !m.has('weapon:' + ref.id)) m.set('weapon:' + ref.id, 'wielded');
+    const inHand = new Set(this.running() ? this.wielded() : [eq.mainHand, eq.offHand, eq.twoHand].filter((r) => r?.kind === 'weapon').map((r) => r!.id));
+    for (const id of loadoutWeapons(this.storage.loadout())) if (!m.has('weapon:' + id)) m.set('weapon:' + id, inHand.has(id) ? 'wielded' : 'click');
     for (const [id, kb] of Object.entries(s.actionKeybinds ?? {})) {
       if (kb) m.set('action:' + id, keybindLabel(kb));
     }
@@ -478,17 +481,25 @@ export class Train implements OnDestroy {
     // side of the same rule lives in `eofIcon` / the morph build in syncTick (bug #2). Change one, check the other.
     const specKey = m.get(SPEC_KEY);
     const eofKey = m.get(EOF_KEY);
-    const r = this.resolved();
-    const weaponSpec = r.weaponSpec?.id ?? null;
-    const stored = new Set([...r.eofSpecs.map((x) => x.id), ...(r.eofSpec ? [r.eofSpec.id] : [])]);
+    const weaponSpec = this.resolved().weaponSpec?.id ?? null;
+    const stored = this.storedSpecs();
     for (const sp of this.data.specs()) {
       const key = 'spec:' + sp.id;
       if (m.has(key)) continue;
       if (sp.id === weaponSpec && specKey) m.set(key, specKey);
-      else if (stored.has(sp.id) && eofKey) m.set(key, eofKey);
-      else if (specKey) m.set(key, specKey); // any other special: the generic slot fires it once its weapon is wielded
+      // a special in an amulet fires from the EoF slot only: with no key on that slot the step is out of reach, and
+      // auto-place puts the slot on the bar (10 Sep 2026: the Final Flurry stall showed the Weapon Special Attack key,
+      // which fired Icy Tempest's "not the special attack of the wielded weapon" instead)
+      else if (stored.has(sp.id)) {
+        if (eofKey) m.set(key, eofKey);
+      } else if (specKey) m.set(key, specKey); // any other special: the generic slot fires it once its weapon is wielded
     }
     return m;
+  });
+  /** the specials the loadout keeps in Essence of Finality amulets, worn or carried */
+  readonly storedSpecs = computed(() => {
+    const r = this.resolved();
+    return new Set([...r.eofSpecs.map((x) => x.id), ...(r.eofSpec ? [r.eofSpec.id] : [])]);
   });
   readonly unreachable = computed(() => {
     const seen = new Set<string>();
@@ -550,7 +561,7 @@ export class Train implements OnDestroy {
   autoPlace(): void {
     if (this.running()) return;
     const layout = keybindLayout(DEFAULT_LAYOUT_ID);
-    const r = placeOnBars(this.storage.actionBars(), this.startStyle(), this.unreachable().map((e) => e.key), layout);
+    const r = placeOnBars(this.storage.actionBars(), this.startStyle(), this.unreachable().map((e) => e.key), layout, this.storedSpecs());
     if (!r.placed.length) {
       this.toast.show('No free slot on your bars. Clear one below, or use the Action bars page.', 'warn');
       return;
@@ -845,9 +856,7 @@ export class Train implements OnDestroy {
    * them counts – not just the one on the neck, or the specs of the carried amulets look like any other spec.
    */
   private eofIcon(e: Entity): string | null {
-    if (e.kind !== 'spec') return null;
-    const r = this.resolved();
-    return r.eofSpecs.some((s) => s.id === e.id) || r.eofSpec?.id === e.id ? EOF_ICON : null;
+    return e.kind === 'spec' && this.storedSpecs().has(e.id) ? EOF_ICON : null;
   }
 
   readonly slots = computed<QueueSlot[]>(() => {

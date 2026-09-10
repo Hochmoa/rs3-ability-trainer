@@ -154,3 +154,23 @@ Settings.stepMode):
   the right key comes. Buffs, cooldowns, adrenaline, channels and the enemy wait with it; every other key is refused
   as wrong; a queued press casts on its own. A same-tick group is waited for key by key: the companion is due on the
   cast tick, so the clock stops there again. engine/step-mode.spec.ts.
+
+## Step mode through the whole Kerapac chain, 10 Sep 2026
+
+Martin: "the first thing I am to do hangs at once", and test with the Kerapac HM solo magic/melee chain, not Rasial.
+Driven from War's Retreat to the last Hurricane (111 steps: 71 perfect, 39 done, none wrong) after these fixes:
+- A press while the clock stands lands on the tick it stands on, ping or not; a press on its way never stops the clock;
+  no automatic basic attack and no Revolution in step mode; Bladed Dive as a "+" companion is due during the GCD.
+- The Final Flurry ("svaranussmercy eofspec") hung: auto-place put only the Weapon Special Attack slot on the bars and
+  the key map fell back to its key, which fired Icy Tempest ("not the special attack of the wielded weapon"). A special
+  stored in an Essence of Finality now goes on, and is keyed by, the EoF slot (bar-place specSlotKey, models
+  loadoutStoredSpecs, the Train page's reachable / storedSpecs); with no key on that slot the step is unreachable and
+  auto-place places the slot.
+- "wielded" as the key of a weapon step followed the starting equipment: after the switch to the dual wield the
+  two-hander's step showed "wielded" and waited for a click. While a session runs the label follows the weapons in hand.
+- A step whose own cooldown still runs (Omnipower 19 ticks after the last one, Bladed Dive in the clone phase: the
+  guide's phases take longer than the trainer's clock) let the session end "stuck". In step mode the clock runs on
+  until the ability is ready and stops there; a press of it meanwhile queues instead of ending the session. In every
+  mode the cast is on time when made as soon as the cooldown ends (the due tick includes the step's own cooldown).
+- A same-tick companion after a click note that takes time ("click clone + target cycle") was late by the note's
+  ticks: its reference is the tick the note's action is done.

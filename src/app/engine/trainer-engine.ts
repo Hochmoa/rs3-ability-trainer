@@ -1,5 +1,5 @@
 import { COMMAND_READY_AFTER, CONJURE_BASE_TICKS } from './rules-necromancy';
-import { AbilityType, CombatMode, EnemyConfig, EntityKind, FAMILIAR_SPECIAL_MAX, FAMILIAR_SPECIAL_REGEN, Familiar, PrayerStats, Prebuild, RevolutionSettings, SPEC_KEY, StepResult, Style, Style4, isStyle4, divertAdrenaline } from '../core/models';
+import { AbilityType, CombatMode, EnemyConfig, EntityKind, FAMILIAR_SPECIAL_MAX, FAMILIAR_SPECIAL_REGEN, Familiar, PrayerStats, Prebuild, RevolutionSettings, EOF_KEY, SPEC_KEY, StepResult, Style, Style4, isStyle4, divertAdrenaline } from '../core/models';
 import { ResolvedLoadout, defaultResolvedLoadout } from './loadout-resolved';
 import { PROTECTION, PrayerBook, SOUL_SPLIT, bookOf, togglePrayer } from './prayer-rules';
 import { BASE_CRIT_CHANCE, BUFF_DAMAGE_MULT, BUFF_FLAT_ADD, BUFF_TYPE_DAMAGE_MULT, FORTITUDE, POISON_EVERY_TICKS, POISON_ROLL, RAGE_MAX, RAGE_PER_STACK, SPIRIT_ATTACKS, TARGET_DAMAGE_ADD, TARGET_DAMAGE_MULT, critMultiplier, damageSkillOf, fortitudeLifePoints, prayerDamagePct } from './damage';
@@ -11,7 +11,7 @@ import { boneShieldTier } from './rules-necromancy';
 import { AbilityRule, ChannelSpec, Condition, Effect, GlobalRule, Requirement, StackId } from './rules-model';
 
 /** the Essence of Finality slot: fires the special stored in the amulet with a weapon of the same style */
-export const EOF_KEY = 'ability:essence-of-finality';
+export { EOF_KEY };
 
 /** Frost Surge (Incite Fear at five Glacial Embrace stacks): 10–50% ability damage, 12 s cooldown, up to 8 enemies around the target */
 const FROST_SURGE_STACKS = 5;
@@ -749,13 +749,18 @@ export class TrainerEngine {
    */
   private dueUnpressed(tick: number): boolean {
     const s = this.steps[this.index];
-    if (!s || this.done.has(this.index) || this.pending || this.settleUntil !== null) return false;
+    // a press on its way (ping) is a press: the clock runs until it is processed
+    if (!s || this.done.has(this.index) || this.pending || this.inflight.length > 0 || this.settleUntil !== null) return false;
     if (s.isNote && !s.awaitAction) return false;
-    if (this.isGcdStep(s) && this.gcdEndTick !== null && tick < this.gcdEndTick) return false;
+    // a real GCD ability waits for the GCD; Bladed Dive and Provoke are off it while one runs and are due at once
+    if (this.isGcdStep(s) && !this.ruleOf(s)?.offGcdNoGain && this.gcdEndTick !== null && tick < this.gcdEndTick) return false;
     if (this.lastChannelEnd !== null && tick < this.lastChannelEnd) return false;
     if (this.channel && !this.channel.cancelled && tick < this.channel.endTick && this.lastChannelEnd === null) return false;
     if (this.busyUntil !== null && tick < this.busyUntil) return false;
     if (s.offsetTicks !== undefined && this.lastInputTick !== null && tick < this.lastInputTick + s.offsetTicks) return false;
+    // the step's own cooldown still runs (a phase written for later than the trainer's clock gets there: Omnipower again
+    // 19 ticks after the last one): the clock runs on until it is ready and stops there, no session ends stuck
+    if (!(this.held?.key === s.key && s.release) && this.cooldownLeft(s.key, tick) > 0) return false;
     return true;
   }
 
@@ -957,11 +962,13 @@ export class TrainerEngine {
 
   press(key: string, now: number): void {
     if (this.state !== 'running') return;
-    // step mode: any press starts the clock again; a wrong one is refused in handle() and the clock stops right back
+    // step mode: a press while the clock stands lands on the tick it stands on, ping or not (the wait was the ping);
+    // any press starts the clock again, a wrong one is refused in handle() and the clock stops right back
+    const frozenAt = this.frozenAt?.virtual ?? null;
     if (this.frozenAt) this.thaw(now);
     now = this.v(now);
     const jitter = this.config.jitterMs > 0 ? (this.random() * 2 - 1) * this.config.jitterMs : 0;
-    const arrival = now + Math.max(0, this.config.pingMs + jitter);
+    const arrival = frozenAt !== null ? frozenAt : now + Math.max(0, this.config.pingMs + jitter);
     this.inflight.push({ key, pressedAt: now, arrival });
   }
 
@@ -1058,7 +1065,8 @@ export class TrainerEngine {
       return;
     }
     const gcdEnd = this.gcdEndTick;
-    const gcdRunning = gcdEnd !== null && tickP < gcdEnd && tickP > (this.castTick ?? -1);
+    // the GCD runs from the cast tick on: a press processed on that tick after the cast (a "+" companion) is inside it
+    const gcdRunning = gcdEnd !== null && tickP < gcdEnd && tickP >= (this.castTick ?? Infinity);
     const rule = this.ruleOf(entity);
     if (rule?.recast && this.hasBuff(rule.recast.whileBuff)) {
       this.removeBuff(rule.recast.whileBuff);
@@ -1143,6 +1151,7 @@ export class TrainerEngine {
     let info: StuckInfo;
     if (blocked.kind === 'on-cooldown') {
       if (blocked.readyInTicks < STUCK_COOLDOWN_TICKS) return false;
+      if (this.config.stepMode) return false; // "wait for my cast" waits for the cooldown too (dueUnpressed)
       info = { key: entity.key, step: this.stepIndexOf(entity.key), reason: 'cooldown', readyInTicks: blocked.readyInTicks, text: entity.name + ' is still on cooldown for ' + (blocked.readyInTicks * TICK_MS) / 1000 + ' s' };
     } else if (blocked.kind === 'requirement') {
       if (blocked.transient) return false;
@@ -1272,6 +1281,8 @@ export class TrainerEngine {
     // does it satisfy an open off-GCD step in the current group?
     let stepIndex = this.openOffGcdStep(this.index, entity.key);
     let ref = this.lastInputTick;
+    // "click clone + target cycle": the click takes its ticks in game, so the companion is measured from when it is done
+    if (ref !== null && this.busyUntil !== null && this.busyUntil > ref) ref = this.busyUntil;
     // "bloat + vulnbomb": the companion may arrive on the same tick, before the ability itself casts
     if (stepIndex < 0 && this.pending && tick >= this.pending.tick) {
       const j = this.steps.findIndex((s, i) => i >= this.index && this.isGcdStep(s) && s.key === this.pending!.key);
@@ -1348,7 +1359,8 @@ export class TrainerEngine {
   private openOffGcdStep(from: number, key: string): number {
     for (let i = from; i < this.steps.length; i++) {
       const s = this.steps[i];
-      if (this.isGcdStep(s)) break;
+      // Bladed Dive and Provoke are off the GCD while one runs: "chaosroar + switches + bd" is one group
+      if (this.isGcdStep(s) && !this.ruleOf(s)?.offGcdNoGain) break;
       if (!this.done.has(i) && (!s.isNote || s.awaitAction) && s.key === key) return i;
     }
     return -1;
@@ -1432,6 +1444,9 @@ export class TrainerEngine {
     this.lastChannelEnd = null;
     // automatic basic attacks that slipped in before this cast: the press is late from the tick it was due at, not from their GCD
     const autoDue = this.autoDue;
+    // the step's own cooldown ending after the GCD is the earliest the game lets it cast: a press then is on time, not late
+    const cdLeft = gcdEnd === null ? 0 : this.cooldownLeft(entity.key, gcdEnd);
+    const cdReady = cdLeft > 0 && gcdEnd !== null ? gcdEnd + cdLeft : null;
     this.castTick = p.tick;
     this.lastInputTick = p.tick;
     // the step being completed decides whether this press starts a held cast or releases one
@@ -1475,6 +1490,7 @@ export class TrainerEngine {
 
     let dueTick = autoDue !== null ? autoDue : gcdEnd === null ? null : channelEnd !== null && channelEnd > gcdEnd ? channelEnd : gcdEnd;
     if (this.busyUntil !== null) dueTick = dueTick === null ? this.busyUntil : Math.max(dueTick, this.busyUntil);
+    if (cdReady !== null && dueTick !== null && cdReady > dueTick) dueTick = cdReady;
     this.busyUntil = null;
     this.autoDue = null;
     const lateTicks = dueTick === null ? 0 : Math.max(0, p.tick - dueTick);
@@ -2806,6 +2822,7 @@ export class TrainerEngine {
    * fires the basic attack through its bar instead (last resort), so nothing happens there.
    */
   private autoAttackTick(tick: number): void {
+    if (this.config.stepMode) return; // step mode: nothing fires on its own, the clock waits for the player instead
     if (this.config.autoAttacks === false || this.revolutionOn || this.pending || this.castTick === null || this.settleUntil !== null) return;
     // doing what an action note asks for ("enter the instance") takes the player away from the target
     if (this.busyUntil !== null && tick < this.busyUntil) return;
@@ -2953,6 +2970,7 @@ export class TrainerEngine {
    * the leftmost usable ability is cast on this tick through the normal cast path.
    */
   private revolutionTick(tick: number): void {
+    if (this.config.stepMode) return; // step mode: nothing fires on its own, the clock waits for the player instead
     if (!this.revolutionOn || this.pending || this.settleUntil !== null) return;
     if (this.busyUntil !== null && tick < this.busyUntil) return; // busy with what an action note asks for
     const gcdEnd = this.gcdEndTick;

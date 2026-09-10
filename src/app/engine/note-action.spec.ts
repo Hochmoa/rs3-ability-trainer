@@ -70,6 +70,16 @@ describe('notes that require an action', () => {
     expect(e.results.map((r) => r.outcome)).toEqual(['perfect', 'missed', 'perfect']);
   });
 
+  it('a same-tick step after a note that takes time is on time when pressed as soon as the note is done', () => {
+    const cycle: EngineEntity = { key: 'action:target-cycle', id: 'target-cycle', kind: 'action', name: 'Target cycle', icon: '', gcd: false, adrenaline: 0, cooldownTicks: 0, buffs: [], offsetTicks: 0 };
+    const e = make([ability('a'), note('click clone', { awaitAction: true, actionTicks: 4 }), cycle, ability('b')]);
+    press(e, 'a', 1);
+    press(e, 'click clone', 4); // done on tick 4, takes until tick 8
+    press(e, 'action:target-cycle', 8);
+    press(e, 'b', 8);
+    expect(outcomes(e)).toEqual(['a:perfect', 'click clone:done', 'Target cycle:perfect', 'b:perfect']);
+  });
+
   it('an action note without a time costs no time', () => {
     const e = make([ability('a'), note('do', { awaitAction: true, actionTicks: 0 }), ability('b')]);
     press(e, 'a', 1);

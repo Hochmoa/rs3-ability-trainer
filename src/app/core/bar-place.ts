@@ -1,7 +1,7 @@
 import { morphSourceOf } from '../engine/morphs';
 import { KeybindLayout } from './keybind-layouts';
 import { isReservedKeybind, keybindKey, parseKeybind } from './keybind.util';
-import { ActionBarSetup, BAR_POSITIONS, BAR_SLOTS, Keybind, RotationStep, SPEC_KEY, Style4, entityKey, visiblePresets } from './models';
+import { ActionBarSetup, BAR_POSITIONS, BAR_SLOTS, EOF_KEY, Keybind, RotationStep, SPEC_KEY, Style4, entityKey, visiblePresets } from './models';
 
 export interface PlaceResult {
   setup: ActionBarSetup;
@@ -18,8 +18,10 @@ export interface PlaceResult {
  * bars shown for `style` (main bar first), gives every slot it uses a key from `layout` when the slot has none
  * (keys nobody else uses) and binds client actions to their layout key. Weapons are clicked, they need no key.
  * A position without a preset gets the first unused empty one. Pure – the setup passed in is not changed.
+ * `storedSpecs`: the specials the loadout keeps in Essence of Finality amulets; those go on the EoF slot, every other
+ * special on the Weapon Special Attack slot (the two slots of the game, see the Train page's `reachable`).
  */
-export function placeOnBars(setup: ActionBarSetup, style: Style4, keys: string[], layout: KeybindLayout): PlaceResult {
+export function placeOnBars(setup: ActionBarSetup, style: Style4, keys: string[], layout: KeybindLayout, storedSpecs: ReadonlySet<string> = new Set()): PlaceResult {
   const s: ActionBarSetup = structuredClone(setup);
   s.actionKeybinds ??= {};
   while (s.slotKeybinds.length < BAR_POSITIONS) s.slotKeybinds.push(Array(BAR_SLOTS).fill(null));
@@ -83,10 +85,10 @@ export function placeOnBars(setup: ActionBarSetup, style: Style4, keys: string[]
       (s.actionKeybinds[id] ? placed : left).push(key);
       continue;
     }
-    // every weapon special fires from the one generic "Weapon Special Attack" slot
+    // a weapon special fires from the generic "Weapon Special Attack" slot, one stored in an amulet from the "Essence of Finality" slot
     // Command X has no slot of its own: it is what the Conjure X slot shows while the spirit is out (engine/morphs.ts)
     const slotId = kind === 'ability' ? morphSourceOf(id) ?? id : id;
-    const step: RotationStep = kind === 'spec' ? { kind: 'ability', id: SPEC_KEY.slice('ability:'.length) } : ({ kind, id: slotId } as RotationStep);
+    const step: RotationStep = kind === 'spec' ? { kind: 'ability', id: specSlotKey(id, storedSpecs).slice('ability:'.length) } : ({ kind, id: slotId } as RotationStep);
     let at = findSlot(step.kind, step.id);
     if (!at) {
       at = freeSlot();
@@ -105,15 +107,20 @@ export function placeOnBars(setup: ActionBarSetup, style: Style4, keys: string[]
 /**
  * The entity keys of a rotation that are not on a keybound slot / weapon key / action key yet – what
  * `placeOnBars` has to place, in the order the rotation presses them. Notes are skipped, a special attack step
- * maps to the one weapon-special slot, and every key is listed once.
+ * maps to the special slot that fires it (`storedSpecs` as in placeOnBars), and every key is listed once.
  */
-export function unboundKeys(setup: ActionBarSetup, steps: RotationStep[], slotKeys: Map<string, unknown>): string[] {
+export function unboundKeys(setup: ActionBarSetup, steps: RotationStep[], slotKeys: Map<string, unknown>, storedSpecs: ReadonlySet<string> = new Set()): string[] {
   const out: string[] = [];
   for (const st of steps) {
     if (st.kind === 'note') continue;
-    const key = st.kind === 'spec' ? SPEC_KEY : entityKey(st.kind, st.id);
+    const key = st.kind === 'spec' ? specSlotKey(st.id, storedSpecs) : entityKey(st.kind, st.id);
     const bound = st.kind === 'weapon' || st.kind === 'action' ? true : slotKeys.has(key); // weapons and client actions are clicked (chips), no key needed
     if (!bound && !out.includes(key)) out.push(key);
   }
   return out;
+}
+
+/** the bar slot a special attack is fired from: the Essence of Finality slot when an amulet stores it, else the weapon's own */
+export function specSlotKey(specId: string, storedSpecs: ReadonlySet<string>): string {
+  return storedSpecs.has(specId) ? EOF_KEY : SPEC_KEY;
 }

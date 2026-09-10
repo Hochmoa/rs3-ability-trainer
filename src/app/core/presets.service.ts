@@ -3,7 +3,7 @@ import { Router } from '@angular/router';
 import { ToastService } from '../shared/toast';
 import { DataService } from './data.service';
 import { addItem, stockSpecials } from './equipment';
-import { ItemRef, Prebuild, Rotation, RotationStep, Setup, loadoutStyle, newSetup } from './models';
+import { ItemRef, Prebuild, Rotation, RotationStep, Setup, loadoutStoredSpecs, loadoutStyle, newSetup } from './models';
 import { placeOnBars, unboundKeys } from './bar-place';
 import { slotKeybinds } from './keybind.util';
 import { DEFAULT_LAYOUT_ID, keybindLayout } from './keybind-layouts';
@@ -156,10 +156,11 @@ export class PresetsService {
   private placeDemoOnBars(rotation: Rotation | undefined): void {
     if (!rotation) return;
     const setup = this.storage.actionBars();
-    const keys = unboundKeys(setup, rotation.steps, slotKeybinds(setup));
+    const stored = loadoutStoredSpecs(this.storage.loadout());
+    const keys = unboundKeys(setup, rotation.steps, slotKeybinds(setup), stored);
     if (!keys.length) return;
     const style = loadoutStyle(this.storage.loadout(), this.data.weaponById());
-    const r = placeOnBars(setup, style, keys, keybindLayout(DEFAULT_LAYOUT_ID));
+    const r = placeOnBars(setup, style, keys, keybindLayout(DEFAULT_LAYOUT_ID), stored);
     if (r.placed.length) void this.storage.saveActionBars(r.setup);
   }
 

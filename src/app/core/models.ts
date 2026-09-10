@@ -188,6 +188,8 @@ export const ACTIONS: Action[] = [
 ];
 /** pressing the "Weapon Special Attack" slot counts for whichever spec the rotation expects with the wielded weapon */
 export const SPEC_KEY = 'ability:weapon-special-attack';
+/** the Essence of Finality slot: fires the special stored in the amulet worn (the second special-attack slot) */
+export const EOF_KEY = 'ability:essence-of-finality';
 
 /** the four weapon styles that can be wielded / bound to action bars (Defence is not a weapon style) */
 export type Style4 = 'Melee' | 'Ranged' | 'Magic' | 'Necromancy';
@@ -921,6 +923,14 @@ export function migrateLegacyLoadout(old: Partial<LegacyLoadout>): Loadout {
 }
 
 /** Weapon ids a loadout carries: the starting set plus the switches. */
+/** the special attacks stored in the Essence of Finality amulets the loadout wears or carries (specs.json ids) */
+export function loadoutStoredSpecs(l: Loadout): Set<string> {
+  const out = new Set<string>();
+  for (const r of [...Object.values(l.equipment ?? {}), ...(l.inventory ?? [])]) if (r?.kind === 'gear' && r.spec) out.add(r.spec);
+  if (l.eofSpec) out.add(l.eofSpec);
+  return out;
+}
+
 export function loadoutWeapons(l: Loadout): string[] {
   const out: string[] = [];
   if (l.equipment) {

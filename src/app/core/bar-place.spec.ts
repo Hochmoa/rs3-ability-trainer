@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { placeOnBars, unboundKeys } from './bar-place';
 import { keybindLayout } from './keybind-layouts';
 import { keybindKey, slotKeybinds } from './keybind.util';
-import { BAR_SLOTS, RotationStep, SPEC_KEY, defaultActionBars } from './models';
+import { BAR_SLOTS, EOF_KEY, RotationStep, SPEC_KEY, defaultActionBars } from './models';
 
 const rows = keybindLayout('rows');
 const code = (kb: { code: string } | null | undefined) => kb?.code ?? null;
@@ -68,6 +68,14 @@ describe('placeOnBars', () => {
     expect(r.filled).toBe(1); // the spec slot; the weapons take no key and the action gets its layout key
   });
 
+  it('a special stored in an Essence of Finality goes on the EoF slot, the wielded weapon\'s own on the Weapon Special Attack slot', () => {
+    const r = placeOnBars(defaultActionBars(), 'Melee', ['spec:the-final-flurry', 'spec:icy-tempest'], rows, new Set(['the-final-flurry']));
+    const main = r.setup.presets.find((p) => p.id === r.setup.positions[0])!;
+    expect(main.slots[0]).toEqual({ kind: 'ability', id: 'essence-of-finality' });
+    expect(main.slots[1]).toEqual({ kind: 'ability', id: 'weapon-special-attack' });
+    expect(r.placed).toEqual(['spec:the-final-flurry', 'spec:icy-tempest']);
+  });
+
   it('only adds a key to a slot that already holds the ability, and reports what does not fit', () => {
     const setup = defaultActionBars();
     for (const p of setup.presets) for (let i = 0; i < BAR_SLOTS; i++) p.slots[i] = { kind: 'ability', id: 'x' + p.id + '-' + i };
@@ -113,6 +121,14 @@ describe('unboundKeys – what of a rotation is not on a key yet', () => {
     s.presets[0].slots[1] = { kind: 'spec', id: 'anything' };
     s.actionKeybinds = { 'target-cycle': { code: 'Tab', ctrl: false, shift: false, alt: false } };
     expect(unboundKeys(s, steps, slotKeybinds(s))).toEqual(['prayer:turmoil']);
+  });
+
+  it('a stored special asks for the Essence of Finality slot, and is bound once that slot has a key', () => {
+    const s = defaultActionBars();
+    const stored = new Set(['devour']);
+    expect(unboundKeys(s, steps, slotKeybinds(s), stored)).toEqual(['ability:sever', EOF_KEY, 'prayer:turmoil']);
+    s.presets[0].slots[0] = { kind: 'ability', id: 'essence-of-finality' }; // main bar slot 1, key "1"
+    expect(unboundKeys(s, steps, slotKeybinds(s), stored)).toEqual(['ability:sever', 'prayer:turmoil']);
   });
 
   it('an entity on a slot without a key still counts as unbound', () => {
