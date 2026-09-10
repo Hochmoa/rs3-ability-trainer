@@ -341,7 +341,7 @@ describe('off-GCD steps (prayers, potions)', () => {
     e.start(0);
     e.press('pot', 100); // not in the current group (a is next)
     e.update(600);
-    expect(e.events[0]).toMatchObject({ kind: 'wrong-fired', key: 'pot' });
+    expect(e.events.find((x) => x.kind === 'wrong-fired')).toMatchObject({ kind: 'wrong-fired', key: 'pot' });
     expect(e.adrenaline).toBe(25);
     e.press('a', 700);
     e.update(1200);

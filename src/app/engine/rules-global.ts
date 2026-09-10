@@ -200,10 +200,4 @@ export const GLOBAL_RULES: GlobalRule[] = [
     when: { type: 'Basic', gcd: true, generating: true, buff: 'deathmark' },
     gainAdd: 1,
   },
-  {
-    id: 'rampage-no-gain',
-    notes: ['Dragon battleaxe Rampage: abilities generate no adrenaline while it is active (' + W + 'Rampage )'],
-    when: { generating: true, buff: 'rampage' },
-    gainMult: 0,
-  },
 ];

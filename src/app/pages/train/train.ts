@@ -1865,6 +1865,8 @@ export class Train implements OnDestroy {
         this.log(ev.key, 'wrong', this.feedback()?.text ?? '', ev.step);
         break;
       }
+      case 'adrenaline':
+        break; // bookkeeping for the trace: the bar shows the total
       case 'crystal': {
         this.feedback.set({ text: 'Adrenaline crystal: +' + ev.amount + '% adrenaline' + (ev.potionsReset ? ', adrenaline potions off cooldown' : '') + '. The next ability is due after the 1.8 s channel', cls: 'info' });
         this.log('action:' + CRYSTAL_ACTION, 'other', 'Adrenaline crystal +' + ev.amount + '%');

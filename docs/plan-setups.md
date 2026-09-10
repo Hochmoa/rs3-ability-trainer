@@ -114,3 +114,12 @@ ultimates -100% or -60%, with the modifiers the engine already applied: Impatien
 Invigorating (+5% per rank on basic attacks), Fury of the Small (+1% on basics), Conservation of Energy (+10% after
 an ultimate), Ring of Vigour (10% saved), Relentless (1% per rank chance to pay nothing). Not modelled: the drain
 out of combat (5% every 2 ticks after 10 s) and Divert's damage-based extra.
+
+## Adrenaline in the trace, 10 Sep 2026
+
+Martin saw the adrenaline climb by the tick in a Wars session. The trace explained it once every change carried its
+source: Vestments of havoc (2 pieces) "After casting a melee ultimate ability, regenerate 15% adrenaline over 18
+seconds", 0.5% a tick for 30 ticks after the stalled Meteor Strike. Every adrenaline change is now an engine event
+('adrenaline', delta, source) that the trace records and tools/trace-report.py prints. Dropped on the way: a rule that
+let abilities generate no adrenaline under Rampage; neither the Rampage nor the Dragon battleaxe page knows such a
+thing (both read 10 Sep 2026).

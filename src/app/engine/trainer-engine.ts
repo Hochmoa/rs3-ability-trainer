@@ -300,6 +300,8 @@ export type EngineEvent =
   /** an ability with a running buff was pressed again and released it (Reprisal) */
   | { kind: 'recast'; key: string; tick: number }
   | { kind: 'missed'; keys: string[] }
+  /** adrenaline changed: `delta` from `source` (an entity key, "over-time:<key>", "buff:<id>", "hit:<key>", "crystal") */
+  | { kind: 'adrenaline'; delta: number; source: string; tick: number }
   /** the adrenaline crystal was used: `amount` gained, `potionsReset` = the adrenaline potions came off cooldown */
   | { kind: 'crystal'; amount: number; tick: number; potionsReset: boolean }
   /** a hit landed on the target (key = source ability / "spirit:<name>"); `miss` = it missed (amount 0, no on-hit effects) */
@@ -1521,7 +1523,7 @@ export class TrainerEngine {
         delta += gain;
       }
     }
-    if (!opt.release) this.addAdrenaline(delta); // the stall already paid
+    if (!opt.release) this.addAdrenaline(delta, entity.key); // the stall already paid
     // A stalled cast stops here: "its adrenaline cost is consumed and its cooldown begins" while it is held, and
     // nothing else of it happens until the release (runescape.wiki/w/Ability_stalling).
     if (opt.stall) {
@@ -1754,7 +1756,7 @@ export class TrainerEngine {
             this.cancelChannel();
             continue;
           }
-          this.addAdrenaline(-Math.min(this.adrenaline, ch.adrenalinePerHit));
+          this.addAdrenaline(-Math.min(this.adrenaline, ch.adrenalinePerHit), 'channel:' + h.key);
         }
         h.channel.hitsDone++;
       }
@@ -1820,11 +1822,11 @@ export class TrainerEngine {
     for (const g of globals) {
       for (const eff of g.onHit ?? []) this.applyEffect(eff, h.tick, h.entity, h.index);
       if (direct) for (const eff of g.onDirectHit ?? []) this.applyEffect(eff, h.tick, h.entity, h.index);
-      if (g.hitAdrenaline) this.addAdrenaline(g.hitAdrenaline * (this.hasBuff('natural-instinct') ? 2 : 1));
-      if (g.critAdrenaline && crit) this.addAdrenaline(g.critAdrenaline * (this.hasBuff('natural-instinct') ? 2 : 1));
+      if (g.hitAdrenaline) this.addAdrenaline(g.hitAdrenaline * (this.hasBuff('natural-instinct') ? 2 : 1), 'hit:' + h.key);
+      if (g.critAdrenaline && crit) this.addAdrenaline(g.critAdrenaline * (this.hasBuff('natural-instinct') ? 2 : 1), 'crit:' + h.key);
     }
     const perTick = this.loadout.channelAdrenalinePerTick[h.entity.id];
-    if (perTick && h.channel) this.addAdrenaline(perTick);
+    if (perTick && h.channel) this.addAdrenaline(perTick, 'channel-tick:' + h.key);
     if (direct) {
       this.rollHitProcs(h);
       this.perfectEquilibrium(h, preCrit);
@@ -1867,7 +1869,7 @@ export class TrainerEngine {
       this.procLockUntil.set(p.id, h.tick + p.cooldownTicks);
       const key = 'proc:' + p.id;
       if (p.buff) this.applyBuff(p.buff.id, h.tick, key, p.buff.durationTicks);
-      if (p.adrenaline) this.addAdrenaline(p.adrenaline);
+      if (p.adrenaline) this.addAdrenaline(p.adrenaline, key);
       if (p.lpScaledHit) {
         // Blood Forfeit: (25% + 100% × current / max life points) of the ability damage; no life points configured = full health
         const lp = this.config.targetLifePoints;
@@ -2360,7 +2362,7 @@ export class TrainerEngine {
         break;
       }
       case 'adrenaline':
-        this.addAdrenaline(eff.amount);
+        this.addAdrenaline(eff.amount, entity.key);
         break;
       case 'adrenaline-per-tick':
         this.overTime.push({ key: entity.key, perTick: eff.amount, untilTick: tick + eff.ticks });
@@ -2530,7 +2532,8 @@ export class TrainerEngine {
     this.buffs = this.buffs.filter((b) => b.id !== id);
   }
 
-  private addAdrenaline(delta: number): void {
+  private addAdrenaline(delta: number, source = 'other'): void {
+    if (delta !== 0) this.events.push({ kind: 'adrenaline', delta: Math.round(delta * 100) / 100, source, tick: this.lastTick });
     this.adrenaline = Math.max(0, Math.min(this.maxAdrenaline, this.adrenaline + delta));
   }
 
@@ -2544,12 +2547,12 @@ export class TrainerEngine {
     this.deferred = this.deferred.filter((d) => d.tick > tick);
     for (const d of due) d.apply();
     for (const o of this.overTime) {
-      if (tick <= o.untilTick) this.addAdrenaline(o.perTick);
+      if (tick <= o.untilTick) this.addAdrenaline(o.perTick, 'over-time:' + o.key);
     }
     this.overTime = this.overTime.filter((o) => tick < o.untilTick);
     for (const b of this.buffs) {
       const def = BUFF_BY_ID.get(b.id);
-      if (def?.adrenalinePerTick && (!def.adrenalinePerTickStyle || this.loadout.style === def.adrenalinePerTickStyle)) this.addAdrenaline(def.adrenalinePerTick);
+      if (def?.adrenalinePerTick && (!def.adrenalinePerTickStyle || this.loadout.style === def.adrenalinePerTickStyle)) this.addAdrenaline(def.adrenalinePerTick, 'buff:' + def.id);
     }
     // poison (cinderbane gloves): a hit every 10 s from the application
     const poisoned = this.buff('poisoned');
@@ -2670,7 +2673,7 @@ export class TrainerEngine {
   private useCrystal(tick: number): void {
     const full = !!this.config.crystalUpgraded;
     const amount = full ? CRYSTAL_ADRENALINE_FULL : CRYSTAL_ADRENALINE_PER_CHANNEL;
-    this.addAdrenaline(amount);
+    this.addAdrenaline(amount, 'crystal');
     this.busyUntil = Math.max(this.busyUntil ?? 0, tick + GCD_TICKS);
     this.lastInputTick = Math.max(tick, this.lastInputTick ?? 0);
     if (full) for (const key of ADRENALINE_POTION_KEYS) this.readyTick.delete(key);

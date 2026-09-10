@@ -120,6 +120,8 @@ def report(t: dict) -> None:
             body = f"{short(e.get('key'))} {e.get('amount')}" + (" crit" if e.get("crit") else "") + (" miss" if e.get("miss") else "") + (" dot" if e.get("dot") else "")
         elif kind == "gear":
             body = f"{e.get('action')} {e.get('item')}"
+        elif kind == "adrenaline":
+            body = f"{e.get('delta'):+g} from {short(e.get('source'))}"
         else:
             body = ", ".join(f"{k}={short(v) if isinstance(v, str) and ':' in v else v}" for k, v in e.items() if k not in ("t", "tick", "kind", "state"))
         line = head + " " + body
