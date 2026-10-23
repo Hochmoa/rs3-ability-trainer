@@ -107,6 +107,7 @@ interface ChannelView {
 
 interface BarView {
   position: number;
+  presetId: number | null;
   presetName: string;
   slots: SlotView[];
   shape: BarShape;
@@ -746,9 +747,25 @@ export class Train implements OnDestroy {
           pressed: running && !!entity && (pressed.has(entity.key) || (!!shown && pressed.has(shown.key))),
         };
       });
-      return { position: pos, presetName: preset?.name ?? 'empty', slots, shape: layout.shape[pos] };
+      return { position: pos, presetId: id, presetName: preset?.name ?? 'empty', slots, shape: layout.shape[pos] };
     });
   });
+
+  /** presets for the cog menu on every bar */
+  readonly presetOptions = computed(() => this.storage.actionBars().presets.map((p) => ({ id: p.id, name: p.name, filled: p.slots.filter(Boolean).length })));
+
+  /**
+   * Cog on a bar: show another preset at this position. Written where the shown preset comes from right now –
+   * the style binding of the wielded style if one applies, otherwise the position's default.
+   */
+  pickPreset(pos: number, id: number | null): void {
+    if (this.running()) return;
+    const s = structuredClone(this.storage.actionBars());
+    const style = this.startStyle();
+    if (s.bindings[style]?.[pos] !== null && s.bindings[style]?.[pos] !== undefined) s.bindings[style][pos] = id;
+    else s.positions[pos] = id;
+    void this.storage.saveActionBars(s);
+  }
 
   /** ← → in layout edit mode: move the bar one place back / forward in the display order */
   moveBar(position: number, dir: -1 | 1): void {

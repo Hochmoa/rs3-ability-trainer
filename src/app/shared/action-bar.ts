@@ -1,5 +1,5 @@
 import { CdkDrag, CdkDragDrop, CdkDragEnd, CdkDropList } from '@angular/cdk/drag-drop';
-import { Component, inject, input, output } from '@angular/core';
+import { Component, ElementRef, HostListener, inject, input, output, signal } from '@angular/core';
 import { DataService, Entity } from '../core/data.service';
 import { ItemRef, entityKey } from '../core/models';
 import { GearDragService } from './gear-drag';
@@ -112,7 +112,21 @@ export interface SlotView {
       <div class="label">
         <span class="pos">{{ position() === 0 ? 'M' : position() }}</span>
         <span class="info" [title]="presetName()" [attr.aria-label]="presetName()">i</span>
+        @if (pickable()) {
+          <button type="button" class="cog" (click)="menuOpen.set(!menuOpen()); $event.stopPropagation()" title="Choose which preset this bar shows" aria-label="Choose preset">⚙</button>
+        }
       </div>
+      @if (menuOpen()) {
+        <div class="picker" (click)="$event.stopPropagation()">
+          <div class="picker-title">{{ position() === 0 ? 'Main bar' : 'Bar ' + position() }} shows</div>
+          <button type="button" class="opt" [class.current]="presetId() === null" (click)="pick(null)">empty</button>
+          @for (p of presets(); track p.id) {
+            <button type="button" class="opt" [class.current]="p.id === presetId()" (click)="pick(p.id)">
+              <span class="num">{{ p.id }}</span> {{ p.name }} <span class="cnt">{{ p.filled }}/14</span>
+            </button>
+          }
+        </div>
+      }
     </div>
   `,
   styles: `
@@ -166,6 +180,74 @@ export interface SlotView {
     .info:hover {
       border-color: var(--gold);
       color: var(--gold);
+    }
+    .cog {
+      width: 17px;
+      height: 17px;
+      padding: 0;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .cog:hover {
+      color: var(--gold);
+    }
+    .bar {
+      position: relative;
+    }
+    .picker {
+      position: absolute;
+      right: 4px;
+      top: calc(100% + 4px);
+      z-index: 30;
+      min-width: 220px;
+      max-height: 320px;
+      overflow-y: auto;
+      padding: 4px 0;
+      background: #15140f;
+      border: 1px solid var(--gold);
+      border-radius: 6px;
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.7);
+    }
+    .picker-title {
+      padding: 4px 12px 6px;
+      font-size: 12px;
+      color: var(--gold);
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 4px;
+    }
+    .opt {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 5px 12px;
+      border: none;
+      background: transparent;
+      color: var(--text);
+      font: inherit;
+      font-size: 13px;
+      text-align: left;
+      cursor: pointer;
+    }
+    .opt:hover {
+      background: rgba(201, 162, 39, 0.15);
+    }
+    .opt.current {
+      color: var(--gold);
+    }
+    .opt .num {
+      width: 18px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+    .opt .cnt {
+      margin-left: auto;
+      color: var(--muted);
+      font-size: 11px;
     }
     .slots {
       position: relative;
@@ -457,6 +539,29 @@ export class ActionBar {
   readonly editable = input<boolean>(false);
   /** Revolution range: the first N slots get the yellow frame (main bar only, 0 = none) */
   readonly revolutionSlots = input<number>(0);
+  /** a cog opens a list of presets to show at this position */
+  readonly pickable = input<boolean>(false);
+  readonly presetId = input<number | null>(null);
+  readonly presets = input<{ id: number; name: string; filled: number }[]>([]);
+  /** the user chose a preset (null = empty position) from the cog menu */
+  readonly presetPick = output<number | null>();
+  readonly menuOpen = signal(false);
+  private readonly host = inject(ElementRef<HTMLElement>);
+
+  pick(id: number | null): void {
+    this.menuOpen.set(false);
+    this.presetPick.emit(id);
+  }
+
+  @HostListener('document:click', ['$event'])
+  closeMenu(e: MouseEvent): void {
+    if (this.menuOpen() && !this.host.nativeElement.contains(e.target as Node)) this.menuOpen.set(false);
+  }
+
+  @HostListener('document:keydown.escape')
+  closeOnEscape(): void {
+    if (this.menuOpen()) this.menuOpen.set(false);
+  }
   readonly slotClick = output<number>();
   /** something was dropped on a slot: an entity from the "missing" list, or (`from` set) the icon of another slot */
   readonly slotDrop = output<{ slot: number; entity: Entity; from?: { pos: number; slot: number } }>();
