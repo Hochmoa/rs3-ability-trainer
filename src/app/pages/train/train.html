@@ -210,6 +210,13 @@
           Wait for my cast
         </label>
       </span>
+      <span class="opt-group">
+        <span class="opt-label">Drill</span>
+        <label class="pill" title="Only the keys and the global cooldown count. Every ability casts: no weapon, prayer book, adrenaline, cooldown or inventory check, no enemy, no target that could die. Use it to learn the key order of a rotation before you play it for real.">
+          <input type="checkbox" [checked]="storage.settings().keyDrill" (change)="setSetting('keyDrill', !storage.settings().keyDrill)" [disabled]="running()" />
+          Key drill only
+        </label>
+      </span>
       <span class="opt-group" title="Says the keys out loud. Volume, lead and voice: Settings → Sound.">
         <span class="opt-label">Coach</span>
         <label class="pill" title="After each cast, the next keys are said at once (Q, then 3).">
@@ -472,7 +479,7 @@
       {{ unknownSteps() }} step(s) use abilities that are no longer in the game. <a routerLink="/rotations">Edit the rotation</a>.
     </div>
   }
-  @if (assumptions().length) {
+  @if (assumptions().length && !keyDrill()) {
     <div class="panel warning assumes">
       <div>
         This rotation starts mid-fight: it uses things it never sets up.
@@ -490,7 +497,7 @@
       </div>
     </div>
   }
-  @if (adrenalineShort(); as a) {
+  @if (!keyDrill() && adrenalineShort(); as a) {
     <div class="panel warning">
       {{ a.name }} needs {{ a.need }}% adrenaline; the session starts with {{ a.have }}%.
       <div class="fixes">
@@ -499,7 +506,7 @@
       </div>
     </div>
   }
-  @if (equipmentWarnings().length) {
+  @if (equipmentWarnings().length && !keyDrill()) {
     <div class="panel warning">
       The active loadout cannot perform:
       @for (w of equipmentWarnings(); track w) {

@@ -348,6 +348,8 @@ export interface Settings {
   crystalUpgraded: boolean;
   /** workaround: an ability casts whatever the bar shows; the cost is still taken (floors at 0) */
   ignoreAdrenaline: boolean;
+  /** key drill: only the keys and the global cooldown count. No weapon, book, adrenaline, cooldown or inventory check, no enemy, no target life points. */
+  keyDrill: boolean;
   /**
    * workaround: the clock stops whenever the next step is due and not pressed; buffs, cooldowns, adrenaline and the
    * enemy wait with it. Only the right ability (or a same-tick companion) is taken, every other press is refused.
@@ -449,6 +451,7 @@ export const DEFAULT_SETTINGS: Settings = {
   fullAdrenaline: false,
   crystalUpgraded: true,
   ignoreAdrenaline: false,
+  keyDrill: false,
   stepMode: false,
   hideObscureEquipment: true,
   hideObscureAbilities: true,

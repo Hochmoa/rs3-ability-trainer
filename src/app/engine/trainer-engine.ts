@@ -104,6 +104,12 @@ export interface EngineConfig {
   /** workaround: no ability is refused for want of adrenaline; the cost is still taken, the bar floors at 0 */
   ignoreAdrenaline?: boolean;
   /**
+   * key drill: only the keys and the global cooldown count. Nothing is refused: not the wielded weapon or its special,
+   * not the prayer or spell book, not adrenaline, not a cooldown, not a missing potion or requirement, not a stun.
+   * Adrenaline, cooldowns and buffs are still tracked so the bars look alive, they just never say no.
+   */
+  keyDrill?: boolean;
+  /**
    * workaround: the clock stops on the tick the next step is due until the right key is pressed; buffs, cooldowns,
    * adrenaline and the enemy wait with it. Only the expected step (or an open same-tick companion) is taken, every
    * other press is refused as wrong. A queued press casts on its own, so queueing keeps working.
@@ -932,6 +938,7 @@ export class TrainerEngine {
 
   /** Why the wielded weapon cannot use this entity: wrong style, or a spec the weapon does not have. */
   weaponFailure(e: EngineEntity): 'weapon' | 'spec' | null {
+    if (this.config.keyDrill) return null;
     if (e.kind === 'spec') return this.loadout.weaponSpec?.id === e.id || this.eofSpecReady(e.id)?.id === e.id ? null : 'spec';
     if (e.kind !== 'ability') return null;
     // the stored special needs a wielded weapon of its own style – greyed out like in the game
@@ -945,7 +952,7 @@ export class TrainerEngine {
   /** Why an entity could not be used at `tick` (for the greyed-out bars), weapon first like in the game. */
   usable(key: string, tick: number): UsableReason {
     const e = this.entityOf(key);
-    if (!e) return 'ok';
+    if (!e || this.config.keyDrill) return 'ok';
     if (e.kind === 'prayer') {
       const book = bookOf(prayerId(key));
       return book && book !== this.prayerBook ? 'book' : 'ok';
@@ -1239,6 +1246,7 @@ export class TrainerEngine {
 
   /** Why an entity cannot cast at `tick` (cooldown, adrenaline, rule requirement), or null. */
   private blocker(entity: EngineEntity, tick: number): EngineEvent | null {
+    if (this.config.keyDrill) return null;
     // releasing a held cast asks nothing of cooldown or adrenaline: the stall paid for it
     if (this.held?.key === entity.key && this.steps[this.index]?.release) return null;
     if (entity.scroll) {
@@ -1263,7 +1271,7 @@ export class TrainerEngine {
     if (entity.kind === 'prayer') {
       const id = prayerId(entity.key);
       const book = bookOf(id);
-      if (book && book !== this.prayerBook) {
+      if (book && book !== this.prayerBook && !this.config.keyDrill) {
         this.wrong++;
         this.events.push({ kind: 'wrong-book', id, book });
         return;

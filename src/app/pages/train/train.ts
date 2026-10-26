@@ -581,6 +581,9 @@ export class Train implements OnDestroy {
   readonly coarsePointer = signal(mediaMatches('(pointer: coarse)'));
   private destroyRef = inject(DestroyRef);
 
+  /** "Key drill only": the engine refuses nothing but a press inside the global cooldown, so the pre-start warnings about adrenaline, equipment and mid-fight assumptions do not apply */
+  readonly keyDrill = computed(() => !!this.storage.settings().keyDrill);
+
   readonly canStart = computed(() => !!this.played() && this.stepEntities().length > 0 && this.unreachable().length === 0 && this.unknownSteps() === 0);
   /** the feedback line before Start */
   readonly idleText = computed(() => (this.canStart() ? (this.coarsePointer() ? 'Press Start, then tap the glowing slot.' : 'Press Start, then press the keys of the glowing slots.') : ''));
@@ -1198,8 +1201,9 @@ export class Train implements OnDestroy {
       // Revolution scans the main bar of the wielded style (position 0, first N slots)
       revolution: this.revolution() ? { ...this.storage.settings().revolution, bar: this.mainBarKeys(this.startStyle()), resolveBar: (st: Style | null) => this.mainBarKeys(st && isStyle4(st) ? st : this.startStyle()) } : undefined,
       // the engine only attacks when the enemy is enabled; its affinity / Defence / armour count for the hit chance either way
-      enemy: { ...enemy, enabled: this.enemyOn(), styles: [...enemy.styles] },
-      targetLifePoints: enemy.lifePoints > 0 ? enemy.lifePoints : undefined,
+      // a key drill fights nobody: no enemy attacks, no target that could die
+      enemy: { ...enemy, enabled: this.enemyOn() && !this.keyDrill(), styles: [...enemy.styles] },
+      targetLifePoints: enemy.lifePoints > 0 && !this.keyDrill() ? enemy.lifePoints : undefined,
       targetType: enemy.type ?? undefined,
       hitChanceDisabled: this.storage.settings().hitChance === 'off',
       hitChanceModel: this.storage.settings().hitChance === 'roll' ? 'roll' : 'scaled',
