@@ -422,7 +422,7 @@ export class Train implements OnDestroy {
     const carried = this.data.carriedWeapons(this.storage.loadout()).map((w) => w.weapon).filter((w): w is Weapon => !!w);
     for (const e of this.stepEntities()) {
       if (e?.special?.kind === 'scroll' && this.storage.loadout().familiar !== e.special.familiar) out.add(e.name + ': needs the ' + (this.data.familiarById().get(e.special.familiar ?? '')?.name ?? e.special.familiar) + ' familiar (Loadout page)');
-      else if (e?.special && !hasSpecial(inv, e.id)) out.add(e.name + ': not in your backpack');
+      else if (e?.special && !hasSpecial(inv, e.id) && !(e.special.kind === 'bomb' && this.storage.settings().autoBombs !== false)) out.add(e.name + ': not in your backpack');
       if (!e?.ability) continue;
       const rule = ruleFor(e.ability.id);
       for (const r of rule?.requires ?? []) {
@@ -508,7 +508,10 @@ export class Train implements OnDestroy {
   readonly unreachable = computed(() => {
     const seen = new Set<string>();
     const r = this.reachable();
-    return this.stepEntities().filter((e): e is Entity => !!e && !e.key.startsWith('note:') && !r.has(e.key) && !seen.has(e.key) && !!seen.add(e.key));
+    const autoBombs = this.storage.settings().autoBombs !== false;
+    return this.stepEntities().filter(
+      (e): e is Entity => !!e && !e.key.startsWith('note:') && !r.has(e.key) && !(autoBombs && e.special?.kind === 'bomb') && !seen.has(e.key) && !!seen.add(e.key),
+    );
   });
   /** the first ability of the rotation needs more adrenaline than the session starts with (a rotation that opens with an ultimate at 0%) */
   /**
@@ -1809,7 +1812,7 @@ export class Train implements OnDestroy {
         if (r.auto) {
           // Revolution (or the automatic basic attack) completed the step on its own – counted like a press, but flagged as automatic
           this.counts.update((c) => (r.outcome === 'late' ? { ...c, late: c.late + 1 } : { ...c, perfect: c.perfect + 1 }));
-          const who = r.autoAttack ? 'Auto-attack: ' : 'Revolution: ';
+          const who = r.autoAttack ? 'Auto-attack: ' : r.autoBomb ? 'Thrown for you: ' : 'Revolution: ';
           this.feedback.set({ text: who + r.name + (r.outcome === 'late' ? ', late by ' + r.lateTicks + (r.lateTicks === 1 ? ' tick' : ' ticks') + ' (nothing was usable earlier)' : ', automatic'), cls: r.outcome === 'late' ? 'warn' : 'good' });
         } else if (r.outcome === 'perfect') {
           this.counts.update((c) => ({ ...c, perfect: c.perfect + 1 }));

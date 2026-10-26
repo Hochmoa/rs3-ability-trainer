@@ -417,6 +417,7 @@ export class DataService {
       adrenalineOverTime: s.adrenalineOverTime > 0 ? { amount: s.adrenalineOverTime, ticks: s.overTimeTicks } : undefined,
       buffs: s.debuff ? [{ id: e.key, name: s.debuff.name, kind: 'Debuff', on: 'target', icon: s.debuff.icon, durationTicks: s.debuff.durationTicks }] : [],
       scroll: s.kind === 'scroll' && s.familiar ? { familiar: s.familiar, specialPoints: s.specialPoints ?? 0 } : undefined,
+      bomb: s.kind === 'bomb' || undefined,
     };
   }
 
