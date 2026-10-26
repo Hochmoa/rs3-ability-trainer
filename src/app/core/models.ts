@@ -338,11 +338,6 @@ export interface Settings {
    * Combat Mode toggle. Missing = on.
    */
   autoAttacks: boolean;
-  /**
-   * Bomb steps (vulnerability bomb) throw themselves when the ability of their group casts, so a rotation written as
-   * "vulnbomb + bloat" needs no key or click for the bomb. Missing = on. Pressing the bomb yourself still works.
-   */
-  autoBombs: boolean;
   loop: boolean;
   /** start every session with full adrenaline (training-dummy style) */
   fullAdrenaline: boolean;
@@ -454,7 +449,6 @@ export const DEFAULT_SETTINGS: Settings = {
   jitterMs: 20,
   abilityQueueing: true,
   autoAttacks: true,
-  autoBombs: true,
   loop: false,
   fullAdrenaline: false,
   crystalUpgraded: true,
@@ -1132,8 +1126,6 @@ export interface StepResult {
   adrenaline: number;
   /** the step was completed by Revolution, not by a press (docs/research/revolution.md) */
   auto?: boolean;
-  /** a bomb step thrown by the trainer when its group's ability cast (setting "auto bombs") */
-  autoBomb?: boolean;
   /** the step was completed by the automatic basic attack (nothing was pressed when the GCD ended) */
   autoAttack?: boolean;
   /** an automatic basic attack slipped in before this cast because the press came after the GCD end: `lateTicks` counts from the intended tick */

@@ -23,7 +23,6 @@ import { TourService } from '../../shared/tour';
         </label>
         <small class="indent">The in-game setting. On: a press during the global cooldown (GCD) queues and casts when it ends. Off: it is ignored, press in the last tick.</small>
         <label class="check"><input type="checkbox" [ngModel]="s().autoAttacks" (ngModelChange)="set('autoAttacks', $event)" /><span>Auto basic attacks: a late press lets the basic attack fire first and then waits a whole GCD, like in game</span></label>
-        <label class="check"><input type="checkbox" [ngModel]="s().autoBombs" (ngModelChange)="set('autoBombs', $event)" /><span>Auto bombs: a vulnerability bomb step is thrown for you when its ability casts ("vulnbomb + bloat"), no key or click needed</span></label>
         <label class="check">
           <input type="checkbox" [ngModel]="s().loop" (ngModelChange)="set('loop', $event)" />
           <span>Loop the rotation until stopped (Esc)</span>

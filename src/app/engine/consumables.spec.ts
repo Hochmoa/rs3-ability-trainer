@@ -171,33 +171,6 @@ describe('vulnerability bomb', () => {
   });
 });
 
-describe('auto bombs', () => {
-  const bomb = (): EngineEntity => ({ ...special('vulnerability-bomb'), bomb: true });
-
-  it('"vulnbomb + bloat": the bomb is thrown on the cast tick of its group ability, no press needed, and the step counts as done', () => {
-    const e = make([bomb(), ability('attack'), ability('attack')], {}, { loop: false });
-    cast(e, 'ability:attack', 2);
-    expect(e.buff('vulnerability')).toMatchObject({ on: 'target', endTick: 102 });
-    expect(e.results.map((r) => [r.key, r.outcome, !!r.autoBomb])).toEqual([
-      ['special:vulnerability-bomb', 'done', true],
-      ['ability:attack', 'perfect', false],
-    ]);
-    expect(e.events.some((x) => x.kind === 'missed')).toBe(false);
-    expect(hits(e, 'ability:attack')).toEqual([{ amount: Math.floor(1200 * 1.1), tick: 2, dot: false }]);
-  });
-
-  it('pressing the bomb yourself still works, and with the setting off a skipped bomb is missed like before', () => {
-    const e = make([bomb(), ability('attack'), ability('attack')], {}, { loop: false });
-    cast(e, 'special:vulnerability-bomb', 1);
-    cast(e, 'ability:attack', 2);
-    expect(e.results.filter((r) => r.key === 'special:vulnerability-bomb')).toHaveLength(1);
-    expect(e.results[0].autoBomb).toBeUndefined();
-    const off = make([bomb(), ability('attack'), ability('attack')], {}, { loop: false, autoBombs: false });
-    cast(off, 'ability:attack', 2);
-    expect(off.results[0]).toMatchObject({ key: 'special:vulnerability-bomb', outcome: 'missed' });
-  });
-});
-
 describe('dominion mine and sticky bomb', () => {
   it('the mine detonates 8 ticks after it is placed for 20% of the target maximum, cap 10,000; Vulnerability adds 10%; two mines per 100 ticks', () => {
     const e = make([special('dominion-mine'), special('vulnerability-bomb')], {}, { targetLifePoints: 30000 });

@@ -158,8 +158,6 @@ export interface EngineConfig {
    * basic attack's GCD. Default true; off = the in-game Combat Mode toggle, or tests that want plain timing.
    */
   autoAttacks?: boolean;
-  /** bomb steps throw themselves on the cast tick of their group's ability (default true) */
-  autoBombs?: boolean;
 }
 
 /**
@@ -236,8 +234,6 @@ export interface EngineEntity {
   weapon?: { id: string; slot: 'main' | 'off' | '2h'; style: Style };
   /** familiar scroll (special of kind "scroll"): needs this familiar out (ResolvedLoadout.familiar) and costs special move points */
   scroll?: { familiar: string; specialPoints: number };
-  /** thrown item (vulnerability bomb): with `autoBombs` the trainer throws it when its group's ability casts */
-  bomb?: boolean;
   /** rotation steps only: PvME "+" (0) / "2t" (2) – expected this many ticks after the previous input's tick */
   offsetTicks?: number;
   /** rotation steps only: free text from an imported rotation, skipped automatically */
@@ -1470,11 +1466,6 @@ export class TrainerEngine {
     this.lastInputTick = p.tick;
     // the step being completed decides whether this press starts a held cast or releases one
     const stallStep = expected && this.satisfies(entity, expected) ? expected : undefined;
-    // bombs of this group ("vulnbomb + bloat") go out before the ability lands, so its hits already see the debuff
-    if (expected && this.satisfies(entity, expected)) {
-      const upTo = this.steps.indexOf(expected, this.index);
-      for (let i = this.index; i < upTo; i++) this.autoThrow(i, p.tick);
-    }
     this.activate(entity, p.tick, {
       offGcd: false,
       noGain: false,
@@ -1501,7 +1492,6 @@ export class TrainerEngine {
         this.done.add(i);
         continue;
       }
-      if (!this.done.has(i) && this.autoThrow(i, p.tick)) continue;
       if (!this.done.has(i)) {
         missed.push(this.steps[i].key);
         this.done.add(i);
@@ -1544,24 +1534,6 @@ export class TrainerEngine {
     this.tooEarly = 0;
     this.wrong = 0;
     this.advanceIndex();
-  }
-
-  /**
-   * "vulnbomb + bloat": with the auto-bombs setting the bomb is thrown by the trainer on the tick its group's ability
-   * casts, whether or not it sits on a bar or in the backpack. A bomb still on its cooldown just counts as done.
-   */
-  private autoThrow(i: number, tick: number): boolean {
-    const s = this.steps[i];
-    if (this.config.autoBombs === false || !s.bomb || this.done.has(i)) return false;
-    this.done.add(i);
-    if (this.cooldownLeft(s.key, tick) <= 0) this.activate(s, tick, { offGcd: true, noGain: false });
-    const result: StepResult = {
-      step: i, key: s.key, name: s.name, kind: s.kind, outcome: 'done', lateTicks: 0, offsetMs: 0, tooEarly: 0, wrong: 0,
-      firedAtTick: tick, adrenaline: this.adrenaline, auto: true, autoBomb: true,
-    };
-    this.results.push(result);
-    this.events.push({ kind: 'fired', result });
-    return true;
   }
 
   /** A prayer step whose prayer is already active counts as done (records a result once). */
