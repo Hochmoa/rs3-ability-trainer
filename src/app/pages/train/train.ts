@@ -641,7 +641,7 @@ export class Train implements OnDestroy {
   readonly iconState = signal<IconState>('idle');
   readonly feedback = signal<Feedback | null>(null);
   /**
-   * an aimed ability (Dive, Bladed Dive, a thrown bomb) was pressed: the key only armed the target cursor, the cast
+   * an aimed ability (Dive, Bladed Dive) was pressed: the key only armed the target cursor, the cast
    * waits for the click on the lit tile. `box` is which of the four tiles around the arena is lit (0 left top,
    * 1 left bottom, 2 right top, 3 right bottom).
    */
@@ -2092,7 +2092,7 @@ export class Train implements OnDestroy {
   }
 
   /**
-   * A press from a key, a slot click or a button. An aimed ability (Dive, Bladed Dive, a thrown bomb) does not reach
+   * A press from a key, a slot click or a button. An aimed ability (Dive, Bladed Dive) does not reach
    * the server yet: like in game the key arms a target cursor and the cast happens on the click, so one of the four
    * tiles around the arena lights up and clickAimBox() sends the press. Any other press drops the cursor, as in game.
    */
