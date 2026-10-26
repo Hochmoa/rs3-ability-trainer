@@ -81,6 +81,7 @@ export const MELEE_RULES: AbilityRule[] = [
   {
     ability: 'dive',
     moves: true,
+    aimed: true,
     offGcd: true,
     sharedCooldown: 'dive',
     cooldownRules: [{ ticks: 2, when: { buff: 'powerburst-of-acceleration' } }],
@@ -92,6 +93,7 @@ export const MELEE_RULES: AbilityRule[] = [
   {
     ability: 'bladed-dive',
     moves: true,
+    aimed: true,
     offGcdNoGain: true,
     sharedCooldown: 'dive',
     adrenaline: 9,

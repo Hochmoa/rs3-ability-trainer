@@ -1573,3 +1573,59 @@
     opacity: 0.55;
   }
 }
+
+/* target tiles of an aimed ability (Dive, Bladed Dive, bombs): four fixed boxes beside the arena, one of them lit */
+.aim-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+}
+
+.aim-box {
+  pointer-events: auto;
+  position: fixed;
+  width: min(170px, 13vw);
+  height: 38vh;
+  border: 2px dashed var(--border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  font: inherit;
+  cursor: crosshair;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 8px;
+
+  &.left { left: 12px; }
+  &.right { right: 12px; }
+  &.top { top: 9vh; }
+  &.bottom { bottom: 5vh; }
+
+  &.lit {
+    border: 3px solid var(--gold);
+    background: rgba(201, 162, 39, 0.2);
+    box-shadow: 0 0 28px rgba(201, 162, 39, 0.55);
+    animation: aim-pulse 0.7s ease-in-out infinite alternate;
+  }
+
+  .aim-text {
+    font-size: 15px;
+    line-height: 1.3;
+    text-shadow: 0 1px 2px #000;
+  }
+
+  @media (max-width: 960px) {
+    width: 52px;
+    height: 30vh;
+
+    .aim-text { font-size: 11px; }
+  }
+}
+
+@keyframes aim-pulse {
+  from { box-shadow: 0 0 14px rgba(201, 162, 39, 0.35); }
+  to { box-shadow: 0 0 36px rgba(201, 162, 39, 0.8); }
+}

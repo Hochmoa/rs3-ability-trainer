@@ -64,6 +64,7 @@ export const SPECIAL_RULES: AbilityRule[] = [
   },
   {
     ability: 'vulnerability-bomb',
+    aimed: true,
     notes: [
       'Thrown: the target takes 10% more damage for 1 minute (100 ticks) – the same Vulnerability status as the spell, so a bomb on a Vulnerability-spelled target (or the other way round) only refreshes the minute, never stacks (' + W + 'Vulnerability_(status) )',
       'Off the global cooldown, no cooldown (' + W + 'Vulnerability_bomb )',
@@ -72,6 +73,7 @@ export const SPECIAL_RULES: AbilityRule[] = [
   },
   {
     ability: 'sticky-bomb',
+    aimed: true,
     notes: ['Thrown: binds monsters in a 3×3 area for 6 seconds (10 ticks), no damage; off the global cooldown, no cooldown (' + W + 'Sticky_bomb )'],
     onCast: [{ kind: 'buff', id: 'bound' }],
   },

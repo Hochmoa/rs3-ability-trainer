@@ -286,6 +286,8 @@ export interface AbilityRule {
   guaranteedCrit?: boolean;
   /** the ability moves the player (Surge, Escape, Dive, Bladed Dive): cancels a channel that is not movable */
   moves?: boolean;
+  /** in game the key only arms a target cursor: the ability fires on the click on a tile (Dive, Bladed Dive) or on the target (thrown bombs); the train page asks for that click */
+  aimed?: boolean;
   channel?: ChannelSpec;
   /** the cast counts as this sequence step (group + step) and opens the next one */
   sequence?: { group: string; step: number; windowTicks: number; last?: boolean };

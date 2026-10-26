@@ -955,3 +955,16 @@
   }
 }
 }
+
+@if (aiming(); as aim) {
+  <div class="aim-layer">
+    @for (i of AIM_BOXES; track i) {
+      <button type="button" class="aim-box" [class.lit]="i === aim.box" [class.left]="i < 2" [class.right]="i >= 2" [class.top]="i % 2 === 0" [class.bottom]="i % 2 === 1"
+              (click)="clickAimBox(i)" [attr.aria-label]="i === aim.box ? 'Target tile: click here to cast ' + aim.name : 'Another tile'">
+        @if (i === aim.box) {
+          <span class="aim-text"><b>{{ aim.name }}</b><br />click here</span>
+        }
+      </button>
+    }
+  </div>
+}

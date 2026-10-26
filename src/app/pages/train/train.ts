@@ -22,6 +22,7 @@ import { TraceRecorder } from '../../core/trace';
 import { BUILD } from '../../version';
 import { prebuildFor, rotationAssumptions } from '../../core/rotation-requires';
 import { resolveLoadout } from '../../engine/loadout-resolver';
+import { needsAim } from '../../core/aim';
 import { BUFF_BY_ID, ruleFor, stackMax, stackName } from '../../engine/rules';
 import { STYLE_STACKS, StackId } from '../../engine/rules-model';
 import { COMMAND_READY_AFTER, CONJURE_BASE_TICKS } from '../../engine/rules-necromancy';
@@ -633,6 +634,13 @@ export class Train implements OnDestroy {
   readonly rotationHasChannel = computed(() => this.stepEntities().some((e) => !!e?.ability && !!ruleFor(e.ability.id)?.channel));
   readonly iconState = signal<IconState>('idle');
   readonly feedback = signal<Feedback | null>(null);
+  /**
+   * an aimed ability (Dive, Bladed Dive, a thrown bomb) was pressed: the key only armed the target cursor, the cast
+   * waits for the click on the lit tile. `box` is which of the four tiles around the arena is lit (0 left top,
+   * 1 left bottom, 2 right top, 3 right bottom).
+   */
+  readonly aiming = signal<{ key: string; name: string; source: string; box: number } | null>(null);
+  readonly AIM_BOXES = [0, 1, 2, 3];
   /** a channel was cut by the cast reported next – appended to that cast's feedback line */
   private cancelNote: string | null = null;
   /** `auto` = Revolution casts, `autoAttacks` = basic attacks that fired on their own because the press came after the GCD end */
@@ -1256,6 +1264,7 @@ export class Train implements OnDestroy {
     this.index.set(0);
     this.iconState.set('idle');
     this.flashKey.set(null);
+    this.aiming.set(null);
     this.pressedUntil.clear();
     this.pressedKeys.set(new Set());
     this.engine.start(performance.now());
@@ -1309,6 +1318,7 @@ export class Train implements OnDestroy {
     this.coach.disable();
     this.engine?.stop();
     this.clearHitsplats();
+    this.aiming.set(null);
     this.running.set(false);
     this.finished.set(true);
     if (!this.finishReason()) this.finishReason.set('stopped');
@@ -2066,8 +2076,40 @@ export class Train implements OnDestroy {
     return r.outcome;
   }
 
-  /** send a press to the (simulated) server and light the slot up right away, like the game does on click */
+  /**
+   * A press from a key, a slot click or a button. An aimed ability (Dive, Bladed Dive, a thrown bomb) does not reach
+   * the server yet: like in game the key arms a target cursor and the cast happens on the click, so one of the four
+   * tiles around the arena lights up and clickAimBox() sends the press. Any other press drops the cursor, as in game.
+   */
   private press(key: string, source = 'click'): void {
+    const aim = this.aiming();
+    if (aim && aim.key === key) return; // pressing the armed ability again changes nothing, the cursor stays
+    if (aim) this.aiming.set(null);
+    if (needsAim(key)) {
+      const name = this.data.name(key);
+      this.aiming.set({ key, name, source, box: Math.floor(Math.random() * 4) });
+      this.pressedUntil.set(key, performance.now() + PRESS_FLASH_MS);
+      this.feedback.set({ text: 'Click the lit tile to cast ' + name + '.', cls: 'info' });
+      return;
+    }
+    this.send(key, source);
+  }
+
+  /** the click on a target tile: the lit one casts the armed ability now, any other drops the cursor and counts as a wrong press */
+  clickAimBox(box: number): void {
+    const aim = this.aiming();
+    if (!aim || !this.running()) return;
+    this.aiming.set(null);
+    if (box === aim.box) {
+      this.send(aim.key, aim.source + ' + tile click');
+      return;
+    }
+    this.flash('wrong', aim.key, performance.now(), 400);
+    this.feedback.set({ text: aim.name + ' went to the wrong tile. Press it again and click the lit one.', cls: 'bad' });
+  }
+
+  /** send a press to the (simulated) server and light the slot up right away, like the game does on click */
+  private send(key: string, source: string): void {
     const now = performance.now();
     if (this.engine && this.trace) this.trace.input(key, source, now, this.engine.debugState(this.engine.currentTick(now)));
     this.engine?.press(key, now);
