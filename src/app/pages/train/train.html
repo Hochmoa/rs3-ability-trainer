@@ -216,6 +216,10 @@
           <input type="checkbox" [checked]="storage.settings().keyDrill" (change)="setSetting('keyDrill', !storage.settings().keyDrill)" [disabled]="running()" />
           Key drill only
         </label>
+        <label class="pill" title="Play the rotation from memory: no upcoming step is shown and no slot glows. The step is revealed after your press for it, right or wrong. The coach stays quiet.">
+          <input type="checkbox" [checked]="storage.settings().hiddenMode" (change)="setSetting('hiddenMode', !storage.settings().hiddenMode)" [disabled]="running()" />
+          Hidden steps
+        </label>
       </span>
       <span class="opt-group" title="Says the keys out loud. Volume, lead and voice: Settings → Sound.">
         <span class="opt-label">Coach</span>
@@ -588,6 +592,11 @@
               <div class="note-card" [class.big]="s.kind === 'current'">{{ s.note }}</div>
             }
             <span class="name muted">{{ s.phase ? 'phase' : s.requiresAction ? 'do this · ' + s.actionTicks + 't' : 'note' }}</span>
+          </div>
+        } @else if (s.hidden) {
+          <div class="slot hidden-step" [class]="'slot hidden-step ' + s.kind" title="Hidden mode: the step shows after your press, right or wrong">
+            <div class="mystery" [class.big]="s.kind === 'current'">?</div>
+            <span class="name">{{ s.kind === 'current' ? 'your call' : '' }}</span>
           </div>
         } @else {
           <div class="slot" [class]="'slot ' + s.kind + ' ' + s.entity.kind" [entityTip]="s.entity" [tipHint]="s.hint">

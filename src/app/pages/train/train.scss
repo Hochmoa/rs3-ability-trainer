@@ -523,6 +523,29 @@
       font-weight: 600;
       font-size: 13px;
     }
+
+    /* hidden mode: a question mark where the step would be */
+    .mystery {
+      width: 48px;
+      height: 48px;
+      border: 2px dashed var(--border);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--muted);
+      background: rgba(255, 255, 255, 0.03);
+
+      &.big {
+        width: 72px;
+        height: 72px;
+        font-size: 40px;
+        border-color: var(--gold);
+        color: var(--gold);
+      }
+    }
   }
 
   .arrow {

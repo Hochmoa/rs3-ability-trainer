@@ -82,6 +82,8 @@ interface QueueSlot {
    */
   gcdPhase: number;
   remainingMs: number;
+  /** hidden mode: the step is not revealed yet, the strip shows a question mark in its place */
+  hidden?: boolean;
 }
 
 interface BuffView {
@@ -584,10 +586,14 @@ export class Train implements OnDestroy {
 
   /** "Key drill only": the engine refuses nothing but a press inside the global cooldown, so the pre-start warnings about adrenaline, equipment and mid-fight assumptions do not apply */
   readonly keyDrill = computed(() => !!this.storage.settings().keyDrill);
+  /** hidden mode: no upcoming step is shown and no slot glows; the step for a press is revealed, right or wrong, when the press comes */
+  readonly hiddenMode = computed(() => !!this.storage.settings().hiddenMode);
+  /** hidden mode: step indexes the player has pressed for (shown from then on) */
+  readonly revealed = signal<Set<number>>(new Set());
 
   readonly canStart = computed(() => !!this.played() && this.stepEntities().length > 0 && this.unreachable().length === 0 && this.unknownSteps() === 0);
   /** the feedback line before Start */
-  readonly idleText = computed(() => (this.canStart() ? (this.coarsePointer() ? 'Press Start, then tap the glowing slot.' : 'Press Start, then press the keys of the glowing slots.') : ''));
+  readonly idleText = computed(() => (this.canStart() ? (this.hiddenMode() ? 'Press Start, then play the rotation from memory. Each step shows after your press, right or wrong.' : this.coarsePointer() ? 'Press Start, then tap the glowing slot.' : 'Press Start, then press the keys of the glowing slots.') : ''));
   /** resources shown for this rotation (STYLE_STACKS of its styles); Storm Shards sit on the target, so they cannot be pre-built */
   readonly styleStacks = computed<StackId[]>(() => {
     const out: StackId[] = [];
@@ -721,7 +727,8 @@ export class Train implements OnDestroy {
     const running = this.running();
     const gcd = this.gcdPhase();
     const gcdMs = this.gcdRemaining();
-    const expected = this.expectedKey();
+    // hidden mode: the expected slot does not glow until the player has pressed for this step
+    const expected = this.hiddenMode() && !this.revealed().has(this.index()) ? null : this.expectedKey();
     const queued = this.queuedKey();
     const flash = this.flashKey();
     const pressed = this.pressedKeys();
@@ -899,6 +906,8 @@ export class Train implements OnDestroy {
     const cooldowns = this.cooldowns();
     const gcdPhase = this.gcdPhase();
     const gcdMs = this.gcdRemaining();
+    const hiddenMode = this.hiddenMode();
+    const revealed = this.revealed();
     const slot = (idx: number, kind: QueueSlot['kind']): QueueSlot | null => {
       let j = idx;
       if (loop) j = ((idx % steps.length) + steps.length) % steps.length;
@@ -931,6 +940,7 @@ export class Train implements OnDestroy {
         offsetTicks: rs?.offsetTicks,
         gcdPhase: gcd.phase,
         remainingMs: gcd.ms,
+        hidden: hiddenMode && kind !== 'prev' && !(running && done.has(j)) && !revealed.has(j) && rs?.kind !== 'note',
       };
     };
     const out: QueueSlot[] = [];
@@ -938,6 +948,8 @@ export class Train implements OnDestroy {
     if (prev) out.push(prev);
     const cur = slot(i, 'current');
     if (cur) out.push(cur);
+    // hidden mode: nothing beyond the current step is shown
+    if (hiddenMode) return out;
     for (let k = 1; k <= 4; k++) {
       const n = slot(i + k, 'next');
       if (n) out.push(n);
@@ -1253,6 +1265,7 @@ export class Train implements OnDestroy {
     this.maxAdrenaline.set(this.engine.maxAdrenaline);
     const first = this.slots().find((s) => s.kind === 'current');
     if (this.revolution()) this.feedback.set({ text: 'Revolution is on: the yellow slots of the main bar fire on their own, so press what the rotation needs beyond that.', cls: 'info' });
+    else if (this.hiddenMode()) this.feedback.set({ text: 'Hidden mode: press the first key of the rotation from memory.', cls: 'info' });
     else this.feedback.set({ text: (this.coarsePointer() ? 'Tap ' : 'Press ') + first?.key + ' (' + first?.entity.name + ') to start.', cls: 'info' });
     this.finished.set(false);
     this.finishReason.set(null);
@@ -1265,6 +1278,7 @@ export class Train implements OnDestroy {
     this.iconState.set('idle');
     this.flashKey.set(null);
     this.aiming.set(null);
+    this.revealed.set(new Set());
     this.pressedUntil.clear();
     this.pressedKeys.set(new Set());
     this.engine.start(performance.now());
@@ -1676,7 +1690,7 @@ export class Train implements OnDestroy {
     };
     if (!cs.lead || e.castTick === null || pressTick === null) {
       // call-outs: the whole group right after the cast, ~1.8 s before the next press ("Q, then 3")
-      this.coach.speak(spokenSequence(group.map((g) => label(g.s))), now);
+      if (!this.hiddenMode()) this.coach.speak(spokenSequence(group.map((g) => label(g.s))), now);
       return;
     }
     // coach mode: every step at its own tick (minus the lead); steps that land on the same tick share one phrase
@@ -1692,6 +1706,7 @@ export class Train implements OnDestroy {
       t = Math.max(t, tick);
       byTick.set(t, [...(byTick.get(t) ?? []), label(g.s)]);
     }
+    if (this.hiddenMode()) return; // hidden mode: the coach would give the steps away
     for (const [t, labels] of [...byTick].sort((a, b) => a[0] - b[0])) this.coach.speak(spokenSequence(labels), e.tickTime(t));
   }
 
@@ -2082,6 +2097,7 @@ export class Train implements OnDestroy {
    * tiles around the arena lights up and clickAimBox() sends the press. Any other press drops the cursor, as in game.
    */
   private press(key: string, source = 'click'): void {
+    if (this.hiddenMode() && this.running()) this.revealed.update((s) => new Set(s).add(this.index()));
     const aim = this.aiming();
     if (aim && aim.key === key) return; // pressing the armed ability again changes nothing, the cursor stays
     if (aim) this.aiming.set(null);
