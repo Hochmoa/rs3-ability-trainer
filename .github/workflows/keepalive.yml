@@ -1,7 +1,7 @@
 name: Keep Supabase awake
 
 # Free-tier projects pause after a week without API activity; one database read every 3 days is enough.
-# Reads the public_setups view (anon may select it since migration 0018) – NOT a table that a later migration
+# Reads the public_setups view (anon may select it since migration 0018): NOT a table that a later migration
 # might drop again: a 404 here means the project got no real activity and went to sleep in September 2026.
 on:
   schedule:
@@ -18,11 +18,12 @@ jobs:
     steps:
       - name: Read one public setup with the publishable key
         run: |
-          code=$(curl -s -o /tmp/body -w '%{http_code}'             "$SUPABASE_URL/rest/v1/public_setups?select=id&limit=1"             -H "apikey: $SUPABASE_KEY" -H "Authorization: Bearer $SUPABASE_KEY")
+          code=$(curl -s -o /tmp/body -w '%{http_code}' \n            "$SUPABASE_URL/rest/v1/public_setups?select=id&limit=1" \n            -H "apikey: $SUPABASE_KEY" -H "Authorization: Bearer $SUPABASE_KEY")
           echo "REST $code: $(head -c 300 /tmp/body)"
           if [ "$code" != "200" ]; then
-            echo "::error::Supabase answered $code – if the host does not resolve, the project is paused: restore it at https://supabase.com/dashboard/project/lqimsvrbpfabkyaupcgx"
+            echo "::error::Supabase answered $code: if the host does not resolve, the project is paused: restore it at https://supabase.com/dashboard/project/lqimsvrbpfabkyaupcgx"
             exit 1
           fi
       - name: Auth health
-        run: curl -sf "$SUPABASE_URL/auth/v1/health" -H "apikey: $SUPABASE_KEY" && echo
+        run: |
+          curl -sf "$SUPABASE_URL/auth/v1/health" -H "apikey: $SUPABASE_KEY" && echo
