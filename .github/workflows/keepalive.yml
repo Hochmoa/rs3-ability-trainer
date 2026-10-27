@@ -18,7 +18,9 @@ jobs:
     steps:
       - name: Read one public setup with the publishable key
         run: |
-          code=$(curl -s -o /tmp/body -w '%{http_code}' \n            "$SUPABASE_URL/rest/v1/public_setups?select=id&limit=1" \n            -H "apikey: $SUPABASE_KEY" -H "Authorization: Bearer $SUPABASE_KEY")
+          code=$(curl -s -o /tmp/body -w '%{http_code}' \
+            "$SUPABASE_URL/rest/v1/public_setups?select=id&limit=1" \
+            -H "apikey: $SUPABASE_KEY" -H "Authorization: Bearer $SUPABASE_KEY")
           echo "REST $code: $(head -c 300 /tmp/body)"
           if [ "$code" != "200" ]; then
             echo "::error::Supabase answered $code: if the host does not resolve, the project is paused: restore it at https://supabase.com/dashboard/project/lqimsvrbpfabkyaupcgx"
