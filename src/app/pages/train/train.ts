@@ -590,10 +590,14 @@ export class Train implements OnDestroy {
   readonly hiddenMode = computed(() => !!this.storage.settings().hiddenMode);
   /** hidden mode: step indexes the player has pressed for (shown from then on) */
   readonly revealed = signal<Set<number>>(new Set());
+  /** hidden mode with "show the step due now": only the steps after the current one stay hidden */
+  readonly hiddenShowCurrent = computed(() => this.hiddenMode() && !!this.storage.settings().hiddenShowCurrent);
+  /** hidden mode without the current step shown: nothing at all gives the next key away */
+  readonly blind = computed(() => this.hiddenMode() && !this.hiddenShowCurrent());
 
   readonly canStart = computed(() => !!this.played() && this.stepEntities().length > 0 && this.unreachable().length === 0 && this.unknownSteps() === 0);
   /** the feedback line before Start */
-  readonly idleText = computed(() => (this.canStart() ? (this.hiddenMode() ? 'Press Start, then play the rotation from memory. Each step shows after your press, right or wrong.' : this.coarsePointer() ? 'Press Start, then tap the glowing slot.' : 'Press Start, then press the keys of the glowing slots.') : ''));
+  readonly idleText = computed(() => (this.canStart() ? (this.blind() ? 'Press Start, then play the rotation from memory. Each step shows after your press, right or wrong.' : this.hiddenMode() ? 'Press Start. Only the step due now is shown, nothing beyond it.' : this.coarsePointer() ? 'Press Start, then tap the glowing slot.' : 'Press Start, then press the keys of the glowing slots.') : ''));
   /** resources shown for this rotation (STYLE_STACKS of its styles); Storm Shards sit on the target, so they cannot be pre-built */
   readonly styleStacks = computed<StackId[]>(() => {
     const out: StackId[] = [];
@@ -728,7 +732,7 @@ export class Train implements OnDestroy {
     const gcd = this.gcdPhase();
     const gcdMs = this.gcdRemaining();
     // hidden mode: the expected slot does not glow until the player has pressed for this step
-    const expected = this.hiddenMode() && !this.revealed().has(this.index()) ? null : this.expectedKey();
+    const expected = this.blind() && !this.revealed().has(this.index()) ? null : this.expectedKey();
     const queued = this.queuedKey();
     const flash = this.flashKey();
     const pressed = this.pressedKeys();
@@ -907,6 +911,7 @@ export class Train implements OnDestroy {
     const gcdPhase = this.gcdPhase();
     const gcdMs = this.gcdRemaining();
     const hiddenMode = this.hiddenMode();
+    const showCurrent = this.hiddenShowCurrent();
     const revealed = this.revealed();
     const slot = (idx: number, kind: QueueSlot['kind']): QueueSlot | null => {
       let j = idx;
@@ -940,7 +945,7 @@ export class Train implements OnDestroy {
         offsetTicks: rs?.offsetTicks,
         gcdPhase: gcd.phase,
         remainingMs: gcd.ms,
-        hidden: hiddenMode && kind !== 'prev' && !(running && done.has(j)) && !revealed.has(j) && rs?.kind !== 'note',
+        hidden: hiddenMode && kind !== 'prev' && !(showCurrent && kind === 'current') && !(running && done.has(j)) && !revealed.has(j) && rs?.kind !== 'note',
       };
     };
     const out: QueueSlot[] = [];
@@ -948,11 +953,10 @@ export class Train implements OnDestroy {
     if (prev) out.push(prev);
     const cur = slot(i, 'current');
     if (cur) out.push(cur);
-    // hidden mode: nothing beyond the current step is shown
-    if (hiddenMode) return out;
     for (let k = 1; k <= 4; k++) {
       const n = slot(i + k, 'next');
-      if (n) out.push(n);
+      // hidden mode: beyond the current step only what a refused skip has already revealed
+      if (n && (!hiddenMode || revealed.has(n.stepIndex))) out.push(n);
     }
     return out;
   });
@@ -1218,6 +1222,8 @@ export class Train implements OnDestroy {
         return (this.live() ?? l).inventory.some((r) => r?.kind === kind && r.id === id);
       },
       prayerBook: this.prayerBook(),
+      // hidden mode: a step the player cannot see must not be skipped silently; the cast is refused and the step revealed
+      noSkip: this.hiddenMode(),
       // Revolution scans the main bar of the wielded style (position 0, first N slots)
       revolution: this.revolution() ? { ...this.storage.settings().revolution, bar: this.mainBarKeys(this.startStyle()), resolveBar: (st: Style | null) => this.mainBarKeys(st && isStyle4(st) ? st : this.startStyle()) } : undefined,
       // the engine only attacks when the enemy is enabled; its affinity / Defence / armour count for the hit chance either way
@@ -1265,7 +1271,7 @@ export class Train implements OnDestroy {
     this.maxAdrenaline.set(this.engine.maxAdrenaline);
     const first = this.slots().find((s) => s.kind === 'current');
     if (this.revolution()) this.feedback.set({ text: 'Revolution is on: the yellow slots of the main bar fire on their own, so press what the rotation needs beyond that.', cls: 'info' });
-    else if (this.hiddenMode()) this.feedback.set({ text: 'Hidden mode: press the first key of the rotation from memory.', cls: 'info' });
+    else if (this.blind()) this.feedback.set({ text: 'Hidden mode: press the first key of the rotation from memory.', cls: 'info' });
     else this.feedback.set({ text: (this.coarsePointer() ? 'Tap ' : 'Press ') + first?.key + ' (' + first?.entity.name + ') to start.', cls: 'info' });
     this.finished.set(false);
     this.finishReason.set(null);
@@ -1690,7 +1696,7 @@ export class Train implements OnDestroy {
     };
     if (!cs.lead || e.castTick === null || pressTick === null) {
       // call-outs: the whole group right after the cast, ~1.8 s before the next press ("Q, then 3")
-      if (!this.hiddenMode()) this.coach.speak(spokenSequence(group.map((g) => label(g.s))), now);
+      if (!this.blind()) this.coach.speak(spokenSequence(group.map((g) => label(g.s))), now);
       return;
     }
     // coach mode: every step at its own tick (minus the lead); steps that land on the same tick share one phrase
@@ -1706,7 +1712,7 @@ export class Train implements OnDestroy {
       t = Math.max(t, tick);
       byTick.set(t, [...(byTick.get(t) ?? []), label(g.s)]);
     }
-    if (this.hiddenMode()) return; // hidden mode: the coach would give the steps away
+    if (this.blind()) return; // hidden mode: the coach would give the steps away
     for (const [t, labels] of [...byTick].sort((a, b) => a[0] - b[0])) this.coach.speak(spokenSequence(labels), e.tickTime(t));
   }
 
@@ -1944,6 +1950,15 @@ export class Train implements OnDestroy {
         const ms = Math.round(e.tickTime(ev.tick) - e.t0);
         this.killedAtMs.set(ms);
         this.feedback.set({ text: 'Target killed after ' + (ms / 1000).toFixed(1) + ' s, ' + Math.round(e.damageDealt).toLocaleString() + ' damage', cls: 'good' });
+        break;
+      }
+      case 'skip-refused': {
+        this.counts.update((c) => ({ ...c, wrong: c.wrong + 1 }));
+        const names = ev.skipped.map((i) => this.stepEntities()[i]?.name ?? 'step ' + (i + 1));
+        this.feedback.set({ text: this.name(ev.key) + ' refused: ' + names.join(', ') + (names.length === 1 ? ' comes' : ' come') + ' first. Press ' + (names.length === 1 ? 'it' : 'them') + ', then ' + this.name(ev.key) + ' again.', cls: 'bad' });
+        this.revealed.update((s) => new Set([...s, ...ev.skipped]));
+        this.log(ev.key, 'wrong', this.feedback()?.text ?? '');
+        this.flash('wrong', ev.key, now, 300);
         break;
       }
       case 'missed':

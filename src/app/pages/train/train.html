@@ -216,10 +216,16 @@
           <input type="checkbox" [checked]="storage.settings().keyDrill" (change)="setSetting('keyDrill', !storage.settings().keyDrill)" [disabled]="running()" />
           Key drill only
         </label>
-        <label class="pill" title="Play the rotation from memory: no upcoming step is shown and no slot glows. The step is revealed after your press for it, right or wrong. The coach stays quiet.">
+        <label class="pill" title="Play the rotation from memory: no upcoming step is shown and no slot glows. The step is revealed after your press for it, right or wrong. No step can be skipped: a cast that would leave one behind is refused and that step is shown. The coach stays quiet.">
           <input type="checkbox" [checked]="storage.settings().hiddenMode" (change)="setSetting('hiddenMode', !storage.settings().hiddenMode)" [disabled]="running()" />
           Hidden steps
         </label>
+        @if (storage.settings().hiddenMode) {
+          <label class="pill" title="Shows the one step that is due right now; everything after it stays hidden.">
+            <input type="checkbox" [checked]="storage.settings().hiddenShowCurrent" (change)="setSetting('hiddenShowCurrent', !storage.settings().hiddenShowCurrent)" [disabled]="running()" />
+            Show the step due now
+          </label>
+        }
       </span>
       <span class="opt-group" title="Says the keys out loud. Volume, lead and voice: Settings → Sound.">
         <span class="opt-label">Coach</span>

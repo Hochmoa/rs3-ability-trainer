@@ -110,6 +110,12 @@ export interface EngineConfig {
    */
   keyDrill?: boolean;
   /**
+   * no step is skipped: a GCD ability whose cast would leave an earlier off-GCD step of the rotation unpressed (a bomb,
+   * a potion, a switch) is refused at its cast tick with a 'skip-refused' event instead of marking the step missed.
+   * Hidden mode uses it, because there the player cannot see the step they are about to skip.
+   */
+  noSkip?: boolean;
+  /**
    * workaround: the clock stops on the tick the next step is due until the right key is pressed; buffs, cooldowns,
    * adrenaline and the enemy wait with it. Only the expected step (or an open same-tick companion) is taken, every
    * other press is refused as wrong. A queued press casts on its own, so queueing keeps working.
@@ -319,6 +325,8 @@ export type EngineEvent =
   /** an ability with a running buff was pressed again and released it (Reprisal) */
   | { kind: 'recast'; key: string; tick: number }
   | { kind: 'missed'; keys: string[] }
+  /** noSkip: the cast of `key` was refused because these earlier steps (indexes into the rotation) were not pressed */
+  | { kind: 'skip-refused'; key: string; skipped: number[]; tick: number }
   /** adrenaline changed: `delta` from `source` (an entity key, "over-time:<key>", "buff:<id>", "hit:<key>", "crystal") */
   | { kind: 'adrenaline'; delta: number; source: string; tick: number }
   /** Time Warp: `phase` 'start' on the press, 'reset' when adrenaline and cooldowns went back to the press's values */
@@ -1447,6 +1455,15 @@ export class TrainerEngine {
       p.tick += Math.max(1, blocked.kind === 'on-cooldown' ? blocked.readyInTicks : 1);
       return;
     }
+    if (this.config.noSkip && !p.auto) {
+      const skipped = this.wouldSkip(entity);
+      if (skipped.length) {
+        this.wrong++;
+        this.events.push({ kind: 'skip-refused', key: entity.key, skipped, tick: p.tick });
+        this.pending = after();
+        return;
+      }
+    }
     this.pending = after();
     // attacking releases a held cast first, on the same tick ("rmeteorstrike + naturalinstinct" in PvME notation)
     const due = this.releaseDue();
@@ -1537,6 +1554,25 @@ export class TrainerEngine {
   }
 
   /** A prayer step whose prayer is already active counts as done (records a result once). */
+  /**
+   * noSkip: the rotation steps before the expected GCD ability that this cast would leave behind: not done, not a
+   * plain note, and not satisfied on their own (a prayer already on, the weapon already in hand).
+   */
+  private wouldSkip(entity: EngineEntity): number[] {
+    const expected = this.expectedAbility;
+    if (!expected || !this.satisfies(entity, expected)) return [];
+    const expectedIndex = this.steps.indexOf(expected, this.index);
+    const out: number[] = [];
+    for (let i = this.index; i < expectedIndex; i++) {
+      const s = this.steps[i];
+      if (this.done.has(i) || (s.isNote && !s.awaitAction)) continue;
+      const wieldedSwitch = s.kind === 'weapon' && [this.wield.mainHand, this.wield.offHand, this.wield.twoHand].includes(s.id);
+      if (wieldedSwitch || (s.kind === 'prayer' && this.activePrayers.has(prayerId(s.key)))) continue;
+      out.push(i);
+    }
+    return out;
+  }
+
   private autoSatisfied(i: number, tick: number): boolean {
     const s = this.steps[i];
     if (this.done.has(i)) return true;

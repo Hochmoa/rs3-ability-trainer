@@ -352,6 +352,8 @@ export interface Settings {
   keyDrill: boolean;
   /** hidden mode: the queue shows no upcoming step and no slot glows; a step is revealed, right or wrong, after the press for it */
   hiddenMode: boolean;
+  /** hidden mode: the step due right now is shown (only the ones after it stay hidden) */
+  hiddenShowCurrent: boolean;
   /**
    * workaround: the clock stops whenever the next step is due and not pressed; buffs, cooldowns, adrenaline and the
    * enemy wait with it. Only the right ability (or a same-tick companion) is taken, every other press is refused.
@@ -455,6 +457,7 @@ export const DEFAULT_SETTINGS: Settings = {
   ignoreAdrenaline: false,
   keyDrill: false,
   hiddenMode: false,
+  hiddenShowCurrent: false,
   stepMode: false,
   hideObscureEquipment: true,
   hideObscureAbilities: true,
